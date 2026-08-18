@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syp - System Operasional Perusahaan Kaca & Landing Page</title>
+    <meta name="description" content="Sistem Operasional & Management Perusahaan Kaca Terintegrasi - Realtime Tracking Orderan, Stok Sisa Kaca, Surat Jalan 4 Warna, dan Dashboard Keuangan.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+
+    <!-- Top Announcement / Realtime Status Bar -->
+    <div class="top-status-bar">
+        <div class="container status-content">
+            <span class="status-badge live-pulse">
+                <span class="pulse-dot"></span> REAL-TIME ENGINE ACTIVE (Socket.io Sim)
+            </span>
+            <span class="brand-tagline">System Operasional Perusahaan Kaca (Syp v2.4)</span>
+            <div class="mode-switch-group">
+                <button class="nav-btn-link" onclick="switchMainView('landing')"><i class="fa-solid fa-globe"></i> Landing Page Public</button>
+                <button class="btn-primary-sm" onclick="switchMainView('app')"><i class="fa-solid fa-gauge-high"></i> Launch Syp App Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <header class="main-header">
+        <div class="container header-container">
+            <div class="logo-box" onclick="switchMainView('landing')">
+                <div class="glass-icon"><i class="fa-solid fa-shapes"></i></div>
+                <div class="logo-text">
+                    <span class="brand-name">SYP GLASS</span>
+                    <span class="brand-sub">Operational & WMS System</span>
+                </div>
+            </div>
+
+            <!-- PUBLIC NAVIGATION -->
+            <nav class="public-nav" id="publicNav">
+                <a href="#hero" class="nav-link active">Beranda</a>
+                <a href="#fitur" class="nav-link">Fitur Operasional</a>
+                <a href="#simulator" class="nav-link">Simulator Kaca</a>
+                <a href="#kalkulator" class="nav-link">Kalkulator Biaya</a>
+                <a href="#produk" class="nav-link">Produk & Specs</a>
+                <a href="#kontak" class="nav-link">Kontak</a>
+            </nav>
+
+            <!-- DASHBOARD ROLE SELECTOR & ACTION (App View) -->
+            <div class="app-nav-actions" id="appNavActions" style="display: none;">
+                <div class="role-selector-wrapper">
+                    <label><i class="fa-solid fa-user-shield"></i> Switch Role User:</label>
+                    <select id="roleSelect" onchange="changeRole(this.value)" class="role-select">
+                        <option value="admin_toko">🏪 Admin Toko (Input Order & Delivery)</option>
+                        <option value="admin_gudang">🏭 Admin Gudang (Disposisi & Restock)</option>
+                        <option value="divisi_ht">✂️ Divisi HT (Potong + Bor + Sisa Kaca)</option>
+                        <option value="divisi_gm">✨ Divisi GM (Gosok Mesin Halus)</option>
+                        <option value="divisi_bv">💎 Divisi BV (Bevel Pinggir)</option>
+                        <option value="divisi_etsa">🌫️ Divisi Etsa (Blur Kaca)</option>
+                        <option value="driver">🚚 Supir / Driver (Pengiriman Surat Jalan)</option>
+                        <option value="owner">📈 Owner & Akuntan (Dashboard Finance)</option>
+                    </select>
+                </div>
+                <button class="btn-secondary-sm" onclick="showNotificationLog()"><i class="fa-solid fa-bell"></i> Log Event (<span id="unreadCount">3</span>)</button>
+            </div>
+
+            <div class="header-cta">
+                <button class="btn-glass" onclick="switchMainView('app')"><i class="fa-solid fa-right-to-bracket"></i> Masuk App Syp</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: LANDING PAGE PUBLIC (WHITE-LABEL)  -->
+    <!-- ========================================== -->
+    <main id="landingView" class="main-view">
+        <!-- HERO SECTION -->
+        <section id="hero" class="hero-section">
+            <div class="hero-bg-glow"></div>
+            <div class="container hero-grid">
+                <div class="hero-text-content">
+                    <div class="hero-badge"><i class="fa-solid fa-bolt"></i> Platform Operasional Kaca Terintegrasi</div>
+                    <h1 class="hero-title">Solusi Sistem Operasional & Manufaktur Kaca <span class="gradient-text">Arsitektural Modern</span></h1>
+                    <p class="hero-subtitle">Kelola alur transaksi toko, disosiasi divisi potong (HT/GM/BV/Etsa), pelacakan sisa kaca di rak, surat jalan 4 warna, hingga analisis keuangan real-time dalam 1 platform.</p>
+                    <div class="hero-btn-group">
+                        <button class="btn-primary-lg" onclick="switchMainView('app')"><i class="fa-solid fa-rocket"></i> Coba Demo Sistem Syp</button>
+                        <a href="#simulator" class="btn-secondary-lg"><i class="fa-solid fa-sliders"></i> Simulator Visual Kaca</a>
+                    </div>
+                    <div class="hero-stats-row">
+                        <div class="stat-item">
+                            <span class="stat-num">8+</span>
+                            <span class="stat-lbl">Role Akses Divisi</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-num">100%</span>
+                            <span class="stat-lbl">Realtime Socket Sync</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-num">0%</span>
+                            <span class="stat-lbl">Kaca Sisa Terbuang</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Floating Interactive Preview Glass Card -->
+                <div class="hero-visual-box">
+                    <div class="glass-preview-card">
+                        <div class="glass-card-header">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="card-title-preview">Monitoring Realtime SPO #0128</span>
+                        </div>
+                        <div class="glass-card-body">
+                            <div class="order-preview-item">
+                                <div class="item-info">
+                                    <strong>Kaca Cermin 5mm Polos (150.5 x 120 cm)</strong>
+                                    <span class="sub-text">Sub-proses: GM + BV 2cm + Bor 2cm</span>
+                                </div>
+                                <span class="badge-status-progress"><i class="fa-solid fa-spinner fa-spin"></i> Divisi GM (Sedang Gosok)</span>
+                            </div>
+                            <div class="order-preview-item">
+                                <div class="item-info">
+                                    <strong>Kaca 12mm Polos (300 x 200 cm)</strong>
+                                    <span class="sub-text">Penggunaan Kaca Sisa: Rak A09</span>
+                                </div>
+                                <span class="badge-status-success"><i class="fa-solid fa-check"></i> Divisi HT (Selesai Potong)</span>
+                            </div>
+                            <div class="scrap-match-alert">
+                                <i class="fa-solid fa-lightbulb"></i> <strong>Rekomendasi Kaca Sisa Otomatis:</strong> "Gunakan sisa potongan 30x40 cm di Rak A09 untuk hemat bahan 18%"
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FITUR OPERASIONAL -->
+        <section id="fitur" class="section-padding bg-dark-glass">
+            <div class="container">
+                <div class="section-header text-center">
+                    <span class="section-tag">Keunggulan Sistem Syp</span>
+                    <h2 class="section-title">Fitur Spesifik Industri Manufaktur & Toko Kaca</h2>
+                    <p class="section-desc">Dirancang khusus untuk memecahkan kendala klasik pencatatan manual, miskomunikasi divisi, dan kaca sisa terbuang.</p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-diagram-project"></i></div>
+                        <h3>Tracking Orderan Multi-Divisi</h3>
+                        <p>Alur sekuensial real-time dari Admin Toko $\rightarrow$ Admin Gudang $\rightarrow$ HT (Potong/Bor) $\rightarrow$ GM (Gosok Mesin) $\rightarrow$ BV (Bevel) $\rightarrow$ Etsa $\rightarrow$ QC & Driver.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-recycle"></i></div>
+                        <h3>Manajemen Kaca Sisa Potongan</h3>
+                        <p>Tukang potong langsung menginput sisa potongan $P \times L$ dan lokasi rak simpan. Sistem otomatis menyarankan sisa kaca saat orderan baru dibuat.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                        <h3>Surat Jalan 4 Warna & COD</h3>
+                        <p>Cetak otomatis Surat Jalan Putih (Lunas), Merah (Tagihan COD Driver), dan Kuning (Arsip Gudang). Driver langsung konfirmasi foto TTD dari HP.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-bell-concierge"></i></div>
+                        <h3>Sistem Revisi Prioritas Live</h3>
+                        <p>Revisi ukuran/spesifikasi langsung diteruskan ke divisi yang sedang memproses orderan tanpa mengganggu divisi lain.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+                        <h3>Modul Keuangan & Valuasi Asset</h3>
+                        <p>Menghitung profit margin per SPO, biaya kerusakan bahan (HPP loss), serta valuasi aset sisa kaca terpakai secara akurat.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                        <h3>Keamanan & Multi-Role Access</h3>
+                        <p>8 role akses dengan hak otorisasi terspesialisasi untuk menghindari kesalahan input dan manipulasi harga.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SIMULATOR VISUAL KACA INTERAKTIF -->
+        <section id="simulator" class="section-padding">
+            <div class="container">
+                <div class="section-header text-center">
+                    <span class="section-tag">Interactive Glass Visualizer</span>
+                    <h2 class="section-title">Simulator Efek Transparansi & Finish Kaca</h2>
+                    <p class="section-desc">Uji coba jenis kaca, ketebalan, dan opsi finishing secara langsung untuk melihat tingkat transparansi dan privasi.</p>
+                </div>
+
+                <div class="simulator-wrapper glass-panel">
+                    <div class="sim-controls">
+                        <div class="sim-group">
+                            <label>Pilih Jenis Kaca:</label>
+                            <select id="simType" onchange="updateGlassSimulator()">
+                                <option value="clear">Clear Float Glass (Bening)</option>
+                                <option value="tinted">Tinted Bronze / Grey Glass</option>
+                                <option value="frosted">Frosted / Etsa Blur Glass</option>
+                                <option value="mirror">Cermin Bevel Decorative</option>
+                                <option value="smart">Smart Glass Switchable</option>
+                            </select>
+                        </div>
+                        <div class="sim-group">
+                            <label>Ketebalan Kaca: <span id="simThickVal">8 mm</span></label>
+                            <input type="range" id="simThick" min="3" max="19" value="8" step="1" oninput="updateGlassSimulator()">
+                        </div>
+                        <div class="sim-group">
+                            <label>Opsi Finishing:</label>
+                            <div class="checkbox-options">
+                                <label><input type="checkbox" id="simHT" checked onchange="updateGlassSimulator()"> HT (Polos)</label>
+                                <label><input type="checkbox" id="simGM" onchange="updateGlassSimulator()"> GM (Gosok Halus)</label>
+                                <label><input type="checkbox" id="simBV" onchange="updateGlassSimulator()"> BV (Bevel Edge)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sim-preview-area">
+                        <div class="glass-viewport" id="glassViewport">
+                            <div class="glass-reflection-layer"></div>
+                            <div class="glass-edge-bevel" id="glassBevelOverlay"></div>
+                            <div class="glass-content-behind">
+                                <p>Teks Pengujian Privasi Kaca Syp</p>
+                                <i class="fa-solid fa-building-user"></i>
+                            </div>
+                        </div>
+                        <div class="sim-stats">
+                            <div class="sim-stat-box">
+                                <span>Light Transmission</span>
+                                <strong id="simStatLight">88%</strong>
+                            </div>
+                            <div class="sim-stat-box">
+                                <span>Privacy Index</span>
+                                <strong id="simStatPrivacy">Low (Transparent)</strong>
+                            </div>
+                            <div class="sim-stat-box">
+                                <span>Estimasi Berat / m²</span>
+                                <strong id="simStatWeight">20 kg/m²</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- KALKULATOR BIAYA ESTIMASI PROYEK -->
+        <section id="kalkulator" class="section-padding bg-dark-glass">
+            <div class="container">
+                <div class="section-header text-center">
+                    <span class="section-tag">Instant Estimator Engine</span>
+                    <h2 class="section-title">Kalkulator Estimasi Biaya Pemesanan Kaca</h2>
+                    <p class="section-desc">Hitung perkiraan biaya kaca custom berdasarkan dimensi, jenis, aksesoris, dan opsi prioritas.</p>
+                </div>
+
+                <div class="calculator-grid">
+                    <div class="calc-form-box glass-panel">
+                        <h3><i class="fa-solid fa-calculator"></i> Input Spesifikasi Pesanan</h3>
+                        <div class="form-row">
+                            <div class="form-group col-6">
+                                <label>Panjang (cm):</label>
+                                <input type="number" id="calcLength" value="150" oninput="calculatePublicEstimate()">
+                            </div>
+                            <div class="form-group col-6">
+                                <label>Lebar (cm):</label>
+                                <input type="number" id="calcWidth" value="120" oninput="calculatePublicEstimate()">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Jenis Kaca & Ketebalan:</label>
+                            <select id="calcGlassType" onchange="calculatePublicEstimate()">
+                                <option value="500000">Kaca Cermin 5mm Polos (Rp 500.000 / m²)</option>
+                                <option value="650000">Kaca Cermin Grey 5mm (Rp 650.000 / m²)</option>
+                                <option value="850000">Kaca Tempered 8mm Clear (Rp 850.000 / m²)</option>
+                                <option value="1200000">Kaca Tempered 12mm Clear (Rp 1.200.000 / m²)</option>
+                                <option value="2500000">Smart Glass Switchable (Rp 2.500.000 / m²)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Opsi Pengerjaan (Bisa Pilih > 1):</label>
+                            <div class="checkbox-grid">
+                                <label><input type="checkbox" class="calc-opt" value="25000" checked onchange="calculatePublicEstimate()"> HT (Gosok Kasar / Manual)</label>
+                                <label><input type="checkbox" class="calc-opt" value="45000" onchange="calculatePublicEstimate()"> GM (Gosok Mesin Halus)</label>
+                                <label><input type="checkbox" class="calc-opt" value="60000" onchange="calculatePublicEstimate()"> BV (Bevel Permukaan 2cm)</label>
+                                <label><input type="checkbox" class="calc-opt" value="35000" onchange="calculatePublicEstimate()"> Etsa (Blur Frosted)</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Opsi Aksesoris:</label>
+                            <select id="calcAcc" onchange="calculatePublicEstimate()">
+                                <option value="0">Tanpa Aksesoris</option>
+                                <option value="75000">Lem Silicone High Grade (Rp 75.000)</option>
+                                <option value="150000">Handle Pintu Stainless (Rp 150.000)</option>
+                                <option value="250000">Aksesoris Aluminium Set (Rp 250.000)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="toggle-priority">
+                                <input type="checkbox" id="calcPriority" onchange="calculatePublicEstimate()">
+                                <span><i class="fa-solid fa-bolt text-warning"></i> Order Prioritas / Buru-Buru (+ Fee Rp 150.000)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="calc-result-box glass-panel text-center">
+                        <div class="result-badge">Estimasi Hasil Kalkulasi</div>
+                        <div class="area-display">Luas Total: <strong id="resArea">1.80 m²</strong></div>
+                        <div class="price-display">
+                            <span class="currency">Rp</span>
+                            <span class="amount" id="resTotal">1.115.000</span>
+                        </div>
+                        <p class="price-note">*Harga di atas adalah estimasi otomatis sistem Syp (termasuk pajak & opsi proses).</p>
+                        
+                        <div class="calc-actions">
+                            <button class="btn-whatsapp-lg" onclick="sendWAQuote()"><i class="fa-brands fa-whatsapp"></i> Order via WhatsApp Quote</button>
+                            <button class="btn-primary-lg" onclick="switchMainView('app')"><i class="fa-solid fa-plus-circle"></i> Input Ke Sistem Syp</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER LANDING PAGE -->
+        <footer id="kontak" class="footer-section">
+            <div class="container footer-content">
+                <div class="footer-brand">
+                    <h3><i class="fa-solid fa-shapes"></i> SYP GLASS OPERATIONAL SYSTEM</h3>
+                    <p>Platform terpadu manufaktur, toko, dan distribusi kaca arsitektural di Indonesia.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Navigasi Cepat</h4>
+                    <a href="#hero">Beranda</a>
+                    <a href="#fitur">Fitur System</a>
+                    <a href="#simulator">Simulator</a>
+                    <a href="#kalkulator">Kalkulator Biaya</a>
+                </div>
+                <div class="footer-contact">
+                    <h4>Kontak Layanan</h4>
+                    <p><i class="fa-solid fa-phone"></i> +62 812-3456-7890</p>
+                    <p><i class="fa-solid fa-envelope"></i> info@sypglass.co.id</p>
+                    <p><i class="fa-solid fa-location-dot"></i> Jakarta - Bandung - Surabaya</p>
+                </div>
+            </div>
+            <div class="footer-bottom text-center">
+                <p>&copy; 2026 Syp Glass Operational System. All rights reserved. Built for CV Cahya Karunia Jaya & White-label General Use.</p>
+            </div>
+        </footer>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: SYP APPLICATION DASHBOARD VIEW     -->
+    <!-- ========================================== -->
+    <main id="appView" class="main-view" style="display: none;">
+        <div class="app-layout container-fluid">
+            <!-- SIDEBAR NAVIGATION -->
+            <aside class="app-sidebar">
+                <div class="current-user-info">
+                    <div class="user-avatar" id="roleAvatar">🏪</div>
+                    <div class="user-details">
+                        <h4 id="roleTitle">Admin Toko</h4>
+                        <span class="badge-role" id="roleBadge">Role Active</span>
+                    </div>
+                </div>
+
+                <nav class="sidebar-menu">
+                    <button class="menu-item active" onclick="switchTab('dashboard')">
+                        <i class="fa-solid fa-chart-pie"></i> <span>Dashboard Utama</span>
+                    </button>
+                    <button class="menu-item" onclick="switchTab('orders')" id="menuOrders">
+                        <i class="fa-solid fa-list-check"></i> <span>Orderan (Single Route)</span>
+                    </button>
+                    <button class="menu-item" onclick="switchTab('production')" id="menuProduction">
+                        <i class="fa-solid fa-gears"></i> <span>Kerjaan Divisi Hari Ini</span>
+                    </button>
+                    <button class="menu-item" onclick="switchTab('scrap')" id="menuScrap">
+                        <i class="fa-solid fa-cubes-stacked"></i> <span>Stok Kaca Sisa di Rak</span>
+                    </button>
+                    <button class="menu-item" onclick="switchTab('deliveries')" id="menuDeliveries">
+                        <i class="fa-solid fa-truck-ramp-box"></i> <span>Pengiriman & Surat Jalan</span>
+                    </button>
+                    <button class="menu-item" onclick="switchTab('stock')" id="menuStock">
+                        <i class="fa-solid fa-boxes-packing"></i> <span>Stok Bahan & Sparepart</span>
+                    </button>
+                    <button class="menu-item" onclick="switchTab('finance')" id="menuFinance">
+                        <i class="fa-solid fa-vault"></i> <span>Finance & Laba/Rugi</span>
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- MAIN CONTENT AREA -->
+            <section class="app-content">
+
+                <!-- TAB 1: DASHBOARD UTAMA -->
+                <div id="tabDashboard" class="tab-content active">
+                    <div class="content-header">
+                        <h2><i class="fa-solid fa-gauge-high"></i> Executive Realtime Dashboard</h2>
+                        <span class="text-muted">Ringkasan status operasional & antrean divisi saat ini</span>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card border-blue">
+                            <div class="metric-icon"><i class="fa-solid fa-receipt"></i></div>
+                            <div class="metric-info">
+                                <span>Total SPO Orderan</span>
+                                <h3 id="dashTotalOrders">12 SPO</h3>
+                            </div>
+                        </div>
+                        <div class="metric-card border-orange">
+                            <div class="metric-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                            <div class="metric-info">
+                                <span>Sedang Diproses Divisi</span>
+                                <h3 id="dashInProcess">4 Pesanan</h3>
+                            </div>
+                        </div>
+                        <div class="metric-card border-green">
+                            <div class="metric-icon"><i class="fa-solid fa-box-check"></i></div>
+                            <div class="metric-info">
+                                <span>Siap Kirim (QC Selesai)</span>
+                                <h3 id="dashReadyShip">3 Pesanan</h3>
+                            </div>
+                        </div>
+                        <div class="metric-card border-purple">
+                            <div class="metric-icon"><i class="fa-solid fa-layer-group"></i></div>
+                            <div class="metric-info">
+                                <span>Stok Sisa Kaca di Rak</span>
+                                <h3 id="dashScrapCount">18 Lembar</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Real-Time Socket Event Activity Feed -->
+                    <div class="live-activity-panel glass-panel mt-4">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-wave-square text-success"></i> Live Socket.io Event Activity Feed</h3>
+                            <button class="btn-secondary-sm" onclick="clearEventLogs()">Clear Log</button>
+                        </div>
+                        <div class="activity-list" id="activityFeed">
+                            <!-- Injected by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: ORDERAN (SINGLE ROUTE DASHBOARD) -->
+                <div id="tabOrders" class="tab-content">
+                    <div class="content-header">
+                        <h2><i class="fa-solid fa-list-check"></i> Menu Orderan (Single Route Dinamis)</h2>
+                        <div class="header-btns">
+                            <button class="btn-primary" onclick="openNewOrderModal()"><i class="fa-solid fa-plus-circle"></i> + Orderan Baru (Admin Toko)</button>
+                        </div>
+                    </div>
+
+                    <!-- 5 DYNAMIC CARDS HEADER (PRD Halaman 5) -->
+                    <div class="dynamic-cards-row">
+                        <div class="status-filter-card active" onclick="filterOrderTab('draft')" id="cardDraft">
+                            <div class="card-count" id="cntDraft">3</div>
+                            <div class="card-label"><i class="fa-solid fa-file-lines"></i> Draf</div>
+                        </div>
+                        <div class="status-filter-card" onclick="filterOrderTab('pengerjaan')" id="cardPengerjaan">
+                            <div class="card-count" id="cntPengerjaan">4</div>
+                            <div class="card-label"><i class="fa-solid fa-gears"></i> Pengerjaan Divisi</div>
+                        </div>
+                        <div class="status-filter-card" onclick="filterOrderTab('pengiriman')" id="cardPengiriman">
+                            <div class="card-count" id="cntPengiriman">2</div>
+                            <div class="card-label"><i class="fa-solid fa-truck-fast"></i> Pengiriman</div>
+                        </div>
+                        <div class="status-filter-card" onclick="filterOrderTab('pembayaran')" id="cardPembayaran">
+                            <div class="card-count" id="cntPembayaran">2</div>
+                            <div class="card-label"><i class="fa-solid fa-money-bill-wave"></i> Pembayaran / COD</div>
+                        </div>
+                        <div class="status-filter-card" onclick="filterOrderTab('selesai')" id="cardSelesai">
+                            <div class="card-count" id="cntSelesai">1</div>
+                            <div class="card-label"><i class="fa-solid fa-circle-check"></i> Selesai & Arsip</div>
+                        </div>
+                    </div>
+
+                    <!-- DYNAMIC TABLE & ACTIONS -->
+                    <div class="table-container glass-panel mt-3">
+                        <div class="table-controls">
+                            <div class="search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="orderSearch" placeholder="Cari ID Draft, No SPO, atau Nama..." onkeyup="renderOrdersTable()">
+                            </div>
+                            <div class="filter-box">
+                                <label>Urutkan:</label>
+                                <select id="orderSort" onchange="renderOrdersTable()">
+                                    <option value="newest">Tanggal Terbaru</option>
+                                    <option value="oldest">Tanggal Terlama</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <table class="data-table" id="ordersTable">
+                            <thead>
+                                <tr id="ordersTableHead">
+                                    <!-- Injected Dynamically based on active card -->
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <!-- Injected dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 3: KERJAAN DIVISI HARI INI (HT, GM, BV, ETSA) -->
+                <div id="tabProduction" class="tab-content">
+                    <div class="content-header">
+                        <h2><i class="fa-solid fa-gears"></i> Workstation Divisi Pengrajin</h2>
+                        <span class="badge-role" id="activeDivisionBadge">Divisi HT (Potong)</span>
+                    </div>
+
+                    <!-- CARD 1: SEDANG DIKERJAKAN -->
+                    <div class="active-work-card glass-panel border-highlight mb-4">
+                        <div class="card-work-header">
+                            <h3><i class="fa-solid fa-hammer text-warning"></i> Orderan Sedang Dikerjakan Divisi</h3>
+                            <span class="badge-status-progress" id="workStatusBadge">Pilih Pekerjaan di Tabel Bawah</span>
+                        </div>
+                        <div class="card-work-body" id="activeWorkBody">
+                            <p class="text-muted text-center py-4">"Silakan pilih orderan pada tabel di bawah yang ingin Anda kerjakan terlebih dahulu."</p>
+                        </div>
+                    </div>
+
+                    <!-- TABEL 2: DAFTAR KERJAAN HARI INI -->
+                    <div class="glass-panel">
+                        <h3><i class="fa-solid fa-list"></i> Antrean Kerjaan Hari Ini</h3>
+                        <table class="data-table mt-2">
+                            <thead>
+                                <tr>
+                                    <th>No SPO</th>
+                                    <th>Item & Ukuran</th>
+                                    <th>Status Prioritas</th>
+                                    <th>Sub-Proses Divisi</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="divisionQueueBody">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 4: STOK KACA SISA DI RAK -->
+                <div id="tabScrap" class="tab-content">
+                    <div class="content-header">
+                        <h2><i class="fa-solid fa-cubes-stacked"></i> Stok Potongan Kaca Sisa di Rak</h2>
+                        <button class="btn-primary" onclick="openInputScrapModal()"><i class="fa-solid fa-plus"></i> + Input Kaca Sisa Baru</button>
+                    </div>
+
+                    <div class="glass-panel">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Kaca Sisa</th>
+                                    <th>Jenis Kaca</th>
+                                    <th>Ukuran (Panjang x Lebar)</th>
+                                    <th>Lokasi Rak Storage</th>
+                                    <th>Status Layak</th>
+                                    <th>Tanggal Input</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scrapTableBody">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 5: PENGIRIMAN & SURAT JALAN 4 WARNA -->
+                <div id="tabDeliveries" class="tab-content">
+                    <div class="content-header">
+                        <h2><i class="fa-solid fa-truck-ramp-box"></i> Pengiriman & Cetak Surat Jalan 4 Warna</h2>
+                    </div>
+
+                    <div class="glass-panel mb-4">
+                        <h3><i class="fa-solid fa-boxes-packing"></i> Daftar Barang Siap Kirim (QC Selesai)</h3>
+                        <table class="data-table mt-2">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" onclick="selectAllShipments(this)"></th>
+                                    <th>No SPO</th>
+                                    <th>Customer & Alamat</th>
+                                    <th>Jenis & Ukuran Barang</th>
+                                    <th>Status Pembayaran</th>
+                                    <th>Warna Surat Jalan</th>
+                                    <th>Aksi Pengiriman</th>
+                                </tr>
+                            </thead>
+                            <tbody id="readyShipBody">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="glass-panel">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Pengiriman & Bukti TTD Driver</h3>
+                        <table class="data-table mt-2">
+                            <thead>
+                                <tr>
+                                    <th>No Surat Jalan</th>
+                                    <th>Tgl & Waktu</th>
+                                    <th>Supir & Plat Mobil</th>
+                                    <th>Status Surat Jalan</th>
+                                    <th>Bukti Foto TTD Driver</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deliveryHistoryBody">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 6: STOK BAHAN & SPAREPART -->
+                <div id="tabStock" class="tab-content">
+                    <div class="content-header">
+                        <h2><i class="fa-solid fa-boxes-packing"></i> Master Stok Bahan Kaca & Sparepart</h2>
+                        <button class="btn-primary" onclick="openNewStockModal()"><i class="fa-solid fa-plus"></i> + Tambah Stok Bahan Baru</button>
+                    </div>
+
+                    <div class="glass-panel">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Kategori</th>
+                                    <th>Nama / Jenis Barang</th>
+                                    <th>Ukuran Lembaran</th>
+                                    <th>Stok Qty</th>
+                                    <th>Rak Gudang</th>
+                                    <th>Status Alert</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="masterStockBody">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 7: FINANCE & LABA / RUGI -->
+                <div id="tabFinance" class="tab-content">
+                    <div class="content-header">
+                        <h2><i class="fa-solid fa-vault"></i> Dashboard Executive Finance & Accounting</h2>
+                        <span class="badge-role">Owner & Akuntan View</span>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card border-green">
+                            <div class="metric-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+                            <div class="metric-info">
+                                <span>Total Pemasukan (Omzet)</span>
+                                <h3 id="finTotalRevenue">Rp 48.500.000</h3>
+                            </div>
+                        </div>
+                        <div class="metric-card border-red">
+                            <div class="metric-icon"><i class="fa-solid fa-file-invoice"></i></div>
+                            <div class="metric-info">
+                                <span>Piutang COD (Surat Jalan Merah)</span>
+                                <h3 id="finPendingCOD">Rp 8.250.000</h3>
+                            </div>
+                        </div>
+                        <div class="metric-card border-purple">
+                            <div class="metric-icon"><i class="fa-solid fa-gem"></i></div>
+                            <div class="metric-info">
+                                <span>Valuasi Aset Kaca Sisa</span>
+                                <h3 id="finScrapAsset">Rp 5.400.000</h3>
+                            </div>
+                        </div>
+                        <div class="metric-card border-orange">
+                            <div class="metric-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="metric-info">
+                                <span>Kerugian Kaca Cacat (HPP Loss)</span>
+                                <h3 id="finDamageLoss">Rp 450.000</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel mt-4">
+                        <h3><i class="fa-solid fa-file-contract"></i> Laporan Rincian Profit Margin per Order (SPO)</h3>
+                        <table class="data-table mt-2">
+                            <thead>
+                                <tr>
+                                    <th>No SPO</th>
+                                    <th>Customer</th>
+                                    <th>Total Tagihan</th>
+                                    <th>Estimasi HPP Bahan</th>
+                                    <th>Priority Fee</th>
+                                    <th>Net Profit Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financeTableBody">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODALS & POP-UPS SECTION                   -->
+    <!-- ========================================== -->
+
+    <!-- MODAL 1: ORDER BARU (ADMIN TOKO) -->
+    <div class="modal-overlay" id="modalNewOrder" style="display: none;">
+        <div class="modal-card glass-panel modal-lg">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-cart-plus"></i> Form Buat Orderan Baru Customer</h3>
+                <button class="close-btn" onclick="closeModal('modalNewOrder')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formNewOrder" onsubmit="saveNewOrder(event)">
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label>Nama Customer:</label>
+                            <input type="text" id="orderCustName" required placeholder="Contoh: Pak Sidik">
+                        </div>
+                        <div class="form-group col-6">
+                            <label>No. Telepon / WA:</label>
+                            <input type="text" id="orderCustPhone" required placeholder="0812xxxx">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Alamat Pengiriman:</label>
+                        <input type="text" id="orderCustAddress" required placeholder="Jl. Sunda No. 45, Bandung">
+                    </div>
+
+                    <hr class="divider">
+
+                    <h4><i class="fa-solid fa-ruler-combined"></i> Spesifikasi Item Kaca</h4>
+                    <div class="form-row">
+                        <div class="form-group col-4">
+                            <label>Panjang (cm):</label>
+                            <input type="number" id="orderLength" value="150" oninput="calculateOrderPrice()" required>
+                        </div>
+                        <div class="form-group col-4">
+                            <label>Lebar (cm):</label>
+                            <input type="number" id="orderWidth" value="120" oninput="calculateOrderPrice()" required>
+                        </div>
+                        <div class="form-group col-4">
+                            <label>Ketebalan (mm):</label>
+                            <input type="number" id="orderThick" value="5" oninput="calculateOrderPrice()" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Jenis Kaca:</label>
+                        <select id="orderGlassType" onchange="calculateOrderPrice()">
+                            <option value="Kaca Cermin 5 mm polos">Kaca Cermin 5 mm polos</option>
+                            <option value="Kaca Cermin Grey 5 mm">Kaca Cermin Grey 5 mm</option>
+                            <option value="Kaca 12 mm Polos">Kaca 12 mm Polos</option>
+                            <option value="Kaca Gorilla 8 mm">Kaca Gorilla 8 mm</option>
+                        </select>
+                    </div>
+
+                    <!-- SMART GLASS SCRAP MATCHING ALERT -->
+                    <div class="scrap-recommendation-box" id="scrapRecBox">
+                        <i class="fa-solid fa-robot"></i> <strong>Rekomendasi Sistem Kaca Sisa:</strong>
+                        <span id="scrapRecText">"Ada sisa potongan kaca cermin 5mm ukuran 150.5 x 120 cm di Rak F7. Gunakan ini untuk hemat modal!"</span>
+                        <label class="use-scrap-toggle mt-1">
+                            <input type="checkbox" id="chkUseScrap" onchange="toggleScrapSelection()"> Gunakan Kaca Sisa di Rak F7
+                        </label>
+                    </div>
+
+                    <div class="form-group mt-2">
+                        <label>Sub-Proses Pengerjaan (Pilih > 1):</label>
+                        <div class="checkbox-grid">
+                            <label><input type="checkbox" class="order-proc" value="HT" checked onchange="calculateOrderPrice()"> HT (Potong + Bor)</label>
+                            <label><input type="checkbox" class="order-proc" value="GM" onchange="calculateOrderPrice()"> GM (Gosok Mesin Halus)</label>
+                            <label><input type="checkbox" class="order-proc" value="BV" onchange="calculateOrderPrice()"> BV (Bevel Edge)</label>
+                            <label><input type="checkbox" class="order-proc" value="Etsa" onchange="calculateOrderPrice()"> Etsa (Blur)</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tambahan Aksesoris:</label>
+                        <select id="orderAcc" onchange="calculateOrderPrice()">
+                            <option value="Tanpa Aksesoris">Tanpa Aksesoris</option>
+                            <option value="Lem Silicone Pcs">Lem Silicone Pcs</option>
+                            <option value="Aksesoris Aluminium Set">Aksesoris Aluminium Set</option>
+                            <option value="Handle Pintu Stainless">Handle Pintu Stainless</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label>Prioritas Order:</label>
+                            <select id="orderPriority" onchange="calculateOrderPrice()">
+                                <option value="Biasa">Biasa (Reguler)</option>
+                                <option value="Prioritas">Prioritas / Buru-buru (+ Priority Fee)</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Target Deadline Selesai:</label>
+                            <input type="date" id="orderDeadline" required>
+                        </div>
+                    </div>
+
+                    <div class="price-calculation-summary glass-panel">
+                        <div>Subtotal Kaca: <span id="lblSubtotal">Rp 450.000</span></div>
+                        <div>Priority Fee: <span id="lblPriorityFee">Rp 0</span></div>
+                        <div><strong>Total Harga Orderan: <span id="lblTotalOrder" class="text-success">Rp 450.000</span></strong></div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="saveOrderAsDraft()">Simpan Sebagai Draf</button>
+                        <button type="submit" class="btn-primary"><i class="fa-solid fa-paper-plane"></i> Kirim Langsung Ke Admin Gudang</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CETAK SURAT JALAN 4 WARNA -->
+    <div class="modal-overlay" id="modalWaybill" style="display: none;">
+        <div class="modal-card glass-panel modal-lg">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-print"></i> Cetak Surat Jalan Pengiriman (4 Lembar Warna)</h3>
+                <button class="close-btn" onclick="closeModal('modalWaybill')">&times;</button>
+            </div>
+            <div class="modal-body" id="printableWaybillArea">
+                <!-- Injected Printable Waybill Sheet -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalWaybill')">Batal</button>
+                <button class="btn-primary" onclick="confirmPrintWaybill()"><i class="fa-solid fa-print"></i> Konfirmasi & Cetak Surat Jalan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: REVISI ORDERAN -->
+    <div class="modal-overlay" id="modalRevision" style="display: none;">
+        <div class="modal-card glass-panel">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Kirim Revisi Orderan Ke Divisi</h3>
+                <button class="close-btn" onclick="closeModal('modalRevision')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Orderan ini saat ini berada di: <strong id="revCurrentDiv" class="text-warning">Divisi HT</strong></p>
+                <div class="form-group">
+                    <label>Detail Instruksi Revisi Ukuran / Spesifikasi:</label>
+                    <textarea id="revNotes" rows="4" placeholder="Contoh: Ukuran kaca diubah dari 150cm ke 145cm. Harap sesuaikan potongannya!"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="submitOrderRevision()"><i class="fa-solid fa-paper-plane"></i> Submit Revisi Prioritas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: INPUT SISA KACA POTONGAN (DIVISI HT) -->
+    <div class="modal-overlay" id="modalInputScrap" style="display: none;">
+        <div class="modal-card glass-panel">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-recycle"></i> Form Input Kaca Sisa Hasil Pemotongan</h3>
+                <button class="close-btn" onclick="closeModal('modalInputScrap')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formScrap" onsubmit="saveScrapGlass(event)">
+                    <div class="form-group">
+                        <label>Jenis Kaca Sisa:</label>
+                        <input type="text" id="scrapType" required value="Kaca Cermin 5mm Polos">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label>Sisa Panjang (cm):</label>
+                            <input type="number" id="scrapLength" required value="30">
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Sisa Lebar (cm):</label>
+                            <input type="number" id="scrapWidth" required value="40">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Simpan di Rak Penyimpanan Sisa:</label>
+                        <div class="form-row">
+                            <div class="col-6">
+                                <select id="scrapRakZone">
+                                    <option value="A">Rak Sisa A</option>
+                                    <option value="B">Rak Sisa B</option>
+                                    <option value="F" selected>Rak Sisa F</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <select id="scrapRakNum">
+                                    <option value="1">Nomor 1</option>
+                                    <option value="7" selected>Nomor 7 (F7)</option>
+                                    <option value="9">Nomor 9 (F9)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn-primary">Simpan Stok Kaca Sisa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT MAIN -->
+    <script src="script.js"></script>
+</body>
+</html>
