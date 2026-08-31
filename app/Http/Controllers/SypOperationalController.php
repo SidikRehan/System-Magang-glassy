@@ -52,9 +52,9 @@ class SypOperationalController extends Controller
             'customer_phone' => 'required|string',
             'customer_address' => 'required|string',
             'glass_type' => 'nullable|string',
-            'length_cm' => 'nullable|numeric',
-            'width_cm' => 'nullable|numeric',
-            'thickness_mm' => 'nullable|integer',
+            'length_cm' => 'nullable',
+            'width_cm' => 'nullable',
+            'thickness_mm' => 'nullable',
             'processes' => 'nullable|array',
             'items' => 'nullable|array',
             'accessories' => 'nullable|array',
@@ -99,9 +99,9 @@ class SypOperationalController extends Controller
             $items[] = $calc;
         }
 
-        $priorityFee = $request->filled('priority_fee') 
-            ? (float) $request->input('priority_fee') 
-            : ($validated['priority_status'] === 'Prioritas' ? 150000 : 0);
+        $priorityFee = $validated['priority_status'] === 'Prioritas' 
+            ? (float) $request->input('priority_fee', 0) 
+            : 0;
 
         $customFee = $request->filled('custom_fee') ? (float) $request->input('custom_fee') : 0;
         
@@ -131,26 +131,23 @@ class SypOperationalController extends Controller
             $sketchPath = $request->file('sketch_photo')->store('sketches', 'public');
         }
 
-        // Handle flexible payment selection (DP % or Lunas)
-        $paymentOption = $request->input('payment_option', 'dp');
-        $dpPercent = (float)$request->input('dp_percent', 50);
+        // Handle flexible payment selection (Cash, Transfer, QRIS with Auto DP / Lunas)
+        $paymentMethod = $request->input('payment_method', 'cash');
+        $rawPaid = $request->input('custom_paid_amount', $request->input('paid_amount', null));
 
         if ($isDraft) {
-            $paidAmount = 0;
+            $paidAmount = (float)($rawPaid ?? 0);
             $paymentStatus = 'Belum Lunas';
         } else {
-            if ($paymentOption === 'lunas') {
+            $paidAmount = $request->filled('custom_paid_amount') ? (float)$rawPaid : round(($totalPrice * (float)$request->input('dp_percent', 50)) / 100);
+            if ($paidAmount >= $totalPrice && $totalPrice > 0) {
                 $paidAmount = $totalPrice;
                 $paymentStatus = 'Lunas';
+            } else if ($paidAmount > 0) {
+                $calcPct = round(($paidAmount / max(1, $totalPrice)) * 100);
+                $paymentStatus = 'DP (' . $calcPct . '%)';
             } else {
-                if ($request->filled('custom_paid_amount') && (float)$request->input('custom_paid_amount') > 0) {
-                    $paidAmount = (float)$request->input('custom_paid_amount');
-                    $calcPct = round(($paidAmount / max(1, $totalPrice)) * 100);
-                    $paymentStatus = 'DP (' . $calcPct . '%)';
-                } else {
-                    $paidAmount = round(($totalPrice * $dpPercent) / 100);
-                    $paymentStatus = 'DP (' . round($dpPercent) . '%)';
-                }
+                $paymentStatus = 'Belum Lunas';
             }
         }
 
@@ -208,9 +205,9 @@ class SypOperationalController extends Controller
             'customer_phone' => 'required|string',
             'customer_address' => 'required|string',
             'glass_type' => 'nullable|string',
-            'length_cm' => 'nullable|numeric',
-            'width_cm' => 'nullable|numeric',
-            'thickness_mm' => 'nullable|integer',
+            'length_cm' => 'nullable',
+            'width_cm' => 'nullable',
+            'thickness_mm' => 'nullable',
             'processes' => 'nullable|array',
             'items' => 'nullable|array',
             'accessories' => 'nullable|array',
@@ -251,9 +248,9 @@ class SypOperationalController extends Controller
             $items[] = $calc;
         }
 
-        $priorityFee = $request->filled('priority_fee') 
-            ? (float) $request->input('priority_fee') 
-            : ($validated['priority_status'] === 'Prioritas' ? 150000 : 0);
+        $priorityFee = $validated['priority_status'] === 'Prioritas' 
+            ? (float) $request->input('priority_fee', 0) 
+            : 0;
 
         $customFee = $request->filled('custom_fee') ? (float) $request->input('custom_fee') : 0;
 
@@ -308,19 +305,21 @@ class SypOperationalController extends Controller
 
         if ($isPromoted || $targetStatus === 'pengerjaan') {
             $order->status = 'pengerjaan';
-            if ($paymentOption === 'lunas') {
+            $rawPaid = $request->input('custom_paid_amount', $request->input('paid_amount', null));
+            $paidAmount = $request->filled('custom_paid_amount') ? (float)$rawPaid : round(($totalPrice * (float)$request->input('dp_percent', 50)) / 100);
+
+            if ($paidAmount >= $totalPrice && $totalPrice > 0) {
                 $order->paid_amount = $totalPrice;
                 $order->payment_status = 'Lunas';
+            } else if ($paidAmount > 0) {
+                $order->paid_amount = $paidAmount;
+                $calcPct = round(($paidAmount / max(1, $totalPrice)) * 100);
+                $order->payment_status = 'DP (' . $calcPct . '%)';
             } else {
-                if ($request->filled('custom_paid_amount') && (float)$request->input('custom_paid_amount') > 0) {
-                    $order->paid_amount = (float)$request->input('custom_paid_amount');
-                    $calcPct = round(($order->paid_amount / max(1, $totalPrice)) * 100);
-                    $order->payment_status = 'DP (' . $calcPct . '%)';
-                } else {
-                    $order->paid_amount = round(($totalPrice * $dpPercent) / 100);
-                    $order->payment_status = 'DP (' . round($dpPercent) . '%)';
-                }
+                $order->paid_amount = 0;
+                $order->payment_status = 'Belum Lunas';
             }
+
             if ($isPromoted) {
                 $order->current_division = 'admin_gudang';
                 $order->division_progress = [
@@ -331,7 +330,7 @@ class SypOperationalController extends Controller
                 ];
             }
         } else if ($order->status === 'draft') {
-            $order->paid_amount = 0;
+            $order->paid_amount = $request->filled('custom_paid_amount') ? (float)$request->input('custom_paid_amount') : 0;
             $order->payment_status = 'Belum Lunas';
         }
 
@@ -443,16 +442,71 @@ class SypOperationalController extends Controller
     }
 
     /**
-     * Complete Division Work
+     * Start Working on Division Job (Menunggu -> Sedang Dikerjakan)
      */
-    public function finishDivisionJob($id)
+    public function startDivisionJob(Request $request, $id)
     {
         $order = Order::findOrFail($id);
-        $order->status = 'pengiriman';
-        $order->current_division = 'QC_Ready';
+        $userRole = auth()->user()->role ?? '';
+
+        if ($userRole !== $order->current_division && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Anda hanya memiliki izin untuk memulai pengerjaan pada divisi Anda sendiri!');
+        }
+
+        $currentDiv = $order->current_division;
+        $currentDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
+        $progress = (array) ($order->division_progress ?? []);
+        if ($currentDivKey) {
+            $progress[$currentDivKey] = 'Sedang Dikerjakan';
+        }
+
+        $order->division_progress = $progress;
         $order->save();
 
-        return redirect()->back()->with('message', 'Pekerjaan Divisi untuk ' . $order->spo_number . ' Selesai! Siap Kirim.');
+        return redirect()->back()->with('message', 'Order #' . $order->spo_number . ' Berhasil Dimulai! Status saat ini: Sedang Dikerjakan di Divisi ' . $currentDivKey);
+    }
+
+    /**
+     * Complete Division Work or Transfer to Next Division
+     */
+    public function finishDivisionJob(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $userRole = auth()->user()->role ?? '';
+
+        // Strict Authorization: Only assigned division staff, admin_gudang, or owner can execute
+        if ($userRole !== $order->current_division && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Anda hanya memiliki izin untuk mengeksekusi pekerjaan pada divisi Anda sendiri!');
+        }
+
+        $currentDiv = $order->current_division;
+        $nextDiv = $request->input('next_division', 'QC_Ready');
+
+        $currentDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
+        $progress = (array) ($order->division_progress ?? []);
+        if ($currentDivKey) {
+            $progress[$currentDivKey] = 'Selesai';
+        }
+
+        if ($nextDiv === 'QC_Ready' || $nextDiv === 'pengiriman') {
+            $order->status = 'pengiriman';
+            $order->current_division = 'QC_Ready';
+            $order->division_progress = $progress;
+            $order->save();
+            $msg = 'Pekerjaan Divisi untuk #' . $order->spo_number . ' Selesai & Lolos QC! Siap Dikirim ke Driver.';
+        } else {
+            $nextDivKey = strtoupper(str_replace('divisi_', '', $nextDiv));
+            $progress[$nextDivKey] = 'Sedang Dikerjakan';
+            $order->status = 'pengerjaan';
+            $order->current_division = $nextDiv;
+            $order->division_progress = $progress;
+            $order->save();
+
+            $nextDivLabel = strtoupper(str_replace('_', ' ', $nextDiv));
+            $msg = 'Pekerjaan #' . $order->spo_number . ' Selesai di ' . $currentDivKey . ' & Berhasil Diteruskan ke ' . $nextDivLabel . '!';
+        }
+
+        return redirect()->back()->with('message', $msg);
     }
 
     /**
@@ -460,11 +514,22 @@ class SypOperationalController extends Controller
      */
     private function calculateItemPricing(array $it): array
     {
-        $l = (float)($it['length_cm'] ?? 100);
-        $w = (float)($it['width_cm'] ?? 100);
-        $t = (int)($it['thickness_mm'] ?? 5);
-        $q = max(1, (int)($it['qty'] ?? 1));
+        $lRaw = str_replace(',', '.', (string)($it['length_cm'] ?? 100));
+        $wRaw = str_replace(',', '.', (string)($it['width_cm'] ?? 100));
+        $l = (float)$lRaw;
+        $w = (float)$wRaw;
+
         $gt = $it['glass_type'] ?? 'Kaca Cermin 5 mm polos';
+        
+        // Auto extract thickness from glass_type if present (e.g. 5, 8, 12)
+        $t = 5;
+        if (preg_match('/(\d+)\s*(?:mm|mili)/i', $gt, $matches)) {
+            $t = (int)$matches[1];
+        } elseif (isset($it['thickness_mm']) && (int)$it['thickness_mm'] > 0) {
+            $t = (int)$it['thickness_mm'];
+        }
+
+        $q = max(1, (int)($it['qty'] ?? 1));
         $procs = is_array($it['processes'] ?? null) ? $it['processes'] : ['HT'];
 
         // 1. Luas & Keliling
@@ -481,19 +546,19 @@ class SypOperationalController extends Controller
         $feeHT = in_array('HT', $procs) ? round($perimeterM * 1000) * $q : 0;
 
         // 5. Biaya BV (Beveling): Rp 15.000/m keliling + Lebar Bevel cm * Rp 10.000
-        $bevelWidthCm = (float)($it['bevel_width_cm'] ?? 1);
+        $bevelWidthCm = (float)str_replace(',', '.', (string)($it['bevel_width_cm'] ?? 1));
         $feeBV = in_array('BV', $procs) ? round(($perimeterM * 15000) + ($bevelWidthCm * 10000)) * $q : 0;
 
         // 6. Biaya Bor (Coakan): Keliling ruas lubang cm * Rp 2.500 * jumlah lubang
-        $holeLCm = (float)($it['hole_length_cm'] ?? 2);
-        $holeWCm = (float)($it['hole_width_cm'] ?? 2);
+        $holeLCm = (float)str_replace(',', '.', (string)($it['hole_length_cm'] ?? 2));
+        $holeWCm = (float)str_replace(',', '.', (string)($it['hole_width_cm'] ?? 2));
         $holeQty = max(1, (int)($it['hole_qty'] ?? 1));
         $holeRuasCm = 2 * ($holeLCm + $holeWCm);
         $feeBor = in_array('Bor', $procs) ? round($holeRuasCm * 2500) * $holeQty * $q : 0;
 
         // 7. Biaya Etsa (Sandblast): Langsung dihitung dari Luas Area Etsa (m2)
-        $etsaLCm = (float)($it['etsa_length_cm'] ?? $l);
-        $etsaWCm = (float)($it['etsa_width_cm'] ?? $w);
+        $etsaLCm = (float)str_replace(',', '.', (string)($it['etsa_length_cm'] ?? $l));
+        $etsaWCm = (float)str_replace(',', '.', (string)($it['etsa_width_cm'] ?? $w));
         $etsaQty = max(1, (int)($it['etsa_qty'] ?? 1));
         $etsaAreaM2 = ($etsaLCm * $etsaWCm) / 10000;
 

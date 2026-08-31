@@ -9,19 +9,34 @@ use Illuminate\Support\Facades\Hash;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database with 8 Role Accounts.
+     * Seed the application's database with Multi-Staff & Role Accounts.
      */
     public function run(): void
     {
         $password = Hash::make('password');
 
         $users = [
+            // Admin Toko Accounts (Multi-Staff Kasir & Sales Toko)
             [
                 'name' => 'Admin Toko Utama',
                 'email' => 'toko@sypglass.co.id',
                 'role' => 'admin_toko',
                 'password' => $password,
             ],
+            [
+                'name' => 'Kasir Toko 1 - Ani',
+                'email' => 'toko1@sypglass.co.id',
+                'role' => 'admin_toko',
+                'password' => $password,
+            ],
+            [
+                'name' => 'Kasir Toko 2 - Doni',
+                'email' => 'toko2@sypglass.co.id',
+                'role' => 'admin_toko',
+                'password' => $password,
+            ],
+
+            // Gudang & Divisi Operasional Accounts
             [
                 'name' => 'Admin Gudang Manufaktur',
                 'email' => 'gudang@sypglass.co.id',

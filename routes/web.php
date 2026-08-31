@@ -18,6 +18,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{id}/update', [SypOperationalController::class, 'updateOrder'])->name('orders.update');
     Route::post('/orders/{id}/promote', [SypOperationalController::class, 'promoteDraftToPengerjaan'])->name('orders.promote');
     Route::post('/orders/{id}/dispatch', [SypOperationalController::class, 'dispatchOrderToDivision'])->name('orders.dispatch');
+    Route::post('/orders/{id}/start-job', [SypOperationalController::class, 'startDivisionJob'])->name('orders.start');
     Route::post('/orders/{id}/revision', [SypOperationalController::class, 'submitRevision'])->name('orders.revision');
     Route::post('/orders/{id}/finish-job', [SypOperationalController::class, 'finishDivisionJob'])->name('orders.finish');
 
