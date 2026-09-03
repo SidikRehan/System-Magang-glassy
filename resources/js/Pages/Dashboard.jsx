@@ -9,6 +9,35 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
     const canViewPricing = userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance';
 
     const [activeTab, setActiveTab] = useState('dashboard');
+
+    const formatIndonesianDate = (dateStr) => {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    };
+
+    const formatIndonesianDateTime = (dateTimeStr) => {
+        if (!dateTimeStr) return '-';
+        const d = new Date(dateTimeStr);
+        if (isNaN(d.getTime())) return dateTimeStr;
+        const datePart = d.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        const timePart = d.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        return `${datePart}, ${timePart} WIB`;
+    };
     const [activeOrderCard, setActiveOrderCard] = useState('draft');
     const [searchTerm, setSearchTerm] = useState('');
     const [showNewOrderModal, setShowNewOrderModal] = useState(false);
@@ -35,6 +64,8 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
     // Stock Management (Bahan Kaca Lembaran Baru & Sisa) State
     const [activeStockCard, setActiveStockCard] = useState('all');
     const [stockSearchTerm, setStockSearchTerm] = useState('');
+    const [showTableSupplierInfo, setShowTableSupplierInfo] = useState(false);
+    const [showTablePricingInfo, setShowTablePricingInfo] = useState(false);
     const [showRestockModal, setShowRestockModal] = useState(false);
     const [selectedStockItem, setSelectedStockItem] = useState(null);
     const [restockQtyInput, setRestockQtyInput] = useState(10);
@@ -42,6 +73,59 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
     const isDivisionWorker = userRole.startsWith('divisi_');
     const [stockSubTab, setStockSubTab] = useState('lembaran');
     const [productionSubTab, setProductionSubTab] = useState(isDivisionWorker ? `${userRole}_active` : 'all');
+
+    // Disposisi & Divisi Working Order & Execution Modal & Scrap Glass Popup State
+    const [selectedWorkingOrder, setSelectedWorkingOrder] = useState(null);
+    const [showExecutionModal, setShowExecutionModal] = useState(false);
+    const [selectedExecutionOrder, setSelectedExecutionOrder] = useState(null);
+    const [showScrapPopupModal, setShowScrapPopupModal] = useState(false);
+    const [scrapPopupForm, setScrapPopupForm] = useState({
+        glass_type: '',
+        length_cm: '',
+        width_cm: '',
+        rak_location: 'Rak A02'
+    });
+
+    const handleOpenExecutionModal = (order) => {
+        setSelectedExecutionOrder(order);
+        setShowExecutionModal(true);
+
+        const cKey = order.current_division.replace('divisi_', '').toUpperCase();
+        const cStatus = (order.division_progress && order.division_progress[cKey]) ? order.division_progress[cKey] : 'Belum';
+        if (cStatus !== 'Sedang Dikerjakan' && cStatus !== 'Selesai') {
+            router.post(route('orders.start', order.id), {}, { preserveScroll: true });
+        }
+    };
+
+    const handleFinishJobSubmit = (orderId, targetDiv) => {
+        router.post(route('orders.finish', orderId), { next_division: targetDiv }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowExecutionModal(false);
+                setSelectedExecutionOrder(null);
+            }
+        });
+    };
+
+    const handleOpenScrapPopup = (glassItem) => {
+        setScrapPopupForm({
+            glass_type: glassItem?.glass_type || 'Kaca Cermin 5 mm polos',
+            length_cm: '',
+            width_cm: '',
+            rak_location: 'Rak A02'
+        });
+        setShowScrapPopupModal(true);
+    };
+
+    const handleSaveScrapFromPopup = (e) => {
+        e.preventDefault();
+        router.post(route('scrap.store'), scrapPopupForm, {
+            onSuccess: () => {
+                setShowScrapPopupModal(false);
+                setScrapPopupForm({ glass_type: '', length_cm: '', width_cm: '', rak_location: 'Rak A02' });
+            }
+        });
+    };
 
     const checkOrderDivisi = (o, divKey) => {
         if (!o) return false;
@@ -1167,6 +1251,205 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         return parseFloat(digits) || 0;
     };
 
+    const sanitizeCustomerName = (val) => {
+        if (val === null || val === undefined) return '';
+        // Allow letters, spaces, apostrophes, dots, and hyphens (stripping numbers & symbols)
+        return String(val).replace(/[^a-zA-Z\s'.`-]/g, '');
+    };
+
+    const sanitizeCustomerPhone = (val) => {
+        if (val === null || val === undefined) return '';
+        // Allow digits, plus sign, hyphens, and spaces (stripping non-phone characters)
+        return String(val).replace(/[^0-9+\-\s]/g, '');
+    };
+
+    const getDynamicGlassTypes = (stockList) => {
+        const defaultTypes = [
+            'Kaca Cermin 5 mm polos',
+            'Kaca Cermin Grey 5 mm',
+            'Kaca Bening 5 mm polos',
+            'Kaca Bening 8 mm polos',
+            'Kaca Bening 10 mm polos',
+            'Kaca Jumbo Polos 12 mm',
+            'Kaca Dark Grey 5 mm',
+            'Kaca Frosted Etsa Sandblast 5 mm',
+            'Kaca 12 mm Polos Tempered'
+        ];
+
+        const stockTypes = (stockList || []).map(g => g.name || g.glass_type).filter(Boolean);
+        return Array.from(new Set([...defaultTypes, ...stockTypes]));
+    };
+
+    const formatNumberDots = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        const cleanNum = String(val).replace(/[^0-9]/g, '');
+        if (!cleanNum) return '';
+        return Number(cleanNum).toLocaleString('id-ID');
+    };
+
+    const parseNumberDots = (val) => {
+        if (!val) return '';
+        return String(val).replace(/[^0-9]/g, '');
+    };
+
+    const [customScrapQtyMap, setCustomScrapQtyMap] = useState({});
+
+    const parseSelectedScrapsFromForm = (usedScrapStr) => {
+        if (!usedScrapStr || typeof usedScrapStr !== 'string') return [];
+        const regex = /([A-Z0-9-]+)\s*\(([^,]+),\s*([^=]+)=\s*(\d+)\s*lbr\)/g;
+        const matches = [];
+        let match;
+        while ((match = regex.exec(usedScrapStr)) !== null) {
+            matches.push({
+                code: match[1].trim(),
+                rak: match[2].trim(),
+                size: match[3].trim(),
+                qty: parseInt(match[4]) || 1
+            });
+        }
+        return matches;
+    };
+
+    const handleToggleIndividualScrap = (m, chosenQty, itemQty) => {
+        const code = m.scrap.scrap_code;
+        const rak = m.scrap.rak_location;
+        const size = `${m.scrap.length_cm}x${m.scrap.width_cm}cm`;
+
+        const currentSelected = parseSelectedScrapsFromForm(orderForm.used_scrap_rak);
+        const existingIdx = currentSelected.findIndex(s => s.code === code);
+
+        let updatedList = [];
+        if (existingIdx >= 0) {
+            updatedList = currentSelected.filter(s => s.code !== code);
+        } else {
+            updatedList = [...currentSelected, { code, rak, size, qty: chosenQty }];
+        }
+
+        if (updatedList.length === 0) {
+            setOrderForm(d => ({ ...d, used_scrap_rak: '' }));
+            return;
+        }
+
+        const totalScrapQty = updatedList.reduce((sum, s) => sum + s.qty, 0);
+        const neededNewGlass = Math.max(0, itemQty - totalScrapQty);
+
+        const formattedScrapStr = updatedList.map(s => `${s.code} (${s.rak}, ${s.size} = ${s.qty} lbr)`).join(', ')
+            + (neededNewGlass > 0 ? ` + ${neededNewGlass} lbr bahan baru` : '');
+
+        setOrderForm(d => ({ ...d, used_scrap_rak: formattedScrapStr }));
+    };
+
+    const handleUpdateIndividualScrapQty = (m, newQty, itemQty) => {
+        const code = m.scrap.scrap_code;
+        const rak = m.scrap.rak_location;
+        const size = `${m.scrap.length_cm}x${m.scrap.width_cm}cm`;
+
+        setCustomScrapQtyMap(prev => ({ ...prev, [code]: newQty }));
+
+        const currentSelected = parseSelectedScrapsFromForm(orderForm.used_scrap_rak);
+        const existingIdx = currentSelected.findIndex(s => s.code === code);
+
+        if (existingIdx >= 0) {
+            const updatedList = currentSelected.map(s => s.code === code ? { ...s, qty: newQty } : s);
+            const totalScrapQty = updatedList.reduce((sum, s) => sum + s.qty, 0);
+            const neededNewGlass = Math.max(0, itemQty - totalScrapQty);
+
+            const formattedScrapStr = updatedList.map(s => `${s.code} (${s.rak}, ${s.size} = ${s.qty} lbr)`).join(', ')
+                + (neededNewGlass > 0 ? ` + ${neededNewGlass} lbr bahan baru` : '');
+
+            setOrderForm(d => ({ ...d, used_scrap_rak: formattedScrapStr }));
+        }
+    };
+
+    const calculateScrapYield = (scrapLen, scrapWid, itemLen, itemWid) => {
+        if (scrapLen <= 0 || scrapWid <= 0 || itemLen <= 0 || itemWid <= 0) return 0;
+        const yieldLenNorm = Math.floor(scrapLen / itemLen);
+        const yieldWidNorm = Math.floor(scrapWid / itemWid);
+        const yieldNorm = yieldLenNorm * yieldWidNorm;
+
+        const yieldLenRot = Math.floor(scrapLen / itemWid);
+        const yieldWidRot = Math.floor(scrapWid / itemLen);
+        const yieldRot = yieldLenRot * yieldWidRot;
+
+        return Math.max(yieldNorm, yieldRot);
+    };
+
+    const findMatchingScrapsForOrder = (item, scrapList) => {
+        if (!item || !Array.isArray(scrapList) || scrapList.length === 0) return null;
+        const rawItemLen = parseDim(item.length_cm);
+        const rawItemWid = parseDim(item.width_cm);
+        const itemQty = Math.max(1, parseInt(item.qty) || 1);
+        if (rawItemLen <= 0 || rawItemWid <= 0) return null;
+
+        // Check if Gosok Mesin (GM) process is required (only GM consumes +1 cm margin)
+        const processes = item.processes || [];
+        const hasEdgeGrinding = processes.includes('GM');
+        const edgeMarginCm = hasEdgeGrinding ? 1.0 : 0.0;
+
+        // Effective dimensions required for raw cut (adding +1 cm margin if GM)
+        const itemLen = rawItemLen + edgeMarginCm;
+        const itemWid = rawItemWid + edgeMarginCm;
+
+        const itemType = (item.glass_type || '').toLowerCase();
+        const itemThickness = extractThickness(item.glass_type);
+
+        const candidates = [];
+        scrapList.forEach(s => {
+            if (s.status && s.status !== 'Layak Pakai') return;
+
+            const sLen = parseFloat(s.length_cm) || 0;
+            const sWid = parseFloat(s.width_cm) || 0;
+            const y = calculateScrapYield(sLen, sWid, itemLen, itemWid);
+            if (y <= 0) return;
+
+            const sType = (s.glass_type || '').toLowerCase();
+            const sThickness = extractThickness(s.glass_type);
+
+            if (itemThickness && sThickness && itemThickness !== sThickness) return;
+
+            const keywords = ['cermin', 'bening', 'riben', 'jumbo', 'es', 'tempered'];
+            for (const kw of keywords) {
+                if (itemType.includes(kw) && !sType.includes(kw)) return;
+            }
+
+            candidates.push({
+                scrap: s,
+                yieldPerSheet: y,
+                scrapArea: sLen * sWid
+            });
+        });
+
+        if (candidates.length === 0) return null;
+
+        candidates.sort((a, b) => a.scrapArea - b.scrapArea);
+
+        let remainingNeeded = itemQty;
+        let totalScrapCovered = 0;
+        const matchedScraps = [];
+
+        for (const cand of candidates) {
+            if (remainingNeeded <= 0) break;
+            const takeFromThisScrap = Math.min(remainingNeeded, cand.yieldPerSheet);
+            totalScrapCovered += takeFromThisScrap;
+            remainingNeeded -= takeFromThisScrap;
+            matchedScraps.push({
+                ...cand,
+                usedQty: takeFromThisScrap
+            });
+        }
+
+        const neededNewGlass = Math.max(0, itemQty - totalScrapCovered);
+
+        return {
+            totalScrapCovered,
+            neededNewGlass,
+            itemQty,
+            hasEdgeGrinding,
+            edgeMarginCm,
+            matchedScraps
+        };
+    };
+
     const handleAddItem = () => {
         const currentItems = orderForm.items || [];
         const newItem = {
@@ -2015,7 +2298,27 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     <tbody className="divide-y divide-slate-800">
                                         {filteredOrders.map(o => (
                                             <tr key={o.id} className="hover:bg-slate-800/30">
-                                                <td className="p-3 font-bold text-cyan-400">{o.spo_number}</td>
+                                                <td className="p-3">
+                                                    <div className="font-bold text-cyan-400 font-mono text-sm">{o.spo_number}</div>
+                                                    <div className="mt-1.5 space-y-1 text-[11px] font-mono">
+                                                        <div className="text-slate-300 flex items-center gap-1" title="Tanggal Pembuatan Order (Admin Toko)">
+                                                            <span>📅</span>
+                                                            <span>{formatIndonesianDate(o.order_date)}</span>
+                                                        </div>
+                                                        {o.gudang_released_at && (
+                                                            <div className="text-blue-300 flex items-center gap-1 text-[10px]" title="Tanggal Diturunkan Gudang (Admin Gudang)">
+                                                                <span>📦</span>
+                                                                <span>{formatIndonesianDateTime(o.gudang_released_at)}</span>
+                                                            </div>
+                                                        )}
+                                                        {o.execution_completed_at && (
+                                                            <div className="text-emerald-300 flex items-center gap-1 text-[10px]" title="Tanggal Selesai Eksekusi Divisi">
+                                                                <span>✅</span>
+                                                                <span>{formatIndonesianDateTime(o.execution_completed_at)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="p-3">
                                                     <div className="font-bold">{o.customer_name}</div>
                                                     <div className="text-xs text-slate-400">{o.customer_phone}</div>
@@ -2025,6 +2328,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         <div className="space-y-1">
                                                             {o.items.map((it, idx) => (
                                                                 <div key={idx} className="bg-slate-950/60 p-2 rounded border border-slate-800 text-xs space-y-1">
+                                                                    
                                                                     <div className="font-bold text-cyan-300">
                                                                         #{idx + 1}. {it.glass_type}
                                                                     </div>
@@ -2249,14 +2553,18 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                     <div className="text-xs text-slate-300 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800/80 space-y-1">
                                                         <div className="font-semibold text-slate-200">Kaca: {o.glass_type}</div>
                                                         <div className="text-slate-400 font-mono">Ukuran: {o.length_cm} x {o.width_cm} cm ({o.thickness_mm}mm)</div>
+                                                        <div className="text-[11px] text-cyan-300 font-mono pt-1.5 border-t border-slate-800/80">
+                                                            📅 Pembuatan Order: <strong className="text-cyan-400">{formatIndonesianDate(o.order_date)}</strong>
+                                                        </div>
                                                     </div>
                                                     <div className="flex justify-between items-center pt-1">
                                                         <span className="text-[11px] text-slate-400 font-mono">📅 Deadline: {o.deadline_date || '-'}</span>
                                                         <button 
                                                             onClick={() => { setSelectedDispatchOrder(o); setShowDispatchModal(true); }} 
-                                                            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold px-3.5 py-1.5 rounded-lg text-xs shadow-md transition flex items-center gap-1"
+                                                            className="group relative inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-300/40 overflow-hidden cursor-pointer"
                                                         >
-                                                            📤 Disposisi Divisi →
+                                                            <span>📤 Disposisi Divisi</span>
+                                                            <span className="transition-transform group-hover:translate-x-1 duration-200">➔</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -2266,227 +2574,205 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 </div>
                             )}
 
-                            {/* SECTION B: WORKSTATION ACTIVE PENGERJAAN CARDS */}
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                                    <h3 className="text-lg font-extrabold text-slate-100 flex items-center gap-2">
-                                        🔨 Pengerjaan Workstation Divisi Pabrik
-                                    </h3>
-                                </div>
+                            {/* SECTION B: WORKSTATION ACTIVE PENGERJAAN & DISPOSISI LAYOUT (SEPERTI SKETSA USER) */}
+                            <div className="space-y-6">
 
-                                {(() => {
-                                    const filteredWorkstationOrders = initialOrders.filter(o => {
-                                        if (isDivisionWorker) {
-                                            if (productionSubTab === `${userRole}_history`) {
-                                                const code = userRole.replace('divisi_', '').toUpperCase();
-                                                const p = o.division_progress || {};
-                                                return o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai');
-                                            }
-                                            return o.current_division === userRole;
-                                        }
-                                        return checkOrderDivisi(o, productionSubTab);
-                                    });
+                                {/* TABEL ANTREAN WORKSTATION DIVISI (PRIORITAS DI PALING ATAS) */}
+                                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                                    <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-3">
+                                        <div>
+                                            <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                                                📋 Tabel Antrean Workstation Divisi
+                                            </h3>
+                                            <p className="text-xs text-slate-400 mt-0.5">
+                                                Order berstatus <strong className="text-rose-400">🔥 PRIORITAS</strong> otomatis diurutkan di paling atas.
+                                            </p>
+                                        </div>
 
-                                    if (filteredWorkstationOrders.length === 0) {
-                                        return (
-                                            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-10 text-center space-y-2">
-                                                <div className="text-3xl">⚙️</div>
-                                                <h4 className="font-extrabold text-slate-300 text-base">Tidak Ada Pengerjaan di Divisi Ini Saat Ini</h4>
-                                                <p className="text-xs text-slate-500">Semua orderan di workstation ini telah selesai dikerjakan atau belum didispatch oleh Gudang.</p>
-                                            </div>
-                                        );
-                                    }
+                                        {/* STATISTIK MASUK & SELESAI HARI INI */}
+                                        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                                            {(() => {
+                                                const todayStr = new Date().toISOString().split('T')[0];
+                                                const curKey = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'HT';
 
-                                    return (
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                            {filteredWorkstationOrders.map(o => {
-                                                const isQC = o.current_division === 'QC_Ready';
-                                                const isMyDiv = (userRole === o.current_division || userRole === 'admin_gudang' || userRole === 'owner');
+                                                const enteredToday = initialOrders.filter(o => {
+                                                    const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                                    return ts.started_at && ts.started_at.startsWith(todayStr);
+                                                }).length;
+
+                                                const completedToday = initialOrders.filter(o => {
+                                                    const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                                    return ts.completed_at && ts.completed_at.startsWith(todayStr);
+                                                }).length;
 
                                                 return (
-                                                    <div 
-                                                        key={o.id} 
-                                                        className={`border rounded-2xl p-5 space-y-4 shadow-xl transition relative overflow-hidden ${isQC ? 'bg-emerald-950/20 border-emerald-500/40' : 'bg-slate-900/90 border-slate-800 hover:border-cyan-500/40'}`}
-                                                    >
-                                                        {/* CARD TOP HEADER */}
-                                                        <div className="flex justify-between items-start border-b border-slate-800/80 pb-3">
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-black text-cyan-400 font-mono text-lg">{o.spo_number}</span>
-                                                                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${o.priority_status === 'Prioritas' ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-                                                                        {o.priority_status === 'Prioritas' ? '🔥 PRIORITAS' : '🔵 Biasa'}
-                                                                    </span>
-                                                                </div>
-                                                                <h4 className="font-extrabold text-slate-100 text-base mt-1">{o.customer_name}</h4>
-                                                                <p className="text-xs text-slate-400 font-mono mt-0.5">📞 {o.customer_phone} — 📍 {o.customer_address}</p>
-                                                            </div>
+                                                    <>
+                                                        <span className="bg-cyan-500/10 text-cyan-300 px-3 py-1.5 rounded-xl border border-cyan-500/30 flex items-center gap-1.5 shadow-sm">
+                                                            <span>📥 Masuk Hari Ini:</span>
+                                                            <strong className="text-white font-extrabold">{enteredToday} Order</strong>
+                                                        </span>
+                                                        <span className="bg-emerald-500/10 text-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                                                            <span>✅ Selesai Hari Ini:</span>
+                                                            <strong className="text-white font-extrabold">{completedToday} Order</strong>
+                                                        </span>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
 
-                                                            <div className="text-right space-y-1">
-                                                                <span className={`inline-block text-xs font-black px-3 py-1 rounded-full border ${isQC ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'}`}>
-                                                                    {isQC ? '✅ QC Ready (Siap Kirim)' : (roleTitles[o.current_division] || o.current_division)}
-                                                                </span>
-                                                                <div className="text-[11px] text-amber-300 font-mono font-bold">
-                                                                    📅 Deadline: {o.deadline_date || '-'}
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                    {(() => {
+                                        const rawFiltered = initialOrders.filter(o => {
+                                            if (isDivisionWorker) {
+                                                if (productionSubTab === `${userRole}_history`) {
+                                                    const code = userRole.replace('divisi_', '').toUpperCase();
+                                                    const p = o.division_progress || {};
+                                                    return o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai');
+                                                }
+                                                return o.current_division === userRole;
+                                            }
+                                            return checkOrderDivisi(o, productionSubTab);
+                                        });
 
-                                                        {/* PROGRES CHECKLIST BADGES */}
-                                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-2">
-                                                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex justify-between">
-                                                                <span>Tahapan Progres Pengerjaan Divisi:</span>
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {['HT', 'GM', 'BV', 'Etsa'].map(proc => {
-                                                                    const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
-                                                                    const isDone = status === 'Selesai';
-                                                                    const isWorking = status === 'Sedang Dikerjakan';
-                                                                    const isNA = status === 'N/A';
+                                        // CRITICAL REQUIREMENT FROM SKETCH: *urutan jadi prioritas + paling atas
+                                        const sortedWorkstationOrders = [...rawFiltered].sort((a, b) => {
+                                            if (a.priority_status === 'Prioritas' && b.priority_status !== 'Prioritas') return -1;
+                                            if (a.priority_status !== 'Prioritas' && b.priority_status === 'Prioritas') return 1;
+                                            return b.id - a.id;
+                                        });
 
-                                                                    return (
-                                                                        <span 
-                                                                            key={proc} 
-                                                                            className={`text-xs px-2.5 py-1 rounded-lg font-bold font-mono border flex items-center gap-1 ${isDone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : isWorking ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 animate-pulse' : isNA ? 'bg-slate-900 text-slate-600 border-slate-800' : 'bg-slate-900 text-slate-400 border-slate-800'}`}
-                                                                        >
-                                                                            <span>{proc}:</span>
-                                                                            <strong>{status}</strong>
-                                                                        </span>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
+                                        if (sortedWorkstationOrders.length === 0) {
+                                            return (
+                                                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-8 text-center space-y-2">
+                                                    <div className="text-3xl">⚙️</div>
+                                                    <h4 className="font-extrabold text-slate-300 text-base">Tidak Ada Orderan Dalam Antrean saat Ini</h4>
+                                                    <p className="text-xs text-slate-500">Semua orderan di workstation ini telah selesai dikerjakan atau belum didispatch oleh Gudang.</p>
+                                                </div>
+                                            );
+                                        }
 
-                                                        {/* ITEM SPESIFIKASI KACA DETAIL */}
-                                                        <div className="space-y-2">
-                                                            <h5 className="text-xs font-bold text-slate-300">Spesifikasi Item Kaca:</h5>
-                                                            {Array.isArray(o.items) && o.items.length > 0 ? (
-                                                                o.items.map((it, idx) => (
-                                                                    <div key={idx} className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
-                                                                        <div className="font-extrabold text-cyan-300 flex justify-between">
-                                                                            <span>Item #{idx + 1}: {it.glass_type}</span>
-                                                                            <span className="font-mono text-emerald-400">Qty: {it.qty || 1} Pcs</span>
+                                        return (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead className="bg-slate-800/40 text-slate-400 uppercase text-[11px]">
+                                                        <tr>
+                                                            <th className="p-3">No SPO & Prioritas</th>
+                                                            <th className="p-3">Jenis Kaca & Ukuran & Detail</th>
+                                                            <th className="p-3">Progres Tahapan Divisi</th>
+                                                            <th className="p-3 text-right">Aksi Pengerjakan</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-800/80">
+                                                        {sortedWorkstationOrders.map(o => {
+                                                            const isPriority = o.priority_status === 'Prioritas';
+                                                            const isCurrentSelected = selectedWorkingOrder && selectedWorkingOrder.id === o.id;
+
+                                                            return (
+                                                                <tr key={o.id} className={`transition ${isPriority ? 'bg-rose-950/20 hover:bg-rose-950/30' : 'hover:bg-slate-800/30'} ${isCurrentSelected ? 'border-l-4 border-l-cyan-400' : ''}`}>
+                                                                    <td className="p-3 font-mono">
+                                                                        <div className="font-extrabold text-cyan-400 text-sm flex items-center gap-1.5">
+                                                                            <span>{o.spo_number}</span>
+                                                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${isPriority ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                                                                                {isPriority ? '🔥 PRIORITAS' : '🔵 Biasa'}
+                                                                            </span>
                                                                         </div>
-                                                                        <div className="text-slate-400 font-mono">
-                                                                            Ukuran: <strong>{it.length_cm} cm</strong> x <strong>{it.width_cm} cm</strong> (Tebal {it.thickness_mm}mm)
-                                                                        </div>
-                                                                        {Array.isArray(it.processes) && (
-                                                                            <div className="text-[11px] text-slate-300">
-                                                                                Proses: <span className="text-amber-300 font-mono">{it.processes.join(', ')}</span>
+                                                                        <div className="text-slate-300 font-bold text-xs mt-0.5">{o.customer_name}</div>
+                                                                        <div className="text-[10px] text-slate-400 mt-1">📅 Order: {formatIndonesianDate(o.order_date)}</div>
+                                                                        <div className="text-[10px] text-amber-300 font-bold">📅 Deadline: {o.deadline_date || '-'}</div>
+                                                                    </td>
+
+                                                                    <td className="p-3 max-w-xs space-y-1">
+                                                                        {Array.isArray(o.items) && o.items.length > 0 ? (
+                                                                            o.items.map((it, idx) => (
+                                                                                <div key={idx} className="bg-slate-950/60 p-2 rounded border border-slate-800 text-[11px] space-y-0.5">
+                                                                                    <div className="font-bold text-cyan-300">#{idx + 1}. {it.glass_type}</div>
+                                                                                    <div className="text-slate-300 font-mono">{it.length_cm} x {it.width_cm} cm ({it.thickness_mm}mm) — Qty: {it.qty || 1}</div>
+                                                                                </div>
+                                                                            ))
+                                                                        ) : (
+                                                                            <div className="bg-slate-950/60 p-2 rounded border border-slate-800 text-[11px]">
+                                                                                <div className="font-bold text-cyan-300">{o.glass_type}</div>
+                                                                                <div className="text-slate-300 font-mono">{o.length_cm} x {o.width_cm} cm ({o.thickness_mm}mm)</div>
                                                                             </div>
                                                                         )}
-                                                                    </div>
-                                                                ))
-                                                            ) : (
-                                                                <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs">
-                                                                    <div className="font-bold text-cyan-300">{o.glass_type}</div>
-                                                                    <div className="text-slate-400 font-mono">Ukuran: {o.length_cm} x {o.width_cm} cm ({o.thickness_mm}mm)</div>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                                    </td>
 
-                                                        {/* CATATAN & RAK SISA */}
-                                                        <div className="flex flex-wrap justify-between items-center gap-2 text-xs pt-1">
-                                                            {o.used_scrap_rak ? (
-                                                                <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg font-mono font-bold flex items-center gap-1">
-                                                                    ♻️ Potongan Kaca Rak: <strong>{o.used_scrap_rak}</strong>
-                                                                </span>
-                                                            ) : <span></span>}
+                                                                    <td className="p-3">
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            {(() => {
+                                                                                const reqSet = new Set();
+                                                                                if (Array.isArray(o.processes)) o.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                                                                if (Array.isArray(o.items)) {
+                                                                                    o.items.forEach(it => {
+                                                                                        if (Array.isArray(it.processes)) it.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                                                                    });
+                                                                                }
 
-                                                            {o.description && (
-                                                                <span className="text-slate-300 italic text-[11px]">
-                                                                    📝 {o.description}
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                                                const activeProcs = ['HT', 'GM', 'BV', 'Etsa'].filter(proc => {
+                                                                                    // HT (Potong) is ALWAYS mandatory for every glass order
+                                                                                    if (proc === 'HT') return true;
+                                                                                    const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
+                                                                                    if (status !== 'N/A') return true;
+                                                                                    if (reqSet.has(proc.toUpperCase())) return true;
+                                                                                    return false;
+                                                                                });
 
-                                                        {/* ACTION BUTTON FOOTER - TWO STEP WORKFLOW & DIVISION HISTORY */}
-                                                        <div className="pt-3 border-t border-slate-800 flex flex-wrap justify-between items-center gap-3">
-                                                            {(() => {
-                                                                const divCode = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : productionSubTab.replace('divisi_', '').toUpperCase();
-                                                                const pStatusInDiv = (o.division_progress && o.division_progress[divCode]) ? o.division_progress[divCode] : '';
-                                                                const isFinishedInThisDiv = (o.current_division !== userRole && pStatusInDiv === 'Selesai');
+                                                                                const renderList = activeProcs.length > 0 ? activeProcs : ['HT', 'GM', 'BV', 'Etsa'];
 
-                                                                if (isQC) {
-                                                                    return (
-                                                                        <div className="w-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 p-2.5 rounded-xl text-xs font-bold text-center flex items-center justify-center gap-2">
-                                                                            <span>✅ Selesai Dikerjakan Divisi & Siap Diterbitkan Surat Jalan oleh Driver</span>
+                                                                                return renderList.map(proc => {
+                                                                                    const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
+                                                                                    const isDone = status === 'Selesai';
+                                                                                    const isWorking = status === 'Sedang Dikerjakan';
+                                                                                    const isNA = status === 'N/A';
+
+                                                                                    const ts = (o.division_timestamps && o.division_timestamps[proc]) ? o.division_timestamps[proc] : {};
+                                                                                    const timeStr = isDone && ts.completed_at 
+                                                                                        ? formatIndonesianDate(ts.completed_at)
+                                                                                        : (isWorking || ts.started_at) 
+                                                                                        ? formatIndonesianDate(ts.started_at) 
+                                                                                        : null;
+
+                                                                                    return (
+                                                                                        <div key={proc} className="flex flex-col">
+                                                                                            <span 
+                                                                                                className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono border flex items-center gap-1 ${isDone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : isWorking ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 animate-pulse' : isNA ? 'bg-slate-950 text-slate-600 border-slate-900' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                                                                                            >
+                                                                                                <span>{proc}: {status}</span>
+                                                                                            </span>
+                                                                                            {timeStr && (
+                                                                                                <span className="text-[9px] font-mono text-slate-400 mt-0.5 px-0.5">
+                                                                                                    {isDone ? '🏁 ' + timeStr : '📥 ' + timeStr}
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    );
+                                                                                });
+                                                                            })()}
                                                                         </div>
-                                                                    );
-                                                                }
+                                                                    </td>
 
-                                                                if (isFinishedInThisDiv && (isDivisionWorker || productionSubTab.startsWith('divisi_'))) {
-                                                                    return (
-                                                                        <div className="w-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 p-2.5 rounded-xl text-xs font-bold flex flex-wrap justify-between items-center gap-2">
-                                                                            <span className="flex items-center gap-1.5">
-                                                                                ✅ Riwayat: Telah Selesai Dikerjakan oleh Divisi Ini ({divCode})
-                                                                            </span>
-                                                                            <span className="text-[11px] bg-slate-900 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 font-mono">
-                                                                                📍 Lokasi Sekarang: {roleTitles[o.current_division] || o.current_division}
-                                                                            </span>
-                                                                        </div>
-                                                                    );
-                                                                }
+                                                                    <td className="p-3 text-right">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleOpenExecutionModal(o)}
+                                                                            className="group relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/50 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-400/40 overflow-hidden cursor-pointer ml-auto"
+                                                                        >
+                                                                            <span className="absolute inset-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                                                            <span className="text-sm transition-transform group-hover:rotate-12 duration-200">🛠️</span>
+                                                                            <span className="tracking-wider uppercase font-black text-[11px] drop-shadow">Mulai Kerjakan / Detail</span>
+                                                                            <span className="text-cyan-200 text-xs transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
 
-                                                                const cKey = o.current_division.replace('divisi_', '').toUpperCase();
-                                                                const cStatus = (o.division_progress && o.division_progress[cKey]) ? o.division_progress[cKey] : 'Belum';
-                                                                const isWorking = cStatus === 'Sedang Dikerjakan';
-
-                                                                return (
-                                                                    <div className="w-full flex flex-wrap justify-between items-center gap-3">
-                                                                        <div className="text-xs text-slate-400 italic">
-                                                                            Petugas: <strong className="text-slate-200">{roleTitles[o.current_division] || o.current_division}</strong>
-                                                                        </div>
-
-                                                                        {isMyDiv ? (
-                                                                            !isWorking && cStatus !== 'Selesai' ? (
-                                                                                <button
-                                                                                    onClick={() => handleStartJob(o.id)}
-                                                                                    className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-extrabold px-5 py-2 rounded-xl text-xs transition shadow-lg shadow-cyan-500/20 flex items-center gap-1.5 animate-pulse"
-                                                                                >
-                                                                                    ▶️ Mulai Kerjakan (Proses Sekarang)
-                                                                                </button>
-                                                                            ) : (
-                                                                                <div className="flex items-center gap-2">
-                                                                                    {/* SELECTOR TRANSFER KE DIVISI LAIN ATAU LANGSUNG QC */}
-                                                                                    <select 
-                                                                                        id={`next_div_select_${o.id}`}
-                                                                                        defaultValue="QC_Ready"
-                                                                                        className="bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs font-semibold focus:border-cyan-400"
-                                                                                    >
-                                                                                        <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
-                                                                                        <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
-                                                                                        <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
-                                                                                        <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
-                                                                                        <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
-                                                                                    </select>
-
-                                                                                    <button 
-                                                                                        onClick={() => {
-                                                                                            const sel = document.getElementById(`next_div_select_${o.id}`);
-                                                                                            const nextVal = sel ? sel.value : 'QC_Ready';
-                                                                                            handleFinishJob(o.id, nextVal);
-                                                                                        }} 
-                                                                                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 py-1.5 rounded-lg text-xs transition shadow-lg shadow-emerald-500/20 flex items-center gap-1"
-                                                                                    >
-                                                                                        ✓ Selesai & Teruskan Pekerjaan
-                                                                                    </button>
-                                                                                </div>
-                                                                            )
-                                                                        ) : (
-                                                                            <span className="text-[11px] bg-slate-950 text-slate-400 border border-slate-800 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5" title="Orderan ini sedang dikerjakan di divisi lain. Anda dapat memantau progresnya, tetapi tombol eksekusi hanya dapat diakses oleh petugas divisi terkait.">
-                                                                                🔒 Mode Monitoring (Eksekusi: {roleTitles[o.current_division] || o.current_division})
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                })()}
                             </div>
                         </div>
                     )}
@@ -2562,7 +2848,32 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                 </span>
                                             </div>
 
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowTableSupplierInfo(prev => !prev)}
+                                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${
+                                                        showTableSupplierInfo 
+                                                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' 
+                                                            : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
+                                                    }`}
+                                                    title="Klik untuk menayangkan / menyembunyikan info supplier di tabel"
+                                                >
+                                                    {showTableSupplierInfo ? '👁️ Supplier: Tampil' : '🙈 Supplier: Sembunyi'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowTablePricingInfo(prev => !prev)}
+                                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${
+                                                        showTablePricingInfo 
+                                                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                                                            : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
+                                                    }`}
+                                                    title="Klik untuk menayangkan / menyembunyikan modal harga beli supplier di tabel"
+                                                >
+                                                    {showTablePricingInfo ? '👁️ Modal Beli: Tampil' : '🙈 Modal Beli: Sembunyi'}
+                                                </button>
+
                                                 <input 
                                                     type="text" 
                                                     placeholder="🔍 Cari Kode / Nama / Jenis Kaca..." 
@@ -2581,7 +2892,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         <th className="p-3">Nama Barang</th>
                                                         <th className="p-3">Jenis Barang</th>
                                                         <th className="p-3">Ukuran Barang</th>
-                                                        <th className="p-3">Harga Beli & Jual</th>
+                                                        <th className="p-3">Harga Jual</th>
                                                         <th className="p-3">Quantity</th>
                                                         <th className="p-3">Aksi</th>
                                                         <th className="p-3">Status</th>
@@ -2590,7 +2901,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                 <tbody className="divide-y divide-slate-800">
                                                     {filteredSheetGlasses.length === 0 ? (
                                                         <tr>
-                                                            <td colSpan="7" className="p-6 text-center text-slate-500 text-xs italic">
+                                                            <td colSpan="8" className="p-6 text-center text-slate-500 text-xs italic">
                                                                 Tidak ada barang stok lembaran yang sesuai dengan filter/pencarian.
                                                             </td>
                                                         </tr>
@@ -2606,10 +2917,12 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                 </td>
                                                                 <td className="p-3 font-bold text-slate-100">
                                                                     <div>{item.name}</div>
-                                                                    <div className="text-[11px] text-emerald-400 font-mono mt-0.5 flex items-center gap-1">
-                                                                        <span>🏭 Supplier:</span>
-                                                                        <span className="font-semibold text-slate-300">{item.supplier_name}</span>
-                                                                    </div>
+                                                                    {showTableSupplierInfo && (
+                                                                        <div className="text-[11px] text-emerald-400 font-mono mt-0.5 flex items-center gap-1">
+                                                                            <span>🏭 Supplier:</span>
+                                                                            <span className="font-semibold text-slate-300">{item.supplier_name}</span>
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                                 <td className="p-3">
                                                                     <span className="bg-slate-800 text-cyan-300 border border-slate-700 px-2.5 py-1 rounded-full text-xs font-semibold">
@@ -2620,8 +2933,10 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                 <td className="p-3 text-xs">
                                                                     {canViewPricing ? (
                                                                         <div className="space-y-0.5 font-mono">
-                                                                            <div className="text-slate-400">Beli: <span className="text-amber-400 font-bold">Rp {Number(item.buy_price || 0).toLocaleString()}</span></div>
-                                                                            <div className="text-slate-400">Jual: <span className="text-emerald-400 font-bold">Rp {Number(item.sell_price || 0).toLocaleString()}</span></div>
+                                                                            <div><span className="text-emerald-400 font-extrabold text-sm">Rp {Number(item.sell_price || 0).toLocaleString()}</span></div>
+                                                                            {showTablePricingInfo && (
+                                                                                <div className="text-slate-400 text-[11px] pt-0.5 border-t border-slate-800">Beli: <span className="text-amber-400 font-bold">Rp {Number(item.buy_price || 0).toLocaleString()}</span></div>
+                                                                            )}
                                                                         </div>
                                                                     ) : (
                                                                         <span className="text-slate-500 text-xs italic">🔒 Rahasia</span>
@@ -3817,10 +4132,20 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 <h3 className="font-bold text-lg text-slate-100 flex items-center gap-2">
                                     🛒 Form Order Baru (Admin Toko)
                                 </h3>
-                                <div className="flex items-center gap-3 text-xs mt-1">
-                                    <span className="text-slate-400 font-mono">
-                                        i. Tanggal: <strong className="text-cyan-400">{orderForm.order_date}</strong> (Auto Sistem)
-                                    </span>
+                                <div className="flex flex-wrap items-center gap-3 text-xs mt-1">
+                                    <div className="flex items-center gap-1.5 text-slate-400 font-mono">
+                                        <span>📅 i. Tanggal Order:</span>
+                                        <input 
+                                            type="date" 
+                                            required 
+                                            value={orderForm.order_date || ''} 
+                                            onChange={e => setOrderForm('order_date', e.target.value)} 
+                                            className="bg-slate-950 border border-cyan-500/50 rounded px-2 py-0.5 text-xs text-cyan-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
+                                        />
+                                        <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                            {formatIndonesianDate(orderForm.order_date)}
+                                        </span>
+                                    </div>
                                     <span className="text-slate-400 font-mono">
                                         ii. SPO: <strong className="text-emerald-400">Auto Generated</strong>
                                     </span>
@@ -3837,16 +4162,33 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-slate-400 block mb-1">iv. Nama Customer:</label>
-                                        <input type="text" required value={orderForm.customer_name} onChange={e => setOrderForm('customer_name', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="e.g. Pak Sidik" />
+                                        <label className="text-slate-400 block mb-1">iv. Nama Customer (Khusus Huruf):</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            value={orderForm.customer_name} 
+                                            onChange={e => setOrderForm('customer_name', sanitizeCustomerName(e.target.value))} 
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-medium" 
+                                            placeholder="cth: Budi Karunia" 
+                                        />
+                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya huruf & spasi (angka/simbol otomatis difilter)</span>
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1">iii. Nomor Telepon / WA:</label>
-                                        <input type="text" required value={orderForm.customer_phone} onChange={e => setOrderForm('customer_phone', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="e.g. 0812-3456-7890" />
+                                        <label className="text-slate-400 block mb-1">iii. Nomor Telepon / WA (Khusus Angka):</label>
+                                        <input 
+                                            type="text" 
+                                            inputMode="numeric"
+                                            required 
+                                            value={orderForm.customer_phone} 
+                                            onChange={e => setOrderForm('customer_phone', sanitizeCustomerPhone(e.target.value))} 
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-mono" 
+                                            placeholder="cth: 081234567890" 
+                                        />
+                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya digit angka nomor hp</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1">v. Alamat Pengiriman:</label>
+                                    <label className="text-slate-400 block mb-1">v. Alamat Pengiriman (Bebas Huruf, Angka & Simbol):</label>
                                     <textarea required rows="2" value={orderForm.customer_address} onChange={e => setOrderForm('customer_address', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="Alamat lengkap lokasi pengantaran kaca..." />
                                 </div>
                             </div>
@@ -3897,15 +4239,9 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                                     >
                                                         <option value="">-- Pilih Jenis Kaca Dasar --</option>
-                                                        <option value="Kaca Cermin 5 mm polos">Kaca Cermin 5 mm polos</option>
-                                                        <option value="Kaca Cermin Grey 5 mm">Kaca Cermin Grey 5 mm</option>
-                                                        <option value="Kaca Bening 5 mm polos">Kaca Bening 5 mm polos</option>
-                                                        <option value="Kaca Bening 8 mm polos">Kaca Bening 8 mm polos</option>
-                                                        <option value="Kaca Bening 10 mm polos">Kaca Bening 10 mm polos</option>
-                                                        <option value="Kaca Jumbo Polos 12 mm">Kaca Jumbo Polos 12 mm</option>
-                                                        <option value="Kaca Dark Grey 5 mm">Kaca Dark Grey 5 mm</option>
-                                                        <option value="Kaca Frosted Etsa Sandblast 5 mm">Kaca Frosted Etsa Sandblast 5 mm</option>
-                                                        <option value="Kaca 12 mm Polos Tempered">Kaca 12 mm Polos Tempered</option>
+                                                        {getDynamicGlassTypes(sheetGlasses).map((gt, gIdx) => (
+                                                            <option key={gIdx} value={gt}>{gt}</option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                                 <div>
@@ -3948,6 +4284,149 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                     />
                                                 </div>
                                             </div>
+
+                                            {/* SMART SCRAP GLASS RECOMMENDATION BANNER (WITH QUANTITY & +1CM GM EDGE MARGIN RULE) */}
+                                            {(() => {
+                                                const scrapMatch = findMatchingScrapsForOrder(item, initialScrap);
+                                                
+                                                // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
+                                                const isEdgeGrinding = (item.processes || []).includes('GM');
+                                                const exactScrapBlockedByGrinding = (!scrapMatch || scrapMatch.totalScrapCovered <= 0) && isEdgeGrinding
+                                                    ? initialScrap?.find(s => {
+                                                        if (s.status && s.status !== 'Layak Pakai') return false;
+                                                        if (extractThickness(s.glass_type) !== extractThickness(item.glass_type)) return false;
+                                                        return calculateScrapYield(parseFloat(s.length_cm), parseFloat(s.width_cm), parseDim(item.length_cm), parseDim(item.width_cm)) > 0;
+                                                    })
+                                                    : null;
+
+                                                if (exactScrapBlockedByGrinding) {
+                                                    return (
+                                                        <div className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/40 text-rose-300 text-xs space-y-1">
+                                                            <div className="font-bold flex items-center gap-1.5">
+                                                                <span>⚠️ Kaca Sisa di {exactScrapBlockedByGrinding.rak_location} ({exactScrapBlockedByGrinding.scrap_code}) Tidak Bisa Dipakai</span>
+                                                                <span className="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded text-[10px] border border-rose-500/30 font-mono font-bold">Aturan Gosok Mesin (GM)</span>
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-300 leading-relaxed">
+                                                                Stok kaca sisa ukuran <strong>{exactScrapBlockedByGrinding.length_cm} x {exactScrapBlockedByGrinding.width_cm} cm</strong> tidak bisa digunakan untuk orderan ini ({parseDim(item.length_cm)} x {parseDim(item.width_cm)} cm) karena memilih proses <strong>Gosok Mesin (GM)</strong>. Mesin penggosok batu memerlukan bahan kaca minimal <strong>+1 cm lebih besar ({parseDim(item.length_cm) + 1} x {parseDim(item.width_cm) + 1} cm)</strong> agar pinggiran kaca tidak tergerus menjadi kekecilan.
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                if (!scrapMatch || scrapMatch.totalScrapCovered <= 0) return null;
+
+                                                const { totalScrapCovered, neededNewGlass, itemQty, matchedScraps, hasEdgeGrinding } = scrapMatch;
+                                                const primaryScrap = matchedScraps[0]?.scrap;
+                                                const isFullCover = neededNewGlass === 0;
+
+                                                const isAnySelected = Boolean(orderForm.used_scrap_rak);
+
+                                                return (
+                                                    <div className={`p-3.5 rounded-xl border flex flex-col items-start justify-between gap-3 transition ${isAnySelected ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' : 'bg-amber-500/10 border-amber-500/40 text-amber-300'}`}>
+                                                        <div className="flex items-start gap-2.5 flex-1 w-full">
+                                                            <span className="text-xl mt-0.5">💡</span>
+                                                            <div className="text-xs space-y-1.5 w-full">
+                                                                <div className="font-bold flex items-center justify-between gap-1.5 flex-wrap">
+                                                                    <span>
+                                                                        {isFullCover 
+                                                                            ? matchedScraps.length === 1 
+                                                                                ? `Rekomendasi Kaca Sisa di ${primaryScrap.rak_location} (${primaryScrap.scrap_code})`
+                                                                                : `Rekomendasi Kaca Sisa (${matchedScraps.length} Rak Terpakai)`
+                                                                            : `Rekomendasi Kombinasi: ${totalScrapCovered} Lembar Scrap + ${neededNewGlass} Lembar Bahan Baru`
+                                                                        }
+                                                                    </span>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        {isAnySelected && <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30 font-mono font-bold">✓ Terpasang ke Form</span>}
+                                                                        {hasEdgeGrinding && <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded text-[10px] border border-cyan-500/30 font-mono font-bold">+1 cm Margin GM</span>}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* ITEMIZED SCRAP BREAKDOWN BOX WITH PER-SCRAP QUANTITY SELECTOR & TOGGLE */}
+                                                                <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 space-y-2 text-[11px]">
+                                                                    <div className="font-semibold text-slate-300 border-b border-slate-800/80 pb-1 flex justify-between items-center flex-wrap gap-1">
+                                                                        <span>📦 Pilih Kaca Sisa & Jumlah Lembar yang Ingin Dipakai (Kebutuhan: {itemQty} Lembar):</span>
+                                                                        <span className="font-mono text-cyan-400 font-bold">{totalScrapCovered} / {itemQty} Lembar Maks. Scrap</span>
+                                                                    </div>
+
+                                                                    <ul className="space-y-2 pt-0.5">
+                                                                        {matchedScraps.map((m, mIdx) => {
+                                                                            const scrapCode = m.scrap.scrap_code;
+                                                                            const maxQty = m.usedQty;
+                                                                            const isThisSelected = orderForm.used_scrap_rak && orderForm.used_scrap_rak.includes(scrapCode);
+                                                                            const currentQty = customScrapQtyMap[scrapCode] !== undefined ? customScrapQtyMap[scrapCode] : maxQty;
+
+                                                                            return (
+                                                                                <li key={mIdx} className={`p-2 rounded-md border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition ${isThisSelected ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-slate-900/80 border-slate-800'}`}>
+                                                                                    <div className="space-y-0.5">
+                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                            <span className="text-amber-400 font-mono font-bold">▪ {scrapCode}</span>
+                                                                                            <span className="text-slate-400 font-mono">({m.scrap.rak_location})</span>
+                                                                                            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
+                                                                                                Ukuran {m.scrap.length_cm} x {m.scrap.width_cm} cm
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="font-mono text-slate-400 text-[10px]">
+                                                                                            Maksimal Potongan Sisa Tersedia: <strong className="text-cyan-300 font-bold">{maxQty} lembar</strong> <span className="text-slate-500">(potong {m.yieldPerSheet} lbr/sheet)</span>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* ACTION CONTROLS: QTY SELECTOR + TOGGLE BUTTON */}
+                                                                                    <div className="flex items-center gap-2 flex-wrap self-end sm:self-center">
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <label className="text-[10px] text-slate-400 whitespace-nowrap">Pakai:</label>
+                                                                                            <select
+                                                                                                value={currentQty}
+                                                                                                onChange={(e) => {
+                                                                                                    const val = Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1));
+                                                                                                    handleUpdateIndividualScrapQty(m, val, itemQty);
+                                                                                                }}
+                                                                                                className="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
+                                                                                            >
+                                                                                                {Array.from({ length: maxQty }, (_, i) => i + 1).map(n => (
+                                                                                                    <option key={n} value={n}>{n} lbr</option>
+                                                                                                ))}
+                                                                                            </select>
+                                                                                        </div>
+
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleToggleIndividualScrap(m, currentQty, itemQty)}
+                                                                                            className={`px-2.5 py-1 rounded-md font-extrabold text-xs transition shadow-sm whitespace-nowrap ${
+                                                                                                isThisSelected 
+                                                                                                    ? 'bg-emerald-500 text-slate-950 hover:bg-rose-500 hover:text-white' 
+                                                                                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                                                                            }`}
+                                                                                            title={`Klik untuk memilih / membatalkan penggunaan ${scrapCode}`}
+                                                                                        >
+                                                                                            {isThisSelected 
+                                                                                                ? `✓ ${currentQty} lbr Terpasang (Batal)` 
+                                                                                                : `+ Gunakan ${currentQty} lbr Scrap Ini`
+                                                                                            }
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </li>
+                                                                            );
+                                                                        })}
+
+                                                                        {neededNewGlass > 0 && (
+                                                                            <li className="flex items-center justify-between text-cyan-300 font-sans border-t border-slate-900 pt-1.5 flex-wrap gap-1">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className="text-cyan-400 font-mono font-bold">▪ Kaca Bahan Lembaran Baru</span>
+                                                                                </div>
+                                                                                <div className="font-mono text-cyan-300 font-bold">
+                                                                                    ➔ Sisa Diambil dari Bahan Baru: <strong className="text-cyan-400 text-xs">{neededNewGlass} lembar</strong>
+                                                                                </div>
+                                                                            </li>
+                                                                        )}
+                                                                    </ul>
+                                                                </div>
+
+                                                                {hasEdgeGrinding && <div className="text-[10px] text-cyan-300/80 font-mono mt-0.5">*Ukuran scrap mencukupi batas aman margin +1 cm untuk penggosokan mesin (GM).</div>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* ROW 3: OPTIONS PROSES MANDIRI PER ITEM */}
                                             <div>
@@ -4214,6 +4693,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     )}
                                 </div>
                             </div>
+
 
                             {/* SECTION 6: BURU-BURU TEU? / PRIORITAS (xi) */}
                             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
@@ -4552,10 +5032,20 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 <h3 className="font-bold text-lg text-slate-100 flex items-center gap-2">
                                     ✏️ Edit Draf Negosiasi #{editingOrder.spo_number}
                                 </h3>
-                                <div className="flex items-center gap-3 text-xs mt-1">
-                                    <span className="text-slate-400 font-mono">
-                                        Tanggal Order: <strong className="text-cyan-400">{orderForm.order_date}</strong>
-                                    </span>
+                                <div className="flex flex-wrap items-center gap-3 text-xs mt-1">
+                                    <div className="flex items-center gap-1.5 text-slate-400 font-mono">
+                                        <span>📅 Tanggal Order:</span>
+                                        <input 
+                                            type="date" 
+                                            required 
+                                            value={orderForm.order_date || ''} 
+                                            onChange={e => setOrderForm('order_date', e.target.value)} 
+                                            className="bg-slate-950 border border-cyan-500/50 rounded px-2 py-0.5 text-xs text-cyan-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
+                                        />
+                                        <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                            {formatIndonesianDate(orderForm.order_date)}
+                                        </span>
+                                    </div>
                                     <span className="text-slate-400 font-mono">
                                         Status: <strong className="text-amber-400 uppercase">{editingOrder.status}</strong>
                                     </span>
@@ -4572,16 +5062,31 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-slate-400 block mb-1">Nama Customer:</label>
-                                        <input type="text" required value={orderForm.customer_name} onChange={e => setOrderForm('customer_name', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
+                                        <label className="text-slate-400 block mb-1">Nama Customer (Khusus Huruf):</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            value={orderForm.customer_name} 
+                                            onChange={e => setOrderForm('customer_name', sanitizeCustomerName(e.target.value))} 
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-medium" 
+                                        />
+                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya huruf & spasi (angka/simbol otomatis difilter)</span>
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1">Nomor Telepon / WA:</label>
-                                        <input type="text" required value={orderForm.customer_phone} onChange={e => setOrderForm('customer_phone', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
+                                        <label className="text-slate-400 block mb-1">Nomor Telepon / WA (Khusus Angka):</label>
+                                        <input 
+                                            type="text" 
+                                            inputMode="numeric"
+                                            required 
+                                            value={orderForm.customer_phone} 
+                                            onChange={e => setOrderForm('customer_phone', sanitizeCustomerPhone(e.target.value))} 
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-mono" 
+                                        />
+                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya digit angka nomor hp</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1">Alamat Pengiriman:</label>
+                                    <label className="text-slate-400 block mb-1">Alamat Pengiriman (Bebas Huruf, Angka & Simbol):</label>
                                     <textarea required rows="2" value={orderForm.customer_address} onChange={e => setOrderForm('customer_address', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
                                 </div>
                             </div>
@@ -4632,15 +5137,9 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                                     >
                                                         <option value="">-- Pilih Jenis Kaca Dasar --</option>
-                                                        <option value="Kaca Cermin 5 mm polos">Kaca Cermin 5 mm polos</option>
-                                                        <option value="Kaca Cermin Grey 5 mm">Kaca Cermin Grey 5 mm</option>
-                                                        <option value="Kaca Bening 5 mm polos">Kaca Bening 5 mm polos</option>
-                                                        <option value="Kaca Bening 8 mm polos">Kaca Bening 8 mm polos</option>
-                                                        <option value="Kaca Bening 10 mm polos">Kaca Bening 10 mm polos</option>
-                                                        <option value="Kaca Jumbo Polos 12 mm">Kaca Jumbo Polos 12 mm</option>
-                                                        <option value="Kaca Dark Grey 5 mm">Kaca Dark Grey 5 mm</option>
-                                                        <option value="Kaca Frosted Etsa Sandblast 5 mm">Kaca Frosted Etsa Sandblast 5 mm</option>
-                                                        <option value="Kaca 12 mm Polos Tempered">Kaca 12 mm Polos Tempered</option>
+                                                        {getDynamicGlassTypes(sheetGlasses).map((gt, gIdx) => (
+                                                            <option key={gIdx} value={gt}>{gt}</option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                                 <div>
@@ -4683,6 +5182,149 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                     />
                                                 </div>
                                             </div>
+
+                                            {/* SMART SCRAP GLASS RECOMMENDATION BANNER (WITH QUANTITY & +1CM GM EDGE MARGIN RULE) */}
+                                            {(() => {
+                                                const scrapMatch = findMatchingScrapsForOrder(item, initialScrap);
+                                                
+                                                // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
+                                                const isEdgeGrinding = (item.processes || []).includes('GM');
+                                                const exactScrapBlockedByGrinding = (!scrapMatch || scrapMatch.totalScrapCovered <= 0) && isEdgeGrinding
+                                                    ? initialScrap?.find(s => {
+                                                        if (s.status && s.status !== 'Layak Pakai') return false;
+                                                        if (extractThickness(s.glass_type) !== extractThickness(item.glass_type)) return false;
+                                                        return calculateScrapYield(parseFloat(s.length_cm), parseFloat(s.width_cm), parseDim(item.length_cm), parseDim(item.width_cm)) > 0;
+                                                    })
+                                                    : null;
+
+                                                if (exactScrapBlockedByGrinding) {
+                                                    return (
+                                                        <div className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/40 text-rose-300 text-xs space-y-1">
+                                                            <div className="font-bold flex items-center gap-1.5">
+                                                                <span>⚠️ Kaca Sisa di {exactScrapBlockedByGrinding.rak_location} ({exactScrapBlockedByGrinding.scrap_code}) Tidak Bisa Dipakai</span>
+                                                                <span className="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded text-[10px] border border-rose-500/30 font-mono font-bold">Aturan Gosok Mesin (GM)</span>
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-300 leading-relaxed">
+                                                                Stok kaca sisa ukuran <strong>{exactScrapBlockedByGrinding.length_cm} x {exactScrapBlockedByGrinding.width_cm} cm</strong> tidak bisa digunakan untuk orderan ini ({parseDim(item.length_cm)} x {parseDim(item.width_cm)} cm) karena memilih proses <strong>Gosok Mesin (GM)</strong>. Mesin penggosok batu memerlukan bahan kaca minimal <strong>+1 cm lebih besar ({parseDim(item.length_cm) + 1} x {parseDim(item.width_cm) + 1} cm)</strong> agar pinggiran kaca tidak tergerus menjadi kekecilan.
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                if (!scrapMatch || scrapMatch.totalScrapCovered <= 0) return null;
+
+                                                const { totalScrapCovered, neededNewGlass, itemQty, matchedScraps, hasEdgeGrinding } = scrapMatch;
+                                                const primaryScrap = matchedScraps[0]?.scrap;
+                                                const isFullCover = neededNewGlass === 0;
+
+                                                const isAnySelected = Boolean(orderForm.used_scrap_rak);
+
+                                                return (
+                                                    <div className={`p-3.5 rounded-xl border flex flex-col items-start justify-between gap-3 transition ${isAnySelected ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' : 'bg-amber-500/10 border-amber-500/40 text-amber-300'}`}>
+                                                        <div className="flex items-start gap-2.5 flex-1 w-full">
+                                                            <span className="text-xl mt-0.5">💡</span>
+                                                            <div className="text-xs space-y-1.5 w-full">
+                                                                <div className="font-bold flex items-center justify-between gap-1.5 flex-wrap">
+                                                                    <span>
+                                                                        {isFullCover 
+                                                                            ? matchedScraps.length === 1 
+                                                                                ? `Rekomendasi Kaca Sisa di ${primaryScrap.rak_location} (${primaryScrap.scrap_code})`
+                                                                                : `Rekomendasi Kaca Sisa (${matchedScraps.length} Rak Terpakai)`
+                                                                            : `Rekomendasi Kombinasi: ${totalScrapCovered} Lembar Scrap + ${neededNewGlass} Lembar Bahan Baru`
+                                                                        }
+                                                                    </span>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        {isAnySelected && <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30 font-mono font-bold">✓ Terpasang ke Form</span>}
+                                                                        {hasEdgeGrinding && <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded text-[10px] border border-cyan-500/30 font-mono font-bold">+1 cm Margin GM</span>}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* ITEMIZED SCRAP BREAKDOWN BOX WITH PER-SCRAP QUANTITY SELECTOR & TOGGLE */}
+                                                                <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 space-y-2 text-[11px]">
+                                                                    <div className="font-semibold text-slate-300 border-b border-slate-800/80 pb-1 flex justify-between items-center flex-wrap gap-1">
+                                                                        <span>📦 Pilih Kaca Sisa & Jumlah Lembar yang Ingin Dipakai (Kebutuhan: {itemQty} Lembar):</span>
+                                                                        <span className="font-mono text-cyan-400 font-bold">{totalScrapCovered} / {itemQty} Lembar Maks. Scrap</span>
+                                                                    </div>
+
+                                                                    <ul className="space-y-2 pt-0.5">
+                                                                        {matchedScraps.map((m, mIdx) => {
+                                                                            const scrapCode = m.scrap.scrap_code;
+                                                                            const maxQty = m.usedQty;
+                                                                            const isThisSelected = orderForm.used_scrap_rak && orderForm.used_scrap_rak.includes(scrapCode);
+                                                                            const currentQty = customScrapQtyMap[scrapCode] !== undefined ? customScrapQtyMap[scrapCode] : maxQty;
+
+                                                                            return (
+                                                                                <li key={mIdx} className={`p-2 rounded-md border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition ${isThisSelected ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-slate-900/80 border-slate-800'}`}>
+                                                                                    <div className="space-y-0.5">
+                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                            <span className="text-amber-400 font-mono font-bold">▪ {scrapCode}</span>
+                                                                                            <span className="text-slate-400 font-mono">({m.scrap.rak_location})</span>
+                                                                                            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
+                                                                                                Ukuran {m.scrap.length_cm} x {m.scrap.width_cm} cm
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="font-mono text-slate-400 text-[10px]">
+                                                                                            Maksimal Potongan Sisa Tersedia: <strong className="text-cyan-300 font-bold">{maxQty} lembar</strong> <span className="text-slate-500">(potong {m.yieldPerSheet} lbr/sheet)</span>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* ACTION CONTROLS: QTY SELECTOR + TOGGLE BUTTON */}
+                                                                                    <div className="flex items-center gap-2 flex-wrap self-end sm:self-center">
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <label className="text-[10px] text-slate-400 whitespace-nowrap">Pakai:</label>
+                                                                                            <select
+                                                                                                value={currentQty}
+                                                                                                onChange={(e) => {
+                                                                                                    const val = Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1));
+                                                                                                    handleUpdateIndividualScrapQty(m, val, itemQty);
+                                                                                                }}
+                                                                                                className="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
+                                                                                            >
+                                                                                                {Array.from({ length: maxQty }, (_, i) => i + 1).map(n => (
+                                                                                                    <option key={n} value={n}>{n} lbr</option>
+                                                                                                ))}
+                                                                                            </select>
+                                                                                        </div>
+
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleToggleIndividualScrap(m, currentQty, itemQty)}
+                                                                                            className={`px-2.5 py-1 rounded-md font-extrabold text-xs transition shadow-sm whitespace-nowrap ${
+                                                                                                isThisSelected 
+                                                                                                    ? 'bg-emerald-500 text-slate-950 hover:bg-rose-500 hover:text-white' 
+                                                                                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                                                                            }`}
+                                                                                            title={`Klik untuk memilih / membatalkan penggunaan ${scrapCode}`}
+                                                                                        >
+                                                                                            {isThisSelected 
+                                                                                                ? `✓ ${currentQty} lbr Terpasang (Batal)` 
+                                                                                                : `+ Gunakan ${currentQty} lbr Scrap Ini`
+                                                                                            }
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </li>
+                                                                            );
+                                                                        })}
+
+                                                                        {neededNewGlass > 0 && (
+                                                                            <li className="flex items-center justify-between text-cyan-300 font-sans border-t border-slate-900 pt-1.5 flex-wrap gap-1">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className="text-cyan-400 font-mono font-bold">▪ Kaca Bahan Lembaran Baru</span>
+                                                                                </div>
+                                                                                <div className="font-mono text-cyan-300 font-bold">
+                                                                                    ➔ Sisa Diambil dari Bahan Baru: <strong className="text-cyan-400 text-xs">{neededNewGlass} lembar</strong>
+                                                                                </div>
+                                                                            </li>
+                                                                        )}
+                                                                    </ul>
+                                                                </div>
+
+                                                                {hasEdgeGrinding && <div className="text-[10px] text-cyan-300/80 font-mono mt-0.5">*Ukuran scrap mencukupi batas aman margin +1 cm untuk penggosokan mesin (GM).</div>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* ROW 3: OPTIONS PROSES MANDIRI PER ITEM */}
                                             <div>
@@ -4949,6 +5591,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     )}
                                 </div>
                             </div>
+
 
                             {/* SECTION 6: BURU-BURU TEU? / PRIORITAS (xi) */}
                             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
@@ -5477,22 +6120,22 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 <div>
                                     <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
                                     <input 
-                                        type="number" 
-                                        min="0"
-                                        placeholder="e.g. 250000"
-                                        value={newStockForm.buy_price}
-                                        onChange={e => setNewStockForm({ ...newStockForm, buy_price: e.target.value })}
+                                        type="text" 
+                                        inputMode="numeric"
+                                        placeholder="e.g. 250.000"
+                                        value={formatNumberDots(newStockForm.buy_price)}
+                                        onChange={e => setNewStockForm({ ...newStockForm, buy_price: parseNumberDots(e.target.value) })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:border-amber-400"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
                                     <input 
-                                        type="number" 
-                                        min="0"
-                                        placeholder="e.g. 450000"
-                                        value={newStockForm.sell_price}
-                                        onChange={e => setNewStockForm({ ...newStockForm, sell_price: e.target.value })}
+                                        type="text" 
+                                        inputMode="numeric"
+                                        placeholder="e.g. 450.000"
+                                        value={formatNumberDots(newStockForm.sell_price)}
+                                        onChange={e => setNewStockForm({ ...newStockForm, sell_price: parseNumberDots(e.target.value) })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-emerald-400"
                                     />
                                 </div>
@@ -5551,15 +6194,6 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                         ))}
                                         <option value="CUSTOM">➕ Input Manual Supplier Baru...</option>
                                     </select>
-
-                                    <label className="text-slate-400 block mb-1 font-semibold">Nama Perusahaan Supplier:</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="e.g. PT Asahimas Flat Glass Tbk"
-                                        value={newStockForm.supplier_name}
-                                        onChange={e => setNewStockForm({ ...newStockForm, supplier_name: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-medium"
-                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
@@ -7132,6 +7766,372 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-extrabold text-slate-950 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition"
                                 >
                                     ✓ Simpan Detail Perbaikan & Kembalikan Ke Stok
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL POPUP DETAIL EKSEKUSI PENGERJAAN ORDER (PREMIUM REDESIGN) */}
+            {showExecutionModal && selectedExecutionOrder && (
+                <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+                    <div className="bg-slate-900/95 border border-cyan-500/30 rounded-3xl w-full max-w-4xl p-6 sm:p-8 shadow-[0_0_60px_rgba(6,182,212,0.15)] space-y-6 relative my-auto overflow-hidden">
+                        
+                        {/* DEKORASI ACCENT BG */}
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                        <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                        {/* MODAL HEADER BAR */}
+                        <div className="flex justify-between items-start border-b border-slate-800/90 pb-4 relative z-10 gap-3">
+                            <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="bg-cyan-500/10 text-cyan-300 font-extrabold text-[11px] px-3 py-1 rounded-full border border-cyan-500/30 flex items-center gap-1.5 shadow-sm">
+                                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                                        <span>MODAL EKSEKUSI WORKSTATION</span>
+                                    </span>
+                                    <span className="font-black text-cyan-400 font-mono text-2xl tracking-tight">{selectedExecutionOrder.spo_number}</span>
+                                    <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border shadow-sm ${selectedExecutionOrder.priority_status === 'Prioritas' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse' : 'bg-slate-800/80 text-slate-400 border-slate-700'}`}>
+                                        {selectedExecutionOrder.priority_status === 'Prioritas' ? '🔥 PRIORITAS TINGGI' : '🔵 Standar / Biasa'}
+                                    </span>
+                                </div>
+                                <h3 className="font-extrabold text-slate-100 text-xl tracking-tight mt-1">{selectedExecutionOrder.customer_name}</h3>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <span className="hidden sm:inline-block text-xs font-bold px-3.5 py-1.5 rounded-xl bg-slate-950 text-cyan-300 border border-slate-800 font-mono shadow-inner">
+                                    Divisi: {roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}
+                                </span>
+                                <button 
+                                    onClick={() => setShowExecutionModal(false)}
+                                    className="bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-9 h-9 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
+                                    title="Tutup Modal"
+                                >&times;</button>
+                            </div>
+                        </div>
+
+                        {/* CUSTOMER & ORDER INFO GRID PANEL */}
+                        <div className="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-slate-300">
+                                    <span className="text-slate-500 w-24">📞 Telepon:</span>
+                                    <strong className="text-slate-200 font-mono">{selectedExecutionOrder.customer_phone}</strong>
+                                </div>
+                                <div className="flex items-start gap-2 text-slate-300">
+                                    <span className="text-slate-500 w-24 shrink-0">📍 Alamat Kirim:</span>
+                                    <span className="text-slate-300">{selectedExecutionOrder.customer_address}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 md:border-l md:border-slate-800/80 md:pl-5">
+                                <div className="flex items-center gap-2 text-slate-300">
+                                    <span className="text-slate-500 w-28">📅 Target Deadline:</span>
+                                    <strong className="text-amber-300 font-mono font-bold">{selectedExecutionOrder.deadline_date || '-'}</strong>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-300">
+                                    <span className="text-slate-500 w-28">📍 Posisi Divisi:</span>
+                                    <span className="text-cyan-300 font-semibold">{roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TIMELINE TANGGAL LIFECYCLE ORDER */}
+                        <div className="space-y-2">
+                            <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>📅 Lifecycle Timeline Tanggal Track:</span>
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-cyan-500/20 space-y-1">
+                                    <span className="text-slate-500 text-[10px] block">📅 Pembuatan Order (Toko):</span>
+                                    <strong className="text-cyan-400 font-bold block text-xs">{formatIndonesianDate(selectedExecutionOrder.order_date)}</strong>
+                                </div>
+                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-blue-500/20 space-y-1">
+                                    <span className="text-slate-500 text-[10px] block">📦 Diturunkan Gudang:</span>
+                                    <strong className="text-blue-300 font-bold block text-xs">{selectedExecutionOrder.gudang_released_at ? formatIndonesianDateTime(selectedExecutionOrder.gudang_released_at) : 'Belum Diturunkan'}</strong>
+                                </div>
+                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-emerald-500/20 space-y-1">
+                                    <span className="text-slate-500 text-[10px] block">✅ Selesai Eksekusi:</span>
+                                    <strong className="text-emerald-400 font-bold block text-xs">{selectedExecutionOrder.execution_completed_at ? formatIndonesianDateTime(selectedExecutionOrder.execution_completed_at) : 'Sedang Eksekusi'}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TAHAPAN PROGRES WORKFLOW PIPELINE DENGAN TANGGAL MASUK & SELESAI PER DIVISI */}
+                        <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                            <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                                <span>📋 Track Tanggal Pengerjakan Per Divisi:</span>
+                                <span className="text-[10px] text-slate-500 font-mono">Diperbarui Otomatis Per Transisi Divisi</span>
+                            </div>
+                            {(() => {
+                                const allProcs = [
+                                    { code: 'HT', name: 'Potong & Bor (HT)' },
+                                    { code: 'GM', name: 'Gosok Mesin (GM)' },
+                                    { code: 'BV', name: 'Bevel (BV)' },
+                                    { code: 'Etsa', name: 'Etsa Blur (Etsa)' }
+                                ];
+
+                                const reqSet = new Set();
+                                if (Array.isArray(selectedExecutionOrder.processes)) {
+                                    selectedExecutionOrder.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                }
+                                if (Array.isArray(selectedExecutionOrder.items)) {
+                                    selectedExecutionOrder.items.forEach(it => {
+                                        if (Array.isArray(it.processes)) {
+                                            it.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                        }
+                                    });
+                                }
+
+                                const activeProcs = allProcs.filter(proc => {
+                                    // HT (Potong) is ALWAYS mandatory for every glass order
+                                    if (proc.code === 'HT') return true;
+                                    const status = (selectedExecutionOrder.division_progress && selectedExecutionOrder.division_progress[proc.code]) 
+                                        ? selectedExecutionOrder.division_progress[proc.code] 
+                                        : 'Belum';
+                                    if (status !== 'N/A') return true;
+                                    if (reqSet.has(proc.code.toUpperCase())) return true;
+                                    return false;
+                                });
+
+                                const renderList = activeProcs.length > 0 ? activeProcs : allProcs;
+
+                                return (
+                                    <div className={`grid grid-cols-1 ${renderList.length === 1 ? 'sm:grid-cols-1' : renderList.length === 2 ? 'sm:grid-cols-2' : renderList.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 md:grid-cols-4'} gap-3`}>
+                                        {renderList.map(proc => {
+                                            const status = (selectedExecutionOrder.division_progress && selectedExecutionOrder.division_progress[proc.code]) ? selectedExecutionOrder.division_progress[proc.code] : 'Belum';
+                                            const isDone = status === 'Selesai';
+                                            const isWorking = status === 'Sedang Dikerjakan';
+                                            const isNA = status === 'N/A';
+
+                                            const ts = (selectedExecutionOrder.division_timestamps && selectedExecutionOrder.division_timestamps[proc.code]) 
+                                                ? selectedExecutionOrder.division_timestamps[proc.code] 
+                                                : {};
+                                            const startedAt = ts.started_at;
+                                            const completedAt = ts.completed_at;
+
+                                            return (
+                                                <div 
+                                                    key={proc.code} 
+                                                    className={`p-3.5 rounded-2xl border flex flex-col justify-between space-y-2 transition ${isDone ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : isWorking ? 'bg-cyan-500/10 text-cyan-300 border-cyan-400 animate-pulse shadow-md shadow-cyan-500/10' : isNA ? 'bg-slate-900/40 text-slate-600 border-slate-800' : 'bg-slate-900/60 text-slate-400 border-slate-800'}`}
+                                                >
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="text-[11px] font-extrabold font-mono">{proc.code}: {proc.name}</div>
+                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${isDone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : isWorking ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400' : isNA ? 'bg-slate-950 text-slate-600 border-slate-900' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
+                                                            {isDone ? '✅ Selesai' : isWorking ? '⚙️ Dikerjakan' : isNA ? '⚪ N/A' : '⏳ Belum'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="space-y-1 text-[10px] font-mono pt-2 border-t border-slate-800/80">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-slate-500">📥 Tgl Masuk / Mulai:</span>
+                                                            <strong className={startedAt ? 'text-cyan-300' : 'text-slate-600'}>
+                                                                {startedAt ? formatIndonesianDateTime(startedAt) : '-'}
+                                                            </strong>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-slate-500">🏁 Tgl Selesai Eksekusi:</span>
+                                                            <strong className={completedAt ? 'text-emerald-300' : 'text-slate-600'}>
+                                                                {completedAt ? formatIndonesianDateTime(completedAt) : '-'}
+                                                            </strong>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* RINCIAN ITEM SPESIFIKASI KACA DETAIL & TOMBOL [+ SISA POTONG] */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <h4 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                                    <span>📋 Detail Spesifikasi Item Kaca:</span>
+                                </h4>
+                                <span className="text-[11px] text-slate-400 font-mono">Klik "+ Input Sisa Potong" untuk mencatat scrap ke rak</span>
+                            </div>
+
+                            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                                {(Array.isArray(selectedExecutionOrder.items) && selectedExecutionOrder.items.length > 0 
+                                    ? selectedExecutionOrder.items 
+                                    : [{
+                                        glass_type: selectedExecutionOrder.glass_type,
+                                        length_cm: selectedExecutionOrder.length_cm,
+                                        width_cm: selectedExecutionOrder.width_cm,
+                                        thickness_mm: selectedExecutionOrder.thickness_mm,
+                                        qty: 1,
+                                        processes: selectedExecutionOrder.processes || ['HT']
+                                    }]).map((it, idx) => (
+                                    <div key={idx} className="bg-slate-950 p-4 rounded-2xl border border-slate-800/90 hover:border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition shadow-md">
+                                        <div className="space-y-1.5 flex-1">
+                                            <div className="font-extrabold text-cyan-300 text-sm flex items-center gap-2">
+                                                <span>Item #{idx + 1}: {it.glass_type}</span>
+                                                <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold">Qty: {it.qty || 1} Pcs</span>
+                                            </div>
+                                            <div className="text-slate-300 font-mono text-xs flex flex-wrap items-center gap-2">
+                                                <span>Ukuran: <strong className="text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{it.length_cm} cm × {it.width_cm} cm</strong></span>
+                                                <span>Tebal: <strong className="text-amber-300">{it.thickness_mm} mm</strong></span>
+                                            </div>
+                                            {Array.isArray(it.processes) && (
+                                                <div className="text-xs text-slate-400 pt-0.5">
+                                                    Proses Divisi: <span className="text-cyan-200 font-mono font-bold">{it.processes.join(', ')}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* TOMBOL POPUP INPUT SISA */}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenScrapPopup(it)}
+                                            className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500 hover:to-orange-500 text-amber-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-amber-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-amber-500/10"
+                                        >
+                                            <span>🧩 + Input Sisa Potong</span>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* KETERANGAN & POTONGAN RAK */}
+                        {selectedExecutionOrder.description && (
+                            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs text-slate-300 italic flex items-center gap-2">
+                                <span>📝 Catatan Order:</span>
+                                <strong>{selectedExecutionOrder.description}</strong>
+                            </div>
+                        )}
+
+                        {/* ACTION FOOTER MODAL BAR */}
+                        <div className="pt-4 border-t border-slate-800 flex flex-wrap justify-between items-center gap-4 relative z-10">
+                            <button 
+                                type="button" 
+                                onClick={() => setShowExecutionModal(false)}
+                                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition border border-slate-700"
+                            >
+                                ✕ Tutup Modal
+                            </button>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                                <select 
+                                    id={`exec_modal_next_div_${selectedExecutionOrder.id}`}
+                                    defaultValue="QC_Ready"
+                                    className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner"
+                                >
+                                    <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
+                                    <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
+                                    <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
+                                    <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
+                                    <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
+                                </select>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const sel = document.getElementById(`exec_modal_next_div_${selectedExecutionOrder.id}`);
+                                        const nextVal = sel ? sel.value : 'QC_Ready';
+                                        handleFinishJobSubmit(selectedExecutionOrder.id, nextVal);
+                                    }}
+                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xl shadow-emerald-500/20 flex items-center gap-2"
+                                >
+                                    <span>✅ Selesai & Teruskan Pekerjaan</span>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL POPUP FORM SISA UNTUK POTONG (INPUT SCRAP GLASS - REDESIGN) */}
+            {showScrapPopupModal && (
+                <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-[60] flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-slate-900 border border-amber-500/40 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-[0_0_50px_rgba(245,158,11,0.18)] space-y-5 relative overflow-hidden my-auto">
+                        
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-3.5">
+                            <h3 className="font-extrabold text-base text-amber-400 flex items-center gap-2">
+                                🧩 Input Kaca Sisa Potongan (Rak Storage)
+                            </h3>
+                            <button 
+                                onClick={() => setShowScrapPopupModal(false)} 
+                                className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
+                            >&times;</button>
+                        </div>
+
+                        <form onSubmit={handleSaveScrapFromPopup} className="space-y-4 text-xs">
+                            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1">
+                                <span className="text-[11px] text-slate-400 block font-semibold">Jenis Kaca Kategori Potongan:</span>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    value={scrapPopupForm.glass_type} 
+                                    onChange={e => setScrapPopupForm(s => ({ ...s, glass_type: e.target.value }))}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-cyan-300 font-extrabold focus:border-amber-400 text-sm" 
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-slate-300 font-bold block">Panjang Sisa (cm):</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.1" 
+                                        required 
+                                        placeholder="cth: 40.5"
+                                        value={scrapPopupForm.length_cm} 
+                                        onChange={e => setScrapPopupForm(s => ({ ...s, length_cm: e.target.value }))}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-amber-300 font-mono font-bold text-lg focus:border-amber-400" 
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-slate-300 font-bold block">Lebar Sisa (cm):</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.1" 
+                                        required 
+                                        placeholder="cth: 30.0"
+                                        value={scrapPopupForm.width_cm} 
+                                        onChange={e => setScrapPopupForm(s => ({ ...s, width_cm: e.target.value }))}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-amber-300 font-mono font-bold text-lg focus:border-amber-400" 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-slate-300 font-bold block">Lokasi Rak Penimpanan Sisa:</label>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    placeholder="cth: Rak A02"
+                                    value={scrapPopupForm.rak_location} 
+                                    onChange={e => setScrapPopupForm(s => ({ ...s, rak_location: e.target.value }))}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono font-bold focus:border-amber-400 text-sm" 
+                                />
+                            </div>
+
+                            {/* RINGKASAN STOK RAK TERSIMPAN */}
+                            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-[11px] space-y-1.5">
+                                <div className="text-slate-400 font-bold flex justify-between">
+                                    <span>📦 Pilih Lokasi Rak Cepat:</span>
+                                    <span className="text-amber-400 font-mono">Format Sisa Layak Pakai</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {['Rak A01', 'Rak A02', 'Rak F7', 'Rak B03', 'Rak C01'].map(r => (
+                                        <button 
+                                            key={r}
+                                            type="button" 
+                                            onClick={() => setScrapPopupForm(s => ({ ...s, rak_location: r }))}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition ${scrapPopupForm.rak_location === r ? 'bg-amber-500/20 text-amber-300 border-amber-400 shadow-sm' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'}`}
+                                        >
+                                            📍 {r}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                                <button type="button" onClick={() => setShowScrapPopupModal(false)} className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition">Batal</button>
+                                <button type="submit" className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-1.5 text-xs">
+                                    <span>+ Simpan Ke Rak Sisa</span>
                                 </button>
                             </div>
                         </form>

@@ -55,7 +55,14 @@ class GlassSystemSeeder extends Seeder
                 'BV' => 'Belum',
                 'Etsa' => 'N/A'
             ],
-            'used_scrap_rak' => 'Rak F7'
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subDays(3)->addHours(2)->toDateTimeString(), 'completed_at' => now()->subDays(2)->addHours(4)->toDateTimeString()],
+                'GM' => ['started_at' => now()->subDays(2)->addHours(5)->toDateTimeString(), 'completed_at' => null],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'used_scrap_rak' => 'Rak F7',
+            'gudang_released_at' => now()->subDays(3)->addHours(2),
         ]);
 
         // 2. Order SPO Sample 2: Siap Kirim (QC Ready)
@@ -101,7 +108,15 @@ class GlassSystemSeeder extends Seeder
                 'GM' => 'Selesai',
                 'BV' => 'N/A',
                 'Etsa' => 'N/A'
-            ]
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subDays(5)->addHours(1)->toDateTimeString(), 'completed_at' => now()->subDays(3)->addHours(3)->toDateTimeString()],
+                'GM' => ['started_at' => now()->subDays(3)->addHours(4)->toDateTimeString(), 'completed_at' => now()->subDays(1)->addHours(4)->toDateTimeString()],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'gudang_released_at' => now()->subDays(5)->addHours(1),
+            'execution_completed_at' => now()->subDays(1)->addHours(4),
         ]);
 
         // 3. Order SPO Sample 3: Draft (Admin Toko)
@@ -152,9 +167,15 @@ class GlassSystemSeeder extends Seeder
             'current_division' => 'admin_toko',
             'division_progress' => [
                 'HT' => 'Belum',
-                'GM' => 'N/A',
+                'GM' => 'Belum',
                 'BV' => 'Belum',
-                'Etsa' => 'N/A'
+                'Etsa' => 'Belum'
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => null, 'completed_at' => null],
+                'GM' => ['started_at' => null, 'completed_at' => null],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
             ]
         ]);
 
@@ -208,7 +229,14 @@ class GlassSystemSeeder extends Seeder
                 'BV' => 'Belum',
                 'Etsa' => 'N/A'
             ],
-            'used_scrap_rak' => 'Rak A09'
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subHours(3)->toDateTimeString(), 'completed_at' => null],
+                'GM' => ['started_at' => null, 'completed_at' => null],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'used_scrap_rak' => 'Rak A09',
+            'gudang_released_at' => now()->subDays(1)->addHours(3),
         ]);
 
         // 5. Order SPO Sample 5: Pengerjaan di Divisi BV (Beveling)
@@ -255,7 +283,14 @@ class GlassSystemSeeder extends Seeder
                 'BV' => 'Sedang Dikerjakan',
                 'Etsa' => 'N/A'
             ],
-            'used_scrap_rak' => 'Rak B03'
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subDays(2)->addHours(1)->toDateTimeString(), 'completed_at' => now()->subDays(1)->addHours(2)->toDateTimeString()],
+                'GM' => ['started_at' => now()->subDays(1)->addHours(3)->toDateTimeString(), 'completed_at' => now()->subDays(1)->addHours(6)->toDateTimeString()],
+                'BV' => ['started_at' => now()->subHours(2)->toDateTimeString(), 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'used_scrap_rak' => 'Rak B03',
+            'gudang_released_at' => now()->subDays(2)->addHours(1),
         ]);
 
         // 6. Order SPO Sample 6: Pengerjaan di Divisi Etsa (Sandblast)
@@ -302,7 +337,14 @@ class GlassSystemSeeder extends Seeder
                 'GM' => 'Selesai',
                 'BV' => 'N/A',
                 'Etsa' => 'Sedang Dikerjakan'
-            ]
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subDays(2)->addHours(2)->toDateTimeString(), 'completed_at' => now()->subDays(1)->addHours(4)->toDateTimeString()],
+                'GM' => ['started_at' => now()->subDays(1)->addHours(5)->toDateTimeString(), 'completed_at' => now()->subHours(4)->toDateTimeString()],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => now()->subHours(3)->toDateTimeString(), 'completed_at' => null],
+            ],
+            'gudang_released_at' => now()->subDays(2)->addHours(2),
         ]);
 
         // 7. Order SPO Sample 7: Dalam Pengiriman Armada (Waybill Merah)
@@ -348,7 +390,15 @@ class GlassSystemSeeder extends Seeder
                 'GM' => 'Selesai',
                 'BV' => 'N/A',
                 'Etsa' => 'N/A'
-            ]
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subDays(4)->addHours(1)->toDateTimeString(), 'completed_at' => now()->subDays(2)->addHours(3)->toDateTimeString()],
+                'GM' => ['started_at' => now()->subDays(2)->addHours(4)->toDateTimeString(), 'completed_at' => now()->subDays(1)->addHours(5)->toDateTimeString()],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'gudang_released_at' => now()->subDays(4)->addHours(1),
+            'execution_completed_at' => now()->subDays(1)->addHours(5),
         ]);
 
         // 8. Order SPO Sample 8: Selesai Terkirim (Waybill Kuning)
@@ -393,8 +443,174 @@ class GlassSystemSeeder extends Seeder
                 'GM' => 'Selesai',
                 'BV' => 'Selesai',
                 'Etsa' => 'N/A'
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subDays(7)->addHours(2)->toDateTimeString(), 'completed_at' => now()->subDays(5)->addHours(1)->toDateTimeString()],
+                'GM' => ['started_at' => now()->subDays(5)->addHours(2)->toDateTimeString(), 'completed_at' => now()->subDays(4)->addHours(3)->toDateTimeString()],
+                'BV' => ['started_at' => now()->subDays(4)->addHours(4)->toDateTimeString(), 'completed_at' => now()->subDays(3)->addHours(6)->toDateTimeString()],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'gudang_released_at' => now()->subDays(7)->addHours(2),
+            'execution_completed_at' => now()->subDays(3)->addHours(6),
+        ]);
+
+        // 9. Order SPO Sample 9: Draft Baru (Admin Toko - Kaca Riben 6mm Canopy Ruko)
+        $order9 = Order::create([
+            'order_date' => now()->toDateString(),
+            'spo_number' => 'SPO-0136',
+            'customer_name' => 'Bapak Rudi Hartono',
+            'customer_phone' => '0822-5566-7788',
+            'customer_address' => 'Komp. Setiabudi Regency C-12, Bandung',
+            'glass_type' => 'Kaca Riben 6 mm Dark',
+            'length_cm' => 220.0,
+            'width_cm' => 110.0,
+            'thickness_mm' => 6,
+            'processes' => ['HT', 'GM'],
+            'accessories' => [
+                ['name' => 'Aksesoris alumunium', 'price' => 85000, 'qty' => 4],
+                ['name' => 'Lem pcs', 'price' => 35000, 'qty' => 2]
+            ],
+            'items' => [
+                [
+                    'glass_type' => 'Kaca Riben 6 mm Dark',
+                    'length_cm' => 220.0,
+                    'width_cm' => 110.0,
+                    'thickness_mm' => 6,
+                    'qty' => 3,
+                    'processes' => ['HT', 'GM'],
+                    'subtotal' => 2100000
+                ]
+            ],
+            'description' => 'Kanopi ruko lantai 2, sudut coak R5.',
+            'priority_status' => 'Biasa',
+            'deadline_date' => now()->addDays(4)->toDateString(),
+            'subtotal' => 2100000,
+            'priority_fee' => 0,
+            'custom_fee' => 0,
+            'total_price' => 2510000,
+            'paid_amount' => 0,
+            'payment_status' => 'Belum Lunas',
+            'status' => 'draft',
+            'current_division' => 'admin_toko',
+            'division_progress' => [
+                'HT' => 'Belum',
+                'GM' => 'Belum',
+                'BV' => 'N/A',
+                'Etsa' => 'N/A'
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => null, 'completed_at' => null],
+                'GM' => ['started_at' => null, 'completed_at' => null],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
             ]
         ]);
+
+        // 10. Order SPO Sample 10: Antrean Disposisi Admin Gudang (Kaca Tempered 10mm Pintu Sekat)
+        $order10 = Order::create([
+            'order_date' => now()->toDateString(),
+            'spo_number' => 'SPO-0137',
+            'customer_name' => 'Toko Kaca Sentosa',
+            'customer_phone' => '0817-6677-8899',
+            'customer_address' => 'Jl. Buah Batu No. 105, Bandung',
+            'glass_type' => 'Kaca Tempered 10 mm Polos',
+            'length_cm' => 210.0,
+            'width_cm' => 90.0,
+            'thickness_mm' => 10,
+            'processes' => ['HT', 'GM', 'Bor'],
+            'accessories' => [
+                ['name' => 'Handle pintu stainless', 'price' => 220000, 'qty' => 1]
+            ],
+            'items' => [
+                [
+                    'glass_type' => 'Kaca Tempered 10 mm Polos',
+                    'length_cm' => 210.0,
+                    'width_cm' => 90.0,
+                    'thickness_mm' => 10,
+                    'qty' => 2,
+                    'processes' => ['HT', 'GM', 'Bor'],
+                    'subtotal' => 2400000
+                ]
+            ],
+            'description' => 'Bor 2 lubang engkol pintu sekat kantor.',
+            'priority_status' => 'Prioritas',
+            'deadline_date' => now()->addDays(2)->toDateString(),
+            'subtotal' => 2400000,
+            'priority_fee' => 150000,
+            'custom_fee' => 0,
+            'total_price' => 2770000,
+            'paid_amount' => 1400000,
+            'payment_status' => 'DP (51%)',
+            'status' => 'pengerjaan',
+            'current_division' => 'admin_gudang',
+            'division_progress' => [
+                'HT' => 'Belum',
+                'GM' => 'Belum',
+                'BV' => 'N/A',
+                'Etsa' => 'N/A'
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => null, 'completed_at' => null],
+                'GM' => ['started_at' => null, 'completed_at' => null],
+                'BV' => ['started_at' => null, 'completed_at' => null],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'gudang_released_at' => now(),
+        ]);
+
+        // 11. Order SPO Sample 11: QC Ready (Lolos QC Siap Kirim - Resto Seafood Paskal)
+        $order11 = Order::create([
+            'order_date' => now()->subDays(3)->toDateString(),
+            'spo_number' => 'SPO-0138',
+            'customer_name' => 'Resto Seafood Paskal',
+            'customer_phone' => '0812-9900-1122',
+            'customer_address' => 'Paskal Food Market Stand 45, Bandung',
+            'glass_type' => 'Kaca Cermin 5 mm Bevel 3 cm (+ 1 item)',
+            'length_cm' => 150.0,
+            'width_cm' => 80.0,
+            'thickness_mm' => 5,
+            'processes' => ['HT', 'GM', 'BV'],
+            'accessories' => [
+                ['name' => 'Lem pcs', 'price' => 35000, 'qty' => 3]
+            ],
+            'items' => [
+                [
+                    'glass_type' => 'Kaca Cermin 5 mm Bevel 3 cm',
+                    'length_cm' => 150.0,
+                    'width_cm' => 80.0,
+                    'thickness_mm' => 5,
+                    'qty' => 2,
+                    'processes' => ['HT', 'GM', 'BV'],
+                    'subtotal' => 1600000
+                ]
+            ],
+            'description' => 'Bevel 3 cm sekeliling, pengiriman sore ini.',
+            'priority_status' => 'Prioritas',
+            'deadline_date' => now()->toDateString(),
+            'subtotal' => 1600000,
+            'priority_fee' => 150000,
+            'custom_fee' => 0,
+            'total_price' => 1855000,
+            'paid_amount' => 1855000,
+            'payment_status' => 'Lunas',
+            'status' => 'pengiriman',
+            'current_division' => 'QC_Ready',
+            'division_progress' => [
+                'HT' => 'Selesai',
+                'GM' => 'Selesai',
+                'BV' => 'Selesai',
+                'Etsa' => 'N/A'
+            ],
+            'division_timestamps' => [
+                'HT' => ['started_at' => now()->subDays(3)->addHours(1)->toDateTimeString(), 'completed_at' => now()->subDays(2)->addHours(2)->toDateTimeString()],
+                'GM' => ['started_at' => now()->subDays(2)->addHours(3)->toDateTimeString(), 'completed_at' => now()->subDays(1)->addHours(4)->toDateTimeString()],
+                'BV' => ['started_at' => now()->subDays(1)->addHours(5)->toDateTimeString(), 'completed_at' => now()->subHours(2)->toDateTimeString()],
+                'Etsa' => ['started_at' => null, 'completed_at' => null],
+            ],
+            'gudang_released_at' => now()->subDays(3)->addHours(1),
+            'execution_completed_at' => now()->subHours(2),
+        ]);
+
 
         // 2. Seed Scrap Glass (Stok Kaca Sisa di Rak Manufaktur)
         ScrapGlass::create([
@@ -451,7 +667,26 @@ class GlassSystemSeeder extends Seeder
             'status' => 'Layak Pakai'
         ]);
 
-        // 3. Seed Deliveries (Surat Jalan 3/4 Warna Terhubung ke Order ID)
+        ScrapGlass::create([
+            'scrap_code' => 'SCRAP-007',
+            'glass_type' => 'Kaca Bening 12mm Polos',
+            'length_cm' => 200.0,
+            'width_cm' => 85.0,
+            'rak_location' => 'Rak D05',
+            'status' => 'Layak Pakai'
+        ]);
+
+        ScrapGlass::create([
+            'scrap_code' => 'SCRAP-008',
+            'glass_type' => 'Kaca Cermin Grey 5mm',
+            'length_cm' => 95.0,
+            'width_cm' => 45.0,
+            'rak_location' => 'Rak E02',
+            'status' => 'Layak Pakai'
+        ]);
+
+
+        // 3. Seed Deliveries (Surat Jalan 4 Warna Terhubung ke Order ID)
         // Surat Jalan 1: Untuk SPO-0129 (Ibu Ratna) - Selesai Terkirim (Lembar Putih)
         Delivery::create([
             'waybill_number' => 'SJ-2026-001',
@@ -483,6 +718,17 @@ class GlassSystemSeeder extends Seeder
             'waybill_color' => 'Kuning',
             'delivery_status' => 'Selesai Terkirim',
             'proof_photo_path' => 'proofs/sample_ttd_parahyangan.jpg'
+        ]);
+
+        // Surat Jalan 4: Untuk SPO-0138 (Resto Seafood Paskal) - Dalam Pengiriman (Lembar Hijau)
+        Delivery::create([
+            'waybill_number' => 'SJ-2026-004',
+            'order_id' => $order11->id,
+            'driver_name' => 'Pak Agus (Supir Armadas)',
+            'vehicle_plate' => 'Engkel Box (D 8472 AB)',
+            'waybill_color' => 'Kuning',
+            'delivery_status' => 'Dalam Pengiriman',
+            'proof_photo_path' => null
         ]);
     }
 }

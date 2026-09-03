@@ -176,12 +176,8 @@ class SypOperationalController extends Controller
             'payment_status' => $paymentStatus,
             'status' => $targetStatus,
             'current_division' => $isDraft ? 'admin_toko' : 'admin_gudang',
-            'division_progress' => [
-                'HT' => $isDraft ? 'N/A' : 'Menunggu Dispatch',
-                'GM' => 'Belum',
-                'BV' => 'N/A',
-                'Etsa' => 'N/A'
-            ],
+            'gudang_released_at' => $isDraft ? null : now(),
+            'division_progress' => $this->buildDivisionProgress($items, $validated['processes'] ?? []),
             'used_scrap_rak' => $validated['used_scrap_rak'] ?? null,
         ]);
 
@@ -322,6 +318,7 @@ class SypOperationalController extends Controller
 
             if ($isPromoted) {
                 $order->current_division = 'admin_gudang';
+                $order->gudang_released_at = $order->gudang_released_at ?? now();
                 $order->division_progress = [
                     'HT' => 'Menunggu Dispatch',
                     'GM' => 'Belum',
@@ -372,6 +369,7 @@ class SypOperationalController extends Controller
         $order->payment_status = $paymentStatus;
         $order->paid_amount = $paidAmount;
         $order->current_division = 'admin_gudang';
+        $order->gudang_released_at = $order->gudang_released_at ?? now();
         $order->division_progress = array_merge((array)$order->division_progress, [
             'HT' => 'Menunggu Dispatch Admin Gudang'
         ]);
@@ -392,12 +390,22 @@ class SypOperationalController extends Controller
         $order = Order::findOrFail($id);
         $targetDiv = $validated['target_division'];
         $order->current_division = $targetDiv;
+        $order->gudang_released_at = $order->gudang_released_at ?? now();
         
         $divNameKey = strtoupper(str_replace('divisi_', '', $targetDiv));
         $progress = (array) ($order->division_progress ?? []);
         $progress[$divNameKey] = 'Sedang Dikerjakan';
 
+        $timestamps = (array) ($order->division_timestamps ?? []);
+        if (!isset($timestamps[$divNameKey]) || !is_array($timestamps[$divNameKey])) {
+            $timestamps[$divNameKey] = ['started_at' => null, 'completed_at' => null];
+        }
+        if (empty($timestamps[$divNameKey]['started_at'])) {
+            $timestamps[$divNameKey]['started_at'] = now()->toDateTimeString();
+        }
+
         $order->division_progress = $progress;
+        $order->division_timestamps = $timestamps;
         $order->save();
 
         return redirect()->back()->with('message', 'Order #' . $order->spo_number . ' Berhasil Dikirim ke ' . strtoupper(str_replace('_', ' ', $targetDiv)) . '!');
@@ -456,11 +464,20 @@ class SypOperationalController extends Controller
         $currentDiv = $order->current_division;
         $currentDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
         $progress = (array) ($order->division_progress ?? []);
+        $timestamps = (array) ($order->division_timestamps ?? []);
+
         if ($currentDivKey) {
             $progress[$currentDivKey] = 'Sedang Dikerjakan';
+            if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
+                $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
+            }
+            if (empty($timestamps[$currentDivKey]['started_at'])) {
+                $timestamps[$currentDivKey]['started_at'] = now()->toDateTimeString();
+            }
         }
 
         $order->division_progress = $progress;
+        $order->division_timestamps = $timestamps;
         $order->save();
 
         return redirect()->back()->with('message', 'Order #' . $order->spo_number . ' Berhasil Dimulai! Status saat ini: Sedang Dikerjakan di Divisi ' . $currentDivKey);
@@ -484,22 +501,38 @@ class SypOperationalController extends Controller
 
         $currentDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
         $progress = (array) ($order->division_progress ?? []);
+        $timestamps = (array) ($order->division_timestamps ?? []);
+
         if ($currentDivKey) {
             $progress[$currentDivKey] = 'Selesai';
+            if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
+                $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
+            }
+            $timestamps[$currentDivKey]['completed_at'] = now()->toDateTimeString();
         }
 
         if ($nextDiv === 'QC_Ready' || $nextDiv === 'pengiriman') {
             $order->status = 'pengiriman';
             $order->current_division = 'QC_Ready';
+            $order->execution_completed_at = now();
             $order->division_progress = $progress;
+            $order->division_timestamps = $timestamps;
             $order->save();
             $msg = 'Pekerjaan Divisi untuk #' . $order->spo_number . ' Selesai & Lolos QC! Siap Dikirim ke Driver.';
         } else {
             $nextDivKey = strtoupper(str_replace('divisi_', '', $nextDiv));
             $progress[$nextDivKey] = 'Sedang Dikerjakan';
+            if (!isset($timestamps[$nextDivKey]) || !is_array($timestamps[$nextDivKey])) {
+                $timestamps[$nextDivKey] = ['started_at' => null, 'completed_at' => null];
+            }
+            if (empty($timestamps[$nextDivKey]['started_at'])) {
+                $timestamps[$nextDivKey]['started_at'] = now()->toDateTimeString();
+            }
+
             $order->status = 'pengerjaan';
             $order->current_division = $nextDiv;
             $order->division_progress = $progress;
+            $order->division_timestamps = $timestamps;
             $order->save();
 
             $nextDivLabel = strtoupper(str_replace('_', ' ', $nextDiv));
@@ -595,5 +628,40 @@ class SypOperationalController extends Controller
             'fee_etsa' => $feeEtsa,
             'subtotal' => $itemSubtotal
         ];
+    }
+
+    /**
+     * Helper to dynamically generate division_progress array based on required item processes
+     */
+    protected function buildDivisionProgress($items = [], $processes = [])
+    {
+        $req = [];
+        if (is_array($processes)) {
+            foreach ($processes as $p) {
+                $req[strtoupper((string)$p)] = true;
+            }
+        }
+        if (is_array($items)) {
+            foreach ($items as $it) {
+                if (isset($it['processes']) && is_array($it['processes'])) {
+                    foreach ($it['processes'] as $p) {
+                        $req[strtoupper((string)$p)] = true;
+                    }
+                }
+            }
+        }
+
+        $divKeys = ['HT', 'GM', 'BV', 'Etsa'];
+        $progress = [];
+        foreach ($divKeys as $code) {
+            $upperCode = strtoupper($code);
+            // HT (Potong) is ALWAYS mandatory for every order (potong kaca lembaran)
+            if ($upperCode === 'HT' || isset($req[$upperCode])) {
+                $progress[$code] = 'Belum';
+            } else {
+                $progress[$code] = 'N/A';
+            }
+        }
+        return $progress;
     }
 }

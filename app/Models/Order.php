@@ -35,16 +35,22 @@ class Order extends Model
         'status',
         'current_division',
         'division_progress',
+        'division_timestamps',
         'used_scrap_rak',
         'revision_notes',
+        'gudang_released_at',
+        'execution_completed_at',
     ];
 
     protected $casts = [
         'order_date' => 'date',
+        'gudang_released_at' => 'datetime',
+        'execution_completed_at' => 'datetime',
         'processes' => 'array',
         'accessories' => 'array',
         'items' => 'array',
         'division_progress' => 'array',
+        'division_timestamps' => 'array',
         'deadline_date' => 'date',
         'length_cm' => 'float',
         'width_cm' => 'float',
