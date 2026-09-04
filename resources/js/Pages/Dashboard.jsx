@@ -86,6 +86,70 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         rak_location: 'Rak A02'
     });
 
+    // Glass Defect Complaint States & Handlers
+    const [showComplaintModal, setShowComplaintModal] = useState(false);
+    const [complaintForm, setComplaintForm] = useState({
+        reason: 'Kaca Baret / Gores',
+        notes: '',
+        photo: null,
+        photoPreview: null
+    });
+    const [showGudangDecisionModal, setShowGudangDecisionModal] = useState(false);
+    const [selectedComplaintOrder, setSelectedComplaintOrder] = useState(null);
+
+    const handleOpenComplaintModal = (order) => {
+        setSelectedExecutionOrder(order);
+        setComplaintForm({
+            reason: 'Kaca Baret / Gores',
+            notes: '',
+            photo: null,
+            photoPreview: null
+        });
+        setShowComplaintModal(true);
+    };
+
+    const handleComplaintPhotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setComplaintForm(prev => ({
+                ...prev,
+                photo: file,
+                photoPreview: URL.createObjectURL(file)
+            }));
+        }
+    };
+
+    const handleSubmitComplaint = (e) => {
+        e.preventDefault();
+        if (!selectedExecutionOrder) return;
+
+        const rawNotes = (complaintForm.notes || '').trim();
+        const formData = new FormData();
+        formData.append('reason', complaintForm.reason);
+        formData.append('notes', rawNotes === '' ? '-' : rawNotes);
+        if (complaintForm.photo) {
+            formData.append('photo', complaintForm.photo);
+        }
+
+        router.post(route('orders.complaint', selectedExecutionOrder.id), formData, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowComplaintModal(false);
+                setShowExecutionModal(false);
+            }
+        });
+    };
+
+    const handleResolveComplaint = (orderId, actionType) => {
+        router.post(route('orders.resolve_complaint', orderId), { action: actionType }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowGudangDecisionModal(false);
+                setSelectedComplaintOrder(null);
+            }
+        });
+    };
+
     const handleOpenExecutionModal = (order) => {
         setSelectedExecutionOrder(order);
         setShowExecutionModal(true);
@@ -119,7 +183,12 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
 
     const handleSaveScrapFromPopup = (e) => {
         e.preventDefault();
-        router.post(route('scrap.store'), scrapPopupForm, {
+        const payload = {
+            ...scrapPopupForm,
+            glass_type: (scrapPopupForm.glass_type || '').trim() || '-',
+            rak_location: (scrapPopupForm.rak_location || '').trim() || '-',
+        };
+        router.post(route('scrap.store'), payload, {
             onSuccess: () => {
                 setShowScrapPopupModal(false);
                 setScrapPopupForm({ glass_type: '', length_cm: '', width_cm: '', rak_location: 'Rak A02' });
@@ -1646,10 +1715,21 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         owner: '📈 Owner & Akuntan'
     };
 
+    const sanitizeField = (val) => {
+        if (val === null || val === undefined) return '-';
+        const s = String(val).trim();
+        return s === '' ? '-' : s;
+    };
+
     const handleCreateOrder = (e, targetStatus = 'pengerjaan') => {
         e.preventDefault();
         router.post(route('orders.store'), {
             ...orderForm,
+            customer_name: sanitizeField(orderForm.customer_name),
+            customer_phone: sanitizeField(orderForm.customer_phone),
+            customer_address: sanitizeField(orderForm.customer_address),
+            description: sanitizeField(orderForm.description),
+            used_scrap_rak: sanitizeField(orderForm.used_scrap_rak),
             subtotal: calcSubtotal,
             priority_fee: calcPriorityFee,
             custom_fee: calcCustomFee,
@@ -1667,6 +1747,9 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
 
     const handleOpenEditModal = (order) => {
         setEditingOrder(order);
+        if (order.status === 'pengerjaan') {
+            router.post(route('orders.lock_revision', order.id), {}, { preserveScroll: true });
+        }
         let itemsList = Array.isArray(order.items) && order.items.length > 0
             ? order.items.map((it, idx) => ({
                 id: idx + 1,
@@ -1702,6 +1785,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
             items: itemsList,
             accessories: Array.isArray(order.accessories) ? order.accessories : [],
             description: order.description || '',
+            revision_notes: order.revision_notes || '',
             sketch_photo: null,
             priority_status: order.priority_status || 'Biasa',
             priority_fee: order.priority_fee || 0,
@@ -1717,6 +1801,15 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         setShowEditOrderModal(true);
     };
 
+    const handleCloseEditModal = () => {
+        if (editingOrder && editingOrder.status === 'pengerjaan') {
+            router.post(route('orders.cancel_revision_lock', editingOrder.id), {}, { preserveScroll: true });
+        }
+        setShowEditOrderModal(false);
+        setEditingOrder(null);
+        setSketchPreview(null);
+    };
+
     const handleUpdateOrderSubmit = (e, targetStatus = null) => {
         e.preventDefault();
         if (!editingOrder) return;
@@ -1725,6 +1818,12 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
 
         router.post(route('orders.update', editingOrder.id), {
             ...orderForm,
+            customer_name: sanitizeField(orderForm.customer_name),
+            customer_phone: sanitizeField(orderForm.customer_phone),
+            customer_address: sanitizeField(orderForm.customer_address),
+            description: sanitizeField(orderForm.description),
+            revision_notes: sanitizeField(orderForm.revision_notes),
+            used_scrap_rak: sanitizeField(orderForm.used_scrap_rak),
             subtotal: calcSubtotal,
             priority_fee: calcPriorityFee,
             custom_fee: calcCustomFee,
@@ -1770,6 +1869,12 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         if (promotePaymentOption === 'lunas') return total;
         if (promotePaymentOption === 'custom') return parseFloat(promoteCustomPaidAmount) || 0;
         return Math.round((total * promoteDpPercent) / 100);
+    };
+
+    const handleAcknowledgeRevision = (orderId) => {
+        router.post(route('orders.acknowledge_revision', orderId), {}, {
+            preserveScroll: true
+        });
     };
 
     const renderProgressTracker = (o) => {
@@ -2299,7 +2404,14 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                         {filteredOrders.map(o => (
                                             <tr key={o.id} className="hover:bg-slate-800/30">
                                                 <td className="p-3">
-                                                    <div className="font-bold text-cyan-400 font-mono text-sm">{o.spo_number}</div>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <div className="font-bold text-cyan-400 font-mono text-sm">{o.spo_number}</div>
+                                                        {o.is_revised && (
+                                                            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1 font-mono shadow-sm" title="Orderan ini memiliki riwayat revisi">
+                                                                🔔 Telah Direvisi ({o.revision_count || 1}x)
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="mt-1.5 space-y-1 text-[11px] font-mono">
                                                         <div className="text-slate-300 flex items-center gap-1" title="Tanggal Pembuatan Order (Admin Toko)">
                                                             <span>📅</span>
@@ -2411,35 +2523,61 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         <span className="text-slate-500 text-xs italic font-normal">🔒 Terverifikasi</span>
                                                     )}
                                                 </td>
-                                                <td className="p-3 flex items-center gap-2">
+                                                <td className="p-3 flex flex-wrap items-center gap-2">
                                                     {o.status === 'draft' && (userRole === 'admin_toko' || userRole === 'owner') && (
                                                         <>
                                                             <button 
                                                                 onClick={() => handleOpenEditModal(o)}
-                                                                className="bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-blue-500/20"
+                                                                className="bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-blue-500/20 cursor-pointer"
                                                             >
                                                                 ✏️ Edit Draf
                                                             </button>
                                                             <button 
                                                                 onClick={() => handleOpenPromoteModal(o)}
-                                                                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-emerald-500/20"
+                                                                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer"
                                                             >
                                                                 ✅ Setuju & DP (50%)
                                                             </button>
                                                         </>
                                                     )}
 
-                                                    {o.status === 'pengerjaan' && o.current_division === 'admin_gudang' && (userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                    {o.status === 'pengerjaan' && (userRole === 'admin_toko' || userRole === 'owner') && (
                                                         <button 
-                                                            onClick={() => { setSelectedDispatchOrder(o); setShowDispatchModal(true); }}
-                                                            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition"
+                                                            onClick={() => handleOpenEditModal(o)}
+                                                            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-amber-500/20 cursor-pointer"
+                                                            title="Klik untuk merevisi deskripsi, foto sketsa project, atau dimensi/spesifikasi item kaca"
                                                         >
-                                                            📤 Kirim Ke Divisi
+                                                            🔄 Revisi / Edit Order
                                                         </button>
                                                     )}
 
+                                                    {o.status === 'pengerjaan' && o.current_division === 'admin_gudang' && (userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                        o.revision_status === 'editing' ? (
+                                                            <button 
+                                                                disabled
+                                                                className="bg-slate-800 text-slate-400 font-extrabold px-3 py-1.5 rounded text-xs cursor-not-allowed opacity-75 flex items-center gap-1.5 shadow-inner"
+                                                                title="Tombol terblokir sementara karena Admin Toko sedang mengedit/merevisi orderan ini"
+                                                            >
+                                                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                                                                <span>🔒 Terkunci (Sedang Direvisi Toko...)</span>
+                                                            </button>
+                                                        ) : (
+                                                            <button 
+                                                                onClick={() => { setSelectedDispatchOrder(o); setShowDispatchModal(true); }}
+                                                                className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-500/20"
+                                                            >
+                                                                <span>📤 Kirim Ke Divisi</span>
+                                                                {o.revision_status === 'pending_gudang' && (
+                                                                    <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded font-mono font-extrabold animate-pulse">
+                                                                        (Revisi Baru)
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        )
+                                                    )}
+
                                                     {(o.status === 'pengiriman' || o.status === 'selesai') && (
-                                                        <button onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }} className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded text-xs font-semibold">
+                                                        <button onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }} className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">
                                                             🖨️ Surat Jalan
                                                         </button>
                                                     )}
@@ -2521,6 +2659,44 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 </div>
                             )}
 
+                            {/* BERSAMAAN DENGAN ANTREAN: WARNING BANNER PENDING KOMPLAIN KACA UNTUK ADMIN GUDANG */}
+                            {initialOrders.filter(o => o.complaint_status === 'pending_gudang').length > 0 && (userRole === 'admin_gudang' || userRole === 'owner') && (
+                                <div className="bg-amber-950/90 border-2 border-amber-500/80 rounded-2xl p-5 shadow-2xl space-y-3 animate-pulse">
+                                    <div className="flex justify-between items-center border-b border-amber-500/40 pb-2.5">
+                                        <h3 className="text-sm font-black text-amber-300 flex items-center gap-2">
+                                            <span>⚠️ PERINGATAN KRITIS: ADA KOMPLAIN KACA CACAT / BARET MENUNGGU DECISION GUDANG ({initialOrders.filter(o => o.complaint_status === 'pending_gudang').length})</span>
+                                        </h3>
+                                        <span className="text-[10px] text-amber-200 bg-amber-500/20 px-2.5 py-1 rounded-full font-mono font-bold border border-amber-500/40">Tindakan Gudang Diperlukan</span>
+                                    </div>
+                                    <div className="space-y-2.5">
+                                        {initialOrders.filter(o => o.complaint_status === 'pending_gudang').map(o => (
+                                            <div key={o.id} className="bg-slate-950/90 border border-amber-500/50 p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                                <div className="space-y-1">
+                                                    <div className="font-extrabold text-amber-300 text-xs font-mono">
+                                                        SPO #{o.spo_number} — Pelapor: Divisi {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''}
+                                                    </div>
+                                                    <div className="text-slate-300 text-xs">
+                                                        Pelanggan: <strong>{o.customer_name}</strong> | Kendala: <strong className="text-rose-400">{o.complaint_data?.reason || 'Kaca Cacat'}</strong>
+                                                    </div>
+                                                    {o.complaint_data?.notes && (
+                                                        <div className="text-slate-400 text-[11px] italic font-mono bg-slate-900/60 p-1.5 rounded border border-slate-800">
+                                                            Catatan Pekerja: "{o.complaint_data.notes}"
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setSelectedComplaintOrder(o); setShowGudangDecisionModal(true); }}
+                                                    className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                                                >
+                                                    <span>⚖️ Tinjau & Ambil Keputusan</span>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* SECTION A: ORDER ANTREAN ADMIN GUDANG */}
                             {(userRole === 'admin_gudang' || userRole === 'owner') && (productionSubTab === 'all' || productionSubTab === 'gudang') && (
                                 <div className="bg-slate-900/80 border-2 border-blue-500/40 rounded-2xl p-6 shadow-xl space-y-4">
@@ -2557,15 +2733,65 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             📅 Pembuatan Order: <strong className="text-cyan-400">{formatIndonesianDate(o.order_date)}</strong>
                                                         </div>
                                                     </div>
+
+                                                    {o.revision_status === 'editing' && (
+                                                        <div className="bg-rose-950/90 border-2 border-rose-500 rounded-xl p-3 text-rose-200 text-xs space-y-1.5 animate-pulse shadow-lg">
+                                                            <div className="font-extrabold text-rose-300 flex items-center justify-between text-xs">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                                                                    <span>⏳ SEDANG DIREVISI OLEH ADMIN TOKO...</span>
+                                                                </span>
+                                                                <span className="bg-rose-500 text-white font-mono px-2 py-0.5 rounded text-[10px]">
+                                                                    LOCKED EDITING
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[11px] text-slate-200 leading-relaxed">
+                                                                Admin Toko sedang mengedit/mengisi detail revisi pada SPO ini. Tombol <strong>Kirim ke Divisi</strong> diblokir sementara sampai Admin Toko selesai mengeklik simpan.
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {o.revision_status === 'pending_gudang' && (
+                                                        <div className="bg-amber-950/80 border-2 border-amber-500 rounded-xl p-3 text-amber-200 text-xs space-y-2">
+                                                            <div className="font-extrabold text-amber-300 flex items-center justify-between text-xs">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <span>⚠️ ORDERAN TELAH DIREVISI OLEH ADMIN TOKO</span>
+                                                                </span>
+                                                                <span className="bg-amber-500 text-slate-950 font-mono font-extrabold px-2 py-0.5 rounded text-[10px]">
+                                                                    REVISI DISIMPAN
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[11px] text-slate-200 leading-relaxed">
+                                                                Admin Toko telah selesai menginput dan menyimpan revisi. Admin Gudang dapat memeriksa spesifikasi/ukuran terbaru di atas dan dapat langsung mengeklik tombol <strong>Disposisi Divisi</strong> di bawah.
+                                                            </p>
+                                                            {o.revision_notes && (
+                                                                <div className="bg-slate-950/90 p-2 rounded border border-amber-500/40 text-[11px] text-amber-300 font-mono">
+                                                                    📝 Catatan Revisi Toko: {o.revision_notes}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex justify-between items-center pt-1">
                                                         <span className="text-[11px] text-slate-400 font-mono">📅 Deadline: {o.deadline_date || '-'}</span>
-                                                        <button 
-                                                            onClick={() => { setSelectedDispatchOrder(o); setShowDispatchModal(true); }} 
-                                                            className="group relative inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-300/40 overflow-hidden cursor-pointer"
-                                                        >
-                                                            <span>📤 Disposisi Divisi</span>
-                                                            <span className="transition-transform group-hover:translate-x-1 duration-200">➔</span>
-                                                        </button>
+                                                        {o.revision_status === 'editing' ? (
+                                                            <button 
+                                                                disabled
+                                                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 bg-slate-800 border border-slate-700 cursor-not-allowed opacity-75 flex items-center gap-1.5"
+                                                                title="SPO sedang di-edit oleh Admin Toko. Tombol akan otomatis aktif setelah revisi disimpan."
+                                                            >
+                                                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                                                                <span>🔒 Terkunci (Sedang Direvisi Admin Toko...)</span>
+                                                            </button>
+                                                        ) : (
+                                                            <button 
+                                                                onClick={() => { setSelectedDispatchOrder(o); setShowDispatchModal(true); }} 
+                                                                className="group relative inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-300/40 overflow-hidden cursor-pointer"
+                                                            >
+                                                                <span>Disposisi Divisi</span>
+                                                                <span className="transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -2679,7 +2905,55 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                         <div className="text-slate-300 font-bold text-xs mt-0.5">{o.customer_name}</div>
                                                                         <div className="text-[10px] text-slate-400 mt-1">📅 Order: {formatIndonesianDate(o.order_date)}</div>
                                                                         <div className="text-[10px] text-amber-300 font-bold">📅 Deadline: {o.deadline_date || '-'}</div>
-                                                                    </td>
+                                                                        {o.revision_status === 'pending_division' && (
+                                                                            <div className="mt-1.5 bg-rose-950/90 border border-rose-500 rounded-xl p-2 text-rose-200 space-y-1 animate-pulse">
+                                                                                <div className="flex justify-between items-center text-[10px] font-extrabold">
+                                                                                    <span className="text-rose-300 flex items-center gap-1">⚠️ PERINGATAN REVISI TOKO</span>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleAcknowledgeRevision(o.id)}
+                                                                                        className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-2 py-0.5 rounded text-[10px] cursor-pointer shadow"
+                                                                                    >
+                                                                                        🔄 Terima & Eksekusi Revisi SPO
+                                                                                    </button>
+                                                                                </div>
+                                                                                {Object.values(o.division_progress || {}).includes('Sedang Dikerjakan') && (
+                                                                                    <div className="bg-rose-600 text-white font-extrabold text-[10px] p-1 rounded animate-bounce">
+                                                                                        🚨 PERINGATAN KRITIS: Orderan ini SEDANG DIKERJAKAN di divisi dan ADA REVISIAN dari Admin Toko! (Cek Perubahan Ukuran)
+                                                                                    </div>
+                                                                                )}
+                                                                                {o.revision_notes && (
+                                                                                    <div className="text-[10px] text-amber-200 font-mono bg-slate-950/80 p-1 rounded border border-rose-500/40">
+                                                                                        Catatan: {o.revision_notes}
+                                                                                    </div>
+                                                                                )}
+                                                                             </div>
+                                                                         )}
+                                                                         {o.complaint_status === 'pending_gudang' && (
+                                                                             <div className="mt-1.5 bg-amber-950/90 border border-amber-500 rounded-xl p-2 text-amber-200 space-y-1 animate-pulse">
+                                                                                 <div className="flex justify-between items-center text-[10px] font-extrabold">
+                                                                                     <span className="text-amber-300 flex items-center gap-1">⚠️ KOMPLAIN KACA DARI {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase()}</span>
+                                                                                     {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                                                         <button
+                                                                                             type="button"
+                                                                                             onClick={() => { setSelectedComplaintOrder(o); setShowGudangDecisionModal(true); }}
+                                                                                             className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-2 py-0.5 rounded text-[10px] cursor-pointer shadow"
+                                                                                         >
+                                                                                             ⚖️ Tinjau Komplain Kaca
+                                                                                         </button>
+                                                                                     )}
+                                                                                 </div>
+                                                                                 <div className="text-[10px] text-amber-200 font-mono">
+                                                                                     Kendala: <strong>{o.complaint_data?.reason}</strong> {o.complaint_data?.notes ? `- "${o.complaint_data.notes}"` : ''}
+                                                                                 </div>
+                                                                             </div>
+                                                                         )}
+                                                                         {o.complaint_status === 're_cut_needed' && o.current_division === 'divisi_ht' && (
+                                                                             <div className="mt-1.5 bg-rose-950/90 border border-rose-500 rounded-xl p-1.5 text-rose-200 text-[10px] font-bold font-mono animate-pulse">
+                                                                                 🚨 POTONG ULANG (GANTI KACA DARI DIVISI {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''})
+                                                                             </div>
+                                                                         )}
+                                                                     </td>
 
                                                                     <td className="p-3 max-w-xs space-y-1">
                                                                         {Array.isArray(o.items) && o.items.length > 0 ? (
@@ -2752,16 +3026,38 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                     </td>
 
                                                                     <td className="p-3 text-right">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleOpenExecutionModal(o)}
-                                                                            className="group relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/50 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-400/40 overflow-hidden cursor-pointer ml-auto"
-                                                                        >
-                                                                            <span className="absolute inset-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                                                                            <span className="text-sm transition-transform group-hover:rotate-12 duration-200">🛠️</span>
-                                                                            <span className="tracking-wider uppercase font-black text-[11px] drop-shadow">Mulai Kerjakan / Detail</span>
-                                                                            <span className="text-cyan-200 text-xs transition-transform group-hover:translate-x-1 duration-200">➔</span>
-                                                                        </button>
+                                                                        {(() => {
+                                                                            const isHistoryRow = productionSubTab.endsWith('_history') || 
+                                                                                                productionSubTab === 'QC_Ready' || 
+                                                                                                (isDivisionWorker && o.current_division !== userRole);
+
+                                                                            if (isHistoryRow) {
+                                                                                return (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleOpenExecutionModal(o)}
+                                                                                        className="group relative inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-cyan-300 bg-slate-800/90 hover:bg-slate-700/90 hover:text-white shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-slate-700 hover:border-cyan-400/50 cursor-pointer ml-auto"
+                                                                                    >
+                                                                                        <span className="text-sm">🔍</span>
+                                                                                        <span className="tracking-wider uppercase font-extrabold text-[11px]">Lihat Detail</span>
+                                                                                        <span className="text-cyan-400 text-xs transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                                                    </button>
+                                                                                );
+                                                                            }
+
+                                                                            return (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleOpenExecutionModal(o)}
+                                                                                    className="group relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/50 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-400/40 overflow-hidden cursor-pointer ml-auto"
+                                                                                >
+                                                                                    <span className="absolute inset-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                                                                    <span className="text-sm transition-transform group-hover:rotate-12 duration-200">🛠️</span>
+                                                                                    <span className="tracking-wider uppercase font-black text-[11px] drop-shadow">Mulai Kerjakan / Detail</span>
+                                                                                    <span className="text-cyan-200 text-xs transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                                                </button>
+                                                                            );
+                                                                        })()}
                                                                     </td>
                                                                 </tr>
                                                             );
@@ -4677,7 +4973,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
                                         📝 ix. Deskripsi (Penjelasan Pesanan)
                                     </h4>
-                                    <textarea rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="Instruksi khusus coakan, ukuran celah, dll..." />
+                                    <textarea required rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="Instruksi khusus coakan, ukuran celah, dll... (Wajib diisi, jika tidak ada ketik '-')" />
                                 </div>
 
                                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
@@ -5030,7 +5326,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                             <div>
                                 <h3 className="font-bold text-lg text-slate-100 flex items-center gap-2">
-                                    ✏️ Edit Draf Negosiasi #{editingOrder.spo_number}
+                                    {editingOrder.status === 'pengerjaan' ? `🔄 Revisi & Edit Orderan Pengerjaan #${editingOrder.spo_number}` : `✏️ Edit Draf Negosiasi #${editingOrder.spo_number}`}
                                 </h3>
                                 <div className="flex flex-wrap items-center gap-3 text-xs mt-1">
                                     <div className="flex items-center gap-1.5 text-slate-400 font-mono">
@@ -5051,10 +5347,32 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     </span>
                                 </div>
                             </div>
-                            <button onClick={() => { setShowEditOrderModal(false); setEditingOrder(null); }} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button onClick={handleCloseEditModal} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
                         </div>
 
                         <form className="space-y-4 text-xs overflow-y-auto pr-2 flex-1">
+                            {editingOrder.status === 'pengerjaan' && (
+                                <div className="bg-amber-950/40 p-4 rounded-xl border border-amber-500/40 space-y-2">
+                                    <h4 className="font-bold text-amber-300 text-xs flex items-center gap-1.5 border-b border-amber-500/30 pb-2">
+                                        <span>📝 Catatan Detail Perubahan Revisi Untuk Divisi Produksi</span>
+                                    </h4>
+                                    <div>
+                                        <label className="text-slate-300 block mb-1">Keterangan / Catatan Revisi:</label>
+                                        <textarea 
+                                            required
+                                            rows="2" 
+                                            placeholder="Contoh: Ukuran sekat kaca cermin diperkecil dari 150x120 cm menjadi 140x110 cm. (Wajib diisi, jika tidak ada ketik '-')"
+                                            value={orderForm.revision_notes || ''} 
+                                            onChange={e => setOrderForm('revision_notes', e.target.value)} 
+                                            className="w-full bg-slate-900 border border-amber-500/50 rounded-lg p-2.5 text-slate-100 text-xs focus:border-amber-400 font-medium"
+                                        />
+                                        <span className="text-[10px] text-amber-400/80 block mt-1">
+                                            *Mengisi catatan revisi ini akan mengirimkan peringatan otomatis ke Admin Gudang & seluruh Divisi Produksi.
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* SECTION 1: PELANGGAN (iii, iv, v) */}
                             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                                 <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
@@ -5908,13 +6226,21 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
 
                             {/* MODAL ACTIONS */}
                             <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => { setShowEditOrderModal(false); setEditingOrder(null); }} className="px-4 py-2 bg-slate-800 rounded text-slate-300 text-xs font-semibold">Batal</button>
-                                <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'draft')} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 font-bold text-white rounded text-xs flex items-center gap-1 shadow-md shadow-blue-600/20">
-                                    💾 Simpan Perubahan Draf
-                                </button>
-                                <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'pengerjaan')} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-slate-950 rounded text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20">
-                                    🚀 Deal & Terbit Order ({orderForm.payment_option === 'lunas' ? 'Lunas' : `DP ${orderForm.dp_percent || 50}%`})
-                                </button>
+                                <button type="button" onClick={handleCloseEditModal} className="px-4 py-2 bg-slate-800 rounded text-slate-300 text-xs font-semibold cursor-pointer">Batal</button>
+                                {editingOrder.status === 'pengerjaan' ? (
+                                    <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'pengerjaan')} className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 font-extrabold text-slate-950 rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer">
+                                        🚀 Simpan Revisi & Kirim Peringatan Divisi
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'draft')} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 font-bold text-white rounded text-xs flex items-center gap-1 shadow-md shadow-blue-600/20 cursor-pointer">
+                                            💾 Simpan Perubahan Draf
+                                        </button>
+                                        <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'pengerjaan')} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-slate-950 rounded text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 cursor-pointer">
+                                            🚀 Deal & Terbit Order ({orderForm.payment_option === 'lunas' ? 'Lunas' : `DP ${orderForm.dp_percent || 50}%`})
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </form>
                     </div>
@@ -7810,6 +8136,52 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
                         </div>
 
+                        {/* PERINGATAN REVISI BANNER IN EXECUTION MODAL */}
+                        {selectedExecutionOrder.revision_status === 'pending_division' && (
+                            <div className="bg-rose-950/90 border-2 border-rose-500 rounded-2xl p-4 text-rose-200 text-xs space-y-2 animate-pulse shadow-lg relative z-10">
+                                <div className="font-extrabold text-rose-300 flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2">
+                                        <span>⚠️ PERINGATAN REVISI ORDERAN DARI ADMIN TOKO!</span>
+                                    </span>
+                                    <span className="bg-rose-500 text-white font-mono px-2.5 py-0.5 rounded-full text-[10px]">
+                                        REVISI PENDING
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-200 leading-relaxed">
+                                    Admin Toko telah merevisi deskripsi, foto sketsa project, atau dimensi ukuran item kaca. <strong>Pekerja divisi wajib mengonfirmasi/menerima revisian ini terlebih dahulu</strong> sebelum melanjutkan/menyelesaikan pengerjaan.
+                                </p>
+                                {selectedExecutionOrder.revision_notes && (
+                                    <div className="bg-slate-950/90 p-2.5 rounded-xl border border-rose-500/40 text-xs text-amber-300 font-mono">
+                                        📝 Catatan Revisi Admin Toko: <strong>{selectedExecutionOrder.revision_notes}</strong>
+                                    </div>
+                                )}
+                                <div className="flex justify-end pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            handleAcknowledgeRevision(selectedExecutionOrder.id);
+                                            setShowExecutionModal(false);
+                                        }}
+                                        className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xl shadow-amber-500/30 cursor-pointer"
+                                    >
+                                        🔄 Terima & Eksekusi Revisi SPO
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* WATERMARK BADGE FOR COMPLETED & REVISED ORDERS */}
+                        {selectedExecutionOrder.is_revised && (
+                            <div className="border-2 border-dashed border-amber-500/60 bg-amber-500/10 p-3.5 rounded-2xl text-center shadow-lg relative overflow-hidden my-2 z-10">
+                                <div className="text-xl sm:text-2xl font-black text-amber-400 tracking-widest uppercase rotate-[-1deg] drop-shadow">
+                                    🏆 ORDERAN SELESAI & SUDAH DIREVISI
+                                </div>
+                                <p className="text-[11px] text-amber-200/90 font-mono mt-1">
+                                    SPO-{selectedExecutionOrder.spo_number} telah berhasil diproses & diselesaikan dengan penyesuaian revisi dari Admin Toko ({selectedExecutionOrder.revision_count || 1}x Revisi).
+                                </p>
+                            </div>
+                        )}
+
                         {/* CUSTOMER & ORDER INFO GRID PANEL */}
                         <div className="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                             <div className="space-y-2">
@@ -7980,14 +8352,16 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                             )}
                                         </div>
 
-                                        {/* TOMBOL POPUP INPUT SISA */}
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenScrapPopup(it)}
-                                            className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500 hover:to-orange-500 text-amber-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-amber-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-amber-500/10"
-                                        >
-                                            <span>🧩 + Input Sisa Potong</span>
-                                        </button>
+                                        {/* TOMBOL POPUP INPUT SISA (KHUSUS DIVISI POTONG / HT) */}
+                                        {selectedExecutionOrder.current_division === 'divisi_ht' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenScrapPopup(it)}
+                                                className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500 hover:to-orange-500 text-amber-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-amber-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-amber-500/10"
+                                            >
+                                                <span>🧩 + Input Sisa Potong</span>
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -8012,29 +8386,89 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </button>
 
                             <div className="flex flex-wrap items-center gap-2">
-                                <select 
-                                    id={`exec_modal_next_div_${selectedExecutionOrder.id}`}
-                                    defaultValue="QC_Ready"
-                                    className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner"
-                                >
-                                    <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
-                                    <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
-                                    <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
-                                    <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
-                                    <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
-                                </select>
+                                {(() => {
+                                    const isHistoryOrder = (isDivisionWorker && selectedExecutionOrder.current_division !== userRole) || 
+                                                           selectedExecutionOrder.current_division === 'QC_Ready' || 
+                                                           selectedExecutionOrder.status === 'selesai' ||
+                                                           productionSubTab.endsWith('_history');
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const sel = document.getElementById(`exec_modal_next_div_${selectedExecutionOrder.id}`);
-                                        const nextVal = sel ? sel.value : 'QC_Ready';
-                                        handleFinishJobSubmit(selectedExecutionOrder.id, nextVal);
-                                    }}
-                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xl shadow-emerald-500/20 flex items-center gap-2"
-                                >
-                                    <span>✅ Selesai & Teruskan Pekerjaan</span>
-                                </button>
+                                    if (isHistoryOrder) {
+                                        return (
+                                            <div className="flex items-center gap-2">
+                                                {selectedExecutionOrder.is_revised && (
+                                                    <span className="text-xs font-black text-amber-300 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-500/40 font-mono">
+                                                        🏆 SELESAI & SUDAH DIREVISI
+                                                    </span>
+                                                )}
+                                                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/30 flex items-center gap-1.5 shadow-sm font-mono">
+                                                    <span>✅ Order Selesai Dikerjakan</span>
+                                                </span>
+                                            </div>
+                                        );
+                                    }
+
+                                    if (selectedExecutionOrder.complaint_status === 'pending_gudang') {
+                                        return (
+                                            <span className="text-xs font-bold text-amber-300 bg-amber-500/20 px-4 py-2 rounded-xl border border-amber-500/40 flex items-center gap-1.5 font-mono shadow-sm">
+                                                <span>⏳ MENUNGGU DECISION ADMIN GUDANG (TERKUNCI)</span>
+                                            </span>
+                                        );
+                                    }
+
+                                    if (selectedExecutionOrder.revision_status === 'pending_division') {
+                                        return (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    handleAcknowledgeRevision(selectedExecutionOrder.id);
+                                                    setShowExecutionModal(false);
+                                                }}
+                                                className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer"
+                                            >
+                                                🔄 Terima & Eksekusi Revisi SPO
+                                            </button>
+                                        );
+                                    }
+
+                                    return (
+                                        <>
+                                            {/* BUTTON LAPORKAN KACA CACAT / BARET UNTUK DIVISI SELAIN HT */}
+                                            {selectedExecutionOrder.current_division !== 'divisi_ht' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenComplaintModal(selectedExecutionOrder)}
+                                                    className="bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500 hover:to-amber-500 text-rose-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-rose-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-rose-500/10 cursor-pointer"
+                                                >
+                                                    <span>⚠️ Laporkan Kaca Cacat / Baret</span>
+                                                </button>
+                                            )}
+
+                                            <select 
+                                                id={`exec_modal_next_div_${selectedExecutionOrder.id}`}
+                                                defaultValue="QC_Ready"
+                                                className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner"
+                                            >
+                                                <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
+                                                <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
+                                                <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
+                                                <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
+                                                <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
+                                            </select>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const sel = document.getElementById(`exec_modal_next_div_${selectedExecutionOrder.id}`);
+                                                    const nextVal = sel ? sel.value : 'QC_Ready';
+                                                    handleFinishJobSubmit(selectedExecutionOrder.id, nextVal);
+                                                }}
+                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xl shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
+                                            >
+                                                <span>✅ Selesai & Teruskan Pekerjaan</span>
+                                            </button>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
 
@@ -8135,6 +8569,180 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL POPUP LAPORKAN KACA CACAT / BARET */}
+            {showComplaintModal && selectedExecutionOrder && (
+                <div className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 shadow-[0_0_50px_rgba(244,63,94,0.18)] relative my-auto">
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <span className="text-2xl">⚠️</span>
+                                <div>
+                                    <h3 className="font-extrabold text-white text-base">Laporkan Kaca Cacat / Baret</h3>
+                                    <p className="text-xs text-slate-400 font-mono">SPO #{selectedExecutionOrder.spo_number} — Divisi {userRole.replace('divisi_', '').toUpperCase()}</p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setShowComplaintModal(false)}
+                                className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmitComplaint} className="space-y-4 text-xs">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-300">Pilih Alasan Kendala / Cacat Kaca:</label>
+                                <select
+                                    value={complaintForm.reason}
+                                    onChange={(e) => setComplaintForm({...complaintForm, reason: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-rose-400"
+                                >
+                                    <option value="Kaca Baret / Gores">🔍 Kaca Baret / Gores (Scratch)</option>
+                                    <option value="Kaca Retak / Pecah">💥 Kaca Retak / Pecah (Cracked/Broken)</option>
+                                    <option value="Cacat Pabrik / Gelembung">🏭 Cacat Pabrik / Gelembung / Flek</option>
+                                    <option value="Miskomunikasi Ukuran / Salah Potong HT">📏 Miskomunikasi Ukuran / Salah Potong HT</option>
+                                    <option value="Kendala Lainnya">⚠️ Kendala Lainnya</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-300">Catatan & Detail Keluhan:</label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    value={complaintForm.notes}
+                                    onChange={(e) => setComplaintForm({...complaintForm, notes: e.target.value})}
+                                    placeholder="Jelaskan lokasi baret/cacat atau kronologi singkat... (Wajib diisi, jika tidak ada ketik '-')"
+                                    className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-3 text-xs focus:border-rose-400 font-mono"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-300">Foto Bukti Kaca Cacat / Baret (Opsional):</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleComplaintPhotoChange}
+                                    className="w-full bg-slate-950 border border-slate-700 text-slate-300 rounded-xl p-2 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-rose-500/20 file:text-rose-300 hover:file:bg-rose-500/30 cursor-pointer"
+                                />
+                                {complaintForm.photoPreview && (
+                                    <div className="mt-2 relative rounded-xl overflow-hidden border border-slate-700 max-h-40">
+                                        <img src={complaintForm.photoPreview} alt="Preview Bukti" className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-amber-950/50 border border-amber-500/30 p-3 rounded-xl text-[11px] text-amber-200 space-y-0.5">
+                                <span className="font-bold block text-amber-300">💡 Informasi Workflow Laporkan:</span>
+                                <p>Setelah dikirim, SPO ini akan otomatis masuk ke <strong>Admin Gudang</strong> untuk peninjauan. Pengerjaan divisi dipause sementara sampai Admin Gudang memberikan instruksi lanjutan.</p>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowComplaintModal(false)}
+                                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs transition shadow-lg shadow-rose-500/20 flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <span>📤 Kirim Laporan ke Admin Gudang</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DECISION ADMIN GUDANG UNTUK KOMPLAIN KACA */}
+            {showGudangDecisionModal && selectedComplaintOrder && (
+                <div className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 shadow-[0_0_50px_rgba(245,158,11,0.18)] relative my-auto">
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <span className="text-2xl">⚖️</span>
+                                <div>
+                                    <h3 className="font-extrabold text-white text-base">Keputusan Admin Gudang - Komplain Kaca</h3>
+                                    <p className="text-xs text-slate-400 font-mono">SPO #{selectedComplaintOrder.spo_number} — Pelapor: Divisi {selectedComplaintOrder.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''}</p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
+                                className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <div className="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
+                            <div className="space-y-1">
+                                <div className="text-slate-400">Pelanggan: <strong className="text-slate-200">{selectedComplaintOrder.customer_name}</strong></div>
+                                <div className="text-slate-400">Alasan Komplain: <strong className="text-rose-400 font-bold">{selectedComplaintOrder.complaint_data?.reason || 'Kaca Cacat / Baret'}</strong></div>
+                                {selectedComplaintOrder.complaint_data?.notes && (
+                                    <div className="text-slate-400">Catatan Pekerja: <span className="text-amber-200 italic font-mono">"{selectedComplaintOrder.complaint_data.notes}"</span></div>
+                                )}
+                                <div className="text-slate-400 text-[10px] pt-1">Dilaporkan pada: <span className="text-cyan-300 font-mono">{selectedComplaintOrder.complaint_data?.reported_at || '-'}</span></div>
+                            </div>
+
+                            {selectedComplaintOrder.complaint_data?.photo_path && (
+                                <div className="space-y-1 pt-1">
+                                    <span className="text-[11px] font-bold text-slate-300">Foto Bukti Kaca Cacat:</span>
+                                    <div className="rounded-xl overflow-hidden border border-slate-700 max-h-48">
+                                        <img src={`/storage/${selectedComplaintOrder.complaint_data.photo_path}`} alt="Bukti Cacat Kaca" className="w-full h-full object-contain bg-black" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2.5">
+                            <h4 className="text-xs font-bold text-slate-300">Pilih Langkah Konfirmasi Admin Gudang:</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => handleResolveComplaint(selectedComplaintOrder.id, 'continue')}
+                                    className="p-3.5 bg-slate-950 hover:bg-emerald-950/60 border border-slate-800 hover:border-emerald-500/60 rounded-2xl text-left space-y-1 group transition shadow-md cursor-pointer"
+                                >
+                                    <div className="font-extrabold text-emerald-400 text-xs flex items-center gap-1.5 group-hover:underline">
+                                        <span>✅ Lanjutkan Pengerjaan</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 leading-tight">
+                                        Lanjutkan di divisi asal tanpa ganti kaca (kaca dinilai masih layak pakai).
+                                    </p>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleResolveComplaint(selectedComplaintOrder.id, 'replace_glass')}
+                                    className="p-3.5 bg-slate-950 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/60 rounded-2xl text-left space-y-1 group transition shadow-md cursor-pointer"
+                                >
+                                    <div className="font-extrabold text-rose-400 text-xs flex items-center gap-1.5 group-hover:underline">
+                                        <span>🚨 Setujui Ganti Kaca (Potong Ulang)</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 leading-tight">
+                                        SPO dikembalikan ke <strong>Divisi Potong (HT)</strong> untuk dipotong ulang lembaran baru.
+                                    </p>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2 border-t border-slate-800">
+                            <button 
+                                type="button" 
+                                onClick={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition"
+                            >
+                                Tutup
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

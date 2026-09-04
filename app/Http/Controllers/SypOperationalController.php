@@ -154,9 +154,9 @@ class SypOperationalController extends Controller
         $order = Order::create([
             'order_date' => $validated['order_date'] ?? now()->toDateString(),
             'spo_number' => $spoNumber,
-            'customer_name' => $validated['customer_name'],
-            'customer_phone' => $validated['customer_phone'],
-            'customer_address' => $validated['customer_address'],
+            'customer_name' => !empty(trim($validated['customer_name'] ?? '')) ? $validated['customer_name'] : '-',
+            'customer_phone' => !empty(trim($validated['customer_phone'] ?? '')) ? $validated['customer_phone'] : '-',
+            'customer_address' => !empty(trim($validated['customer_address'] ?? '')) ? $validated['customer_address'] : '-',
             'glass_type' => $summaryGlassType,
             'length_cm' => $primaryItem['length_cm'],
             'width_cm' => $primaryItem['width_cm'],
@@ -164,7 +164,7 @@ class SypOperationalController extends Controller
             'processes' => $primaryItem['processes'],
             'accessories' => $validated['accessories'] ?? [],
             'items' => $items,
-            'description' => $validated['description'] ?? null,
+            'description' => !empty(trim($validated['description'] ?? '')) ? $validated['description'] : '-',
             'sketch_photo_path' => $sketchPath,
             'priority_status' => $validated['priority_status'],
             'deadline_date' => $validated['deadline_date'] ?? now()->addDays(3)->toDateString(),
@@ -178,7 +178,7 @@ class SypOperationalController extends Controller
             'current_division' => $isDraft ? 'admin_toko' : 'admin_gudang',
             'gudang_released_at' => $isDraft ? null : now(),
             'division_progress' => $this->buildDivisionProgress($items, $validated['processes'] ?? []),
-            'used_scrap_rak' => $validated['used_scrap_rak'] ?? null,
+            'used_scrap_rak' => !empty(trim($validated['used_scrap_rak'] ?? '')) ? $validated['used_scrap_rak'] : '-',
         ]);
 
         $message = $isDraft 
@@ -208,6 +208,7 @@ class SypOperationalController extends Controller
             'items' => 'nullable|array',
             'accessories' => 'nullable|array',
             'description' => 'nullable|string',
+            'revision_notes' => 'nullable|string',
             'sketch_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'priority_status' => 'required|string',
             'priority_fee' => 'nullable|numeric',
@@ -276,14 +277,15 @@ class SypOperationalController extends Controller
 
         $targetStatus = $request->input('status', $order->status);
         $isPromoted = ($order->status === 'draft' && $targetStatus === 'pengerjaan');
+        $isRevisionUpdate = ($order->status === 'pengerjaan' && !$isPromoted);
 
         $paymentOption = $request->input('payment_option', 'dp');
         $dpPercent = (float)$request->input('dp_percent', 50);
 
         $order->order_date = $validated['order_date'] ?? $order->order_date;
-        $order->customer_name = $validated['customer_name'];
-        $order->customer_phone = $validated['customer_phone'];
-        $order->customer_address = $validated['customer_address'];
+        $order->customer_name = !empty(trim($validated['customer_name'] ?? '')) ? $validated['customer_name'] : '-';
+        $order->customer_phone = !empty(trim($validated['customer_phone'] ?? '')) ? $validated['customer_phone'] : '-';
+        $order->customer_address = !empty(trim($validated['customer_address'] ?? '')) ? $validated['customer_address'] : '-';
         $order->glass_type = $summaryGlassType;
         $order->length_cm = $primaryItem['length_cm'];
         $order->width_cm = $primaryItem['width_cm'];
@@ -291,13 +293,36 @@ class SypOperationalController extends Controller
         $order->processes = $primaryItem['processes'];
         $order->accessories = $validated['accessories'] ?? [];
         $order->items = $items;
-        $order->description = $validated['description'] ?? null;
+        $order->description = !empty(trim($validated['description'] ?? '')) ? $validated['description'] : '-';
         $order->priority_status = $validated['priority_status'];
         $order->deadline_date = $validated['deadline_date'] ?? $order->deadline_date;
         $order->subtotal = $subtotal;
         $order->priority_fee = $priorityFee;
         $order->custom_fee = $customFee;
         $order->total_price = $totalPrice;
+
+        if ($isRevisionUpdate) {
+            $order->is_revised = true;
+            $order->revision_count = ($order->revision_count ?? 0) + 1;
+            $rawRevNotes = trim($request->input('revision_notes', ''));
+            $revNotes = !empty($rawRevNotes) ? $rawRevNotes : (!empty(trim($validated['description'] ?? '')) ? $validated['description'] : 'Revisi ukuran & spesifikasi dari Admin Toko.');
+            $order->revision_notes = $revNotes;
+            
+            if ($order->current_division === 'admin_gudang') {
+                $order->revision_status = 'pending_gudang';
+            } else {
+                $order->revision_status = 'pending_division';
+            }
+
+            $history = (array) ($order->revision_history ?? []);
+            $history[] = [
+                'revised_at' => now()->toDateTimeString(),
+                'revised_by' => auth()->user()->name ?? 'Admin Toko',
+                'notes' => $revNotes,
+                'glass_summary' => $summaryGlassType,
+            ];
+            $order->revision_history = $history;
+        }
 
         if ($isPromoted || $targetStatus === 'pengerjaan') {
             $order->status = 'pengerjaan';
@@ -333,9 +358,14 @@ class SypOperationalController extends Controller
 
         $order->save();
 
-        $message = $isPromoted 
-            ? 'Draf Order #' . $order->spo_number . ' Berhasil Didealkan & Diterbitkan ke Admin Gudang!' 
-            : 'Perubahan Draf Order #' . $order->spo_number . ' Berhasil Diperbarui!';
+        if ($isRevisionUpdate) {
+            $destTarget = ($order->current_division === 'admin_gudang') ? 'Admin Gudang' : 'Seluruh Divisi Produksi';
+            $message = 'Revisi Order #' . $order->spo_number . ' Berhasil Disimpan & Peringatan Terkirim ke ' . $destTarget . '!';
+        } else {
+            $message = $isPromoted 
+                ? 'Draf Order #' . $order->spo_number . ' Berhasil Didealkan & Diterbitkan ke Admin Gudang!' 
+                : 'Perubahan Draf Order #' . $order->spo_number . ' Berhasil Diperbarui!';
+        }
 
         return redirect()->back()->with('message', $message);
     }
@@ -388,6 +418,11 @@ class SypOperationalController extends Controller
         ]);
 
         $order = Order::findOrFail($id);
+
+        if ($order->revision_status === 'pending_gudang') {
+            $order->revision_status = 'pending_division';
+        }
+
         $targetDiv = $validated['target_division'];
         $order->current_division = $targetDiv;
         $order->gudang_released_at = $order->gudang_released_at ?? now();
@@ -438,15 +473,79 @@ class SypOperationalController extends Controller
     }
 
     /**
-     * Submit Revision
+     * Lock order for Admin Gudang & Divisions when Admin Toko opens edit/revision modal
+     */
+    public function lockRevisionEdit(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        if ($order->status === 'pengerjaan') {
+            $order->revision_status = 'editing';
+            $order->save();
+        }
+        return redirect()->back();
+    }
+
+    /**
+     * Cancel revision edit lock if Admin Toko closes edit modal without saving
+     */
+    public function cancelRevisionLock(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        if ($order->revision_status === 'editing') {
+            $order->revision_status = $order->is_revised ? 'acknowledged' : 'none';
+            $order->save();
+        }
+        return redirect()->back();
+    }
+
+    /**
+     * Submit Revision from Admin Toko
      */
     public function submitRevision(Request $request, $id)
     {
         $order = Order::findOrFail($id);
-        $order->revision_notes = $request->input('notes', 'Revisi ukuran & spesifikasi dari Admin Toko.');
+        $notes = $request->input('notes', 'Revisi ukuran & spesifikasi dari Admin Toko.');
+        $order->is_revised = true;
+        $order->revision_count = ($order->revision_count ?? 0) + 1;
+        $order->revision_notes = $notes;
+        $order->revision_status = ($order->current_division === 'admin_gudang') ? 'pending_gudang' : 'pending_division';
+
+        $history = (array) ($order->revision_history ?? []);
+        $history[] = [
+            'revised_at' => now()->toDateTimeString(),
+            'revised_by' => auth()->user()->name ?? 'Admin Toko',
+            'notes' => $notes,
+            'glass_summary' => $order->glass_type,
+        ];
+        $order->revision_history = $history;
         $order->save();
 
-        return redirect()->back()->with('message', 'Revisi Order ' . $order->spo_number . ' Berhasil Dikirim ke Divisi!');
+        return redirect()->back()->with('message', 'Peringatan Revisi Order ' . $order->spo_number . ' Berhasil Dikirim!');
+    }
+
+    /**
+     * Acknowledge / Accept Revision (Admin Gudang or Division Worker like Divisi Potong HT)
+     */
+    public function acknowledgeRevision(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->revision_status === 'pending_gudang') {
+            $order->revision_status = 'acknowledged';
+            $order->save();
+            return redirect()->back()->with('message', '✅ Revisi Order #' . $order->spo_number . ' Berhasil Dikonfirmasi Admin Gudang! SPO siap didisposisi.');
+        }
+
+        if ($order->revision_status === 'pending_division') {
+            $order->revision_status = 'acknowledged';
+            $order->save();
+            return redirect()->back()->with('message', '🔄 Revisi SPO #' . $order->spo_number . ' Berhasil Diterima & Disetujui Pekerja Divisi! Silakan lanjutkan pekerjaan.');
+        }
+
+        $order->revision_status = 'acknowledged';
+        $order->save();
+
+        return redirect()->back()->with('message', 'Status revisi SPO #' . $order->spo_number . ' Berhasil Dikonfirmasi.');
     }
 
     /**
@@ -459,6 +558,14 @@ class SypOperationalController extends Controller
 
         if ($userRole !== $order->current_division && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
             return redirect()->back()->with('message', '⚠️ Akses Ditolak: Anda hanya memiliki izin untuk memulai pengerjaan pada divisi Anda sendiri!');
+        }
+
+        if ($order->revision_status === 'pending_division') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Orderan #' . $order->spo_number . ' sedang memiliki revisian dari Admin Toko! Harap klik button Terima & Eksekusi Revisi SPO terlebih dahulu.');
+        }
+
+        if ($order->complaint_status === 'pending_gudang') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Orderan #' . $order->spo_number . ' sedang dalam proses pelaporan kaca cacat/baret ke Admin Gudang!');
         }
 
         $currentDiv = $order->current_division;
@@ -496,6 +603,14 @@ class SypOperationalController extends Controller
             return redirect()->back()->with('message', '⚠️ Akses Ditolak: Anda hanya memiliki izin untuk mengeksekusi pekerjaan pada divisi Anda sendiri!');
         }
 
+        if ($order->revision_status === 'pending_division') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Orderan #' . $order->spo_number . ' sedang memiliki revisian yang belum dikonfirmasi! Harap klik button Terima & Eksekusi Revisi SPO terlebih dahulu sebelum menyelesaikan pekerjaan.');
+        }
+
+        if ($order->complaint_status === 'pending_gudang') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Orderan #' . $order->spo_number . ' sedang dalam proses pelaporan kaca cacat/baret ke Admin Gudang!');
+        }
+
         $currentDiv = $order->current_division;
         $nextDiv = $request->input('next_division', 'QC_Ready');
 
@@ -509,6 +624,14 @@ class SypOperationalController extends Controller
                 $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
             }
             $timestamps[$currentDivKey]['completed_at'] = now()->toDateTimeString();
+        }
+
+        if ($order->is_revised) {
+            $order->revision_status = 'resolved';
+        }
+
+        if ($order->complaint_status === 're_cut_needed' && $currentDiv === 'divisi_ht') {
+            $order->complaint_status = 'resolved';
         }
 
         if ($nextDiv === 'QC_Ready' || $nextDiv === 'pengiriman') {
@@ -540,6 +663,100 @@ class SypOperationalController extends Controller
         }
 
         return redirect()->back()->with('message', $msg);
+    }
+
+    /**
+     * Submit Glass Defect / Scratch Complaint from Division
+     */
+    public function submitGlassComplaint(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $userRole = auth()->user()->role ?? '';
+
+        if ($userRole !== $order->current_division && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Anda hanya memiliki izin untuk mengajukan komplain pada divisi Anda sendiri!');
+        }
+
+        $request->validate([
+            'reason' => 'required|string',
+            'notes' => 'nullable|string',
+            'photo' => 'nullable|image|max:5120',
+        ]);
+
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('complaints', 'public');
+        }
+
+        $rawNotes = trim($request->input('notes', ''));
+        $complaintData = [
+            'reporting_division' => $order->current_division,
+            'reason' => $request->input('reason'),
+            'notes' => !empty($rawNotes) ? $rawNotes : '-',
+            'photo_path' => $photoPath,
+            'reported_at' => now()->toDateTimeString(),
+            'resolved_at' => null,
+            'gudang_decision' => null,
+        ];
+
+        $order->complaint_status = 'pending_gudang';
+        $order->complaint_data = $complaintData;
+        $order->save();
+
+        $divLabel = strtoupper(str_replace('divisi_', '', $order->current_division));
+        return redirect()->back()->with('message', '⚠️ Komplain Kaca Cacat/Baret dari Divisi ' . $divLabel . ' untuk SPO #' . $order->spo_number . ' Berhasil Dikirim ke Admin Gudang!');
+    }
+
+    /**
+     * Resolve Glass Defect Complaint by Admin Gudang (Continue vs Replace Glass)
+     */
+    public function resolveGlassComplaint(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $userRole = auth()->user()->role ?? '';
+
+        if ($userRole !== 'admin_gudang' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Hanya Admin Gudang atau Owner yang dapat mengonfirmasi keputusan komplain kaca!');
+        }
+
+        $action = $request->input('action'); // 'continue' or 'replace_glass'
+        $complaintData = (array) ($order->complaint_data ?? []);
+
+        if ($action === 'continue') {
+            $complaintData['gudang_decision'] = 'continue';
+            $complaintData['resolved_at'] = now()->toDateTimeString();
+
+            $order->complaint_status = 'resolved';
+            $order->complaint_data = $complaintData;
+            $order->save();
+
+            return redirect()->back()->with('message', '✅ Keputusan Admin Gudang: Pengerjaan SPO #' . $order->spo_number . ' Dilanjutkan di divisi asal.');
+        } elseif ($action === 'replace_glass') {
+            $reportingDiv = $order->current_division;
+            $reportingDivKey = strtoupper(str_replace('divisi_', '', $reportingDiv));
+            $reason = $complaintData['reason'] ?? 'Kaca Cacat / Baret';
+
+            $complaintData['gudang_decision'] = 'replace_glass';
+            $complaintData['resolved_at'] = now()->toDateTimeString();
+
+            // Update history of reporting division to reflect replaced glass
+            $progress = (array) ($order->division_progress ?? []);
+            if ($reportingDivKey) {
+                $progress[$reportingDivKey] = 'Kaca Diganti & Dikembalikan ke Potong (HT)';
+            }
+            // Mark HT as requiring re-cutting
+            $progress['HT'] = 'Potong Ulang (Ganti Kaca dari ' . $reportingDivKey . ')';
+
+            $order->complaint_status = 're_cut_needed';
+            $order->complaint_data = $complaintData;
+            $order->current_division = 'divisi_ht';
+            $order->division_progress = $progress;
+            $order->save();
+
+            return redirect()->back()->with('message', '🚨 Permintaan Ganti Kaca Disetujui! SPO #' . $order->spo_number . ' telah dikembalikan ke Divisi Potong (HT) untuk dipotong ulang.');
+        }
+
+        return redirect()->back()->with('message', '⚠️ Keputusan tidak valid!');
     }
 
     /**

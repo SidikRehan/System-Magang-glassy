@@ -40,6 +40,12 @@ class Order extends Model
         'revision_notes',
         'gudang_released_at',
         'execution_completed_at',
+        'is_revised',
+        'revision_status',
+        'revision_count',
+        'revision_history',
+        'complaint_status',
+        'complaint_data',
     ];
 
     protected $casts = [
@@ -51,6 +57,10 @@ class Order extends Model
         'items' => 'array',
         'division_progress' => 'array',
         'division_timestamps' => 'array',
+        'revision_history' => 'array',
+        'complaint_data' => 'array',
+        'is_revised' => 'boolean',
+        'revision_count' => 'integer',
         'deadline_date' => 'date',
         'length_cm' => 'float',
         'width_cm' => 'float',
