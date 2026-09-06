@@ -414,7 +414,7 @@ class SypOperationalController extends Controller
     public function dispatchOrderToDivision(Request $request, $id)
     {
         $validated = $request->validate([
-            'target_division' => 'required|string', // e.g. divisi_ht, divisi_gm, divisi_bv, divisi_etsa
+            'target_division' => 'nullable|string', // e.g. divisi_ht, divisi_gm, divisi_bv, divisi_etsa
         ]);
 
         $order = Order::findOrFail($id);
@@ -423,27 +423,67 @@ class SypOperationalController extends Controller
             $order->revision_status = 'pending_division';
         }
 
-        $targetDiv = $validated['target_division'];
+        // Determine all required processes/divisions for this order
+        $procs = (array) ($order->processes ?? []);
+        if (is_array($order->items)) {
+            foreach ($order->items as $it) {
+                if (isset($it['processes']) && is_array($it['processes'])) {
+                    foreach ($it['processes'] as $p) {
+                        if (!in_array($p, $procs)) {
+                            $procs[] = $p;
+                        }
+                    }
+                }
+            }
+        }
+        if (empty($procs)) {
+            $procs = ['HT'];
+        }
+        if (!in_array('HT', $procs)) {
+            array_unshift($procs, 'HT');
+        }
+
+        $targetDiv = $validated['target_division'] ?? ('divisi_' . strtolower($procs[0]));
         $order->current_division = $targetDiv;
         $order->gudang_released_at = $order->gudang_released_at ?? now();
         
-        $divNameKey = strtoupper(str_replace('divisi_', '', $targetDiv));
+        $currentDivKey = strtoupper(str_replace('divisi_', '', $targetDiv));
         $progress = (array) ($order->division_progress ?? []);
-        $progress[$divNameKey] = 'Sedang Dikerjakan';
+
+        // Ensure all required divisions are set in progress tracker
+        $divCodes = ['HT', 'GM', 'BV', 'Etsa'];
+        foreach ($divCodes as $code) {
+            if (in_array($code, $procs)) {
+                if (!isset($progress[$code]) || $progress[$code] === 'N/A') {
+                    $progress[$code] = 'Belum';
+                }
+            }
+        }
+        $progress[$currentDivKey] = 'Sedang Dikerjakan';
 
         $timestamps = (array) ($order->division_timestamps ?? []);
-        if (!isset($timestamps[$divNameKey]) || !is_array($timestamps[$divNameKey])) {
-            $timestamps[$divNameKey] = ['started_at' => null, 'completed_at' => null];
+        if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
+            $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
         }
-        if (empty($timestamps[$divNameKey]['started_at'])) {
-            $timestamps[$divNameKey]['started_at'] = now()->toDateTimeString();
+        if (empty($timestamps[$currentDivKey]['started_at'])) {
+            $timestamps[$currentDivKey]['started_at'] = now()->toDateTimeString();
         }
 
         $order->division_progress = $progress;
         $order->division_timestamps = $timestamps;
         $order->save();
 
-        return redirect()->back()->with('message', 'Order #' . $order->spo_number . ' Berhasil Dikirim ke ' . strtoupper(str_replace('_', ' ', $targetDiv)) . '!');
+        $divNames = array_map(function($p) {
+            $labels = [
+                'HT' => 'Divisi HT (Potong)',
+                'GM' => 'Divisi GM (Gosok)',
+                'BV' => 'Divisi BV (Bevel)',
+                'Etsa' => 'Divisi Etsa (Blur)',
+            ];
+            return $labels[$p] ?? ('Divisi ' . $p);
+        }, $procs);
+
+        return redirect()->back()->with('message', '🚀 Order #' . $order->spo_number . ' Berhasil Dikirim ke Divisi Bersangkutan: ' . implode(', ', $divNames) . '!');
     }
 
     /**
