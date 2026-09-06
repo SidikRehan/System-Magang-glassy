@@ -298,9 +298,9 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
 
                         {/* HEADLINE */}
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-[#0F172A]">
-                            Sistem Operasional & <br />
+                            Sidik Ganteng <br />
                             <span className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] bg-clip-text text-transparent">
-                                Manufaktur Kaca Enterprise
+                                Banget
                             </span>
                         </h1>
 
