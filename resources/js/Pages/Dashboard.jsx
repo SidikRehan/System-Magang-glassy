@@ -523,6 +523,263 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         });
     };
 
+    // Warehouse Operational Supplies State (Perlengkapan Gudang - Habis Pakai)
+    const [warehouseSuppliesList, setWarehouseSuppliesList] = useState([
+        { id: 1, item_code: 'PLK-001', name: 'Sarung Tangan Safety Antigores / Cut Resistant', category: 'APD & Keselamatan Kerja', stock_qty: 45, min_stock: 10, unit: 'Pasang', location: 'Rak APD A1', status: 'Aman' },
+        { id: 2, item_code: 'PLK-002', name: 'Kacamata Safety Bening Protective Goggles', category: 'APD & Keselamatan Kerja', stock_qty: 28, min_stock: 5, unit: 'Pcs', location: 'Rak APD A2', status: 'Aman' },
+        { id: 3, item_code: 'PLK-003', name: 'Cutter Heavy Duty Operasional & Mata Pisau Refill', category: 'Perkakas Tangan Habis Pakai', stock_qty: 15, min_stock: 5, unit: 'Set', location: 'Rak Alat B1', status: 'Aman' },
+        { id: 4, item_code: 'PLK-004', name: 'Lakban Bening Packaging Heavy Duty 2 Inch', category: 'Peralatan Packaging & Pengiriman', stock_qty: 60, min_stock: 15, unit: 'Roll', location: 'Gudang Packaging', status: 'Aman' },
+        { id: 5, item_code: 'PLK-005', name: 'Cairan Pembersih Kaca Special Glass Cleaner 5L', category: 'Bahan Kimia & Kebersihan Kaca', stock_qty: 6, min_stock: 8, unit: 'Galon', location: 'Gudang B1', status: 'Menipis' },
+        { id: 6, item_code: 'PLK-006', name: 'Amplas Kaca Halus & Sanding Pad Edge', category: 'Consumables Mesin Potong & Gosok', stock_qty: 40, min_stock: 10, unit: 'Lembar', location: 'Rak Finishing C2', status: 'Aman' },
+        { id: 7, item_code: 'PLK-007', name: 'Oli Pelumas Mesin Bor & Mesin Potong (Lubricant)', category: 'Perawatan Mesin & Pelumas', stock_qty: 4, min_stock: 5, unit: 'Liter', location: 'Gudang Mesin D1', status: 'Menipis' },
+        { id: 8, item_code: 'PLK-008', name: 'Masker Respirator Filter Debu Etsa & Gosok', category: 'APD & Keselamatan Kerja', stock_qty: 50, min_stock: 15, unit: 'Pcs', location: 'Rak APD A3', status: 'Aman' },
+    ]);
+
+    const [supplyUsageLogs, setSupplyUsageLogs] = useState([
+        { id: 1, item_code: 'PLK-001', item_name: 'Sarung Tangan Safety Antigores / Cut Resistant', used_qty: 5, unit: 'Pasang', user_division: 'Divisi Potong (HT)', taker_name: 'Pekerja Supri', usage_date: '2026-09-04', notes: 'Penggantian sarung tangan kerja tim potong kaca cermin' },
+        { id: 2, item_code: 'PLK-004', item_name: 'Lakban Bening Packaging Heavy Duty 2 Inch', used_qty: 12, unit: 'Roll', user_division: 'Admin Gudang / Pengiriman', taker_name: 'Driver Agus', usage_date: '2026-09-05', notes: 'Packing peti kayu kaca cermin pesanan proyek SPO-0128' },
+        { id: 3, item_code: 'PLK-005', item_name: 'Cairan Pembersih Kaca Special Glass Cleaner 5L', used_qty: 2, unit: 'Galon', user_division: 'Divisi Gosok (GM)', taker_name: 'Pekerja Bambang', usage_date: '2026-09-06', notes: 'Pembersihan sisa residu polishing kaca beveling' },
+    ]);
+
+    const [supplySearchTerm, setSupplySearchTerm] = useState('');
+    const [supplySubTab, setSupplySubTab] = useState('katalog');
+    const [showAddSupplyModal, setShowAddSupplyModal] = useState(false);
+    const [showUseSupplyModal, setShowUseSupplyModal] = useState(false);
+
+    const [newSupplyForm, setNewSupplyForm] = useState({
+        item_code: '',
+        name: '',
+        category: 'APD & Keselamatan Kerja',
+        stock_qty: 10,
+        min_stock: 5,
+        unit: 'Pcs',
+        location: 'Gudang Utama'
+    });
+
+    const [useSupplyForm, setUseSupplyForm] = useState({
+        supply_id: '',
+        used_qty: 1,
+        user_division: 'Divisi Potong (HT)',
+        taker_name: '',
+        usage_date: new Date().toISOString().split('T')[0],
+        notes: ''
+    });
+
+    const handleAddSupplySubmit = (e) => {
+        e.preventDefault();
+        if (!newSupplyForm.name) return;
+
+        const autoCode = newSupplyForm.item_code || ('PLK-00' + (warehouseSuppliesList.length + 1));
+        const stockQty = parseInt(newSupplyForm.stock_qty) || 0;
+        const minStock = parseInt(newSupplyForm.min_stock) || 5;
+
+        let status = 'Aman';
+        if (stockQty <= 0) status = 'Habis';
+        else if (stockQty <= minStock) status = 'Menipis';
+
+        const newItem = {
+            id: Date.now(),
+            item_code: autoCode,
+            name: newSupplyForm.name,
+            category: newSupplyForm.category,
+            stock_qty: stockQty,
+            min_stock: minStock,
+            unit: newSupplyForm.unit || 'Pcs',
+            location: newSupplyForm.location || 'Gudang Utama',
+            status: status
+        };
+
+        setWarehouseSuppliesList(prev => [newItem, ...prev]);
+        setShowAddSupplyModal(false);
+        setNewSupplyForm({
+            item_code: '',
+            name: '',
+            category: 'APD & Keselamatan Kerja',
+            stock_qty: 10,
+            min_stock: 5,
+            unit: 'Pcs',
+            location: 'Gudang Utama'
+        });
+    };
+
+    const handleUseSupplySubmit = (e) => {
+        e.preventDefault();
+        if (!useSupplyForm.supply_id || !useSupplyForm.taker_name) {
+            alert('Pilih barang perlengkapan dan isi nama pengambil!');
+            return;
+        }
+
+        const supplyObj = warehouseSuppliesList.find(s => s.id === parseInt(useSupplyForm.supply_id));
+        const qtyToUse = parseInt(useSupplyForm.used_qty) || 1;
+
+        if (!supplyObj || qtyToUse > supplyObj.stock_qty) {
+            alert(`Stok "${supplyObj ? supplyObj.name : 'Perlengkapan'}" tidak mencukupi! Sisa stok saat ini: ${supplyObj ? supplyObj.stock_qty : 0} ${supplyObj ? supplyObj.unit : ''}.`);
+            return;
+        }
+
+        setWarehouseSuppliesList(prev => prev.map(s => {
+            if (s.id === supplyObj.id) {
+                const newQty = s.stock_qty - qtyToUse;
+                let newStatus = 'Aman';
+                if (newQty <= 0) newStatus = 'Habis';
+                else if (newQty <= s.min_stock) newStatus = 'Menipis';
+                return { ...s, stock_qty: newQty, status: newStatus };
+            }
+            return s;
+        }));
+
+        const newLog = {
+            id: Date.now(),
+            item_code: supplyObj.item_code,
+            item_name: supplyObj.name,
+            used_qty: qtyToUse,
+            unit: supplyObj.unit,
+            user_division: useSupplyForm.user_division,
+            taker_name: useSupplyForm.taker_name,
+            usage_date: useSupplyForm.usage_date || new Date().toISOString().split('T')[0],
+            notes: useSupplyForm.notes || 'Pemakaian operasional gudang/divisi'
+        };
+
+        setSupplyUsageLogs(prev => [newLog, ...prev]);
+        setShowUseSupplyModal(false);
+        setUseSupplyForm({
+            supply_id: '',
+            used_qty: 1,
+            user_division: 'Divisi Potong (HT)',
+            taker_name: '',
+            usage_date: new Date().toISOString().split('T')[0],
+            notes: ''
+        });
+    };
+
+    // Warehouse Supply Restock Requests to Admin Toko State
+    const [supplyRestockRequests, setSupplyRestockRequests] = useState([
+        {
+            id: 1,
+            supply_id: 5,
+            item_code: 'PLK-005',
+            item_name: 'Cairan Pembersih Kaca Special Glass Cleaner 5L',
+            current_stock: 6,
+            request_qty: 10,
+            unit: 'Galon',
+            priority: 'Mendesak / Stok Menipis',
+            notes: 'Stok sisa 6 galon di gudang B1, dibutuhkan untuk proses finishing beveling minggu depan.',
+            requested_by: 'Admin Gudang (Joko)',
+            requested_at: '2026-09-06',
+            status: 'Menunggu Persetujuan Admin Toko'
+        },
+        {
+            id: 2,
+            supply_id: 7,
+            item_code: 'PLK-007',
+            item_name: 'Oli Pelumas Mesin Bor & Mesin Potong (Lubricant)',
+            current_stock: 4,
+            request_qty: 12,
+            unit: 'Liter',
+            priority: 'Biasa',
+            notes: 'Stok mendekati batas minimum 5L, mohon dipesankan ke supplier pelumas.',
+            requested_by: 'Admin Gudang (Joko)',
+            requested_at: '2026-09-05',
+            status: 'Disetujui & Dipesan'
+        }
+    ]);
+
+    const [showRequestRestockModal, setShowRequestRestockModal] = useState(false);
+    const [requestRestockForm, setRequestRestockForm] = useState({
+        supply_id: '',
+        request_qty: 10,
+        priority: 'Mendesak / Stok Menipis',
+        notes: ''
+    });
+
+    const handleOpenRequestRestockModal = (supplyItem = null) => {
+        if (supplyItem) {
+            setRequestRestockForm({
+                supply_id: supplyItem.id,
+                request_qty: Math.max(10, supplyItem.min_stock * 2),
+                priority: supplyItem.status === 'Habis' ? 'Mendesak / Stok Habis' : 'Mendesak / Stok Menipis',
+                notes: `Stok sisa ${supplyItem.stock_qty} ${supplyItem.unit} (lokasi: ${supplyItem.location}). Mohon restok ke Admin Toko.`
+            });
+        } else {
+            setRequestRestockForm({
+                supply_id: '',
+                request_qty: 10,
+                priority: 'Mendesak / Stok Menipis',
+                notes: ''
+            });
+        }
+        setShowRequestRestockModal(true);
+    };
+
+    const handleRequestRestockSubmit = (e) => {
+        e.preventDefault();
+        if (!requestRestockForm.supply_id) {
+            alert('Pilih perlengkapan yang ingin diajukan restok!');
+            return;
+        }
+
+        const supplyObj = warehouseSuppliesList.find(s => s.id === parseInt(requestRestockForm.supply_id));
+        if (!supplyObj) return;
+
+        const reqQty = parseInt(requestRestockForm.request_qty) || 1;
+
+        const newReq = {
+            id: Date.now(),
+            supply_id: supplyObj.id,
+            item_code: supplyObj.item_code,
+            item_name: supplyObj.name,
+            current_stock: supplyObj.stock_qty,
+            request_qty: reqQty,
+            unit: supplyObj.unit,
+            priority: requestRestockForm.priority || 'Biasa',
+            notes: requestRestockForm.notes || 'Pengajuan restok dari Admin Gudang',
+            requested_by: userName || 'Admin Gudang',
+            requested_at: new Date().toISOString().split('T')[0],
+            status: 'Menunggu Persetujuan Admin Toko'
+        };
+
+        setSupplyRestockRequests(prev => [newReq, ...prev]);
+        setShowRequestRestockModal(false);
+
+        const waMsg = `Halo Admin Toko SYP Glass,%0A%0AMeminta pengajuan RESTOK PERLENGKAPAN GUDANG:%0A• Kode & Barang: [${supplyObj.item_code}] ${supplyObj.name}%0A• Sisa Stok Gudang: ${supplyObj.stock_qty} ${supplyObj.unit}%0A• Jumlah Pengajuan Restok: ${reqQty} ${supplyObj.unit}%0A• Prioritas: ${requestRestockForm.priority}%0A• Catatan: ${requestRestockForm.notes || '-'}`;
+        
+        if (confirm(`✅ Pengajuan restok "${supplyObj.name}" (${reqQty} ${supplyObj.unit}) BERHASIL dikirim ke Admin Toko!\n\nApakah Anda ingin membuka kirim pesan WhatsApp otomatis ke Admin Toko?`)) {
+            window.open(`https://api.whatsapp.com/send?text=${waMsg}`, '_blank');
+        }
+    };
+
+    const handleApproveRestockRequest = (reqId) => {
+        setSupplyRestockRequests(prev => prev.map(r => {
+            if (r.id === reqId) {
+                return { ...r, status: 'Disetujui & Dipesan' };
+            }
+            return r;
+        }));
+        alert('✅ Pengajuan restok disetujui & status diubah menjadi Disetujui & Dipesan!');
+    };
+
+    const handleCompleteRestockRequest = (req) => {
+        setSupplyRestockRequests(prev => prev.map(r => {
+            if (r.id === req.id) {
+                return { ...r, status: 'Selesai Restok' };
+            }
+            return r;
+        }));
+
+        setWarehouseSuppliesList(prev => prev.map(s => {
+            if (s.id === req.supply_id || s.item_code === req.item_code) {
+                const newQty = s.stock_qty + req.request_qty;
+                let newStatus = 'Aman';
+                if (newQty <= 0) newStatus = 'Habis';
+                else if (newQty <= s.min_stock) newStatus = 'Menipis';
+                return { ...s, stock_qty: newQty, status: newStatus };
+            }
+            return s;
+        }));
+
+        alert(`🎉 Restok "${req.item_name}" sejumlah +${req.request_qty} ${req.unit} SELESAI & STOK GUDANG BERHASIL DITAMBAHKAN!`);
+    };
+
     // Return Tool Modal State
     const [showReturnToolModal, setShowReturnToolModal] = useState(false);
     const [selectedReturnBorrow, setSelectedReturnBorrow] = useState(null);
@@ -1222,6 +1479,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         if (userRole.startsWith('divisi_')) setActiveTab('production');
         else if (userRole === 'driver') setActiveTab('deliveries');
         else if (userRole === 'owner') setActiveTab('finance');
+        else if (userRole === 'admin_gudang') setActiveTab('orders');
         else setActiveTab('orders');
     }, [userRole]);
 
@@ -1935,6 +2193,45 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         );
     };
 
+    const getOrderRelevantDivisions = (o) => {
+        if (!o) return [];
+        let procs = [];
+        if (Array.isArray(o.processes) && o.processes.length > 0) {
+            procs = [...o.processes];
+        }
+        if (Array.isArray(o.items)) {
+            o.items.forEach(it => {
+                if (Array.isArray(it.processes)) {
+                    it.processes.forEach(p => {
+                        if (!procs.includes(p)) procs.push(p);
+                    });
+                }
+            });
+        }
+        if (procs.length === 0) procs = ['HT'];
+        if (!procs.includes('HT')) procs.unshift('HT');
+
+        const divInfo = {
+            'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi HT (Potong & Tempering)', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
+            'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', icon: '✨', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
+            'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', icon: '💎', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
+            'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', icon: '🌫️', bg: 'bg-purple-500/10 text-purple-300 border-purple-500/30' }
+        };
+
+        return procs.map(p => divInfo[p]).filter(Boolean);
+    };
+
+    const handleOpenDispatchModal = (order) => {
+        setSelectedDispatchOrder(order);
+        const rels = getOrderRelevantDivisions(order);
+        if (rels.length > 0) {
+            setTargetDivChoice(rels[0].key);
+        } else {
+            setTargetDivChoice('divisi_ht');
+        }
+        setShowDispatchModal(true);
+    };
+
     const handleDispatchOrderSubmit = (e) => {
         e.preventDefault();
         if (!selectedDispatchOrder) return;
@@ -2036,9 +2333,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                     </div>
 
                     <nav className="space-y-1">
-                        <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                            📊 <span>Dashboard Utama</span>
-                        </button>
+                        {userRole !== 'admin_gudang' && (
+                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                📊 <span>Dashboard Utama</span>
+                            </button>
+                        )}
                         
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                             <button onClick={() => { setActiveTab('orders'); if (userRole === 'driver') setActiveOrderCard('pengiriman'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
@@ -2058,15 +2357,21 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                        {(userRole === 'admin_toko' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 🏢 <span>Data Supplier & Mitra</span>
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                        {(userRole === 'admin_toko' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                🔌 <span>Stok Aksesoris</span>
+                                🔌 <span>Aksesoris Konsumen</span>
+                            </button>
+                        )}
+
+                        {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
+                            <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                🧰 <span>Perlengkapan Gudang</span>
                             </button>
                         )}
 
@@ -2088,7 +2393,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                 <main className="flex-1 p-8 overflow-y-auto">
                     
                     {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
-                    {activeTab === 'dashboard' && (
+                    {activeTab === 'dashboard' && userRole !== 'admin_gudang' && (
                         <div className="space-y-6">
                             {/* WELCOME BANNER & PERFORMANCE HIGHLIGHT */}
                             <div className="flex flex-wrap justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 p-6 rounded-2xl border border-cyan-500/20 shadow-2xl">
@@ -2563,7 +2868,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             </button>
                                                         ) : (
                                                             <button 
-                                                                onClick={() => { setSelectedDispatchOrder(o); setShowDispatchModal(true); }}
+                                                                onClick={() => handleOpenDispatchModal(o)}
                                                                 className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-500/20"
                                                             >
                                                                 <span>📤 Kirim Ke Divisi</span>
@@ -2785,7 +3090,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             </button>
                                                         ) : (
                                                             <button 
-                                                                onClick={() => { setSelectedDispatchOrder(o); setShowDispatchModal(true); }} 
+                                                                onClick={() => handleOpenDispatchModal(o)} 
                                                                 className="group relative inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-300/40 overflow-hidden cursor-pointer"
                                                             >
                                                                 <span>Disposisi Divisi</span>
@@ -3625,7 +3930,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                     )}
 
                     {/* TAB 7: DATA SUPPLIER & MITRA */}
-                    {activeTab === 'suppliers' && (
+                    {activeTab === 'suppliers' && (userRole === 'admin_toko' || userRole === 'owner') && (
                         <div className="space-y-6">
                             <div className="flex flex-wrap justify-between items-center gap-4">
                                 <div>
@@ -3803,7 +4108,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                             </div>
 
                             {/* BUTTON TAMBAH AKSESORIS DIRECTLY BELOW CARDS */}
-                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                            {(userRole === 'admin_toko' || userRole === 'owner') && (
                                 <div className="flex justify-start">
                                     <button 
                                         onClick={() => setShowAddAccModal(true)} 
@@ -3914,6 +4219,288 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* TAB: PERLENGKAPAN GUDANG (BARANG HABIS PAKAI OPERASIONAL) */}
+                    {activeTab === 'supplies' && (
+                        <div className="space-y-6">
+                            <div>
+                                <h2 className="text-2xl font-extrabold text-slate-100">🧰 Perlengkapan & Consumables Gudang</h2>
+                                <p className="text-slate-400 text-sm">Kelola inventory perlengkapan operasional gudang & pabrik yang dipakai / habis pakai (APD, sarung tangan, kacamata safety, lakban, cutter, oli mesin, dll.) serta ajukan restok ke Admin Toko.</p>
+                            </div>
+
+                            {/* STATS CARDS */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block">Total Jenis Perlengkapan</span>
+                                    <h3 className="text-2xl font-black text-cyan-400 mt-1">{warehouseSuppliesList.length} Item</h3>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block">Stok Aman</span>
+                                    <h3 className="text-2xl font-black text-emerald-400 mt-1">{warehouseSuppliesList.filter(s => s.status === 'Aman').length} Item</h3>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block">Stok Menipis / Perlu Restok</span>
+                                    <h3 className="text-2xl font-black text-amber-400 mt-1">{warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length} Item</h3>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block">Pengajuan Restok Aktif</span>
+                                    <h3 className="text-2xl font-black text-purple-400 mt-1">{supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length} Pengajuan</h3>
+                                </div>
+                            </div>
+
+                            {/* BUTTON ACTION & SUBTAB TOGGLE */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => setSupplySubTab('katalog')} 
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${supplySubTab === 'katalog' ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+                                    >
+                                        📦 Katalog Perlengkapan ({warehouseSuppliesList.length})
+                                    </button>
+                                    <button 
+                                        onClick={() => setSupplySubTab('usage_log')} 
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${supplySubTab === 'usage_log' ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+                                    >
+                                        📋 Log Pemakaian Gudang ({supplyUsageLogs.length})
+                                    </button>
+                                    <button 
+                                        onClick={() => setSupplySubTab('restock_requests')} 
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${supplySubTab === 'restock_requests' ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+                                    >
+                                        📩 Pengajuan Restok ke Admin Toko ({supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length})
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                        <>
+                                            <button 
+                                                onClick={() => handleOpenRequestRestockModal(null)} 
+                                                className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-md shadow-amber-500/20"
+                                            >
+                                                <span>📩</span> + Ajukan Restok ke Admin Toko
+                                            </button>
+                                            <button 
+                                                onClick={() => setShowAddSupplyModal(true)} 
+                                                className="bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold px-4 py-2 rounded-lg border border-cyan-500/30 text-xs flex items-center gap-1.5 transition"
+                                            >
+                                                <span>✨</span> + Tambah Perlengkapan Baru
+                                            </button>
+                                            <button 
+                                                onClick={() => setShowUseSupplyModal(true)} 
+                                                className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-md shadow-cyan-500/20"
+                                            >
+                                                <span>📝</span> + Catat Pemakaian Barang
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* SUBTAB CONTENT 1: KATALOG PERLENGKAPAN */}
+                            {supplySubTab === 'katalog' && (
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
+                                    <div className="flex flex-wrap justify-between items-center gap-4">
+                                        <h3 className="font-extrabold text-slate-200 text-base">📋 Master Inventory Perlengkapan Gudang</h3>
+                                        <input 
+                                            type="text" 
+                                            placeholder="🔍 Cari Kode / Nama Perlengkapan / Kategori..." 
+                                            value={supplySearchTerm} 
+                                            onChange={e => setSupplySearchTerm(e.target.value)}
+                                            className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 w-64 focus:border-cyan-400"
+                                        />
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs text-slate-300">
+                                            <thead className="bg-slate-800/60 text-slate-400 uppercase font-bold text-[10px]">
+                                                <tr>
+                                                    <th className="p-3">Kode</th>
+                                                    <th className="p-3">Nama Perlengkapan Operasional</th>
+                                                    <th className="p-3">Kategori</th>
+                                                    <th className="p-3 text-center">Stok</th>
+                                                    <th className="p-3">Lokasi Simpan</th>
+                                                    <th className="p-3 text-center">Status Stok</th>
+                                                    <th className="p-3 text-right">Aksi Gudang</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800">
+                                                {warehouseSuppliesList
+                                                    .filter(s => 
+                                                        s.name.toLowerCase().includes(supplySearchTerm.toLowerCase()) || 
+                                                        s.item_code.toLowerCase().includes(supplySearchTerm.toLowerCase()) || 
+                                                        s.category.toLowerCase().includes(supplySearchTerm.toLowerCase())
+                                                    )
+                                                    .map(s => (
+                                                        <tr key={s.id} className="hover:bg-slate-800/40 transition">
+                                                            <td className="p-3 font-mono text-cyan-400 font-bold">{s.item_code}</td>
+                                                            <td className="p-3 font-bold text-slate-100">{s.name}</td>
+                                                            <td className="p-3 text-slate-400">{s.category}</td>
+                                                            <td className="p-3 text-center font-extrabold text-slate-100">
+                                                                {s.stock_qty} <span className="text-[10px] text-slate-400 font-normal">{s.unit}</span>
+                                                            </td>
+                                                            <td className="p-3 text-slate-400">{s.location}</td>
+                                                            <td className="p-3 text-center">
+                                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${s.status === 'Aman' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : s.status === 'Menipis' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`}>
+                                                                    {s.status}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 text-right">
+                                                                {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                                    <button 
+                                                                        onClick={() => handleOpenRequestRestockModal(s)}
+                                                                        className={`px-3 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 ml-auto ${s.status !== 'Aman' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse' : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30'}`}
+                                                                        title="Ajukan Restok Barang ini ke Admin Toko"
+                                                                    >
+                                                                        <span>📩</span> Ajukan Restok
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SUBTAB CONTENT 2: LOG PEMAKAIAN */}
+                            {supplySubTab === 'usage_log' && (
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
+                                    <h3 className="font-extrabold text-slate-200 text-base">📋 Riwayat & Log Pemakaian Perlengkapan Operasional</h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs text-slate-300">
+                                            <thead className="bg-slate-800/60 text-slate-400 uppercase font-bold text-[10px]">
+                                                <tr>
+                                                    <th className="p-3">Tanggal</th>
+                                                    <th className="p-3">Kode & Nama Perlengkapan</th>
+                                                    <th className="p-3 text-center">Jumlah Dipakai</th>
+                                                    <th className="p-3">Divisi Pengambil</th>
+                                                    <th className="p-3">Nama Pengambil</th>
+                                                    <th className="p-3">Catatan Pemakaian</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800">
+                                                {supplyUsageLogs.map(log => (
+                                                    <tr key={log.id} className="hover:bg-slate-800/40 transition">
+                                                        <td className="p-3 text-slate-400">{log.usage_date}</td>
+                                                        <td className="p-3">
+                                                            <div className="font-bold text-slate-100">{log.item_name}</div>
+                                                            <div className="text-[10px] font-mono text-cyan-400">{log.item_code}</div>
+                                                        </td>
+                                                        <td className="p-3 text-center font-extrabold text-cyan-300">
+                                                            {log.used_qty} {log.unit}
+                                                        </td>
+                                                        <td className="p-3 font-semibold text-slate-300">{log.user_division}</td>
+                                                        <td className="p-3 text-slate-300">{log.taker_name}</td>
+                                                        <td className="p-3 text-slate-400 italic">{log.notes}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SUBTAB CONTENT 3: PENGAJUAN RESTOK KE ADMIN TOKO */}
+                            {supplySubTab === 'restock_requests' && (
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
+                                    <div className="flex flex-wrap justify-between items-center gap-4">
+                                        <div>
+                                            <h3 className="font-extrabold text-slate-200 text-base">📩 Daftar Pengajuan Restok Perlengkapan ke Admin Toko</h3>
+                                            <p className="text-xs text-slate-400">Monitoring pengajuan restok barang gudang yang diajukan Admin Gudang ke Admin Toko/Purchasing.</p>
+                                        </div>
+                                        {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                            <button 
+                                                onClick={() => handleOpenRequestRestockModal(null)}
+                                                className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-md shadow-amber-500/20"
+                                            >
+                                                <span>📩</span> + Ajukan Restok Baru
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs text-slate-300">
+                                            <thead className="bg-slate-800/60 text-slate-400 uppercase font-bold text-[10px]">
+                                                <tr>
+                                                    <th className="p-3">Tanggal</th>
+                                                    <th className="p-3">Kode & Nama Perlengkapan</th>
+                                                    <th className="p-3 text-center">Jumlah Restok</th>
+                                                    <th className="p-3">Prioritas</th>
+                                                    <th className="p-3">Diajukan Oleh</th>
+                                                    <th className="p-3">Catatan / Keperluan</th>
+                                                    <th className="p-3 text-center">Status Pengajuan</th>
+                                                    <th className="p-3 text-right">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800">
+                                                {supplyRestockRequests.map(req => (
+                                                    <tr key={req.id} className="hover:bg-slate-800/40 transition">
+                                                        <td className="p-3 text-slate-400">{req.requested_at}</td>
+                                                        <td className="p-3">
+                                                            <div className="font-bold text-slate-100">{req.item_name}</div>
+                                                            <div className="text-[10px] font-mono text-cyan-400">{req.item_code} (Sisa: {req.current_stock} {req.unit})</div>
+                                                        </td>
+                                                        <td className="p-3 text-center font-extrabold text-amber-300">
+                                                            +{req.request_qty} {req.unit}
+                                                        </td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${req.priority.includes('Mendesak') ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-slate-800 text-slate-300'}`}>
+                                                                {req.priority}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 text-slate-300">{req.requested_by}</td>
+                                                        <td className="p-3 text-slate-400 italic max-w-xs truncate">{req.notes}</td>
+                                                        <td className="p-3 text-center">
+                                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${req.status === 'Menunggu Persetujuan Admin Toko' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : req.status === 'Disetujui & Dipesan' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
+                                                                {req.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            <div className="flex justify-end gap-1.5">
+                                                                {req.status === 'Menunggu Persetujuan Admin Toko' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                                                                    <button 
+                                                                        onClick={() => handleApproveRestockRequest(req.id)}
+                                                                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-2.5 py-1 rounded text-[11px] transition shadow"
+                                                                        title="Setujui dan pesan barang dari supplier"
+                                                                    >
+                                                                        ✓ Setujui & Pesan
+                                                                    </button>
+                                                                )}
+
+                                                                {req.status === 'Disetujui & Dipesan' && (userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                                                                    <button 
+                                                                        onClick={() => handleCompleteRestockRequest(req)}
+                                                                        className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] transition shadow"
+                                                                        title="Konfirmasi barang dari supplier sudah tiba di gudang (stok otomatis bertambah)"
+                                                                    >
+                                                                        📦 Barang Datang (Selesai)
+                                                                    </button>
+                                                                )}
+
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        const waMsg = `Halo Admin Toko SYP Glass,%0A%0AFollow-up Pengajuan Restok Perlengkapan Gudang:%0A• Barang: [${req.item_code}] ${req.item_name}%0A• Jumlah: ${req.request_qty} ${req.unit}%0A• Status Saat Ini: ${req.status}`;
+                                                                        window.open(`https://api.whatsapp.com/send?text=${waMsg}`, '_blank');
+                                                                    }}
+                                                                    className="bg-slate-800 hover:bg-slate-700 text-emerald-400 px-2 py-1 rounded text-[11px] border border-emerald-500/30"
+                                                                    title="Kirim pesan WhatsApp"
+                                                                >
+                                                                    💬 WA
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -4758,9 +5345,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                     </label>
                                                     <input 
                                                         type="number" 
-                                                        step="0.5" 
-                                                        value={item.bevel_width_cm || 1} 
+                                                        step="any"
+                                                        min="0"
+                                                        value={item.bevel_width_cm ?? ''} 
                                                         onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
+                                                        placeholder="1"
                                                         className="w-36 bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
                                                     />
                                                 </div>
@@ -4776,8 +5365,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block">Panjang Lubang (cm):</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.hole_length_cm || 2} 
+                                                                step="any"
+                                                                min="0"
+                                                                value={item.hole_length_cm ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'hole_length_cm', e.target.value)} 
+                                                                placeholder="2"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -4785,8 +5377,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block">Lebar Lubang (cm):</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.hole_width_cm || 2} 
+                                                                step="any"
+                                                                min="0"
+                                                                value={item.hole_width_cm ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'hole_width_cm', e.target.value)} 
+                                                                placeholder="2"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -4794,8 +5389,10 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block">Jumlah Lubang:</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.hole_qty || 1} 
+                                                                min="0"
+                                                                value={item.hole_qty ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'hole_qty', e.target.value)} 
+                                                                placeholder="1"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -4815,6 +5412,8 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block mb-0.5">Panjang Etsa (cm):</span>
                                                             <input 
                                                                 type="number" 
+                                                                step="any"
+                                                                min="0"
                                                                 value={item.etsa_length_cm !== undefined ? item.etsa_length_cm : (item.length_cm || '')} 
                                                                 onChange={e => handleItemChange(idx, 'etsa_length_cm', e.target.value)} 
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
@@ -4825,6 +5424,8 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block mb-0.5">Lebar Etsa (cm):</span>
                                                             <input 
                                                                 type="number" 
+                                                                step="any"
+                                                                min="0"
                                                                 value={item.etsa_width_cm !== undefined ? item.etsa_width_cm : (item.width_cm || '')} 
                                                                 onChange={e => handleItemChange(idx, 'etsa_width_cm', e.target.value)} 
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
@@ -4835,8 +5436,10 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block mb-0.5">Jumlah Area (Pcs):</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.etsa_qty || 1} 
+                                                                min="0"
+                                                                value={item.etsa_qty ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'etsa_qty', e.target.value)} 
+                                                                placeholder="1"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -5678,9 +6281,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                     </label>
                                                     <input 
                                                         type="number" 
-                                                        step="0.5" 
-                                                        value={item.bevel_width_cm || 1} 
+                                                        step="any"
+                                                        min="0"
+                                                        value={item.bevel_width_cm ?? ''} 
                                                         onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
+                                                        placeholder="1"
                                                         className="w-36 bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
                                                     />
                                                 </div>
@@ -5696,8 +6301,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block">Panjang Lubang (cm):</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.hole_length_cm || 2} 
+                                                                step="any"
+                                                                min="0"
+                                                                value={item.hole_length_cm ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'hole_length_cm', e.target.value)} 
+                                                                placeholder="2"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -5705,8 +6313,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block">Lebar Lubang (cm):</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.hole_width_cm || 2} 
+                                                                step="any"
+                                                                min="0"
+                                                                value={item.hole_width_cm ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'hole_width_cm', e.target.value)} 
+                                                                placeholder="2"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -5714,8 +6325,10 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block">Jumlah Lubang:</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.hole_qty || 1} 
+                                                                min="0"
+                                                                value={item.hole_qty ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'hole_qty', e.target.value)} 
+                                                                placeholder="1"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -5735,6 +6348,8 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block mb-0.5">Panjang Etsa (cm):</span>
                                                             <input 
                                                                 type="number" 
+                                                                step="any"
+                                                                min="0"
                                                                 value={item.etsa_length_cm !== undefined ? item.etsa_length_cm : (item.length_cm || '')} 
                                                                 onChange={e => handleItemChange(idx, 'etsa_length_cm', e.target.value)} 
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
@@ -5745,6 +6360,8 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block mb-0.5">Lebar Etsa (cm):</span>
                                                             <input 
                                                                 type="number" 
+                                                                step="any"
+                                                                min="0"
                                                                 value={item.etsa_width_cm !== undefined ? item.etsa_width_cm : (item.width_cm || '')} 
                                                                 onChange={e => handleItemChange(idx, 'etsa_width_cm', e.target.value)} 
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
@@ -5755,8 +6372,10 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             <span className="text-[10px] text-slate-400 block mb-0.5">Jumlah Area (Pcs):</span>
                                                             <input 
                                                                 type="number" 
-                                                                value={item.etsa_qty || 1} 
+                                                                min="0"
+                                                                value={item.etsa_qty ?? ''} 
                                                                 onChange={e => handleItemChange(idx, 'etsa_qty', e.target.value)} 
+                                                                placeholder="1"
                                                                 className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
                                                             />
                                                         </div>
@@ -6246,46 +6865,71 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                     </div>
                 </div>
             )}
-            {showDispatchModal && selectedDispatchOrder && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-bold text-base text-slate-100 flex items-center gap-2">
-                                📤 Disposisi Order Admin Gudang
-                            </h3>
-                            <button onClick={() => setShowDispatchModal(false)} className="text-slate-400 hover:text-white text-xl">&times;</button>
-                        </div>
-
-                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
-                            <div className="text-cyan-400 font-bold">{selectedDispatchOrder.spo_number} - {selectedDispatchOrder.customer_name}</div>
-                            <div className="text-slate-300">Kaca: {selectedDispatchOrder.glass_type} ({selectedDispatchOrder.length_cm} x {selectedDispatchOrder.width_cm} cm)</div>
-                        </div>
-
-                        <form onSubmit={handleDispatchOrderSubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="text-slate-400 block mb-1.5 font-semibold">Pilih Divisi Tujuan Eksekusi:</label>
-                                <select 
-                                    value={targetDivChoice} 
-                                    onChange={e => setTargetDivChoice(e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-semibold focus:border-cyan-400"
-                                >
-                                    <option value="divisi_ht">✂️ Divisi HT (Cutting & Tempering)</option>
-                                    <option value="divisi_gm">✨ Divisi GM (Gosok Mesin)</option>
-                                    <option value="divisi_bv">💎 Divisi BV (Beveling)</option>
-                                    <option value="divisi_etsa">🌫️ Divisi Etsa (Sandblast Blur)</option>
-                                </select>
+            {showDispatchModal && selectedDispatchOrder && (() => {
+                const relevantDivisions = getOrderRelevantDivisions(selectedDispatchOrder);
+                return (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+                            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                <h3 className="font-bold text-base text-slate-100 flex items-center gap-2">
+                                    📤 Disposisi Order Admin Gudang
+                                </h3>
+                                <button onClick={() => setShowDispatchModal(false)} className="text-slate-400 hover:text-white text-xl">&times;</button>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowDispatchModal(false)} className="px-4 py-2 bg-slate-800 rounded text-slate-300 font-semibold">Batal</button>
-                                <button type="submit" className="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 font-bold text-slate-950 rounded shadow-md">
-                                    Kirim Ke Divisi →
-                                </button>
+                            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
+                                <div className="text-cyan-400 font-bold">{selectedDispatchOrder.spo_number} - {selectedDispatchOrder.customer_name}</div>
+                                <div className="text-slate-300">Spesifikasi Kaca: {selectedDispatchOrder.glass_type} ({selectedDispatchOrder.length_cm} x {selectedDispatchOrder.width_cm} cm)</div>
                             </div>
-                        </form>
+
+                            {/* NOTIFIKASI PENGIRIMAN DIVISI BERSANGKATAN */}
+                            <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2 text-xs">
+                                <div className="font-bold text-amber-300 flex items-center gap-1.5">
+                                    <span>⚠️ Notifikasi Pengiriman Ke Divisi</span>
+                                </div>
+                                <p className="text-slate-300 leading-relaxed text-[11px]">
+                                    Orderan ini akan dikirim ke <strong className="text-amber-200">divisi yang bersangkutan</strong> sesuai kebutuhan pesanan:
+                                </p>
+                                
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {relevantDivisions.map(d => (
+                                        <span key={d.key} className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1 ${d.bg}`}>
+                                            <span>{d.icon}</span>
+                                            <span>{d.name}</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleDispatchOrderSubmit} className="space-y-4 text-xs">
+                                <div>
+                                    <label className="text-slate-400 block mb-1.5 font-semibold">Divisi Awal Mulai Pengerjaan:</label>
+                                    <select 
+                                        value={targetDivChoice} 
+                                        onChange={e => setTargetDivChoice(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-semibold focus:border-cyan-400"
+                                    >
+                                        {relevantDivisions.map(d => (
+                                            <option key={d.key} value={d.key}>
+                                                {d.icon} {d.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                                    <button type="button" onClick={() => setShowDispatchModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-semibold transition">
+                                        Batal
+                                    </button>
+                                    <button type="submit" className="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 font-extrabold text-slate-950 rounded shadow-md transition cursor-pointer flex items-center gap-1 shadow-cyan-500/20">
+                                        <span>Ya, Kirim Ke Divisi Bersangkutan →</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* MODAL RESTOCK BARANG LEMBARAN */}
             {showRestockModal && selectedStockItem && (
@@ -7479,6 +8123,296 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-emerald-500/20 flex items-center gap-1.5"
                                 >
                                     🚀 Confirm Deal & Kirim ke Gudang
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: TAMBAH PERLENGKAPAN GUDANG BARU */}
+            {showAddSupplyModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
+                                🧰 Tambah Perlengkapan Gudang Baru
+                            </h3>
+                            <button onClick={() => setShowAddSupplyModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                        </div>
+
+                        <form onSubmit={handleAddSupplySubmit} className="space-y-4 text-xs">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Kode Barang (Opsional):</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Otomatis jika kosong" 
+                                        value={newSupplyForm.item_code} 
+                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, item_code: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono focus:border-cyan-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Kategori Perlengkapan:</label>
+                                    <select 
+                                        value={newSupplyForm.category} 
+                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, category: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    >
+                                        <option value="APD & Keselamatan Kerja">APD & Keselamatan Kerja (Sarung Tangan, Kacamata)</option>
+                                        <option value="Perkakas Tangan Habis Pakai">Perkakas Tangan Habis Pakai (Cutter, Pisau)</option>
+                                        <option value="Peralatan Packaging & Pengiriman">Packaging & Pengiriman (Lakban, Plastik)</option>
+                                        <option value="Bahan Kimia & Kebersihan Kaca">Bahan Kimia & Cleaning (Pembersih Kaca, Spiritus)</option>
+                                        <option value="Consumables Mesin Potong & Gosok">Consumables Mesin (Amplas, Pad)</option>
+                                        <option value="Perawatan Mesin & Pelumas">Pelumas & Maintenance (Oli, Penetran)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-slate-400 block mb-1 font-semibold">Nama Perlengkapan / Barang Habis Pakai:*</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Contoh: Sarung Tangan Safety Antigores / Cutter Blade Refill" 
+                                    value={newSupplyForm.name} 
+                                    onChange={e => setNewSupplyForm({ ...newSupplyForm, name: e.target.value })}
+                                    required
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Stok Awal:*</label>
+                                    <input 
+                                        type="number" 
+                                        min="0"
+                                        value={newSupplyForm.stock_qty} 
+                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, stock_qty: e.target.value })}
+                                        required
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Min. Stok (Alert):</label>
+                                    <input 
+                                        type="number" 
+                                        min="1"
+                                        value={newSupplyForm.min_stock} 
+                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, min_stock: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Satuan Unit:</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Pcs/Pasang/Roll/Box" 
+                                        value={newSupplyForm.unit} 
+                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, unit: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-slate-400 block mb-1 font-semibold">Lokasi Simpan di Gudang:</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Contoh: Rak APD A1 / Gudang Packaging" 
+                                    value={newSupplyForm.location} 
+                                    onChange={e => setNewSupplyForm({ ...newSupplyForm, location: e.target.value })}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                                <button type="button" onClick={() => setShowAddSupplyModal(false)} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Batal</button>
+                                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black">✨ Simpan Barang Baru</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: CATAT PEMAKAIAN PERLENGKAPAN OPERASIONAL */}
+            {showUseSupplyModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
+                                📝 Catat Pemakaian Perlengkapan Operasional
+                            </h3>
+                            <button onClick={() => setShowUseSupplyModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                        </div>
+
+                        <form onSubmit={handleUseSupplySubmit} className="space-y-4 text-xs">
+                            <div>
+                                <label className="text-slate-400 block mb-1 font-semibold">Pilih Barang Perlengkapan:*</label>
+                                <select 
+                                    value={useSupplyForm.supply_id} 
+                                    onChange={e => setUseSupplyForm({ ...useSupplyForm, supply_id: e.target.value })}
+                                    required
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                >
+                                    <option value="">-- Pilih Barang Perlengkapan --</option>
+                                    {warehouseSuppliesList.map(s => (
+                                        <option key={s.id} value={s.id} disabled={s.stock_qty <= 0}>
+                                            [{s.item_code}] {s.name} (Sisa Stok: {s.stock_qty} {s.unit})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Jumlah Dipakai:*</label>
+                                    <input 
+                                        type="number" 
+                                        min="1"
+                                        value={useSupplyForm.used_qty} 
+                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, used_qty: e.target.value })}
+                                        required
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Tanggal Pemakaian:</label>
+                                    <input 
+                                        type="date" 
+                                        value={useSupplyForm.usage_date} 
+                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, usage_date: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Divisi Pengambil:*</label>
+                                    <select 
+                                        value={useSupplyForm.user_division} 
+                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, user_division: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    >
+                                        <option value="Divisi Potong (HT)">Divisi Potong (HT)</option>
+                                        <option value="Divisi Gosok (GM)">Divisi Gosok (GM)</option>
+                                        <option value="Divisi Bevel (BV)">Divisi Bevel (BV)</option>
+                                        <option value="Divisi Etsa">Divisi Etsa</option>
+                                        <option value="Admin Gudang / Pengiriman">Admin Gudang & Pengiriman</option>
+                                        <option value="Teknisi Lapangan">Teknisi Lapangan</option>
+                                        <option value="Umum & Maintenance">Umum & Maintenance</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Nama Pengambil/Pekerja:*</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Contoh: Supri / Bambang" 
+                                        value={useSupplyForm.taker_name} 
+                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, taker_name: e.target.value })}
+                                        required
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-slate-400 block mb-1 font-semibold">Catatan / Keperluan Pemakaian:</label>
+                                <textarea 
+                                    rows="2" 
+                                    placeholder="Contoh: Penggantian APD bulanan / packing peti kayu SPO-0129" 
+                                    value={useSupplyForm.notes} 
+                                    onChange={e => setUseSupplyForm({ ...useSupplyForm, notes: e.target.value })}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                ></textarea>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                                <button type="button" onClick={() => setShowUseSupplyModal(false)} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Batal</button>
+                                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black">✓ Simpan Log Pemakaian</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: PENGAJUAN RESTOK PERLENGKAPAN GUDANG KE ADMIN TOKO */}
+            {showRequestRestockModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <h3 className="font-extrabold text-amber-400 text-lg flex items-center gap-2">
+                                📩 Form Pengajuan Restok Perlengkapan ke Admin Toko
+                            </h3>
+                            <button onClick={() => setShowRequestRestockModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                        </div>
+
+                        <form onSubmit={handleRequestRestockSubmit} className="space-y-4 text-xs">
+                            <div>
+                                <label className="text-slate-300 block mb-1 font-bold">Pilih Barang Perlengkapan:*</label>
+                                <select 
+                                    value={requestRestockForm.supply_id} 
+                                    onChange={e => setRequestRestockForm({ ...requestRestockForm, supply_id: e.target.value })}
+                                    required
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
+                                >
+                                    <option value="">-- Pilih Barang Perlengkapan --</option>
+                                    {warehouseSuppliesList.map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            [{s.item_code}] {s.name} (Sisa Stok: {s.stock_qty} {s.unit} - Status: {s.status})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-slate-300 block mb-1 font-bold">Jumlah Pengajuan Restok:*</label>
+                                    <input 
+                                        type="number" 
+                                        min="1"
+                                        value={requestRestockForm.request_qty} 
+                                        onChange={e => setRequestRestockForm({ ...requestRestockForm, request_qty: e.target.value })}
+                                        required
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-amber-300 font-extrabold focus:border-amber-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-300 block mb-1 font-bold">Tingkat Prioritas:</label>
+                                    <select 
+                                        value={requestRestockForm.priority} 
+                                        onChange={e => setRequestRestockForm({ ...requestRestockForm, priority: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
+                                    >
+                                        <option value="Biasa">Biasa (Persediaan Rutin)</option>
+                                        <option value="Mendesak / Stok Menipis">Mendesak / Stok Menipis</option>
+                                        <option value="Mendesak / Stok Habis">🚨 CRITICAL: Stok Sudah Habis!</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-slate-300 block mb-1 font-bold">Catatan & Alasan Pengajuan ke Admin Toko:</label>
+                                <textarea 
+                                    rows="3" 
+                                    placeholder="Contoh: Stok sisa 6 galon di gudang B1, dibutuhkan untuk pengerjaan finishing beveling proyek minggu depan." 
+                                    value={requestRestockForm.notes} 
+                                    onChange={e => setRequestRestockForm({ ...requestRestockForm, notes: e.target.value })}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
+                                ></textarea>
+                            </div>
+
+                            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                                <span className="text-cyan-400 font-bold block">💡 Info Pengajuan Restok:</span>
+                                <p>Pengajuan akan dikirim ke dashboard Admin Toko & tersedia tombol pintas WhatsApp pesan otomatis ke Admin Toko / Purchasing.</p>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                                <button type="button" onClick={() => setShowRequestRestockModal(false)} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Batal</button>
+                                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black flex items-center gap-1.5 shadow-lg shadow-amber-500/20">
+                                    <span>🚀</span> Kirim Pengajuan (+ Kirim WA)
                                 </button>
                             </div>
                         </form>
