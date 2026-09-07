@@ -38,7 +38,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         });
         return `${datePart}, ${timePart} WIB`;
     };
-    const [activeOrderCard, setActiveOrderCard] = useState('draft');
+    const [activeOrderCard, setActiveOrderCard] = useState(userRole === 'admin_gudang' || userRole.startsWith('divisi_') || userRole === 'driver' ? 'pengerjaan' : 'draft');
     const [searchTerm, setSearchTerm] = useState('');
     const [showNewOrderModal, setShowNewOrderModal] = useState(false);
     const [showScrapModal, setShowScrapModal] = useState(false);
@@ -96,6 +96,15 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
     });
     const [showGudangDecisionModal, setShowGudangDecisionModal] = useState(false);
     const [selectedComplaintOrder, setSelectedComplaintOrder] = useState(null);
+
+    // Sketch Lightbox Modal State
+    const [sketchLightbox, setSketchLightbox] = useState({ isOpen: false, url: '', title: '' });
+
+    const handleOpenSketchLightbox = (path, title) => {
+        if (!path) return;
+        const fullUrl = path.startsWith('http') || path.startsWith('/') ? path : `/storage/${path}`;
+        setSketchLightbox({ isOpen: true, url: fullUrl, title: title || 'Sketsa Kaca' });
+    };
 
     const handleOpenComplaintModal = (order) => {
         setSelectedExecutionOrder(order);
@@ -1158,6 +1167,18 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
 
         setShowRestockAccModal(false);
         setSelectedAccItem(null);
+    };
+
+    const handleRequestAccRestockStatus = (accId) => {
+        setAccessoriesList(prev => prev.map(acc => {
+            if (acc.id === accId) {
+                return {
+                    ...acc,
+                    status: 'Pengajuan Restock'
+                };
+            }
+            return acc;
+        }));
     };
 
     const handleAddStockItemSubmit = (e) => {
@@ -2270,6 +2291,9 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
     };
 
     const filteredOrders = initialOrders.filter(o => {
+        if (o.status === 'draft' && userRole !== 'admin_toko' && userRole !== 'owner') {
+            return false;
+        }
         const matchesSearch = o.spo_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               o.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
         if (activeOrderCard === 'draft') return o.status === 'draft' && matchesSearch;
@@ -2340,8 +2364,8 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                         )}
                         
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
-                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'driver') setActiveOrderCard('pengiriman'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                📝 <span>Orderan & Draf</span>
+                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'driver') setActiveOrderCard('pengiriman'); else if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                📝 <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
                             </button>
                         )}
 
@@ -2352,8 +2376,16 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                         )}
 
                         {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                📦 <span>Stok Kaca</span>
+                            <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <div className="flex items-center gap-3">
+                                    📦 <span>Stok Kaca</span>
+                                </div>
+                                {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length > 0 && (
+                                    <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce shadow-md shadow-amber-400/30 flex items-center gap-1 border border-amber-300 font-mono">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
+                                        {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length} Restock
+                                    </span>
+                                )}
                             </button>
                         )}
 
@@ -2363,15 +2395,31 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                🔌 <span>Aksesoris Konsumen</span>
+                        {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'admin_gudang') && (
+                            <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <div className="flex items-center gap-3">
+                                    🔌 <span>Aksesoris Konsumen</span>
+                                </div>
+                                {accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length > 0 && (
+                                    <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce shadow-md shadow-amber-400/30 flex items-center gap-1 border border-amber-300 font-mono">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
+                                        {accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length} Restock
+                                    </span>
+                                )}
                             </button>
                         )}
 
                         {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
-                            <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                🧰 <span>Perlengkapan Gudang</span>
+                            <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <div className="flex items-center gap-3">
+                                    🧰 <span>Perlengkapan Gudang</span>
+                                </div>
+                                {(supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length + warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length) > 0 && (
+                                    <span className="bg-purple-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce shadow-md shadow-purple-500/30 border border-purple-400 flex items-center gap-1 font-mono">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                                        {supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length + warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length} Restock
+                                    </span>
+                                )}
                             </button>
                         )}
 
@@ -2632,18 +2680,20 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                         <div className="space-y-6">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                 <div>
-                                    <h2 className="text-2xl font-extrabold text-slate-100">Menu Orderan & Draf</h2>
-                                    <p className="text-slate-400 text-sm">Kelola orderan baru, draf negosiasi, dan disposisi pengerjaan</p>
+                                    <h2 className="text-2xl font-extrabold text-slate-100">{userRole === 'admin_toko' || userRole === 'owner' ? 'Menu Orderan & Draf' : 'Menu Orderan Pengerjaan'}</h2>
+                                    <p className="text-slate-400 text-sm">{userRole === 'admin_toko' || userRole === 'owner' ? 'Kelola orderan baru, draf negosiasi, dan disposisi pengerjaan' : 'Kelola orderan aktif pengerjaan, pengiriman, dan disposisi'}</p>
                                 </div>
                             </div>
 
-                            {/* 5 DYNAMIC CARDS HEADER */}
-                            <div className="grid grid-cols-5 gap-4">
+                            {/* DYNAMIC CARDS HEADER */}
+                            <div className={`grid ${userRole === 'admin_toko' || userRole === 'owner' ? 'grid-cols-5' : 'grid-cols-4'} gap-4`}>
                                 {[
-                                    { key: 'draft', label: 'Draf (Belum Deal)', count: initialOrders.filter(o => o.status === 'draft').length, icon: '📄' },
+                                    ...(userRole === 'admin_toko' || userRole === 'owner' ? [
+                                        { key: 'draft', label: 'Draf (Belum Deal)', count: initialOrders.filter(o => o.status === 'draft').length, icon: '📄' }
+                                    ] : []),
                                     { key: 'pengerjaan', label: 'Order Pengerjaan', count: initialOrders.filter(o => o.status === 'pengerjaan').length, icon: '⚙️' },
                                     { key: 'pengiriman', label: 'Pengiriman & Surat Jalan', count: initialOrders.filter(o => o.status === 'pengiriman').length, icon: '🚚' },
-                                    { key: 'pembayaran', label: 'Pembayaran / COD', count: initialOrders.filter(o => o.payment_status !== 'Lunas').length, icon: '💵' },
+                                    { key: 'pembayaran', label: 'Pembayaran / COD', count: initialOrders.filter(o => o.payment_status !== 'Lunas' && (userRole === 'admin_toko' || userRole === 'owner' ? true : o.status !== 'draft')).length, icon: '💵' },
                                     { key: 'selesai', label: 'Selesai', count: initialOrders.filter(o => o.status === 'selesai').length, icon: '✅' },
                                 ].map(card => (
                                     <div 
@@ -2783,6 +2833,27 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         </>
                                                     )}
 
+                                                    {o.sketch_photo_path && (
+                                                        <div className="mt-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
+                                                                className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-sm cursor-pointer"
+                                                                title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
+                                                            >
+                                                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                                                    <img 
+                                                                        src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
+                                                                        alt="Sketsa Pola"
+                                                                        className="w-8 h-8 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
+                                                                    />
+                                                                    <span className="font-bold text-[11px] truncate">📐 Sketsa Sambungan Kaca</span>
+                                                                </div>
+                                                                <span className="text-[10px] bg-cyan-400/20 text-cyan-200 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+
                                                     {Array.isArray(o.accessories) && o.accessories.length > 0 && (
                                                         <div className="flex flex-wrap gap-1 pt-1">
                                                             {o.accessories.map((a, accIdx) => {
@@ -2829,21 +2900,27 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                     )}
                                                 </td>
                                                 <td className="p-3 flex flex-wrap items-center gap-2">
-                                                    {o.status === 'draft' && (userRole === 'admin_toko' || userRole === 'owner') && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => handleOpenEditModal(o)}
-                                                                className="bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-blue-500/20 cursor-pointer"
-                                                            >
-                                                                ✏️ Edit Draf
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => handleOpenPromoteModal(o)}
-                                                                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer"
-                                                            >
-                                                                ✅ Setuju & DP (50%)
-                                                            </button>
-                                                        </>
+                                                    {o.status === 'draft' && (
+                                                        (userRole === 'admin_toko' || userRole === 'owner') ? (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleOpenEditModal(o)}
+                                                                    className="bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-blue-500/20 cursor-pointer"
+                                                                >
+                                                                    ✏️ Edit Draf
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleOpenPromoteModal(o)}
+                                                                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer"
+                                                                >
+                                                                    ✅ Setuju & DP (50%)
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20 text-xs font-semibold flex items-center gap-1">
+                                                                <i className="bi bi-hourglass-split"></i> Draf Toko (Belum DP)
+                                                            </span>
+                                                        )
                                                     )}
 
                                                     {o.status === 'pengerjaan' && (userRole === 'admin_toko' || userRole === 'owner') && (
@@ -3258,6 +3335,27 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                                  🚨 POTONG ULANG (GANTI KACA DARI DIVISI {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''})
                                                                              </div>
                                                                          )}
+
+                                                                         {o.sketch_photo_path && (
+                                                                             <div className="mt-1.5">
+                                                                                 <button
+                                                                                     type="button"
+                                                                                     onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
+                                                                                     className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-sm cursor-pointer"
+                                                                                     title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
+                                                                                 >
+                                                                                     <div className="flex items-center gap-1.5 overflow-hidden">
+                                                                                         <img 
+                                                                                             src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
+                                                                                             alt="Sketsa Pola"
+                                                                                             className="w-7 h-7 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
+                                                                                         />
+                                                                                         <span className="font-bold text-[10px] truncate">📐 Sketsa Sambungan Kaca</span>
+                                                                                     </div>
+                                                                                     <span className="text-[9px] bg-cyan-400/20 text-cyan-200 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
+                                                                                 </button>
+                                                                             </div>
+                                                                         )}
                                                                      </td>
 
                                                                     <td className="p-3 max-w-xs space-y-1">
@@ -3391,9 +3489,14 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
                                     <button
                                         onClick={() => setStockSubTab('lembaran')}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${stockSubTab === 'lembaran' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 ${stockSubTab === 'lembaran' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
                                     >
-                                        📦 Stok Kaca Lembaran (Baru)
+                                        <span>📦 Stok Kaca Lembaran (Baru)</span>
+                                        {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length > 0 && (
+                                            <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">
+                                                {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length} Restock
+                                            </span>
+                                        )}
                                     </button>
                                     <button
                                         onClick={() => setStockSubTab('sisa')}
@@ -3417,8 +3520,14 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                             <div 
                                                 key={card.key}
                                                 onClick={() => setActiveStockCard(card.key)}
-                                                className={`cursor-pointer border rounded-xl p-4 text-center transition ${activeStockCard === card.key ? 'bg-cyan-500/15 border-cyan-400 text-slate-100 shadow-lg shadow-cyan-500/10' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/40'}`}
+                                                className={`relative cursor-pointer border rounded-xl p-4 text-center transition ${activeStockCard === card.key ? 'bg-cyan-500/15 border-cyan-400 text-slate-100 shadow-lg shadow-cyan-500/10' : card.key === 'pengajuan' && card.count > 0 ? 'bg-rose-950/20 border-rose-500/60 text-slate-100 shadow-lg shadow-rose-500/20 animate-pulse' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/40'}`}
                                             >
+                                                {card.key === 'pengajuan' && card.count > 0 && (
+                                                    <span className="absolute -top-2.5 -right-2 bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border border-rose-300 animate-bounce flex items-center gap-1 font-mono">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                                                        🔔 Restock Gudang
+                                                    </span>
+                                                )}
                                                 <div className={`text-2xl font-black ${card.key === 'aman' ? 'text-emerald-400' : card.key === 'menipis' ? 'text-amber-400' : card.key === 'pengajuan' ? 'text-rose-400' : 'text-cyan-400'}`}>{card.count}</div>
                                                 <div className="text-xs font-semibold mt-1">{card.icon} {card.label}</div>
                                             </div>
@@ -4097,9 +4206,15 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     <span className="text-xs text-slate-400 block">Stok Aman</span>
                                     <h3 className="text-2xl font-black text-emerald-400 mt-1">{accessoriesList.filter(a => a.status === 'Aman').length} Item</h3>
                                 </div>
-                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                <div className={`relative border rounded-xl p-4 transition ${accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length > 0 ? 'bg-amber-950/20 border-amber-500/60 shadow-lg shadow-amber-500/20 animate-pulse' : 'bg-slate-900/80 border-slate-800'}`}>
+                                    {accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length > 0 && (
+                                        <span className="absolute -top-2.5 -right-2 bg-amber-400 text-slate-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border border-amber-300 animate-bounce flex items-center gap-1 font-mono">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
+                                            🔔 Perlu Restock
+                                        </span>
+                                    )}
                                     <span className="text-xs text-slate-400 block">Stok Menipis / Perlu Restock</span>
-                                    <h3 className="text-2xl font-black text-amber-400 mt-1">{accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis').length} Item</h3>
+                                    <h3 className="text-2xl font-black text-amber-400 mt-1">{accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length} Item</h3>
                                 </div>
                                 <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
                                     <span className="text-xs text-slate-400 block">Estimasi Nilai Inventory</span>
@@ -4180,9 +4295,30 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         </span>
                                                     </td>
                                                     <td className="p-3">
-                                                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${acc.status === 'Aman' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : acc.status === 'Menipis' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30'}`}>
-                                                            {acc.status}
-                                                        </span>
+                                                        {acc.status === 'Aman' && (
+                                                            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
+                                                                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                                                Aman
+                                                            </span>
+                                                        )}
+                                                        {acc.status === 'Menipis' && (
+                                                            <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
+                                                                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                                                                Menipis
+                                                            </span>
+                                                        )}
+                                                        {acc.status === 'Habis' && (
+                                                            <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
+                                                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                                                                Habis
+                                                            </span>
+                                                        )}
+                                                        {acc.status === 'Pengajuan Restock' && (
+                                                            <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
+                                                                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+                                                                Pengajuan Restock
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="p-3">
                                                         <div className="flex flex-wrap items-center gap-2">
@@ -4193,6 +4329,15 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                             >
                                                                 🔄 Restock
                                                             </button>
+                                                            {acc.status !== 'Pengajuan Restock' && (
+                                                                <button
+                                                                    onClick={() => handleRequestAccRestockStatus(acc.id)}
+                                                                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-md flex items-center gap-1"
+                                                                    title="Ajukan kebutuhan restock aksesoris ini"
+                                                                >
+                                                                    📩 Ajukan Stok
+                                                                </button>
+                                                            )}
                                                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                                 <>
                                                                     <button 
@@ -4240,11 +4385,23 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     <span className="text-xs text-slate-400 block">Stok Aman</span>
                                     <h3 className="text-2xl font-black text-emerald-400 mt-1">{warehouseSuppliesList.filter(s => s.status === 'Aman').length} Item</h3>
                                 </div>
-                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                <div className={`relative border rounded-xl p-4 transition ${warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length > 0 ? 'bg-amber-950/20 border-amber-500/60 shadow-lg shadow-amber-500/20 animate-pulse' : 'bg-slate-900/80 border-slate-800'}`}>
+                                    {warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length > 0 && (
+                                        <span className="absolute -top-2.5 -right-2 bg-amber-400 text-slate-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border border-amber-300 animate-bounce flex items-center gap-1 font-mono">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
+                                            🔔 Perlu Restok
+                                        </span>
+                                    )}
                                     <span className="text-xs text-slate-400 block">Stok Menipis / Perlu Restok</span>
                                     <h3 className="text-2xl font-black text-amber-400 mt-1">{warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length} Item</h3>
                                 </div>
-                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                <div className={`relative border rounded-xl p-4 transition ${supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length > 0 ? 'bg-purple-950/20 border-purple-500/60 shadow-lg shadow-purple-500/20 animate-pulse' : 'bg-slate-900/80 border-slate-800'}`}>
+                                    {supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length > 0 && (
+                                        <span className="absolute -top-2.5 -right-2 bg-purple-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border border-purple-300 animate-bounce flex items-center gap-1 font-mono">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                                            🔔 {supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length} Pengajuan
+                                        </span>
+                                    )}
                                     <span className="text-xs text-slate-400 block">Pengajuan Restok Aktif</span>
                                     <h3 className="text-2xl font-black text-purple-400 mt-1">{supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length} Pengajuan</h3>
                                 </div>
@@ -4269,7 +4426,12 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                         onClick={() => setSupplySubTab('restock_requests')} 
                                         className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${supplySubTab === 'restock_requests' ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
                                     >
-                                        📩 Pengajuan Restok ke Admin Toko ({supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length})
+                                        <span>📩 Pengajuan Restok ke Admin Toko</span>
+                                        {supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length > 0 && (
+                                            <span className="bg-purple-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce shadow-sm font-mono">
+                                                {supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length} Restok
+                                            </span>
+                                        )}
                                     </button>
                                 </div>
 
@@ -6880,6 +7042,25 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                             <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
                                 <div className="text-cyan-400 font-bold">{selectedDispatchOrder.spo_number} - {selectedDispatchOrder.customer_name}</div>
                                 <div className="text-slate-300">Spesifikasi Kaca: {selectedDispatchOrder.glass_type} ({selectedDispatchOrder.length_cm} x {selectedDispatchOrder.width_cm} cm)</div>
+                                {selectedDispatchOrder.sketch_photo_path && (
+                                    <div className="pt-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenSketchLightbox(selectedDispatchOrder.sketch_photo_path, selectedDispatchOrder.spo_number)}
+                                            className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-2 flex items-center justify-between gap-2 text-xs transition cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                <img 
+                                                    src={selectedDispatchOrder.sketch_photo_path.startsWith('http') || selectedDispatchOrder.sketch_photo_path.startsWith('/') ? selectedDispatchOrder.sketch_photo_path : `/storage/${selectedDispatchOrder.sketch_photo_path}`}
+                                                    alt="Sketsa Pola"
+                                                    className="w-8 h-8 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
+                                                />
+                                                <span className="font-bold text-xs truncate">📐 Sketsa Sambungan Kaca</span>
+                                            </div>
+                                            <span className="text-[10px] bg-cyan-400/20 text-cyan-200 px-2 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* NOTIFIKASI PENGIRIMAN DIVISI BERSANGKATAN */}
@@ -9141,6 +9322,47 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
                         </div>
 
+                        {/* LAMPIRAN SKETSA POLA & GAMBAR SAMBUNGAN KACA */}
+                        {selectedExecutionOrder.sketch_photo_path && (
+                            <div className="bg-gradient-to-r from-slate-950 via-cyan-950/30 to-slate-950 border border-cyan-500/40 p-4 rounded-2xl space-y-3 relative z-10 shadow-lg">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-xs font-black text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+                                        <span>📐 SKETSA POLA & GAMBAR SAMBUNGAN KACA (ACUAN PEKERJA DIVISI)</span>
+                                    </h4>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        className="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
+                                    >
+                                        🔍 Perbesar Gambar Sketsa
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div 
+                                        onClick={() => handleOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden border-2 border-cyan-400/50 bg-black shrink-0 shadow-lg"
+                                    >
+                                        <img 
+                                            src={selectedExecutionOrder.sketch_photo_path.startsWith('http') || selectedExecutionOrder.sketch_photo_path.startsWith('/') ? selectedExecutionOrder.sketch_photo_path : `/storage/${selectedExecutionOrder.sketch_photo_path}`}
+                                            alt="Sketsa Pola Kaca"
+                                            className="w-full h-full object-contain transition transform group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-bold gap-1">
+                                            🔍 Klik Perbesar
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-slate-300 space-y-1.5">
+                                        <div className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
+                                            <span>📌 Acuan Pemotongan & Sambungan Pola Kaca</span>
+                                        </div>
+                                        <p className="text-slate-400 text-[11px] leading-relaxed">
+                                            Admin Gudang dan Pekerja Divisi (Potong/HT, Gosok/GM, Bevel/BV, Etsa) wajib melihat sketsa ini sebagai acuan pola fisik, arah sambungan gambar/cermin, dan ukuran pemotongan kaca.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* TIMELINE TANGGAL LIFECYCLE ORDER */}
                         <div className="space-y-2">
                             <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -9676,6 +9898,50 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             >
                                 Tutup
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* GLOBAL SKETCH LIGHTBOX MODAL */}
+            {sketchLightbox.isOpen && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-cyan-500/50 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_80px_rgba(6,182,212,0.25)]">
+                        <div className="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">📐</span>
+                                <div>
+                                    <h3 className="font-black text-cyan-400 text-base">
+                                        Sketsa Pola & Gambar Sambungan Kaca
+                                    </h3>
+                                    <p className="text-xs text-slate-400 font-mono">No SPO: {sketchLightbox.title}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <a 
+                                    href={sketchLightbox.url} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    download
+                                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-cyan-500/20"
+                                >
+                                    ⬇️ Unduh Gambar
+                                </a>
+                                <button 
+                                    onClick={() => setSketchLightbox({ isOpen: false, url: '', title: '' })} 
+                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition cursor-pointer"
+                                >&times;</button>
+                            </div>
+                        </div>
+                        <div className="flex-1 p-6 bg-black/95 flex items-center justify-center overflow-auto">
+                            <img 
+                                src={sketchLightbox.url} 
+                                alt="Detail Sketsa Kaca" 
+                                className="max-w-full max-h-[75vh] object-contain rounded-xl border border-slate-800 shadow-2xl"
+                            />
+                        </div>
+                        <div className="p-3.5 bg-slate-950 border-t border-slate-800 text-center text-xs text-slate-400 font-mono">
+                            💡 Acuan gambar sketsa pola fisik & posisi sambungan kaca untuk semua divisi operasional SYP Glass (Gudang, Potong, Gosok, Bevel, Etsa).
                         </div>
                     </div>
                 </div>
