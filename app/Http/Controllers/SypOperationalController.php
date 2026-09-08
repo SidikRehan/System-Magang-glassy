@@ -27,7 +27,7 @@ class SypOperationalController extends Controller
     public function dashboard()
     {
         return Inertia::render('Dashboard', [
-            'orders' => Order::latest()->get(),
+            'orders' => Order::orderBy('id', 'desc')->get(),
             'scrapGlasses' => ScrapGlass::latest()->get(),
             'deliveries' => Delivery::with('order')->latest()->get(),
             'metrics' => [
@@ -487,6 +487,31 @@ class SypOperationalController extends Controller
     }
 
     /**
+     * Complete Order Delivery (Pengiriman -> Selesai)
+     */
+    public function completeDelivery(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        $order->status = 'selesai';
+        $order->current_division = 'selesai';
+        $order->delivered_at = $order->delivered_at ?? now();
+
+        if ($request->boolean('mark_lunas') || $request->input('payment_status') === 'Lunas') {
+            $order->payment_status = 'Lunas';
+            $order->paid_amount = $order->total_price;
+        }
+
+        $order->save();
+
+        Delivery::where('order_id', $order->id)->update([
+            'delivery_status' => 'Selesai Terkirim'
+        ]);
+
+        return redirect()->back()->with('message', '✅ Order #' . $order->spo_number . ' Berhasil Dikonfirmasi Selesai Terkirim ke Konsumen!');
+    }
+
+    /**
      * Store Scrap Glass (Divisi HT)
      */
     public function storeScrap(Request $request)
@@ -677,7 +702,8 @@ class SypOperationalController extends Controller
         if ($nextDiv === 'QC_Ready' || $nextDiv === 'pengiriman') {
             $order->status = 'pengiriman';
             $order->current_division = 'QC_Ready';
-            $order->execution_completed_at = now();
+            $order->execution_completed_at = $order->execution_completed_at ?? now();
+            $order->shipped_at = $order->shipped_at ?? now();
             $order->division_progress = $progress;
             $order->division_timestamps = $timestamps;
             $order->save();

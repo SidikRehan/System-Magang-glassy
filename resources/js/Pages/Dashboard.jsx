@@ -2286,6 +2286,12 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         });
     };
 
+    const handleCompleteDelivery = (id, markLunas = false) => {
+        router.post(route('orders.complete_delivery', id), {
+            mark_lunas: markLunas
+        });
+    };
+
     const handleLogout = () => {
         router.post(route('logout'));
     };
@@ -2302,7 +2308,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         if (activeOrderCard === 'pembayaran') return o.payment_status !== 'Lunas' && matchesSearch;
         if (activeOrderCard === 'selesai') return o.status === 'selesai' && matchesSearch;
         return matchesSearch;
-    });
+    }).sort((a, b) => b.id - a.id);
 
     return (
         <div className="h-screen bg-[#090d16] text-slate-100 font-sans flex flex-col overflow-hidden">
@@ -2724,7 +2730,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                 <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-3">
                                     <div className="flex items-center gap-3">
                                         <h3 className="font-bold text-slate-100 text-base">
-                                            📋 Tabel Orderan: <span className="text-cyan-400 uppercase tracking-wider">{activeOrderCard}</span>
+                                            {activeOrderCard === 'draft' && '📄 Tabel Draf Orderan (Belum Deal / DP)'}
+                                            {activeOrderCard === 'pengerjaan' && '⚙️ Tabel Orderan Aktif Pengerjaan Divisi Pabrik'}
+                                            {activeOrderCard === 'pengiriman' && '🚚 Tabel Orderan Pengiriman Armada & Penerbitan Surat Jalan'}
+                                            {activeOrderCard === 'pembayaran' && '💵 Tabel Status Pembayaran & Tagihan COD'}
+                                            {activeOrderCard === 'selesai' && '✅ Tabel Arsip Orderan Selesai & Terkirim'}
                                         </h3>
                                         <span className="text-xs bg-cyan-500/10 text-cyan-400 px-2.5 py-1 rounded-full border border-cyan-500/20 font-mono font-bold">
                                             {filteredOrders.length} Items
@@ -2741,6 +2751,28 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                         />
                                     </div>
                                 </div>
+
+                                {activeOrderCard === 'pengiriman' && (
+                                    <div className="bg-cyan-950/60 border border-cyan-500/40 p-3 rounded-xl text-xs text-cyan-200 flex flex-wrap justify-between items-center gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base">🚚</span>
+                                            <span>
+                                                <strong>Fitur Pengiriman & Surat Jalan:</strong> Orderan di tabel ini telah selesai dikerjakan pabrik dan siap/sedang dikirim armada. Klik <strong>🖨️ Surat Jalan (4 Warna)</strong> untuk mencetak dokumen resmi, dan klik <strong>✅ Konfirmasi Selesai Terkirim</strong> untuk memindahkan order ke status <strong>Selesai</strong>.
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeOrderCard === 'selesai' && (
+                                    <div className="bg-emerald-950/60 border border-emerald-500/40 p-3 rounded-xl text-xs text-emerald-200 flex flex-wrap justify-between items-center gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base">✅</span>
+                                            <span>
+                                                <strong>Fitur Order Selesai:</strong> Seluruh orderan di tabel ini telah sukses dikirim dan dikonfirmasi diterima konsumen. Dokumen Surat Jalan dapat dicetak ulang kapan saja sebagai arsip transaksi.
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
@@ -2768,20 +2800,32 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         )}
                                                     </div>
                                                     <div className="mt-1.5 space-y-1 text-[11px] font-mono">
-                                                        <div className="text-slate-300 flex items-center gap-1" title="Tanggal Pembuatan Order (Admin Toko)">
-                                                            <span>📅</span>
+                                                        <div className="text-slate-300 flex items-center gap-1" title="1. Tanggal Pembuatan / Input Draf (Admin Toko)">
+                                                            <span className="text-cyan-400">📅 Input Toko:</span>
                                                             <span>{formatIndonesianDate(o.order_date)}</span>
                                                         </div>
                                                         {o.gudang_released_at && (
-                                                            <div className="text-blue-300 flex items-center gap-1 text-[10px]" title="Tanggal Diturunkan Gudang (Admin Gudang)">
-                                                                <span>📦</span>
+                                                            <div className="text-blue-300 flex items-center gap-1 text-[10px]" title="2. Tanggal Diturunkan / Disposisi Admin Gudang ke Divisi">
+                                                                <span>📦 Disposisi Gudang:</span>
                                                                 <span>{formatIndonesianDateTime(o.gudang_released_at)}</span>
                                                             </div>
                                                         )}
                                                         {o.execution_completed_at && (
-                                                            <div className="text-emerald-300 flex items-center gap-1 text-[10px]" title="Tanggal Selesai Eksekusi Divisi">
-                                                                <span>✅</span>
+                                                            <div className="text-emerald-300 flex items-center gap-1 text-[10px]" title="3. Tanggal Selesai Eksekusi Kaca & Lolos QC Pabrik">
+                                                                <span>⚙️ Selesai Pabrik:</span>
                                                                 <span>{formatIndonesianDateTime(o.execution_completed_at)}</span>
+                                                            </div>
+                                                        )}
+                                                        {o.shipped_at && (
+                                                            <div className="text-cyan-300 flex items-center gap-1 text-[10px]" title="4. Tanggal Mulai Pengiriman Armada / Surat Jalan">
+                                                                <span>🚚 Mulai Kirim:</span>
+                                                                <span>{formatIndonesianDateTime(o.shipped_at)}</span>
+                                                            </div>
+                                                        )}
+                                                        {o.delivered_at && (
+                                                            <div className="text-emerald-400 flex items-center gap-1 text-[10px] font-bold" title="5. Tanggal Selesai Terkirim & Diterima Konsumen">
+                                                                <span>✅ Selesai Terkirim:</span>
+                                                                <span>{formatIndonesianDateTime(o.delivered_at)}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -2958,10 +3002,38 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         )
                                                     )}
 
-                                                    {(o.status === 'pengiriman' || o.status === 'selesai') && (
-                                                        <button onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }} className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer">
-                                                            🖨️ Surat Jalan
-                                                        </button>
+                                                    {o.status === 'pengiriman' && (
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <button 
+                                                                onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }} 
+                                                                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
+                                                                title="Cetak 4 Warna Surat Jalan Pengiriman (Putih, Merah, Kuning, Hijau)"
+                                                            >
+                                                                🖨️ Surat Jalan (4 Warna)
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleCompleteDelivery(o.id, true)} 
+                                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black shadow-md shadow-emerald-500/20 transition flex items-center gap-1 cursor-pointer transform hover:scale-105"
+                                                                title="Klik jika barang telah sampai dan diterima konsumen (Status otomatis berubah jadi Selesai)"
+                                                            >
+                                                                ✅ Konfirmasi Selesai Terkirim
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {o.status === 'selesai' && (
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1">
+                                                                <span>✅</span> Selesai Terkirim
+                                                            </span>
+                                                            <button 
+                                                                onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }} 
+                                                                className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-1"
+                                                                title="Cetak Ulang Arsip Surat Jalan"
+                                                            >
+                                                                🖨️ Surat Jalan (Arsip)
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
@@ -3097,7 +3169,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                         </p>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {initialOrders.filter(o => o.status === 'pengerjaan' && o.current_division === 'admin_gudang').map(o => (
+                                            {initialOrders.filter(o => o.status === 'pengerjaan' && o.current_division === 'admin_gudang').sort((a, b) => b.id - a.id).map(o => (
                                                 <div key={o.id} className="bg-slate-950 border border-slate-800 hover:border-cyan-500/40 rounded-xl p-4 space-y-3 transition">
                                                     <div className="flex justify-between items-start">
                                                         <div>
@@ -3242,12 +3314,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                             return checkOrderDivisi(o, productionSubTab);
                                         });
 
-                                        // CRITICAL REQUIREMENT FROM SKETCH: *urutan jadi prioritas + paling atas
-                                        const sortedWorkstationOrders = [...rawFiltered].sort((a, b) => {
-                                            if (a.priority_status === 'Prioritas' && b.priority_status !== 'Prioritas') return -1;
-                                            if (a.priority_status !== 'Prioritas' && b.priority_status === 'Prioritas') return 1;
-                                            return b.id - a.id;
-                                        });
+                                        const sortedWorkstationOrders = [...rawFiltered].sort((a, b) => b.id - a.id);
 
                                         if (sortedWorkstationOrders.length === 0) {
                                             return (
@@ -3921,7 +3988,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         {/* 1. NOMOR SPO */}
                                                         <td className="p-3">
                                                             <div className="font-extrabold text-cyan-400 font-mono text-sm">
-                                                                {ord.spo_number || d.spo_number || 'SPO-0129'}
+                                                                {ord.spo_number || d.spo_number || 'SPO-0002'}
                                                             </div>
                                                             <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                                                                 SJ: <strong className="text-slate-300">{d.waybill_number || 'SJ-2026-001'}</strong>

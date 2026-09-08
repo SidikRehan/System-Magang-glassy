@@ -14,7 +14,7 @@ class GlassSystemSeeder extends Seeder
         // 1. Order SPO Sample 1: Pengerjaan di Divisi GM (Gosok Mesin)
         $order1 = Order::create([
             'order_date' => now()->subDays(3)->toDateString(),
-            'spo_number' => 'SPO-0128',
+            'spo_number' => 'SPO-0001',
             'customer_name' => 'Pak Sidik',
             'customer_phone' => '0812-3456-7890',
             'customer_address' => 'Jl. Sunda No. 45, Bandung',
@@ -68,7 +68,7 @@ class GlassSystemSeeder extends Seeder
         // 2. Order SPO Sample 2: Siap Kirim (QC Ready)
         $order2 = Order::create([
             'order_date' => now()->subDays(5)->toDateString(),
-            'spo_number' => 'SPO-0129',
+            'spo_number' => 'SPO-0002',
             'customer_name' => 'Ibu Ratna (Villa Dago)',
             'customer_phone' => '0813-9876-5432',
             'customer_address' => 'Jl. Dago Pakar No. 88, Bandung',
@@ -117,12 +117,13 @@ class GlassSystemSeeder extends Seeder
             ],
             'gudang_released_at' => now()->subDays(5)->addHours(1),
             'execution_completed_at' => now()->subDays(1)->addHours(4),
+            'shipped_at' => now()->subDays(1)->addHours(5),
         ]);
 
         // 3. Order SPO Sample 3: Draft (Admin Toko)
         $order3 = Order::create([
             'order_date' => now()->toDateString(),
-            'spo_number' => 'SPO-0130',
+            'spo_number' => 'SPO-0003',
             'customer_name' => 'PT Arsitek Indonesia',
             'customer_phone' => '0811-2233-4455',
             'customer_address' => 'Gedung Wisma Millenium Lt. 4, Jakarta',
@@ -182,7 +183,7 @@ class GlassSystemSeeder extends Seeder
         // 4. Order SPO Sample 4: Pengerjaan di Divisi HT (Potong / Pemotongan)
         $order4 = Order::create([
             'order_date' => now()->subDays(1)->toDateString(),
-            'spo_number' => 'SPO-0131',
+            'spo_number' => 'SPO-0004',
             'customer_name' => 'Toko Kaca Jaya Mulia',
             'customer_phone' => '0857-1122-3344',
             'customer_address' => 'Jl. Soekarno Hatta No. 210, Bandung',
@@ -243,7 +244,7 @@ class GlassSystemSeeder extends Seeder
         // 5. Order SPO Sample 5: Pengerjaan di Divisi BV (Beveling)
         $order5 = Order::create([
             'order_date' => now()->subDays(2)->toDateString(),
-            'spo_number' => 'SPO-0132',
+            'spo_number' => 'SPO-0005',
             'customer_name' => 'CV Interior Elegant',
             'customer_phone' => '0821-9988-7766',
             'customer_address' => 'Kawasan Industri Cimahi Blok C5, Bandung',
@@ -297,7 +298,7 @@ class GlassSystemSeeder extends Seeder
         // 6. Order SPO Sample 6: Pengerjaan di Divisi Etsa (Sandblast)
         $order6 = Order::create([
             'order_date' => now()->subDays(2)->toDateString(),
-            'spo_number' => 'SPO-0133',
+            'spo_number' => 'SPO-0006',
             'customer_name' => 'Bapak Hendra (Ruko Paskal)',
             'customer_phone' => '0818-4455-6677',
             'customer_address' => 'Ruko Paskal Hyper Square B-12, Bandung',
@@ -351,7 +352,7 @@ class GlassSystemSeeder extends Seeder
         // 7. Order SPO Sample 7: Dalam Pengiriman Armada (Waybill Merah)
         $order7 = Order::create([
             'order_date' => now()->subDays(4)->toDateString(),
-            'spo_number' => 'SPO-0134',
+            'spo_number' => 'SPO-0007',
             'customer_name' => 'Hotel Grand Merdeka',
             'customer_phone' => '0812-7788-9900',
             'customer_address' => 'Jl. Merdeka No. 10, Bandung',
@@ -400,12 +401,13 @@ class GlassSystemSeeder extends Seeder
             ],
             'gudang_released_at' => now()->subDays(4)->addHours(1),
             'execution_completed_at' => now()->subDays(1)->addHours(5),
+            'shipped_at' => now()->subDays(1)->addHours(6),
         ]);
 
         // 8. Order SPO Sample 8: Selesai Terkirim (Waybill Kuning)
         $order8 = Order::create([
             'order_date' => now()->subDays(7)->toDateString(),
-            'spo_number' => 'SPO-0135',
+            'spo_number' => 'SPO-0008',
             'customer_name' => 'Apt. Parahyangan Residences',
             'customer_phone' => '0813-1122-3344',
             'customer_address' => 'Jl. Ciumbuleuit No. 42 Tower B, Bandung',
@@ -453,12 +455,14 @@ class GlassSystemSeeder extends Seeder
             ],
             'gudang_released_at' => now()->subDays(7)->addHours(2),
             'execution_completed_at' => now()->subDays(3)->addHours(6),
+            'shipped_at' => now()->subDays(2)->addHours(1),
+            'delivered_at' => now()->subDays(1)->addHours(3),
         ]);
 
         // 9. Order SPO Sample 9: Draft Baru (Admin Toko - Kaca Riben 6mm Canopy Ruko)
         $order9 = Order::create([
             'order_date' => now()->toDateString(),
-            'spo_number' => 'SPO-0136',
+            'spo_number' => 'SPO-0009',
             'customer_name' => 'Bapak Rudi Hartono',
             'customer_phone' => '0822-5566-7788',
             'customer_address' => 'Komp. Setiabudi Regency C-12, Bandung',
@@ -510,7 +514,7 @@ class GlassSystemSeeder extends Seeder
         // 10. Order SPO Sample 10: Antrean Disposisi Admin Gudang (Kaca Tempered 10mm Pintu Sekat)
         $order10 = Order::create([
             'order_date' => now()->toDateString(),
-            'spo_number' => 'SPO-0137',
+            'spo_number' => 'SPO-0010',
             'customer_name' => 'Toko Kaca Sentosa',
             'customer_phone' => '0817-6677-8899',
             'customer_address' => 'Jl. Buah Batu No. 105, Bandung',
@@ -562,7 +566,7 @@ class GlassSystemSeeder extends Seeder
         // 11. Order SPO Sample 11: QC Ready (Lolos QC Siap Kirim - Resto Seafood Paskal)
         $order11 = Order::create([
             'order_date' => now()->subDays(3)->toDateString(),
-            'spo_number' => 'SPO-0138',
+            'spo_number' => 'SPO-0011',
             'customer_name' => 'Resto Seafood Paskal',
             'customer_phone' => '0812-9900-1122',
             'customer_address' => 'Paskal Food Market Stand 45, Bandung',
@@ -610,6 +614,7 @@ class GlassSystemSeeder extends Seeder
             ],
             'gudang_released_at' => now()->subDays(3)->addHours(1),
             'execution_completed_at' => now()->subHours(2),
+            'shipped_at' => now()->subHours(1),
         ]);
 
 
@@ -688,7 +693,7 @@ class GlassSystemSeeder extends Seeder
 
 
         // 3. Seed Deliveries (Surat Jalan 4 Warna Terhubung ke Order ID)
-        // Surat Jalan 1: Untuk SPO-0129 (Ibu Ratna) - Selesai Terkirim (Lembar Putih)
+        // Surat Jalan 1: Untuk SPO-0002 (Ibu Ratna) - Selesai Terkirim (Lembar Putih)
         Delivery::create([
             'waybill_number' => 'SJ-2026-001',
             'order_id' => $order2->id,
@@ -699,7 +704,7 @@ class GlassSystemSeeder extends Seeder
             'proof_photo_path' => 'proofs/sample_ttd.jpg'
         ]);
 
-        // Surat Jalan 2: Untuk SPO-0134 (Hotel Grand Merdeka) - Dalam Pengiriman (Lembar Merah)
+        // Surat Jalan 2: Untuk SPO-0007 (Hotel Grand Merdeka) - Dalam Pengiriman (Lembar Merah)
         Delivery::create([
             'waybill_number' => 'SJ-2026-002',
             'order_id' => $order7->id,
@@ -710,7 +715,7 @@ class GlassSystemSeeder extends Seeder
             'proof_photo_path' => null
         ]);
 
-        // Surat Jalan 3: Untuk SPO-0135 (Apt. Parahyangan Residences) - Selesai Terkirim (Lembar Kuning)
+        // Surat Jalan 3: Untuk SPO-0008 (Apt. Parahyangan Residences) - Selesai Terkirim (Lembar Kuning)
         Delivery::create([
             'waybill_number' => 'SJ-2026-003',
             'order_id' => $order8->id,
@@ -721,7 +726,7 @@ class GlassSystemSeeder extends Seeder
             'proof_photo_path' => 'proofs/sample_ttd_parahyangan.jpg'
         ]);
 
-        // Surat Jalan 4: Untuk SPO-0138 (Resto Seafood Paskal) - Dalam Pengiriman (Lembar Hijau)
+        // Surat Jalan 4: Untuk SPO-0011 (Resto Seafood Paskal) - Dalam Pengiriman (Lembar Hijau)
         Delivery::create([
             'waybill_number' => 'SJ-2026-004',
             'order_id' => $order11->id,

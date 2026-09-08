@@ -24,6 +24,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{id}/cancel-revision-lock', [SypOperationalController::class, 'cancelRevisionLock'])->name('orders.cancel_revision_lock');
     Route::post('/orders/{id}/acknowledge-revision', [SypOperationalController::class, 'acknowledgeRevision'])->name('orders.acknowledge_revision');
     Route::post('/orders/{id}/finish-job', [SypOperationalController::class, 'finishDivisionJob'])->name('orders.finish');
+    Route::post('/orders/{id}/complete-delivery', [SypOperationalController::class, 'completeDelivery'])->name('orders.complete_delivery');
 
     // Division Defect Complaint Operations
     Route::post('/orders/{id}/complaint', [SypOperationalController::class, 'submitGlassComplaint'])->name('orders.complaint');
