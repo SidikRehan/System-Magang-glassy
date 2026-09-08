@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
+import NewOrderModal from '@/Components/Modals/NewOrderModal';
+import EditDraftOrderModal from '@/Components/Modals/EditDraftOrderModal';
+import DispatchModal from '@/Components/Modals/DispatchModal';
+import ComplaintModal from '@/Components/Modals/ComplaintModal';
+import ScrapPopupModal from '@/Components/Modals/ScrapPopupModal';
+import GudangDecisionModal from '@/Components/Modals/GudangDecisionModal';
+import GatePassModal from '@/Components/Modals/GatePassModal';
+import DivisionExecutionModal from '@/Components/Modals/DivisionExecutionModal';
 
-export default function Dashboard({ orders: initialOrders, scrapGlasses: initialScrap, deliveries: initialDeliveries, metrics }) {
+export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], metrics = {} }) {
     const { auth } = usePage().props;
     const userRole = auth.user?.role || 'admin_toko';
     const userName = auth.user?.name || 'User Syp';
@@ -76,9 +84,21 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
 
     // Disposisi & Divisi Working Order & Execution Modal & Scrap Glass Popup State
     const [selectedWorkingOrder, setSelectedWorkingOrder] = useState(null);
+    const [activeWorkingOrderId, setActiveWorkingOrderId] = useState(null);
+    const [localStartTimes, setLocalStartTimes] = useState({});
+    const [timerTick, setTimerTick] = useState(Date.now());
+    const [activeCardNextDiv, setActiveCardNextDiv] = useState('QC_Ready');
     const [showExecutionModal, setShowExecutionModal] = useState(false);
     const [selectedExecutionOrder, setSelectedExecutionOrder] = useState(null);
     const [showScrapPopupModal, setShowScrapPopupModal] = useState(false);
+
+    // Live running timer ticker (updates every 1 second)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTimerTick(Date.now());
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
     const [scrapPopupForm, setScrapPopupForm] = useState({
         glass_type: '',
         length_cm: '',
@@ -159,15 +179,30 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         });
     };
 
-    const handleOpenExecutionModal = (order) => {
+    const handleOpenDetailModal = (order) => {
         setSelectedExecutionOrder(order);
         setShowExecutionModal(true);
+    };
 
+    const handleStartWorkstationJob = (order) => {
+        setActiveWorkingOrderId(order.id);
         const cKey = order.current_division.replace('divisi_', '').toUpperCase();
         const cStatus = (order.division_progress && order.division_progress[cKey]) ? order.division_progress[cKey] : 'Belum';
         if (cStatus !== 'Sedang Dikerjakan' && cStatus !== 'Selesai') {
-            router.post(route('orders.start', order.id), {}, { preserveScroll: true });
+            router.post(route('orders.start', order.id), {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setLocalStartTimes(prev => ({ ...prev, [order.id]: Date.now() }));
+                }
+            });
         }
+        setTimeout(() => {
+            document.getElementById('active-workstation-card')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
+
+    const handleOpenExecutionModal = (order) => {
+        handleOpenDetailModal(order);
     };
 
     const handleFinishJobSubmit = (orderId, targetDiv) => {
@@ -176,8 +211,30 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
             onSuccess: () => {
                 setShowExecutionModal(false);
                 setSelectedExecutionOrder(null);
+                if (activeWorkingOrderId === orderId) {
+                    setActiveWorkingOrderId(null);
+                }
             }
         });
+    };
+
+    const calculateJobElapsedTime = (order, divKey) => {
+        if (!order) return '00:00:00';
+        const ts = (order.division_timestamps && order.division_timestamps[divKey]) ? order.division_timestamps[divKey] : {};
+        const startedAtStr = ts.started_at;
+        let startMs = null;
+        if (startedAtStr) {
+            startMs = new Date(startedAtStr.replace(' ', 'T')).getTime();
+        } else if (localStartTimes[order.id]) {
+            startMs = localStartTimes[order.id];
+        }
+        if (!startMs || isNaN(startMs)) return '00:00:00';
+        const diffMs = Math.max(0, Date.now() - startMs);
+        const totalSecs = Math.floor(diffMs / 1000);
+        const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+        const secs = String(totalSecs % 60).padStart(2, '0');
+        return `${hrs}:${mins}:${secs}`;
     };
 
     const handleOpenScrapPopup = (glassItem) => {
@@ -381,7 +438,8 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
     const [toolSearchTerm, setToolSearchTerm] = useState('');
     const [toolSubTab, setToolSubTab] = useState('katalog');
     const [repairFilterTab, setRepairFilterTab] = useState('semua');
-    const [dashboardChartMetric, setDashboardChartMetric] = useState('revenue');
+    const [dashboardChartMetric, setDashboardChartMetric] = useState(canViewPricing ? 'revenue' : 'orders');
+    const [hoveredDonutSegment, setHoveredDonutSegment] = useState(null);
     const [showAddToolModal, setShowAddToolModal] = useState(false);
     const [showBorrowToolModal, setShowBorrowToolModal] = useState(false);
 
@@ -2304,6 +2362,27 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
         return matchesSearch;
     });
 
+    const glassCategoriesData = [
+        { id: 'cermin', label: 'Kaca Cermin Grey & Polos 5mm', shortLabel: 'Cermin 5mm', percent: 38, volume: '22 SPO', rp: 'Rp 48.830.000', color: '#06b6d4', textClass: 'text-cyan-400' },
+        { id: 'tempered', label: 'Kaca Tempered 8mm - 12mm', shortLabel: 'Tempered', percent: 32, volume: '19 SPO', rp: 'Rp 41.120.000', color: '#10b981', textClass: 'text-emerald-400' },
+        { id: 'tinted', label: 'Kaca Tinted & Dark Grey', shortLabel: 'Tinted / Dark', percent: 18, volume: '10 SPO', rp: 'Rp 23.130.000', color: '#f59e0b', textClass: 'text-amber-400' },
+        { id: 'laminated', label: 'Kaca Laminated & Etsa Blur', shortLabel: 'Laminated / Etsa', percent: 12, volume: '7 SPO', rp: 'Rp 15.420.000', color: '#a855f7', textClass: 'text-purple-400' },
+    ];
+
+    const donutCircumference = 2 * Math.PI * 65; // ~408.407
+    let donutAccumOffset = 0;
+    const donutSlices = glassCategoriesData.map(cat => {
+        const sliceLength = (cat.percent / 100) * donutCircumference;
+        const strokeDasharray = `${sliceLength} ${donutCircumference}`;
+        const strokeDashoffset = -donutAccumOffset;
+        donutAccumOffset += sliceLength;
+        return {
+            ...cat,
+            strokeDasharray,
+            strokeDashoffset
+        };
+    });
+
     return (
         <div className="h-screen bg-[#090d16] text-slate-100 font-sans flex flex-col overflow-hidden">
             <Head title={`Dashboard (${roleTitles[userRole] || userRole}) - SYP GLASS`} />
@@ -2370,8 +2449,24 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                         )}
 
                         {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('production')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'production' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                ⚙️ <span>Disposisi & Divisi</span>
+                            <button onClick={() => setActiveTab('production')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'production' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <div className="flex items-center gap-3">
+                                    ⚙️ <span>Disposisi & Divisi</span>
+                                </div>
+                                {(() => {
+                                    if (!isDivisionWorker) return null;
+                                    const pendingRevs = initialOrders.filter(o => o.current_division === userRole && o.revision_status === 'pending_division').length;
+
+                                    if (pendingRevs > 0) {
+                                        return (
+                                            <span className="flex items-center gap-1 bg-rose-500/20 text-rose-300 border border-rose-500/50 px-2 py-0.5 rounded-full text-[10px] font-black animate-pulse" title={`${pendingRevs} order memiliki revisi yang butuh konfirmasi divisi`}>
+                                                <span>⚠️</span>
+                                                <span>{pendingRevs}</span>
+                                            </span>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                             </button>
                         )}
 
@@ -2453,7 +2548,11 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                         <span className="text-xs text-slate-400 font-mono">📅 Periode 2026</span>
                                     </div>
                                     <h2 className="text-2xl font-black text-slate-100 tracking-tight">Selamat Datang, {userName}!</h2>
-                                    <p className="text-slate-400 text-xs mt-0.5">Monitoring Penjualan Kaca, Omset Usaha, dan Performa Divisi Pengerjaan SYP GLASS.</p>
+                                    <p className="text-slate-400 text-xs mt-0.5">
+                                        {canViewPricing 
+                                            ? 'Monitoring Penjualan Kaca, Omset Usaha, dan Performa Divisi Pengerjaan SYP GLASS.' 
+                                            : 'Monitoring Pengerjaan Kaca, Alur Disposisi Antar Divisi, dan Kinerja Operasional SYP GLASS.'}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button
@@ -2484,14 +2583,29 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     </span>
                                 </div>
 
-                                <div className="bg-slate-900/80 border-l-4 border-emerald-500 border border-slate-800 rounded-xl p-5 shadow-lg relative overflow-hidden group">
-                                    <div className="absolute -right-3 -bottom-3 text-6xl opacity-10 group-hover:scale-110 transition">💵</div>
-                                    <span className="text-xs text-slate-400 font-semibold block">Estimasi Omset Penjualan (Bulan Ini)</span>
-                                    <h3 className="text-2xl font-extrabold text-emerald-400 mt-1 font-mono">Rp 128.500.000</h3>
-                                    <span className="text-[11px] text-emerald-400 font-bold mt-2 inline-flex items-center gap-1">
-                                        🚀 Peak Omset Tertinggi 2026
-                                    </span>
-                                </div>
+                                {canViewPricing ? (
+                                    <div className="bg-slate-900/80 border-l-4 border-emerald-500 border border-slate-800 rounded-xl p-5 shadow-lg relative overflow-hidden group">
+                                        <div className="absolute -right-3 -bottom-3 text-6xl opacity-10 group-hover:scale-110 transition">💵</div>
+                                        <span className="text-xs text-slate-400 font-semibold block">Estimasi Omset Penjualan (Bulan Ini)</span>
+                                        <h3 className="text-2xl font-extrabold text-emerald-400 mt-1 font-mono">Rp 128.500.000</h3>
+                                        <span className="text-[11px] text-emerald-400 font-bold mt-2 inline-flex items-center gap-1">
+                                            🚀 Peak Omset Tertinggi 2026
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="bg-slate-900/80 border-l-4 border-emerald-500 border border-slate-800 rounded-xl p-5 shadow-lg relative overflow-hidden group">
+                                        <div className="absolute -right-3 -bottom-3 text-6xl opacity-10 group-hover:scale-110 transition">🛠️</div>
+                                        <span className="text-xs text-slate-400 font-semibold block">Output Pengerjaan Selesai (Bulan Ini)</span>
+                                        <h3 className="text-2xl font-extrabold text-emerald-400 mt-1 font-mono">
+                                            {initialOrders.filter(o => o.status === 'selesai' || o.current_division === 'QC_Ready').length > 0
+                                                ? `${initialOrders.filter(o => o.status === 'selesai' || o.current_division === 'QC_Ready').length} SPO Selesai`
+                                                : '48 SPO Selesai'}
+                                        </h3>
+                                        <span className="text-[11px] text-emerald-400 font-bold mt-2 inline-flex items-center gap-1">
+                                            🚀 Kualitas & SLA On-Time 98.5%
+                                        </span>
+                                    </div>
+                                )}
 
                                 <div className="bg-slate-900/80 border-l-4 border-amber-500 border border-slate-800 rounded-xl p-5 shadow-lg relative overflow-hidden group">
                                     <div className="absolute -right-3 -bottom-3 text-6xl opacity-10 group-hover:scale-110 transition">⚙️</div>
@@ -2520,25 +2634,29 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800 pb-4">
                                         <div>
                                             <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
-                                                📊 Grafik Penjualan & Pertumbuhan Omset (Jan - Agu 2026)
+                                                {canViewPricing ? '📊 Grafik Penjualan & Pertumbuhan Omset (Jan - Agu 2026)' : '📊 Tren Volume Pengerjaan & Produksi (Jan - Agu 2026)'}
                                             </h3>
-                                            <p className="text-xs text-slate-400">Tren penjualan bulanan kaca cermin, tempered, dan aksesoris.</p>
+                                            <p className="text-xs text-slate-400">
+                                                {canViewPricing ? 'Tren penjualan bulanan kaca cermin, tempered, dan aksesoris.' : 'Tren volume bulanan pengerjaan kaca cermin, tempered, dan aksesoris.'}
+                                            </p>
                                         </div>
 
-                                        <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-                                            <button
-                                                onClick={() => setDashboardChartMetric('revenue')}
-                                                className={`px-3 py-1.5 rounded-lg transition font-bold ${dashboardChartMetric === 'revenue' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
-                                            >
-                                                💵 Omset (Rp)
-                                            </button>
-                                            <button
-                                                onClick={() => setDashboardChartMetric('orders')}
-                                                className={`px-3 py-1.5 rounded-lg transition font-bold ${dashboardChartMetric === 'orders' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
-                                            >
-                                                📦 Vol SPO
-                                            </button>
-                                        </div>
+                                        {canViewPricing && (
+                                            <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                                                <button
+                                                    onClick={() => setDashboardChartMetric('revenue')}
+                                                    className={`px-3 py-1.5 rounded-lg transition font-bold ${dashboardChartMetric === 'revenue' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
+                                                >
+                                                    💵 Omset (Rp)
+                                                </button>
+                                                <button
+                                                    onClick={() => setDashboardChartMetric('orders')}
+                                                    className={`px-3 py-1.5 rounded-lg transition font-bold ${dashboardChartMetric === 'orders' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
+                                                >
+                                                    📦 Vol SPO
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* VISUAL BAR CHART DISPLAY */}
@@ -2556,7 +2674,7 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                             ].map((item, idx) => {
                                                 const maxRev = 140;
                                                 const maxSpo = 70;
-                                                const heightPct = dashboardChartMetric === 'revenue' 
+                                                const heightPct = (canViewPricing && dashboardChartMetric === 'revenue')
                                                     ? Math.round((item.revenue / maxRev) * 100)
                                                     : Math.round((item.spo / maxSpo) * 100);
 
@@ -2565,12 +2683,12 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                         {/* HOVER TOOLTIP */}
                                                         <div className="opacity-0 group-hover:opacity-100 transition duration-200 absolute -top-12 bg-slate-950 border border-cyan-400/50 text-slate-100 text-[11px] font-mono px-2.5 py-1.5 rounded-lg shadow-2xl z-20 pointer-events-none whitespace-nowrap text-center">
                                                             <div className="font-bold text-cyan-300">{item.month} 2026</div>
-                                                            <div>{item.rpText} • {item.spo} SPO ({item.growth})</div>
+                                                            <div>{canViewPricing && dashboardChartMetric === 'revenue' ? `${item.rpText} • ` : ''}{item.spo} SPO ({item.growth})</div>
                                                         </div>
 
                                                         {/* VALUE LABEL ABOVE BAR */}
                                                         <span className={`text-[10px] font-mono font-bold ${item.isPeak ? 'text-cyan-300' : 'text-slate-400'}`}>
-                                                            {dashboardChartMetric === 'revenue' ? item.rpText : `${item.spo} SPO`}
+                                                            {canViewPricing && dashboardChartMetric === 'revenue' ? item.rpText : `${item.spo} SPO`}
                                                         </span>
 
                                                         {/* GRADIENT BAR */}
@@ -2598,49 +2716,151 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                     {/* FOOTER STATS IN CHART CARD */}
                                     <div className="grid grid-cols-3 gap-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs">
                                         <div>
-                                            <span className="text-slate-400 text-[11px]">Rata-rata Omset/Bulan:</span>
-                                            <div className="font-extrabold text-slate-100 font-mono text-sm">Rp 82.350.000</div>
+                                            <span className="text-slate-400 text-[11px]">{canViewPricing ? 'Rata-rata Omset/Bulan:' : 'Rata-rata Order/Bulan:'}</span>
+                                            <div className="font-extrabold text-slate-100 font-mono text-sm">{canViewPricing ? 'Rp 82.350.000' : '38.6 SPO'}</div>
                                         </div>
                                         <div>
-                                            <span className="text-slate-400 text-[11px]">Bulan Tertinggi (Peak):</span>
-                                            <div className="font-extrabold text-cyan-400 font-mono text-sm">Agustus (Rp 128.5M)</div>
+                                            <span className="text-slate-400 text-[11px]">{canViewPricing ? 'Bulan Tertinggi (Peak):' : 'Bulan Tersibuk (Peak):'}</span>
+                                            <div className="font-extrabold text-cyan-400 font-mono text-sm">{canViewPricing ? 'Agustus (Rp 128.5M)' : 'Agustus (58 SPO)'}</div>
                                         </div>
                                         <div>
-                                            <span className="text-slate-400 text-[11px]">Pertumbuhan Tahunan:</span>
-                                            <div className="font-extrabold text-emerald-400 font-mono text-sm">+38.5% YoY</div>
+                                            <span className="text-slate-400 text-[11px]">{canViewPricing ? 'Pertumbuhan Tahunan:' : 'Efisiensi Produksi:'}</span>
+                                            <div className="font-extrabold text-emerald-400 font-mono text-sm">{canViewPricing ? '+38.5% YoY' : '+38.5% Target'}</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* GRAFIK 2: PERFORMANCE KATEGORI PRODUK & KINERJA DIVISI */}
+                                {/* GRAFIK 2: DIAGRAM DONAT / LINGKARAN KONTRIBUSI PRODUK KACA */}
                                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl flex flex-col justify-between">
                                     <div>
-                                        <h3 className="font-extrabold text-slate-100 text-base flex items-center gap-2 border-b border-slate-800 pb-3">
-                                            🎯 Kontribusi Penjualan Per Jenis Kaca
-                                        </h3>
-                                        <p className="text-xs text-slate-400 mt-1">Distribusi omset berdasarkan jenis produk kaca utama.</p>
+                                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                            <div>
+                                                <h3 className="font-extrabold text-slate-100 text-base flex items-center gap-2">
+                                                    🎯 {canViewPricing ? 'Kontribusi Penjualan Per Jenis Kaca' : 'Distribusi Volume Jenis Kaca'}
+                                                </h3>
+                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                    {canViewPricing ? 'Distribusi omset berdasarkan jenis produk kaca utama.' : 'Distribusi proporsi pengerjaan berdasarkan jenis produk kaca.'}
+                                                </p>
+                                            </div>
+                                            <span className="text-[10px] font-mono bg-cyan-500/10 text-cyan-300 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold">
+                                                Donut Chart
+                                            </span>
+                                        </div>
 
-                                        {/* PROGRESS BARS PER CATEGORY */}
-                                        <div className="space-y-4 mt-4">
-                                            {[
-                                                { label: 'Kaca Cermin Grey & Polos 5mm', percent: 38, rp: 'Rp 48.830.000', gradient: 'from-cyan-500 to-blue-600' },
-                                                { label: 'Kaca Tempered 8mm - 12mm', percent: 32, rp: 'Rp 41.120.000', gradient: 'from-emerald-500 to-teal-600' },
-                                                { label: 'Kaca Tinted & Dark Grey', percent: 18, rp: 'Rp 23.130.000', gradient: 'from-amber-500 to-orange-600' },
-                                                { label: 'Kaca Laminated & Etsa Blur', percent: 12, rp: 'Rp 15.420.000', gradient: 'from-purple-500 to-indigo-600' },
-                                            ].map((cat, idx) => (
-                                                <div key={idx} className="space-y-1">
-                                                    <div className="flex justify-between text-xs font-semibold">
-                                                        <span className="text-slate-200">{cat.label}</span>
-                                                        <span className="font-mono text-cyan-300">{cat.percent}% ({cat.rp})</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                                                        <div
-                                                            style={{ width: `${cat.percent}%` }}
-                                                            className={`h-full rounded-full bg-gradient-to-r ${cat.gradient} transition-all duration-500`}
-                                                        ></div>
+                                        {/* DONUT CHART SVG VISUALIZATION */}
+                                        <div className="flex flex-col items-center justify-center pt-4 pb-2">
+                                            <div className="relative w-48 h-48 sm:w-52 sm:h-52 flex items-center justify-center">
+                                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                                                    <defs>
+                                                        <filter id="donut-glow" x="-20%" y="-20%" width="140%" height="140%">
+                                                            <feGaussianBlur stdDeviation="3" result="blur" />
+                                                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                                        </filter>
+                                                    </defs>
+
+                                                    {/* Track Background */}
+                                                    <circle
+                                                        cx="100"
+                                                        cy="100"
+                                                        r="65"
+                                                        fill="transparent"
+                                                        stroke="#0f172a"
+                                                        strokeWidth="20"
+                                                    />
+
+                                                    {/* Donut Segments */}
+                                                    {donutSlices.map((cat) => {
+                                                        const isHovered = hoveredDonutSegment?.id === cat.id;
+                                                        return (
+                                                            <circle
+                                                                key={cat.id}
+                                                                cx="100"
+                                                                cy="100"
+                                                                r="65"
+                                                                fill="transparent"
+                                                                stroke={cat.color}
+                                                                strokeWidth={isHovered ? 26 : 20}
+                                                                strokeDasharray={cat.strokeDasharray}
+                                                                strokeDashoffset={cat.strokeDashoffset}
+                                                                strokeLinecap="round"
+                                                                filter={isHovered ? 'url(#donut-glow)' : undefined}
+                                                                opacity={hoveredDonutSegment && !isHovered ? 0.45 : 1}
+                                                                className="transition-all duration-300 cursor-pointer"
+                                                                onMouseEnter={() => setHoveredDonutSegment(cat)}
+                                                                onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                            />
+                                                        );
+                                                    })}
+                                                </svg>
+
+                                                {/* Donut Center Hole Content */}
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none p-4">
+                                                    <div className="w-24 h-24 rounded-full bg-slate-950/90 border border-slate-800 shadow-inner flex flex-col items-center justify-center p-1.5 transition-all duration-300">
+                                                        {hoveredDonutSegment ? (
+                                                            <>
+                                                                <span className="text-xl font-black font-mono leading-none tracking-tight" style={{ color: hoveredDonutSegment.color }}>
+                                                                    {hoveredDonutSegment.percent}%
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-200 font-bold truncate max-w-[80px] mt-1">
+                                                                    {hoveredDonutSegment.shortLabel}
+                                                                </span>
+                                                                <span className="text-[9px] text-slate-400 font-mono">
+                                                                    {canViewPricing ? hoveredDonutSegment.rp : hoveredDonutSegment.volume}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <span className="text-lg leading-none mb-0.5">🪟</span>
+                                                                <span className="text-sm font-black text-slate-100 font-mono leading-none">
+                                                                    {canViewPricing ? 'Rp 128.5M' : '58 SPO'}
+                                                                </span>
+                                                                <span className="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider font-semibold">
+                                                                    {canViewPricing ? 'Total Omset' : 'Total Order'}
+                                                                </span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ))}
+                                            </div>
+
+                                            {/* DONUT LEGEND ITEMS */}
+                                            <div className="w-full space-y-1.5 mt-4">
+                                                {donutSlices.map((cat) => {
+                                                    const isHovered = hoveredDonutSegment?.id === cat.id;
+                                                    return (
+                                                        <div
+                                                            key={cat.id}
+                                                            onMouseEnter={() => setHoveredDonutSegment(cat)}
+                                                            onMouseLeave={() => setHoveredDonutSegment(null)}
+                                                            className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer border ${
+                                                                isHovered 
+                                                                    ? 'bg-slate-800/90 border-cyan-500/50 shadow-md scale-[1.01]' 
+                                                                    : 'bg-slate-950/70 border-slate-800/70 hover:bg-slate-900/80 hover:border-slate-700'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                <span 
+                                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-transform duration-200"
+                                                                    style={{ 
+                                                                        backgroundColor: cat.color, 
+                                                                        boxShadow: isHovered ? `0 0 10px ${cat.color}` : 'none',
+                                                                        transform: isHovered ? 'scale(1.3)' : 'scale(1)'
+                                                                    }}
+                                                                ></span>
+                                                                <span className="text-xs text-slate-300 font-medium truncate">{cat.label}</span>
+                                                            </div>
+                                                            <div className="text-right flex-shrink-0 ml-2 font-mono">
+                                                                <span className="font-extrabold text-xs" style={{ color: cat.color }}>{cat.percent}%</span>
+                                                                {canViewPricing ? (
+                                                                    <span className="text-[10px] text-slate-400 block font-normal">{cat.rp}</span>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-slate-400 block font-normal">{cat.volume}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -3185,6 +3405,219 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                             {/* SECTION B: WORKSTATION ACTIVE PENGERJAAN & DISPOSISI LAYOUT (SEPERTI SKETSA USER) */}
                             <div className="space-y-6">
 
+                                {/* CARD PROSES BERJALAN: HANYA BERLAKU UNTUK DIVISI HT, BV, GM, & ETSA */}
+                                {isDivisionWorker && (() => {
+                                    const activeDivKey = userRole.replace('divisi_', '').toUpperCase();
+
+                                    const activeOngoingOrder = (() => {
+                                        if (activeWorkingOrderId) {
+                                            const found = initialOrders.find(o => o.id === activeWorkingOrderId);
+                                            if (found) return found;
+                                        }
+                                        return initialOrders.find(o => {
+                                            if (isDivisionWorker) {
+                                                return o.current_division === userRole && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
+                                            }
+                                            if (productionSubTab.startsWith('divisi_')) {
+                                                return o.current_division === productionSubTab && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
+                                            }
+                                            return false;
+                                        }) || null;
+                                    })();
+
+                                    return (
+                                        <div id="active-workstation-card" className="transition-all duration-300">
+                                            {activeOngoingOrder ? (
+                                                <div className="relative overflow-hidden rounded-3xl border-2 border-cyan-500/50 bg-gradient-to-br from-slate-900 via-slate-900/95 to-cyan-950/40 p-6 sm:p-7 shadow-[0_0_40px_rgba(6,182,212,0.18)] space-y-5">
+                                                    {/* Ambient subtle glow background */}
+                                                    <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+                                                    <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20"></div>
+
+                                                    {/* CARD TOP HEADER */}
+                                                    <div className="relative z-10 flex flex-wrap justify-between items-center gap-3 border-b border-cyan-500/20 pb-4">
+                                                        <div className="flex flex-wrap items-center gap-2.5">
+                                                            <span className="relative flex h-3 w-3">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                                            </span>
+                                                            <span className="text-xs font-black uppercase tracking-wider text-emerald-300 font-mono flex items-center gap-1.5">
+                                                                <span>⚡ PROSES SEDANG BERLANGSUNG DI MEJA KERJA</span>
+                                                            </span>
+                                                            <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-mono shadow-sm">
+                                                                Workstation {roleTitles[activeOngoingOrder.current_division] || activeOngoingOrder.current_division}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2">
+                                                            {activeOngoingOrder.priority_status === 'Prioritas' ? (
+                                                                <span className="text-[10px] font-black px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/50 animate-pulse flex items-center gap-1 shadow-sm">
+                                                                    <span>🔥 PRIORITAS TINGGI</span>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                                                                    🔵 Standar
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs font-mono font-extrabold text-cyan-400 bg-slate-950/80 px-3 py-1 rounded-xl border border-cyan-500/30">
+                                                                {activeOngoingOrder.spo_number}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* PERINGATAN INTERUPSI REVISI TOKO JIKA SEDANG BERJALAN DAN MENDAPAT REVISI */}
+                                                    {activeOngoingOrder.revision_status === 'pending_division' && (
+                                                        <div className="relative z-10 bg-rose-950/90 border-2 border-rose-500 rounded-2xl p-4 text-rose-200 text-xs space-y-2 animate-pulse shadow-xl shadow-rose-950/40">
+                                                            <div className="flex flex-wrap justify-between items-center gap-2 font-black text-xs text-rose-300">
+                                                                <span className="flex items-center gap-2 text-sm">
+                                                                    <span>⚠️ INTERUPSI REVISI DARI ADMIN TOKO!</span>
+                                                                </span>
+                                                                <span className="bg-rose-500 text-white font-mono px-2.5 py-0.5 rounded text-[10px] uppercase font-black">
+                                                                    Tindakan Mendesak
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-slate-200 leading-relaxed">
+                                                                Admin Toko telah mengirimkan revisi pada SPO ini saat pengerjaan sedang berlangsung! Harap periksa perubahan ukuran/spesifikasi sebelum melanjutkan proses kaca agar tidak terjadi salah potong/proses.
+                                                            </p>
+                                                            {activeOngoingOrder.revision_notes && (
+                                                                <div className="bg-slate-950/90 p-2.5 rounded-lg border border-rose-500/40 text-xs text-amber-300 font-mono">
+                                                                    📝 Catatan Revisi Toko: <strong>{activeOngoingOrder.revision_notes}</strong>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex justify-end pt-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleAcknowledgeRevision(activeOngoingOrder.id)}
+                                                                    className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer"
+                                                                >
+                                                                    <span>🔄 Terima & Eksekusi Revisi SPO</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* CARD MAIN BODY GRID: 3 COLUMNS */}
+                                                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                                                        {/* COL 1: INFO CUSTOMER & ORDER (4 Cols) */}
+                                                        <div className="md:col-span-4 space-y-2">
+                                                            <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Pemesan / Proyek:</div>
+                                                            <h3 className="text-xl font-black text-white tracking-tight leading-snug">
+                                                                {activeOngoingOrder.customer_name}
+                                                            </h3>
+                                                            <div className="text-xs text-slate-300 space-y-1 pt-1 font-mono">
+                                                                <div className="flex items-center gap-2 text-slate-400">
+                                                                    <span>📅 Order:</span>
+                                                                    <span className="text-slate-200">{formatIndonesianDate(activeOngoingOrder.order_date)}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 text-amber-300 font-bold">
+                                                                    <span>⏰ Deadline:</span>
+                                                                    <span>{activeOngoingOrder.deadline_date || '-'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* COL 2: SPESIFIKASI KACA & UKURAN (4 Cols) */}
+                                                        <div className="md:col-span-4 bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 space-y-2">
+                                                            <div className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider font-bold">Spesifikasi Kaca & Dimensi:</div>
+                                                            {Array.isArray(activeOngoingOrder.items) && activeOngoingOrder.items.length > 0 ? (
+                                                                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                                                                    {activeOngoingOrder.items.map((it, idx) => (
+                                                                        <div key={idx} className="text-xs bg-slate-900/80 p-2 rounded border border-slate-800">
+                                                                            <div className="font-bold text-cyan-300">#{idx + 1}. {it.glass_type}</div>
+                                                                            <div className="text-slate-300 font-mono text-[11px]">{it.length_cm} x {it.width_cm} cm ({it.thickness_mm}mm) — Qty: <strong className="text-white">{it.qty || 1}</strong></div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs space-y-1">
+                                                                    <div className="font-bold text-cyan-300 text-sm">{activeOngoingOrder.glass_type}</div>
+                                                                    <div className="text-slate-300 font-mono text-xs">{activeOngoingOrder.length_cm} x {activeOngoingOrder.width_cm} cm ({activeOngoingOrder.thickness_mm}mm)</div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* COL 3: DIGITAL RUNNING TIMER (4 Cols) */}
+                                                        <div className="md:col-span-4 bg-slate-950/90 border-2 border-cyan-500/40 rounded-2xl p-4 text-center shadow-[inset_0_0_20px_rgba(6,182,212,0.1)] space-y-1 relative overflow-hidden">
+                                                            <div className="text-[11px] font-black font-mono text-cyan-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
+                                                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                                                                <span>⏱️ WAKTU BERJALAN</span>
+                                                            </div>
+                                                            <div className="text-3xl sm:text-4xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-emerald-300 tracking-widest drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] py-1">
+                                                                {calculateJobElapsedTime(activeOngoingOrder, activeDivKey)}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-400 font-mono">
+                                                                {activeOngoingOrder.division_timestamps?.[activeDivKey]?.started_at ? (
+                                                                    <span>Mulai: {formatIndonesianDate(activeOngoingOrder.division_timestamps[activeDivKey].started_at)}</span>
+                                                                ) : (
+                                                                    <span className="text-cyan-400/80 animate-pulse">● Stopwatch Aktif</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* CARD BOTTOM ACTION FOOTER */}
+                                                    <div className="relative z-10 flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-cyan-500/20">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenDetailModal(activeOngoingOrder)}
+                                                                className="group inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 transition shadow-sm cursor-pointer"
+                                                                title="Buka Modal Detail Lengkap, Sketsa & Histori"
+                                                            >
+                                                                <span className="text-sm">👁️</span>
+                                                                <span className="font-extrabold text-[11px]">Detail Lengkap</span>
+                                                            </button>
+
+                                                            {activeOngoingOrder.current_division !== 'divisi_ht' && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenComplaintModal(activeOngoingOrder)}
+                                                                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition cursor-pointer"
+                                                                >
+                                                                    <span>⚠️ Lapor Cacat</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+
+                                                        {/* ACTION SELESAI */}
+                                                        <div className="flex flex-wrap items-center gap-2 ml-auto">
+                                                            <span className="text-xs text-slate-400 font-mono font-semibold hidden sm:inline-block">Teruskan ke:</span>
+                                                            <select
+                                                                value={activeCardNextDiv}
+                                                                onChange={(e) => setActiveCardNextDiv(e.target.value)}
+                                                                className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner"
+                                                            >
+                                                                <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
+                                                                <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
+                                                                <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
+                                                                <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
+                                                                <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
+                                                            </select>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleFinishJobSubmit(activeOngoingOrder.id, activeCardNextDiv)}
+                                                                className="group relative inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 hover:from-emerald-300 hover:via-teal-300 hover:to-cyan-300 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-emerald-300/40 cursor-pointer"
+                                                            >
+                                                                <span className="text-sm">✅</span>
+                                                                <span className="tracking-wider uppercase font-black text-xs">Selesai Pengerjaan</span>
+                                                                <span className="transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/40 p-6 sm:p-8 text-center space-y-2 shadow-inner">
+                                                    <div className="text-3xl animate-bounce">⏱️</div>
+                                                    <h4 className="text-sm font-extrabold text-slate-300">Belum Ada Pekerjaan yang Sedang Dikerjakan di Workstation</h4>
+                                                    <p className="text-xs text-slate-500 max-w-lg mx-auto">
+                                                        Silakan pilih salah satu order dari tabel antrean di bawah, kemudian klik tombol <strong className="text-cyan-400">"⚡ Mulai Kerjakan"</strong> untuk memindahkan baris antrean ke card pengerjaan aktif ini dan mengaktifkan stopwatch live running timer.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
                                 {/* TABEL ANTREAN WORKSTATION DIVISI (PRIORITAS DI PALING ATAS) */}
                                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
                                     <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-3">
@@ -3192,9 +3625,15 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                             <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
                                                 📋 Tabel Antrean Workstation Divisi
                                             </h3>
-                                            <p className="text-xs text-slate-400 mt-0.5">
-                                                Order berstatus <strong className="text-rose-400">🔥 PRIORITAS</strong> otomatis diurutkan di paling atas.
-                                            </p>
+                                            {isDivisionWorker ? (
+                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                    Urutan antrean: <strong className="text-rose-400">⚡ INTERUPSI REVISI</strong> berada di posisi teratas, disusul <strong className="text-amber-400">🔥 PRIORITAS</strong>, kemudian antrean reguler.
+                                                </p>
+                                            ) : (
+                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                    Order berstatus <strong className="text-rose-400">🔥 PRIORITAS</strong> otomatis diurutkan di paling atas.
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* STATISTIK MASUK & SELESAI HARI INI */}
@@ -3242,10 +3681,22 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                             return checkOrderDivisi(o, productionSubTab);
                                         });
 
-                                        // CRITICAL REQUIREMENT FROM SKETCH: *urutan jadi prioritas + paling atas
                                         const sortedWorkstationOrders = [...rawFiltered].sort((a, b) => {
-                                            if (a.priority_status === 'Prioritas' && b.priority_status !== 'Prioritas') return -1;
-                                            if (a.priority_status !== 'Prioritas' && b.priority_status === 'Prioritas') return 1;
+                                            if (isDivisionWorker) {
+                                                // 1. REVISION INTERRUPTION: pending_division has highest urgency for division workers (HT, BV, GM, Etsa)
+                                                const aRev = a.revision_status === 'pending_division';
+                                                const bRev = b.revision_status === 'pending_division';
+                                                if (aRev && !bRev) return -1;
+                                                if (!aRev && bRev) return 1;
+                                            }
+
+                                            // 2. PRIORITY: Prioritas
+                                            const aPri = a.priority_status === 'Prioritas';
+                                            const bPri = b.priority_status === 'Prioritas';
+                                            if (aPri && !bPri) return -1;
+                                            if (!aPri && bPri) return 1;
+
+                                            // 3. Regular Queue FIFO
                                             return b.id - a.id;
                                         });
 
@@ -3258,6 +3709,24 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                 </div>
                                             );
                                         }
+
+                                        const curDivKey = isDivisionWorker
+                                            ? userRole.replace('divisi_', '').toUpperCase()
+                                            : (productionSubTab.startsWith('divisi_') ? productionSubTab.replace('divisi_', '').toUpperCase() : 'HT');
+
+                                        const activeOngoingId = (() => {
+                                            if (activeWorkingOrderId) return activeWorkingOrderId;
+                                            const found = initialOrders.find(o => {
+                                                if (isDivisionWorker) {
+                                                    return o.current_division === userRole && o.division_progress?.[curDivKey] === 'Sedang Dikerjakan';
+                                                }
+                                                if (productionSubTab.startsWith('divisi_')) {
+                                                    return o.current_division === productionSubTab && o.division_progress?.[curDivKey] === 'Sedang Dikerjakan';
+                                                }
+                                                return false;
+                                            });
+                                            return found?.id || null;
+                                        })();
 
                                         return (
                                             <div className="overflow-x-auto">
@@ -3272,17 +3741,36 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-800/80">
                                                         {sortedWorkstationOrders.map(o => {
+                                                            const isRevision = isDivisionWorker && o.revision_status === 'pending_division';
                                                             const isPriority = o.priority_status === 'Prioritas';
-                                                            const isCurrentSelected = selectedWorkingOrder && selectedWorkingOrder.id === o.id;
+                                                            const isCurrentlyActiveInCard = isDivisionWorker && activeOngoingId === o.id;
 
                                                             return (
-                                                                <tr key={o.id} className={`transition ${isPriority ? 'bg-rose-950/20 hover:bg-rose-950/30' : 'hover:bg-slate-800/30'} ${isCurrentSelected ? 'border-l-4 border-l-cyan-400' : ''}`}>
+                                                                <tr key={o.id} className={`transition ${isCurrentlyActiveInCard ? 'bg-cyan-950/30 border-l-4 border-l-cyan-400' : isRevision ? 'bg-rose-950/25 hover:bg-rose-950/35 border-l-4 border-l-rose-500' : isPriority ? 'bg-amber-950/15 hover:bg-amber-950/25 border-l-4 border-l-amber-500' : 'hover:bg-slate-800/30'}`}>
                                                                     <td className="p-3 font-mono">
-                                                                        <div className="font-extrabold text-cyan-400 text-sm flex items-center gap-1.5">
+                                                                        <div className="font-extrabold text-cyan-400 text-sm flex flex-wrap items-center gap-1.5">
                                                                             <span>{o.spo_number}</span>
-                                                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${isPriority ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-                                                                                {isPriority ? '🔥 PRIORITAS' : '🔵 Biasa'}
-                                                                            </span>
+                                                                            {isRevision && (
+                                                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-300 border border-rose-500/50 animate-pulse flex items-center gap-1">
+                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
+                                                                                    <span>⚡ REVISI TOKO</span>
+                                                                                </span>
+                                                                            )}
+                                                                            {isPriority && !isRevision && (
+                                                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
+                                                                                    🔥 PRIORITAS
+                                                                                </span>
+                                                                            )}
+                                                                            {!isPriority && !isRevision && (
+                                                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                                                                                    🔵 Biasa
+                                                                                </span>
+                                                                            )}
+                                                                            {isCurrentlyActiveInCard && (
+                                                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-mono">
+                                                                                    ● DI MEJA KERJA
+                                                                                </span>
+                                                                            )}
                                                                         </div>
                                                                         <div className="text-slate-300 font-bold text-xs mt-0.5">{o.customer_name}</div>
                                                                         <div className="text-[10px] text-slate-400 mt-1">📅 Order: {formatIndonesianDate(o.order_date)}</div>
@@ -3309,54 +3797,54 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                                         Catatan: {o.revision_notes}
                                                                                     </div>
                                                                                 )}
-                                                                             </div>
-                                                                         )}
-                                                                         {o.complaint_status === 'pending_gudang' && (
-                                                                             <div className="mt-1.5 bg-amber-950/90 border border-amber-500 rounded-xl p-2 text-amber-200 space-y-1 animate-pulse">
-                                                                                 <div className="flex justify-between items-center text-[10px] font-extrabold">
-                                                                                     <span className="text-amber-300 flex items-center gap-1">⚠️ KOMPLAIN KACA DARI {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase()}</span>
-                                                                                     {(userRole === 'admin_gudang' || userRole === 'owner') && (
-                                                                                         <button
-                                                                                             type="button"
-                                                                                             onClick={() => { setSelectedComplaintOrder(o); setShowGudangDecisionModal(true); }}
-                                                                                             className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-2 py-0.5 rounded text-[10px] cursor-pointer shadow"
-                                                                                         >
-                                                                                             ⚖️ Tinjau Komplain Kaca
-                                                                                         </button>
-                                                                                     )}
-                                                                                 </div>
-                                                                                 <div className="text-[10px] text-amber-200 font-mono">
-                                                                                     Kendala: <strong>{o.complaint_data?.reason}</strong> {o.complaint_data?.notes ? `- "${o.complaint_data.notes}"` : ''}
-                                                                                 </div>
-                                                                             </div>
-                                                                         )}
-                                                                         {o.complaint_status === 're_cut_needed' && o.current_division === 'divisi_ht' && (
-                                                                             <div className="mt-1.5 bg-rose-950/90 border border-rose-500 rounded-xl p-1.5 text-rose-200 text-[10px] font-bold font-mono animate-pulse">
-                                                                                 🚨 POTONG ULANG (GANTI KACA DARI DIVISI {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''})
-                                                                             </div>
-                                                                         )}
+                                                                            </div>
+                                                                        )}
+                                                                        {o.complaint_status === 'pending_gudang' && (
+                                                                            <div className="mt-1.5 bg-amber-950/90 border border-amber-500 rounded-xl p-2 text-amber-200 space-y-1 animate-pulse">
+                                                                                <div className="flex justify-between items-center text-[10px] font-extrabold">
+                                                                                    <span className="text-amber-300 flex items-center gap-1">⚠️ KOMPLAIN KACA DARI {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase()}</span>
+                                                                                    {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => { setSelectedComplaintOrder(o); setShowGudangDecisionModal(true); }}
+                                                                                            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-2 py-0.5 rounded text-[10px] cursor-pointer shadow"
+                                                                                        >
+                                                                                            ⚖️ Tinjau Komplain Kaca
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="text-[10px] text-amber-200 font-mono">
+                                                                                    Kendala: <strong>{o.complaint_data?.reason}</strong> {o.complaint_data?.notes ? `- "${o.complaint_data.notes}"` : ''}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        {o.complaint_status === 're_cut_needed' && o.current_division === 'divisi_ht' && (
+                                                                            <div className="mt-1.5 bg-rose-950/90 border border-rose-500 rounded-xl p-1.5 text-rose-200 text-[10px] font-bold font-mono animate-pulse">
+                                                                                🚨 POTONG ULANG (GANTI KACA DARI DIVISI {o.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''})
+                                                                            </div>
+                                                                        )}
 
-                                                                         {o.sketch_photo_path && (
-                                                                             <div className="mt-1.5">
-                                                                                 <button
-                                                                                     type="button"
-                                                                                     onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
-                                                                                     className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-sm cursor-pointer"
-                                                                                     title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
-                                                                                 >
-                                                                                     <div className="flex items-center gap-1.5 overflow-hidden">
-                                                                                         <img 
-                                                                                             src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
-                                                                                             alt="Sketsa Pola"
-                                                                                             className="w-7 h-7 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
-                                                                                         />
-                                                                                         <span className="font-bold text-[10px] truncate">📐 Sketsa Sambungan Kaca</span>
-                                                                                     </div>
-                                                                                     <span className="text-[9px] bg-cyan-400/20 text-cyan-200 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
-                                                                                 </button>
-                                                                             </div>
-                                                                         )}
-                                                                     </td>
+                                                                        {o.sketch_photo_path && (
+                                                                            <div className="mt-1.5">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
+                                                                                    className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-sm cursor-pointer"
+                                                                                    title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
+                                                                                >
+                                                                                    <div className="flex items-center gap-1.5 overflow-hidden">
+                                                                                        <img 
+                                                                                            src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
+                                                                                            alt="Sketsa Pola"
+                                                                                            className="w-7 h-7 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
+                                                                                        />
+                                                                                        <span className="font-bold text-[10px] truncate">📐 Sketsa Sambungan Kaca</span>
+                                                                                    </div>
+                                                                                    <span className="text-[9px] bg-cyan-400/20 text-cyan-200 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
 
                                                                     <td className="p-3 max-w-xs space-y-1">
                                                                         {Array.isArray(o.items) && o.items.length > 0 ? (
@@ -3386,7 +3874,6 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                                 }
 
                                                                                 const activeProcs = ['HT', 'GM', 'BV', 'Etsa'].filter(proc => {
-                                                                                    // HT (Potong) is ALWAYS mandatory for every glass order
                                                                                     if (proc === 'HT') return true;
                                                                                     const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
                                                                                     if (status !== 'N/A') return true;
@@ -3434,31 +3921,59 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
                                                                                                 productionSubTab === 'QC_Ready' || 
                                                                                                 (isDivisionWorker && o.current_division !== userRole);
 
-                                                                            if (isHistoryRow) {
+                                                                            if (!isDivisionWorker || isHistoryRow) {
                                                                                 return (
                                                                                     <button
                                                                                         type="button"
-                                                                                        onClick={() => handleOpenExecutionModal(o)}
-                                                                                        className="group relative inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-cyan-300 bg-slate-800/90 hover:bg-slate-700/90 hover:text-white shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-slate-700 hover:border-cyan-400/50 cursor-pointer ml-auto"
+                                                                                        onClick={() => handleOpenDetailModal(o)}
+                                                                                        className="group relative inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs text-cyan-300 bg-slate-800/90 hover:bg-slate-700 hover:text-white shadow-sm hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-slate-700 hover:border-cyan-400/50 cursor-pointer ml-auto"
                                                                                     >
-                                                                                        <span className="text-sm">🔍</span>
-                                                                                        <span className="tracking-wider uppercase font-extrabold text-[11px]">Lihat Detail</span>
-                                                                                        <span className="text-cyan-400 text-xs transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                                                        <span className="text-sm">👁️</span>
+                                                                                        <span className="font-extrabold text-[11px]">Detail</span>
+                                                                                        <span className="text-cyan-400 text-xs transition-transform group-hover:translate-x-0.5 duration-200">➔</span>
                                                                                     </button>
                                                                                 );
                                                                             }
 
                                                                             return (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => handleOpenExecutionModal(o)}
-                                                                                    className="group relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/50 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-400/40 overflow-hidden cursor-pointer ml-auto"
-                                                                                >
-                                                                                    <span className="absolute inset-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                                                                                    <span className="text-sm transition-transform group-hover:rotate-12 duration-200">🛠️</span>
-                                                                                    <span className="tracking-wider uppercase font-black text-[11px] drop-shadow">Mulai Kerjakan / Detail</span>
-                                                                                    <span className="text-cyan-200 text-xs transition-transform group-hover:translate-x-1 duration-200">➔</span>
-                                                                                </button>
+                                                                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                                                                    {/* TOMBOL DETAIL (IKON MATA + KETERANGAN DETAIL) */}
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleOpenDetailModal(o)}
+                                                                                        className="group inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs text-slate-300 bg-slate-800/90 hover:bg-slate-700 hover:text-white border border-slate-700 hover:border-cyan-400/50 transition shadow-sm cursor-pointer"
+                                                                                        title="Lihat Detail Lengkap SPO, Sketsa & Riwayat"
+                                                                                    >
+                                                                                        <span className="text-sm">👁️</span>
+                                                                                        <span className="font-extrabold text-[11px]">Detail</span>
+                                                                                    </button>
+
+                                                                                    {/* TOMBOL MULAI KERJAKAN */}
+                                                                                    {isCurrentlyActiveInCard ? (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => {
+                                                                                                document.getElementById('active-workstation-card')?.scrollIntoView({ behavior: 'smooth' });
+                                                                                            }}
+                                                                                            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-black text-xs text-cyan-300 bg-cyan-950/60 border border-cyan-500/50 shadow-md shadow-cyan-500/10 cursor-pointer"
+                                                                                            title="Sedang Dikerjakan di Card Atas"
+                                                                                        >
+                                                                                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                                                                                            <span className="font-mono text-[11px]">Sedang Berjalan</span>
+                                                                                        </button>
+                                                                                    ) : (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleStartWorkstationJob(o)}
+                                                                                            className="group relative inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl font-black text-xs text-slate-950 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 hover:from-cyan-300 hover:via-teal-300 hover:to-emerald-300 shadow-md shadow-cyan-500/20 hover:shadow-cyan-400/30 hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-cyan-300/40 cursor-pointer"
+                                                                                            title="Mulai Pengerjaan & Pindahkan ke Card Proses di Atas"
+                                                                                        >
+                                                                                            <span className="text-xs">⚡</span>
+                                                                                            <span className="font-black text-[11px] uppercase tracking-wider">Mulai Kerjakan</span>
+                                                                                            <span className="text-[10px] transition-transform group-hover:translate-x-0.5 duration-200">➔</span>
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
                                                                             );
                                                                         })()}
                                                                     </td>
@@ -5169,1949 +5684,97 @@ export default function Dashboard({ orders: initialOrders, scrapGlasses: initial
             </div>
 
             {/* MODAL 1: ORDER BARU (ADMIN TOKO - 12 POINT SPEC) */}
-            {showNewOrderModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div>
-                                <h3 className="font-bold text-lg text-slate-100 flex items-center gap-2">
-                                    🛒 Form Order Baru (Admin Toko)
-                                </h3>
-                                <div className="flex flex-wrap items-center gap-3 text-xs mt-1">
-                                    <div className="flex items-center gap-1.5 text-slate-400 font-mono">
-                                        <span>📅 i. Tanggal Order:</span>
-                                        <input 
-                                            type="date" 
-                                            required 
-                                            value={orderForm.order_date || ''} 
-                                            onChange={e => setOrderForm('order_date', e.target.value)} 
-                                            className="bg-slate-950 border border-cyan-500/50 rounded px-2 py-0.5 text-xs text-cyan-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
-                                        />
-                                        <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                                            {formatIndonesianDate(orderForm.order_date)}
-                                        </span>
-                                    </div>
-                                    <span className="text-slate-400 font-mono">
-                                        ii. SPO: <strong className="text-emerald-400">Auto Generated</strong>
-                                    </span>
-                                </div>
-                            </div>
-                            <button onClick={() => setShowNewOrderModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
-                        </div>
-
-                        <form className="space-y-4 text-xs overflow-y-auto pr-2 flex-1">
-                            {/* SECTION 1: PELANGGAN (iii, iv, v) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                    👤 Data Pemesan & Pelanggan
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-slate-400 block mb-1">iv. Nama Customer (Khusus Huruf):</label>
-                                        <input 
-                                            type="text" 
-                                            required 
-                                            value={orderForm.customer_name} 
-                                            onChange={e => setOrderForm('customer_name', sanitizeCustomerName(e.target.value))} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-medium" 
-                                            placeholder="cth: Budi Karunia" 
-                                        />
-                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya huruf & spasi (angka/simbol otomatis difilter)</span>
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-400 block mb-1">iii. Nomor Telepon / WA (Khusus Angka):</label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            required 
-                                            value={orderForm.customer_phone} 
-                                            onChange={e => setOrderForm('customer_phone', sanitizeCustomerPhone(e.target.value))} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-mono" 
-                                            placeholder="cth: 081234567890" 
-                                        />
-                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya digit angka nomor hp</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-slate-400 block mb-1">v. Alamat Pengiriman (Bebas Huruf, Angka & Simbol):</label>
-                                    <textarea required rows="2" value={orderForm.customer_address} onChange={e => setOrderForm('customer_address', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="Alamat lengkap lokasi pengantaran kaca..." />
-                                </div>
-                            </div>
-
-                            {/* SECTION 2: RINCIAN MULTI-ITEM KACA & UKURAN */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
-                                <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-2 gap-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs flex items-center gap-1.5">
-                                        📐 vi & vii. Rincian Item Kaca ({calcItems.length} Item Kaca)
-                                    </h4>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleAddItem} 
-                                        className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold px-3 py-1 rounded-lg text-[11px] border border-cyan-500/30 flex items-center gap-1 transition"
-                                    >
-                                        ➕ Tambah Item Kaca Lain
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {calcItems.map((item, idx) => (
-                                        <div key={item.id || idx} className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-3 relative">
-                                            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                                <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-2">
-                                                    🔷 Item Kaca #{idx + 1}
-                                                    <span className="font-mono text-[10px] text-slate-400">
-                                                        (Luas: {item.areaM2.toFixed(2)} m² | Subtotal: <strong className="text-emerald-400">Rp {item.subtotal.toLocaleString()}</strong>)
-                                                    </span>
-                                                </span>
-                                                {calcItems.length > 1 && (
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => handleRemoveItem(idx)}
-                                                        className="text-rose-400 hover:text-rose-300 text-xs font-bold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 transition"
-                                                    >
-                                                        🗑️ Hapus Item
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {/* ROW 1: JENIS KACA & QTY */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                                <div className="sm:col-span-3">
-                                                    <label className="text-slate-400 block mb-1">Jenis Kaca Dasar:</label>
-                                                    <select 
-                                                        value={item.glass_type} 
-                                                        onChange={e => handleItemChange(idx, 'glass_type', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
-                                                    >
-                                                        <option value="">-- Pilih Jenis Kaca Dasar --</option>
-                                                        {getDynamicGlassTypes(sheetGlasses).map((gt, gIdx) => (
-                                                            <option key={gIdx} value={gt}>{gt}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Jumlah (Qty):</label>
-                                                    <input 
-                                                        type="number" 
-                                                        min="0" 
-                                                        required 
-                                                        value={item.qty} 
-                                                        onChange={e => handleItemChange(idx, 'qty', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* ROW 2: DIMENSI UKURAN */}
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Panjang (cm):</label>
-                                                    <input 
-                                                        type="text" 
-                                                        inputMode="decimal"
-                                                        required 
-                                                        placeholder="cth: 24,3 atau 150"
-                                                        value={item.length_cm} 
-                                                        onChange={e => handleItemChange(idx, 'length_cm', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Lebar (cm):</label>
-                                                    <input 
-                                                        type="text" 
-                                                        inputMode="decimal"
-                                                        required 
-                                                        placeholder="cth: 160,5 atau 120"
-                                                        value={item.width_cm} 
-                                                        onChange={e => handleItemChange(idx, 'width_cm', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* SMART SCRAP GLASS RECOMMENDATION BANNER (WITH QUANTITY & +1CM GM EDGE MARGIN RULE) */}
-                                            {(() => {
-                                                const scrapMatch = findMatchingScrapsForOrder(item, initialScrap);
-                                                
-                                                // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
-                                                const isEdgeGrinding = (item.processes || []).includes('GM');
-                                                const exactScrapBlockedByGrinding = (!scrapMatch || scrapMatch.totalScrapCovered <= 0) && isEdgeGrinding
-                                                    ? initialScrap?.find(s => {
-                                                        if (s.status && s.status !== 'Layak Pakai') return false;
-                                                        if (extractThickness(s.glass_type) !== extractThickness(item.glass_type)) return false;
-                                                        return calculateScrapYield(parseFloat(s.length_cm), parseFloat(s.width_cm), parseDim(item.length_cm), parseDim(item.width_cm)) > 0;
-                                                    })
-                                                    : null;
-
-                                                if (exactScrapBlockedByGrinding) {
-                                                    return (
-                                                        <div className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/40 text-rose-300 text-xs space-y-1">
-                                                            <div className="font-bold flex items-center gap-1.5">
-                                                                <span>⚠️ Kaca Sisa di {exactScrapBlockedByGrinding.rak_location} ({exactScrapBlockedByGrinding.scrap_code}) Tidak Bisa Dipakai</span>
-                                                                <span className="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded text-[10px] border border-rose-500/30 font-mono font-bold">Aturan Gosok Mesin (GM)</span>
-                                                            </div>
-                                                            <div className="text-[11px] text-slate-300 leading-relaxed">
-                                                                Stok kaca sisa ukuran <strong>{exactScrapBlockedByGrinding.length_cm} x {exactScrapBlockedByGrinding.width_cm} cm</strong> tidak bisa digunakan untuk orderan ini ({parseDim(item.length_cm)} x {parseDim(item.width_cm)} cm) karena memilih proses <strong>Gosok Mesin (GM)</strong>. Mesin penggosok batu memerlukan bahan kaca minimal <strong>+1 cm lebih besar ({parseDim(item.length_cm) + 1} x {parseDim(item.width_cm) + 1} cm)</strong> agar pinggiran kaca tidak tergerus menjadi kekecilan.
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                if (!scrapMatch || scrapMatch.totalScrapCovered <= 0) return null;
-
-                                                const { totalScrapCovered, neededNewGlass, itemQty, matchedScraps, hasEdgeGrinding } = scrapMatch;
-                                                const primaryScrap = matchedScraps[0]?.scrap;
-                                                const isFullCover = neededNewGlass === 0;
-
-                                                const isAnySelected = Boolean(orderForm.used_scrap_rak);
-
-                                                return (
-                                                    <div className={`p-3.5 rounded-xl border flex flex-col items-start justify-between gap-3 transition ${isAnySelected ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' : 'bg-amber-500/10 border-amber-500/40 text-amber-300'}`}>
-                                                        <div className="flex items-start gap-2.5 flex-1 w-full">
-                                                            <span className="text-xl mt-0.5">💡</span>
-                                                            <div className="text-xs space-y-1.5 w-full">
-                                                                <div className="font-bold flex items-center justify-between gap-1.5 flex-wrap">
-                                                                    <span>
-                                                                        {isFullCover 
-                                                                            ? matchedScraps.length === 1 
-                                                                                ? `Rekomendasi Kaca Sisa di ${primaryScrap.rak_location} (${primaryScrap.scrap_code})`
-                                                                                : `Rekomendasi Kaca Sisa (${matchedScraps.length} Rak Terpakai)`
-                                                                            : `Rekomendasi Kombinasi: ${totalScrapCovered} Lembar Scrap + ${neededNewGlass} Lembar Bahan Baru`
-                                                                        }
-                                                                    </span>
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        {isAnySelected && <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30 font-mono font-bold">✓ Terpasang ke Form</span>}
-                                                                        {hasEdgeGrinding && <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded text-[10px] border border-cyan-500/30 font-mono font-bold">+1 cm Margin GM</span>}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* ITEMIZED SCRAP BREAKDOWN BOX WITH PER-SCRAP QUANTITY SELECTOR & TOGGLE */}
-                                                                <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 space-y-2 text-[11px]">
-                                                                    <div className="font-semibold text-slate-300 border-b border-slate-800/80 pb-1 flex justify-between items-center flex-wrap gap-1">
-                                                                        <span>📦 Pilih Kaca Sisa & Jumlah Lembar yang Ingin Dipakai (Kebutuhan: {itemQty} Lembar):</span>
-                                                                        <span className="font-mono text-cyan-400 font-bold">{totalScrapCovered} / {itemQty} Lembar Maks. Scrap</span>
-                                                                    </div>
-
-                                                                    <ul className="space-y-2 pt-0.5">
-                                                                        {matchedScraps.map((m, mIdx) => {
-                                                                            const scrapCode = m.scrap.scrap_code;
-                                                                            const maxQty = m.usedQty;
-                                                                            const isThisSelected = orderForm.used_scrap_rak && orderForm.used_scrap_rak.includes(scrapCode);
-                                                                            const currentQty = customScrapQtyMap[scrapCode] !== undefined ? customScrapQtyMap[scrapCode] : maxQty;
-
-                                                                            return (
-                                                                                <li key={mIdx} className={`p-2 rounded-md border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition ${isThisSelected ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-slate-900/80 border-slate-800'}`}>
-                                                                                    <div className="space-y-0.5">
-                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                                                            <span className="text-amber-400 font-mono font-bold">▪ {scrapCode}</span>
-                                                                                            <span className="text-slate-400 font-mono">({m.scrap.rak_location})</span>
-                                                                                            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
-                                                                                                Ukuran {m.scrap.length_cm} x {m.scrap.width_cm} cm
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <div className="font-mono text-slate-400 text-[10px]">
-                                                                                            Maksimal Potongan Sisa Tersedia: <strong className="text-cyan-300 font-bold">{maxQty} lembar</strong> <span className="text-slate-500">(potong {m.yieldPerSheet} lbr/sheet)</span>
-                                                                                        </div>
-                                                                                    </div>
-
-                                                                                    {/* ACTION CONTROLS: QTY SELECTOR + TOGGLE BUTTON */}
-                                                                                    <div className="flex items-center gap-2 flex-wrap self-end sm:self-center">
-                                                                                        <div className="flex items-center gap-1">
-                                                                                            <label className="text-[10px] text-slate-400 whitespace-nowrap">Pakai:</label>
-                                                                                            <select
-                                                                                                value={currentQty}
-                                                                                                onChange={(e) => {
-                                                                                                    const val = Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1));
-                                                                                                    handleUpdateIndividualScrapQty(m, val, itemQty);
-                                                                                                }}
-                                                                                                className="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
-                                                                                            >
-                                                                                                {Array.from({ length: maxQty }, (_, i) => i + 1).map(n => (
-                                                                                                    <option key={n} value={n}>{n} lbr</option>
-                                                                                                ))}
-                                                                                            </select>
-                                                                                        </div>
-
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => handleToggleIndividualScrap(m, currentQty, itemQty)}
-                                                                                            className={`px-2.5 py-1 rounded-md font-extrabold text-xs transition shadow-sm whitespace-nowrap ${
-                                                                                                isThisSelected 
-                                                                                                    ? 'bg-emerald-500 text-slate-950 hover:bg-rose-500 hover:text-white' 
-                                                                                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                                                                                            }`}
-                                                                                            title={`Klik untuk memilih / membatalkan penggunaan ${scrapCode}`}
-                                                                                        >
-                                                                                            {isThisSelected 
-                                                                                                ? `✓ ${currentQty} lbr Terpasang (Batal)` 
-                                                                                                : `+ Gunakan ${currentQty} lbr Scrap Ini`
-                                                                                            }
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </li>
-                                                                            );
-                                                                        })}
-
-                                                                        {neededNewGlass > 0 && (
-                                                                            <li className="flex items-center justify-between text-cyan-300 font-sans border-t border-slate-900 pt-1.5 flex-wrap gap-1">
-                                                                                <div className="flex items-center gap-1.5">
-                                                                                    <span className="text-cyan-400 font-mono font-bold">▪ Kaca Bahan Lembaran Baru</span>
-                                                                                </div>
-                                                                                <div className="font-mono text-cyan-300 font-bold">
-                                                                                    ➔ Sisa Diambil dari Bahan Baru: <strong className="text-cyan-400 text-xs">{neededNewGlass} lembar</strong>
-                                                                                </div>
-                                                                            </li>
-                                                                        )}
-                                                                    </ul>
-                                                                </div>
-
-                                                                {hasEdgeGrinding && <div className="text-[10px] text-cyan-300/80 font-mono mt-0.5">*Ukuran scrap mencukupi batas aman margin +1 cm untuk penggosokan mesin (GM).</div>}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()}
-
-                                            {/* ROW 3: OPTIONS PROSES MANDIRI PER ITEM */}
-                                            <div>
-                                                <label className="text-slate-400 block mb-1 font-semibold">vii. Options Proses Item #{idx + 1}:</label>
-                                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                                    {[
-                                                        { id: 'HT', name: 'HT (Halus Tepi)' },
-                                                        { id: 'BV', name: 'BV (Beveling)' },
-                                                        { id: 'GM', name: 'GM (Gosok Mesin)' },
-                                                        { id: 'Etsa', name: 'Etsa (Sandblast)' },
-                                                        { id: 'Bor', name: 'Bor (Coakan)' },
-                                                    ].map(proc => (
-                                                        <label 
-                                                            key={proc.id} 
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                toggleItemProcess(idx, proc.id);
-                                                            }} 
-                                                            className={`p-1.5 rounded-lg border cursor-pointer transition flex items-center justify-between text-[11px] ${(item.processes || []).includes(proc.id) ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400'}`}
-                                                        >
-                                                            <span>{proc.name}</span>
-                                                            <input type="checkbox" checked={(item.processes || []).includes(proc.id)} onChange={() => {}} className="rounded bg-slate-900 border-slate-700 text-cyan-500 w-3 h-3 pointer-events-none" />
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* CONDITIONAL PARAMETERS FOR BEVEL & BOR */}
-                                            {(item.processes || []).includes('BV') && (
-                                                <div className="p-2 bg-slate-950 rounded-lg border border-cyan-500/30">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold block mb-1">
-                                                        📐 Lebar Bevel (cm): <span className="text-[10px] text-slate-400 font-mono">(Biaya: Keliling × Rp 15.000 + Lebar cm × Rp 10.000)</span>
-                                                    </label>
-                                                    <input 
-                                                        type="number" 
-                                                        step="any"
-                                                        min="0"
-                                                        value={item.bevel_width_cm ?? ''} 
-                                                        onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
-                                                        placeholder="1"
-                                                        className="w-36 bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {(item.processes || []).includes('Bor') && (
-                                                <div className="p-2 bg-slate-950 rounded-lg border border-cyan-500/30 space-y-1">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold block">
-                                                        🔘 Dimensi Lubang Bor / Coakan: <span className="text-[10px] text-slate-400 font-mono">(Biaya: Keliling Ruas cm × Rp 2.500 × Qty Lubang)</span>
-                                                    </label>
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Panjang Lubang (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.hole_length_cm ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'hole_length_cm', e.target.value)} 
-                                                                placeholder="2"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Lebar Lubang (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.hole_width_cm ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'hole_width_cm', e.target.value)} 
-                                                                placeholder="2"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Jumlah Lubang:</span>
-                                                            <input 
-                                                                type="number" 
-                                                                min="0"
-                                                                value={item.hole_qty ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'hole_qty', e.target.value)} 
-                                                                placeholder="1"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {(item.processes || []).includes('Etsa') && (
-                                                <div className="p-2.5 bg-slate-950 rounded-lg border border-cyan-500/30 space-y-2">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold flex items-center justify-between">
-                                                        <span>🌫️ Dimensi Area Etsa / Sandblast:</span>
-                                                        <span className="text-[10px] text-slate-400 font-mono">(Tarif: Rp 50.000 / m²)</span>
-                                                    </label>
-                                                    
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Panjang Etsa (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.etsa_length_cm !== undefined ? item.etsa_length_cm : (item.length_cm || '')} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_length_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                                placeholder={item.length_cm}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Lebar Etsa (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.etsa_width_cm !== undefined ? item.etsa_width_cm : (item.width_cm || '')} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_width_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                                placeholder={item.width_cm}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Jumlah Area (Pcs):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                min="0"
-                                                                value={item.etsa_qty ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_qty', e.target.value)} 
-                                                                placeholder="1"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* TRANSPARENT PRICING BREAKDOWN BADGES */}
-                                            <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-mono border-t border-slate-800/80">
-                                                <span className="text-slate-400 font-semibold">Rincian Harga:</span>
-                                                <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-300">
-                                                    Kaca: Rp {item.baseGlassPrice.toLocaleString()}
-                                                </span>
-                                                {item.feeGM > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        GM: +Rp {item.feeGM.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeHT > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        HT: +Rp {item.feeHT.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeBV > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Bevel: +Rp {item.feeBV.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeBor > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Bor ({item.holeRuasCm}cm ruas): +Rp {item.feeBor.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeEtsa > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Etsa ({item.etsaAreaM2 ? (item.etsaAreaM2 * (item.etsa_qty || 1)).toFixed(2) : '0'}m²): +Rp {item.feeEtsa.toLocaleString()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* SECTION 4: TAMBAHAN AKSESORIS TERINTEGRASI STOK GUDANG (viii) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs flex items-center gap-1.5">
-                                        📦 viii. Tambahan Aksesoris / Hardware Proyek (Stock Integrated)
-                                    </h4>
-                                    <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                                        ✓ Stok Terhubung Gudang
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                    <select
-                                        className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-100 font-medium focus:border-cyan-400 flex-1 cursor-pointer"
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                handleAddAccessoryFromStock(e.target.value);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                    >
-                                        <option value="">+ Tambah Aksesoris dari Master Stok Inventory Gudang...</option>
-                                        {MASTER_ACCESSORY_STOCK.map(item => (
-                                            <option key={item.id} value={item.id} disabled={item.stock <= 0}>
-                                                {item.name} — Rp {item.price.toLocaleString()}/{item.unit} ({item.stock > 0 ? `Stok: ${item.stock} ${item.unit}` : 'Stok Habis'})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {Array.isArray(orderForm.accessories) && orderForm.accessories.length > 0 ? (
-                                    <div className="space-y-2 pt-1">
-                                        {orderForm.accessories.map((acc, accIdx) => {
-                                            const isObj = typeof acc === 'object' && acc !== null;
-                                            const accName = isObj ? acc.name : acc;
-                                            const accPrice = isObj ? (parseFloat(acc.price) || 0) : 0;
-                                            const accUnit = isObj ? (acc.unit || 'pcs') : 'pcs';
-                                            const accStock = isObj ? (acc.stock || 50) : 50;
-                                            const accQty = isObj ? (parseInt(acc.qty) || 1) : 1;
-                                            const accTotal = accPrice * accQty;
-
-                                            return (
-                                                <div key={accIdx} className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-                                                    <div className="flex items-center gap-2 flex-1">
-                                                        <span className="font-bold text-slate-200">{accName}</span>
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${accStock < 10 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                                                            Stok: {accStock} {accUnit}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-3 w-full sm:w-auto justify-between">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[10px] text-slate-400">Jumlah Terpakai:</span>
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                value={accQty}
-                                                                onChange={e => handleAccessoryQtyChange(accIdx, e.target.value)}
-                                                                className="w-16 bg-slate-950 border border-slate-700 rounded p-1 text-center text-xs font-mono font-bold text-cyan-300"
-                                                            />
-                                                            <span className="text-[10px] text-slate-400">{accUnit}</span>
-                                                        </div>
-
-                                                        <span className="font-mono text-cyan-300 font-bold min-w-[90px] text-right">
-                                                            Rp {accTotal.toLocaleString()}
-                                                        </span>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleRemoveAccessory(accIdx)}
-                                                            className="text-red-400 hover:text-red-300 text-xs font-bold p-1 rounded hover:bg-red-500/10"
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="p-3 bg-slate-900/50 rounded-lg border border-dashed border-slate-800 text-center text-slate-500 text-xs">
-                                        Belum ada aksesoris ditambahkan. Pilih dari dropdown stok di atas jika proyek memerlukan hardware/fitting pendukung.
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* SECTION 5: DESKRIPSI & SKETSA GAMBAR (ix, x) */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                        📝 ix. Deskripsi (Penjelasan Pesanan)
-                                    </h4>
-                                    <textarea required rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="Instruksi khusus coakan, ukuran celah, dll... (Wajib diisi, jika tidak ada ketik '-')" />
-                                </div>
-
-                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                        🖼️ x. Gambar / Sketsa Kaca (JPG/PNG)
-                                    </h4>
-                                    <input type="file" accept="image/*" onChange={handleFileChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-slate-300 text-xs cursor-pointer" />
-                                    {sketchPreview && (
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <img src={sketchPreview} alt="Preview Sketsa" className="w-14 h-14 object-cover rounded-lg border border-cyan-500" />
-                                            <span className="text-[10px] text-emerald-400 font-bold">✓ Sketsa Berhasil Di-upload</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-
-                            {/* SECTION 6: BURU-BURU TEU? / PRIORITAS (xi) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <h4 className="font-bold text-amber-400 text-xs border-b border-slate-800 pb-2">
-                                    ⚡ xi. Buru-buru teu? Status Prioritas & Tanggal Selesai
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Status Pengerjaan:</label>
-                                        <select 
-                                            value={orderForm.priority_status} 
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setOrderForm(d => ({
-                                                    ...d,
-                                                    priority_status: val,
-                                                    priority_fee: val === 'Prioritas' ? (d.priority_fee || '') : 0
-                                                }));
-                                            }} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold focus:border-cyan-400"
-                                        >
-                                            <option value="Biasa">Biasa (Standard)</option>
-                                            <option value="Prioritas">Prioritas (Buru-buru / Fee Custom)</option>
-                                        </select>
-                                    </div>
-                                    {orderForm.priority_status === 'Prioritas' && (
-                                        <div>
-                                            <label className="text-slate-400 block mb-1 font-semibold">Nominal Fee Prioritas (Rp):</label>
-                                            <input 
-                                                type="text"
-                                                inputMode="numeric"
-                                                value={formatRupiahInput(orderForm.priority_fee)} 
-                                                onChange={e => setOrderForm('priority_fee', parseRupiahInput(e.target.value))} 
-                                                className="w-full bg-slate-900 border border-amber-500/40 rounded-lg p-2 text-amber-400 font-bold font-mono focus:border-amber-400" 
-                                                placeholder="cth: 150.000 atau 200.000" 
-                                            />
-                                            <span className="text-[10px] text-amber-400/80 block mt-1">*Admin isi manual (bisa ketik koma/titik)</span>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Harus diselesaikan pada (Deadline):</label>
-                                        <input type="date" value={orderForm.deadline_date} onChange={e => setOrderForm('deadline_date', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* SECTION 8: METODE & OPSI PEMBAYARAN CUSTOMER */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <h4 className="font-bold text-emerald-400 text-xs border-b border-slate-800 pb-2 flex items-center justify-between">
-                                    <span>💳 Metode & Opsi Pembayaran Customer</span>
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                        Total Tagihan: <strong className="text-emerald-400 font-extrabold text-sm">Rp {calcTotalPrice.toLocaleString()}</strong>
-                                    </span>
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Metode Pembayaran Customer:</label>
-                                        <select 
-                                            value={orderForm.payment_method || 'cash'} 
-                                            onChange={e => setOrderForm('payment_method', e.target.value)} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold focus:border-cyan-400"
-                                        >
-                                            <option value="cash">💵 Cash / Tunai</option>
-                                            <option value="transfer">🏦 Transfer Bank (BCA/Mandiri/BRI)</option>
-                                            <option value="qris">📱 QRIS (Scan Barcode)</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Jumlah Uang Diterima / Dibayar (Rp):</label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            value={formatRupiahInput(orderForm.custom_paid_amount)} 
-                                            onChange={e => {
-                                                const num = parseRupiahInput(e.target.value);
-                                                const pct = calcTotalPrice > 0 ? Math.round((num / calcTotalPrice) * 100) : 50;
-                                                setOrderForm(d => ({ ...d, custom_paid_amount: num, dp_percent: pct }));
-                                            }} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-emerald-400 font-mono font-bold text-sm focus:border-cyan-400" 
-                                            placeholder="cth: 500.000 atau 1.000.000" 
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-[11px] text-slate-400">Tombol Cepat Bayar:</span>
-                                        {[
-                                            { label: 'Rp 100rb', val: 100000 },
-                                            { label: 'Rp 200rb', val: 200000 },
-                                            { label: 'Rp 300rb', val: 300000 },
-                                            { label: 'Rp 500rb', val: 500000 },
-                                            { label: '50% (DP Half)', val: Math.round(calcTotalPrice * 0.5) },
-                                            { label: '⚡ Bayar Full / Lunas (100%)', val: calcTotalPrice }
-                                        ].map((preset, pIdx) => (
-                                            <button 
-                                                key={pIdx}
-                                                type="button"
-                                                onClick={() => {
-                                                    const pct = calcTotalPrice > 0 ? Math.round((preset.val / calcTotalPrice) * 100) : 50;
-                                                    setOrderForm(d => ({ ...d, custom_paid_amount: preset.val, dp_percent: pct }));
-                                                }}
-                                                className={`px-2.5 py-1 border rounded text-[11px] font-mono transition ${preset.val === calcTotalPrice && calcTotalPrice > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold' : 'bg-slate-900 hover:bg-cyan-500/20 text-slate-300 border-slate-700'}`}
-                                            >
-                                                {preset.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* OTOMATIS PENENTUAN STATUS (DP VS LUNAS) */}
-                                <div className="bg-slate-900/90 p-3 rounded-lg border border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs">
-                                    <div>
-                                        <span className="text-slate-400 block text-[11px]">Otomatis Penentuan Status Pembayaran:</span>
-                                        <span className="font-mono font-extrabold text-sm">
-                                            {(() => {
-                                                const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                                    ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                                    : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                                const pct = calcTotalPrice > 0 ? Math.round((paid / calcTotalPrice) * 100) : (orderForm.dp_percent || 50);
-                                                const methodText = (orderForm.payment_method || 'cash').toUpperCase();
-                                                
-                                                if (paid >= calcTotalPrice && calcTotalPrice > 0) {
-                                                    return <span className="text-emerald-400">✅ Lunas Langsung (100%) — {methodText}</span>;
-                                                } else if (paid > 0) {
-                                                    return <span className="text-amber-300">💵 Uang Muka / DP Rp {paid.toLocaleString()} ({pct}% dari Total) — {methodText}</span>;
-                                                } else {
-                                                    return <span className="text-slate-400">⚪ Belum Ada Pembayaran (DP 0%)</span>;
-                                                }
-                                            })()}
-                                        </span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-slate-400 block text-[11px]">Sisa Pelunasan (COD):</span>
-                                        <span className="font-mono font-bold text-slate-200">
-                                            {(() => {
-                                                const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                                    ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                                    : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                                const sisa = Math.max(0, calcTotalPrice - paid);
-                                                return sisa === 0 ? <span className="text-emerald-400 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`;
-                                            })()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* SECTION 7: RINCIAN STRUK ORDERAN & KALKULASI HARGA (xii) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-cyan-500/40 space-y-3 font-mono">
-                                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                    <h4 className="font-bold text-cyan-300 text-xs flex items-center gap-1.5 font-sans">
-                                        🧾 Rincian Struk Orderan & Kalkulasi Harga
-                                    </h4>
-                                    <span className="text-[10px] text-slate-400">
-                                        Luas Total Kaca: <strong className="text-cyan-400">{calcItems.reduce((sum, i) => sum + i.areaM2, 0).toFixed(2)} m²</strong>
-                                    </span>
-                                </div>
-
-                                {/* LIST ITEM KACA RECEIPT LINES */}
-                                <div className="space-y-3 text-xs">
-                                    {calcItems.map((it, iIdx) => {
-                                        const processFeeSum = (it.feeGM || 0) + (it.feeHT || 0) + (it.feeBV || 0) + (it.feeBor || 0) + (it.feeEtsa || 0);
-                                        return (
-                                            <div key={iIdx} className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-2">
-                                                <div className="flex justify-between text-slate-100 font-bold border-b border-slate-800 pb-1.5">
-                                                    <span>
-                                                        #{iIdx + 1}. {it.glass_type || 'Kaca Dasar'} ({it.length_cm || 0} x {it.width_cm || 0} cm)
-                                                    </span>
-                                                    <span className="text-cyan-400 font-mono">
-                                                        {it.qty} Unit (Total {it.areaM2.toFixed(2)} m²)
-                                                    </span>
-                                                </div>
-
-                                                {/* RINCIAN HARGA BAHAN KACA DIBELI */}
-                                                <div className="space-y-1 text-[11px] text-slate-300 pl-1">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">1. Harga Kaca yang Dibeli (Bahan):</span>
-                                                        <strong className="text-slate-200">Rp {it.baseGlassPrice.toLocaleString()}</strong>
-                                                    </div>
-
-                                                    {/* RINCIAN BIAYA EKSEKUSI KACA */}
-                                                    <div className="space-y-0.5 pl-2 border-l-2 border-slate-700/60 my-1">
-                                                        <div className="text-[10px] text-cyan-400/90 font-semibold">2. Rincian Biaya Eksekusi / Proses Kaca:</div>
-                                                        {it.processes && it.processes.includes('HT') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Potong & Halus Tepi (HT)</span>
-                                                                <span>+ Rp {(it.feeHT || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('GM') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Gosok Mesin (GM)</span>
-                                                                <span>+ Rp {(it.feeGM || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('BV') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Beveling (BV {it.bevel_width_cm || 1} cm)</span>
-                                                                <span>+ Rp {(it.feeBV || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('Bor') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Bor Coakan Lubang ({it.hole_qty || 1} lubang)</span>
-                                                                <span>+ Rp {(it.feeBor || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('Etsa') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Etsa Sandblast</span>
-                                                                <span>+ Rp {(it.feeEtsa || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {(!it.processes || it.processes.length === 0) && (
-                                                            <div className="text-[10px] text-slate-500 italic">• Polos (Tanpa Proses Lanjutan)</div>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex justify-between text-[11px] text-slate-300 font-semibold pt-0.5">
-                                                        <span className="text-slate-400">• Total Biaya Eksekusi Item Ini:</span>
-                                                        <strong className="text-cyan-300">+ Rp {processFeeSum.toLocaleString()}</strong>
-                                                    </div>
-                                                </div>
-
-                                                <div className="text-right text-xs font-extrabold text-slate-100 border-t border-slate-800 pt-1.5">
-                                                    Subtotal Item Kaca #{iIdx + 1}: <span className="text-emerald-400">Rp {it.subtotal.toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* AKSESORIS TAMBAHAN JIKA ADA */}
-                                    {orderForm.accessories && orderForm.accessories.length > 0 && (
-                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-1">
-                                            <div className="font-bold text-slate-200 text-xs flex justify-between border-b border-slate-800 pb-1">
-                                                <span>🛠️ Aksesoris & Hardware Tambahan:</span>
-                                                <span className="text-cyan-400">Rp {calcTotalAccessoryFees.toLocaleString()}</span>
-                                            </div>
-                                            {orderForm.accessories.map((acc, aIdx) => {
-                                                const price = typeof acc === 'object' ? (acc.price || 0) : 0;
-                                                const qty = typeof acc === 'object' ? (acc.qty || 1) : 1;
-                                                const name = typeof acc === 'object' ? (acc.name || 'Aksesoris') : acc;
-                                                return (
-                                                    <div key={aIdx} className="flex justify-between text-[11px] text-slate-300 pl-1">
-                                                        <span>- {name} ({qty} {acc.unit || 'pcs'})</span>
-                                                        <strong className="text-slate-200">Rp {(price * qty).toLocaleString()}</strong>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* GARIS PEMBATAS STRUK (DASHED BORDER) */}
-                                <div className="border-t border-dashed border-slate-700 my-2"></div>
-
-                                {/* RINCIAN AKHIR SUB-TOTAL, BIAYA PRIORITAS & GRAND TOTAL */}
-                                <div className="space-y-1.5 text-xs font-sans">
-                                    <div className="flex justify-between text-slate-300">
-                                        <span>• Total Harga Kaca Dibeli (Bahan):</span>
-                                        <strong className="font-mono text-slate-200">Rp {calcTotalGlassBasePrice.toLocaleString()}</strong>
-                                    </div>
-
-                                    <div className="flex justify-between text-slate-300">
-                                        <span>• Total Biaya Eksekusi / Proses Kaca:</span>
-                                        <strong className="font-mono text-cyan-300">+ Rp {calcTotalProcessFees.toLocaleString()}</strong>
-                                    </div>
-
-                                    {calcTotalAccessoryFees > 0 && (
-                                        <div className="flex justify-between text-slate-300">
-                                            <span>• Total Aksesoris & Hardware:</span>
-                                            <strong className="font-mono text-slate-200">+ Rp {calcTotalAccessoryFees.toLocaleString()}</strong>
-                                        </div>
-                                    )}
-
-                                    {/* BIAYA PRIORITAS PENGERJAAN */}
-                                    <div className="flex justify-between items-center bg-slate-900/80 p-2 rounded-lg border border-amber-500/30">
-                                        <span className="text-amber-300 font-bold flex items-center gap-1">
-                                            ⚡ Biaya Prioritas Pengerjaan (Buru-buru):
-                                            {orderForm.priority_status !== 'Prioritas' && <span className="text-[10px] text-slate-400 font-normal ml-1">(Status: Biasa)</span>}
-                                        </span>
-                                        <strong className="font-mono text-amber-400 font-extrabold text-sm">
-                                            + Rp {calcPriorityFee.toLocaleString()}
-                                        </strong>
-                                    </div>
-
-                                    {/* BIAYA CUSTOM ADMIN */}
-                                    <div className="flex justify-between items-center bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                                        <label className="text-slate-300 font-medium">
-                                            ➕ Biaya Tambahan / Custom Admin (Rp):
-                                        </label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            value={formatRupiahInput(orderForm.custom_fee)} 
-                                            onChange={e => setOrderForm('custom_fee', parseRupiahInput(e.target.value))} 
-                                            className="w-36 bg-slate-950 border border-slate-700 rounded p-1 text-slate-100 font-mono font-bold text-xs text-right focus:border-cyan-400" 
-                                            placeholder="0" 
-                                        />
-                                    </div>
-
-                                    <div className="border-t border-dashed border-slate-700 pt-2 flex justify-between items-center bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/40">
-                                        <div>
-                                            <span className="text-slate-200 block font-bold text-xs">GRAND TOTAL HARGA ORDER:</span>
-                                            <span className="text-[10px] text-slate-400 font-mono">Bahan + Eksekusi + Prioritas + Custom</span>
-                                        </div>
-                                        <span className="font-mono font-black text-emerald-400 text-lg">
-                                            Rp {calcTotalPrice.toLocaleString()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* MODAL ACTIONS */}
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowNewOrderModal(false)} className="px-4 py-2 bg-slate-800 rounded text-slate-300 text-xs font-semibold">Batal</button>
-                                <button type="button" onClick={(e) => handleCreateOrder(e, 'draft')} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 font-bold text-white rounded text-xs flex items-center gap-1">
-                                    📄 Simpan Draf (Belum Deal)
-                                </button>
-                                <button type="button" onClick={(e) => handleCreateOrder(e, 'pengerjaan')} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 font-bold text-slate-950 rounded text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20">
-                                    ⚡ Simpan & Terbit Order ({orderForm.payment_option === 'lunas' ? 'Lunas' : `DP ${orderForm.dp_percent || 50}%`})
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* MODAL 1: ORDER BARU (ADMIN TOKO - 12 POINT SPEC) */}
+            <NewOrderModal
+                show={showNewOrderModal}
+                onClose={() => setShowNewOrderModal(false)}
+                orderForm={orderForm}
+                setOrderForm={setOrderForm}
+                formatIndonesianDate={formatIndonesianDate}
+                sanitizeCustomerName={sanitizeCustomerName}
+                sanitizeCustomerPhone={sanitizeCustomerPhone}
+                handleItemChange={handleItemChange}
+                handleAddItem={handleAddItem}
+                handleRemoveItem={handleRemoveItem}
+                toggleItemProcess={toggleItemProcess}
+                handleCreateOrder={handleCreateOrder}
+                handleFileChange={handleFileChange}
+                sketchPreview={sketchPreview}
+                calcItems={calcItems}
+                getDynamicGlassTypes={getDynamicGlassTypes}
+                sheetGlasses={sheetGlasses}
+                findMatchingScrapsForOrder={findMatchingScrapsForOrder}
+                initialScrap={initialScrap}
+                extractThickness={extractThickness}
+                calculateScrapYield={calculateScrapYield}
+                parseDim={parseDim}
+                customScrapQtyMap={customScrapQtyMap}
+                handleUpdateIndividualScrapQty={handleUpdateIndividualScrapQty}
+                handleToggleIndividualScrap={handleToggleIndividualScrap}
+                handleAddAccessoryFromStock={handleAddAccessoryFromStock}
+                MASTER_ACCESSORY_STOCK={MASTER_ACCESSORY_STOCK}
+                handleAccessoryQtyChange={handleAccessoryQtyChange}
+                handleRemoveAccessory={handleRemoveAccessory}
+                formatRupiahInput={formatRupiahInput}
+                parseRupiahInput={parseRupiahInput}
+                calcTotalAccessoryFees={calcTotalAccessoryFees}
+                calcTotalGlassBasePrice={calcTotalGlassBasePrice}
+                calcTotalProcessFees={calcTotalProcessFees}
+                calcPriorityFee={calcPriorityFee}
+                calcTotalPrice={calcTotalPrice}
+            />
 
             {/* MODAL 1B: EDIT DRAF ORDER (ADMIN TOKO) */}
-            {showEditOrderModal && editingOrder && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div>
-                                <h3 className="font-bold text-lg text-slate-100 flex items-center gap-2">
-                                    {editingOrder.status === 'pengerjaan' ? `🔄 Revisi & Edit Orderan Pengerjaan #${editingOrder.spo_number}` : `✏️ Edit Draf Negosiasi #${editingOrder.spo_number}`}
-                                </h3>
-                                <div className="flex flex-wrap items-center gap-3 text-xs mt-1">
-                                    <div className="flex items-center gap-1.5 text-slate-400 font-mono">
-                                        <span>📅 Tanggal Order:</span>
-                                        <input 
-                                            type="date" 
-                                            required 
-                                            value={orderForm.order_date || ''} 
-                                            onChange={e => setOrderForm('order_date', e.target.value)} 
-                                            className="bg-slate-950 border border-cyan-500/50 rounded px-2 py-0.5 text-xs text-cyan-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
-                                        />
-                                        <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                                            {formatIndonesianDate(orderForm.order_date)}
-                                        </span>
-                                    </div>
-                                    <span className="text-slate-400 font-mono">
-                                        Status: <strong className="text-amber-400 uppercase">{editingOrder.status}</strong>
-                                    </span>
-                                </div>
-                            </div>
-                            <button onClick={handleCloseEditModal} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
-                        </div>
+            <EditDraftOrderModal
+                show={showEditOrderModal}
+                onClose={handleCloseEditModal}
+                handleCloseEditModal={handleCloseEditModal}
+                editingOrder={editingOrder}
+                orderForm={orderForm}
+                setOrderForm={setOrderForm}
+                formatIndonesianDate={formatIndonesianDate}
+                sanitizeCustomerName={sanitizeCustomerName}
+                sanitizeCustomerPhone={sanitizeCustomerPhone}
+                handleItemChange={handleItemChange}
+                handleAddItem={handleAddItem}
+                handleRemoveItem={handleRemoveItem}
+                toggleItemProcess={toggleItemProcess}
+                handleUpdateOrderSubmit={handleUpdateOrderSubmit}
+                handleFileChange={handleFileChange}
+                sketchPreview={sketchPreview}
+                calcItems={calcItems}
+                getDynamicGlassTypes={getDynamicGlassTypes}
+                sheetGlasses={sheetGlasses}
+                findMatchingScrapsForOrder={findMatchingScrapsForOrder}
+                initialScrap={initialScrap}
+                extractThickness={extractThickness}
+                calculateScrapYield={calculateScrapYield}
+                parseDim={parseDim}
+                customScrapQtyMap={customScrapQtyMap}
+                handleUpdateIndividualScrapQty={handleUpdateIndividualScrapQty}
+                handleToggleIndividualScrap={handleToggleIndividualScrap}
+                handleAddAccessoryFromStock={handleAddAccessoryFromStock}
+                MASTER_ACCESSORY_STOCK={MASTER_ACCESSORY_STOCK}
+                handleAccessoryQtyChange={handleAccessoryQtyChange}
+                handleRemoveAccessory={handleRemoveAccessory}
+                formatRupiahInput={formatRupiahInput}
+                parseRupiahInput={parseRupiahInput}
+                calcTotalAccessoryFees={calcTotalAccessoryFees}
+                calcTotalGlassBasePrice={calcTotalGlassBasePrice}
+                calcTotalProcessFees={calcTotalProcessFees}
+                calcPriorityFee={calcPriorityFee}
+                calcTotalPrice={calcTotalPrice}
+            />
 
-                        <form className="space-y-4 text-xs overflow-y-auto pr-2 flex-1">
-                            {editingOrder.status === 'pengerjaan' && (
-                                <div className="bg-amber-950/40 p-4 rounded-xl border border-amber-500/40 space-y-2">
-                                    <h4 className="font-bold text-amber-300 text-xs flex items-center gap-1.5 border-b border-amber-500/30 pb-2">
-                                        <span>📝 Catatan Detail Perubahan Revisi Untuk Divisi Produksi</span>
-                                    </h4>
-                                    <div>
-                                        <label className="text-slate-300 block mb-1">Keterangan / Catatan Revisi:</label>
-                                        <textarea 
-                                            required
-                                            rows="2" 
-                                            placeholder="Contoh: Ukuran sekat kaca cermin diperkecil dari 150x120 cm menjadi 140x110 cm. (Wajib diisi, jika tidak ada ketik '-')"
-                                            value={orderForm.revision_notes || ''} 
-                                            onChange={e => setOrderForm('revision_notes', e.target.value)} 
-                                            className="w-full bg-slate-900 border border-amber-500/50 rounded-lg p-2.5 text-slate-100 text-xs focus:border-amber-400 font-medium"
-                                        />
-                                        <span className="text-[10px] text-amber-400/80 block mt-1">
-                                            *Mengisi catatan revisi ini akan mengirimkan peringatan otomatis ke Admin Gudang & seluruh Divisi Produksi.
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* SECTION 1: PELANGGAN (iii, iv, v) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                    👤 Data Pemesan & Pelanggan
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-slate-400 block mb-1">Nama Customer (Khusus Huruf):</label>
-                                        <input 
-                                            type="text" 
-                                            required 
-                                            value={orderForm.customer_name} 
-                                            onChange={e => setOrderForm('customer_name', sanitizeCustomerName(e.target.value))} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-medium" 
-                                        />
-                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya huruf & spasi (angka/simbol otomatis difilter)</span>
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-400 block mb-1">Nomor Telepon / WA (Khusus Angka):</label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            required 
-                                            value={orderForm.customer_phone} 
-                                            onChange={e => setOrderForm('customer_phone', sanitizeCustomerPhone(e.target.value))} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 font-mono" 
-                                        />
-                                        <span className="text-[10px] text-slate-500 block mt-0.5">*Hanya digit angka nomor hp</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-slate-400 block mb-1">Alamat Pengiriman (Bebas Huruf, Angka & Simbol):</label>
-                                    <textarea required rows="2" value={orderForm.customer_address} onChange={e => setOrderForm('customer_address', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
-                                </div>
-                            </div>
-
-                            {/* SECTION 2: RINCIAN MULTI-ITEM KACA & UKURAN */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
-                                <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-2 gap-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs flex items-center gap-1.5">
-                                        📐 Rincian Item Kaca ({calcItems.length} Item Kaca)
-                                    </h4>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleAddItem} 
-                                        className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold px-3 py-1 rounded-lg text-[11px] border border-cyan-500/30 flex items-center gap-1 transition"
-                                    >
-                                        ➕ Tambah Item Kaca Lain
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {calcItems.map((item, idx) => (
-                                        <div key={item.id || idx} className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-3 relative">
-                                            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                                <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-2">
-                                                    🔷 Item Kaca #{idx + 1}
-                                                    <span className="font-mono text-[10px] text-slate-400">
-                                                        (Luas: {item.areaM2.toFixed(2)} m² | Subtotal: <strong className="text-emerald-400">Rp {item.subtotal.toLocaleString()}</strong>)
-                                                    </span>
-                                                </span>
-                                                {calcItems.length > 1 && (
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => handleRemoveItem(idx)}
-                                                        className="text-rose-400 hover:text-rose-300 text-xs font-bold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 transition"
-                                                    >
-                                                        🗑️ Hapus Item
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {/* ROW 1: JENIS KACA & QTY */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                                <div className="sm:col-span-3">
-                                                    <label className="text-slate-400 block mb-1">Jenis Kaca Dasar:</label>
-                                                    <select 
-                                                        value={item.glass_type} 
-                                                        onChange={e => handleItemChange(idx, 'glass_type', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
-                                                    >
-                                                        <option value="">-- Pilih Jenis Kaca Dasar --</option>
-                                                        {getDynamicGlassTypes(sheetGlasses).map((gt, gIdx) => (
-                                                            <option key={gIdx} value={gt}>{gt}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Jumlah (Qty):</label>
-                                                    <input 
-                                                        type="number" 
-                                                        min="0" 
-                                                        required 
-                                                        value={item.qty} 
-                                                        onChange={e => handleItemChange(idx, 'qty', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* ROW 2: DIMENSI UKURAN */}
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Panjang (cm):</label>
-                                                    <input 
-                                                        type="text" 
-                                                        inputMode="decimal"
-                                                        required 
-                                                        placeholder="cth: 24,3 atau 150"
-                                                        value={item.length_cm} 
-                                                        onChange={e => handleItemChange(idx, 'length_cm', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Lebar (cm):</label>
-                                                    <input 
-                                                        type="text" 
-                                                        inputMode="decimal"
-                                                        required 
-                                                        placeholder="cth: 160,5 atau 120"
-                                                        value={item.width_cm} 
-                                                        onChange={e => handleItemChange(idx, 'width_cm', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* SMART SCRAP GLASS RECOMMENDATION BANNER (WITH QUANTITY & +1CM GM EDGE MARGIN RULE) */}
-                                            {(() => {
-                                                const scrapMatch = findMatchingScrapsForOrder(item, initialScrap);
-                                                
-                                                // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
-                                                const isEdgeGrinding = (item.processes || []).includes('GM');
-                                                const exactScrapBlockedByGrinding = (!scrapMatch || scrapMatch.totalScrapCovered <= 0) && isEdgeGrinding
-                                                    ? initialScrap?.find(s => {
-                                                        if (s.status && s.status !== 'Layak Pakai') return false;
-                                                        if (extractThickness(s.glass_type) !== extractThickness(item.glass_type)) return false;
-                                                        return calculateScrapYield(parseFloat(s.length_cm), parseFloat(s.width_cm), parseDim(item.length_cm), parseDim(item.width_cm)) > 0;
-                                                    })
-                                                    : null;
-
-                                                if (exactScrapBlockedByGrinding) {
-                                                    return (
-                                                        <div className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/40 text-rose-300 text-xs space-y-1">
-                                                            <div className="font-bold flex items-center gap-1.5">
-                                                                <span>⚠️ Kaca Sisa di {exactScrapBlockedByGrinding.rak_location} ({exactScrapBlockedByGrinding.scrap_code}) Tidak Bisa Dipakai</span>
-                                                                <span className="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded text-[10px] border border-rose-500/30 font-mono font-bold">Aturan Gosok Mesin (GM)</span>
-                                                            </div>
-                                                            <div className="text-[11px] text-slate-300 leading-relaxed">
-                                                                Stok kaca sisa ukuran <strong>{exactScrapBlockedByGrinding.length_cm} x {exactScrapBlockedByGrinding.width_cm} cm</strong> tidak bisa digunakan untuk orderan ini ({parseDim(item.length_cm)} x {parseDim(item.width_cm)} cm) karena memilih proses <strong>Gosok Mesin (GM)</strong>. Mesin penggosok batu memerlukan bahan kaca minimal <strong>+1 cm lebih besar ({parseDim(item.length_cm) + 1} x {parseDim(item.width_cm) + 1} cm)</strong> agar pinggiran kaca tidak tergerus menjadi kekecilan.
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                if (!scrapMatch || scrapMatch.totalScrapCovered <= 0) return null;
-
-                                                const { totalScrapCovered, neededNewGlass, itemQty, matchedScraps, hasEdgeGrinding } = scrapMatch;
-                                                const primaryScrap = matchedScraps[0]?.scrap;
-                                                const isFullCover = neededNewGlass === 0;
-
-                                                const isAnySelected = Boolean(orderForm.used_scrap_rak);
-
-                                                return (
-                                                    <div className={`p-3.5 rounded-xl border flex flex-col items-start justify-between gap-3 transition ${isAnySelected ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' : 'bg-amber-500/10 border-amber-500/40 text-amber-300'}`}>
-                                                        <div className="flex items-start gap-2.5 flex-1 w-full">
-                                                            <span className="text-xl mt-0.5">💡</span>
-                                                            <div className="text-xs space-y-1.5 w-full">
-                                                                <div className="font-bold flex items-center justify-between gap-1.5 flex-wrap">
-                                                                    <span>
-                                                                        {isFullCover 
-                                                                            ? matchedScraps.length === 1 
-                                                                                ? `Rekomendasi Kaca Sisa di ${primaryScrap.rak_location} (${primaryScrap.scrap_code})`
-                                                                                : `Rekomendasi Kaca Sisa (${matchedScraps.length} Rak Terpakai)`
-                                                                            : `Rekomendasi Kombinasi: ${totalScrapCovered} Lembar Scrap + ${neededNewGlass} Lembar Bahan Baru`
-                                                                        }
-                                                                    </span>
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        {isAnySelected && <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30 font-mono font-bold">✓ Terpasang ke Form</span>}
-                                                                        {hasEdgeGrinding && <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded text-[10px] border border-cyan-500/30 font-mono font-bold">+1 cm Margin GM</span>}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* ITEMIZED SCRAP BREAKDOWN BOX WITH PER-SCRAP QUANTITY SELECTOR & TOGGLE */}
-                                                                <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 space-y-2 text-[11px]">
-                                                                    <div className="font-semibold text-slate-300 border-b border-slate-800/80 pb-1 flex justify-between items-center flex-wrap gap-1">
-                                                                        <span>📦 Pilih Kaca Sisa & Jumlah Lembar yang Ingin Dipakai (Kebutuhan: {itemQty} Lembar):</span>
-                                                                        <span className="font-mono text-cyan-400 font-bold">{totalScrapCovered} / {itemQty} Lembar Maks. Scrap</span>
-                                                                    </div>
-
-                                                                    <ul className="space-y-2 pt-0.5">
-                                                                        {matchedScraps.map((m, mIdx) => {
-                                                                            const scrapCode = m.scrap.scrap_code;
-                                                                            const maxQty = m.usedQty;
-                                                                            const isThisSelected = orderForm.used_scrap_rak && orderForm.used_scrap_rak.includes(scrapCode);
-                                                                            const currentQty = customScrapQtyMap[scrapCode] !== undefined ? customScrapQtyMap[scrapCode] : maxQty;
-
-                                                                            return (
-                                                                                <li key={mIdx} className={`p-2 rounded-md border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition ${isThisSelected ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-slate-900/80 border-slate-800'}`}>
-                                                                                    <div className="space-y-0.5">
-                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                                                            <span className="text-amber-400 font-mono font-bold">▪ {scrapCode}</span>
-                                                                                            <span className="text-slate-400 font-mono">({m.scrap.rak_location})</span>
-                                                                                            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
-                                                                                                Ukuran {m.scrap.length_cm} x {m.scrap.width_cm} cm
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <div className="font-mono text-slate-400 text-[10px]">
-                                                                                            Maksimal Potongan Sisa Tersedia: <strong className="text-cyan-300 font-bold">{maxQty} lembar</strong> <span className="text-slate-500">(potong {m.yieldPerSheet} lbr/sheet)</span>
-                                                                                        </div>
-                                                                                    </div>
-
-                                                                                    {/* ACTION CONTROLS: QTY SELECTOR + TOGGLE BUTTON */}
-                                                                                    <div className="flex items-center gap-2 flex-wrap self-end sm:self-center">
-                                                                                        <div className="flex items-center gap-1">
-                                                                                            <label className="text-[10px] text-slate-400 whitespace-nowrap">Pakai:</label>
-                                                                                            <select
-                                                                                                value={currentQty}
-                                                                                                onChange={(e) => {
-                                                                                                    const val = Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1));
-                                                                                                    handleUpdateIndividualScrapQty(m, val, itemQty);
-                                                                                                }}
-                                                                                                className="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
-                                                                                            >
-                                                                                                {Array.from({ length: maxQty }, (_, i) => i + 1).map(n => (
-                                                                                                    <option key={n} value={n}>{n} lbr</option>
-                                                                                                ))}
-                                                                                            </select>
-                                                                                        </div>
-
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => handleToggleIndividualScrap(m, currentQty, itemQty)}
-                                                                                            className={`px-2.5 py-1 rounded-md font-extrabold text-xs transition shadow-sm whitespace-nowrap ${
-                                                                                                isThisSelected 
-                                                                                                    ? 'bg-emerald-500 text-slate-950 hover:bg-rose-500 hover:text-white' 
-                                                                                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                                                                                            }`}
-                                                                                            title={`Klik untuk memilih / membatalkan penggunaan ${scrapCode}`}
-                                                                                        >
-                                                                                            {isThisSelected 
-                                                                                                ? `✓ ${currentQty} lbr Terpasang (Batal)` 
-                                                                                                : `+ Gunakan ${currentQty} lbr Scrap Ini`
-                                                                                            }
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </li>
-                                                                            );
-                                                                        })}
-
-                                                                        {neededNewGlass > 0 && (
-                                                                            <li className="flex items-center justify-between text-cyan-300 font-sans border-t border-slate-900 pt-1.5 flex-wrap gap-1">
-                                                                                <div className="flex items-center gap-1.5">
-                                                                                    <span className="text-cyan-400 font-mono font-bold">▪ Kaca Bahan Lembaran Baru</span>
-                                                                                </div>
-                                                                                <div className="font-mono text-cyan-300 font-bold">
-                                                                                    ➔ Sisa Diambil dari Bahan Baru: <strong className="text-cyan-400 text-xs">{neededNewGlass} lembar</strong>
-                                                                                </div>
-                                                                            </li>
-                                                                        )}
-                                                                    </ul>
-                                                                </div>
-
-                                                                {hasEdgeGrinding && <div className="text-[10px] text-cyan-300/80 font-mono mt-0.5">*Ukuran scrap mencukupi batas aman margin +1 cm untuk penggosokan mesin (GM).</div>}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()}
-
-                                            {/* ROW 3: OPTIONS PROSES MANDIRI PER ITEM */}
-                                            <div>
-                                                <label className="text-slate-400 block mb-1 font-semibold">Options Proses Item #{idx + 1}:</label>
-                                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                                    {[
-                                                        { id: 'HT', name: 'HT (Halus Tepi)' },
-                                                        { id: 'BV', name: 'BV (Beveling)' },
-                                                        { id: 'GM', name: 'GM (Gosok Mesin)' },
-                                                        { id: 'Etsa', name: 'Etsa (Sandblast)' },
-                                                        { id: 'Bor', name: 'Bor (Coakan)' },
-                                                    ].map(proc => (
-                                                        <label 
-                                                            key={proc.id} 
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                toggleItemProcess(idx, proc.id);
-                                                            }} 
-                                                            className={`p-1.5 rounded-lg border cursor-pointer transition flex items-center justify-between text-[11px] ${(item.processes || []).includes(proc.id) ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400'}`}
-                                                        >
-                                                            <span>{proc.name}</span>
-                                                            <input type="checkbox" checked={(item.processes || []).includes(proc.id)} onChange={() => {}} className="rounded bg-slate-900 border-slate-700 text-cyan-500 w-3 h-3 pointer-events-none" />
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* CONDITIONAL PARAMETERS FOR BEVEL & BOR */}
-                                            {(item.processes || []).includes('BV') && (
-                                                <div className="p-2 bg-slate-950 rounded-lg border border-cyan-500/30">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold block mb-1">
-                                                        📐 Lebar Bevel (cm): <span className="text-[10px] text-slate-400 font-mono">(Biaya: Keliling × Rp 15.000 + Lebar cm × Rp 10.000)</span>
-                                                    </label>
-                                                    <input 
-                                                        type="number" 
-                                                        step="any"
-                                                        min="0"
-                                                        value={item.bevel_width_cm ?? ''} 
-                                                        onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
-                                                        placeholder="1"
-                                                        className="w-36 bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {(item.processes || []).includes('Bor') && (
-                                                <div className="p-2 bg-slate-950 rounded-lg border border-cyan-500/30 space-y-1">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold block">
-                                                        🔘 Dimensi Lubang Bor / Coakan: <span className="text-[10px] text-slate-400 font-mono">(Biaya: Keliling Ruas cm × Rp 2.500 × Qty Lubang)</span>
-                                                    </label>
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Panjang Lubang (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.hole_length_cm ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'hole_length_cm', e.target.value)} 
-                                                                placeholder="2"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Lebar Lubang (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.hole_width_cm ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'hole_width_cm', e.target.value)} 
-                                                                placeholder="2"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Jumlah Lubang:</span>
-                                                            <input 
-                                                                type="number" 
-                                                                min="0"
-                                                                value={item.hole_qty ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'hole_qty', e.target.value)} 
-                                                                placeholder="1"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {(item.processes || []).includes('Etsa') && (
-                                                <div className="p-2.5 bg-slate-950 rounded-lg border border-cyan-500/30 space-y-2">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold flex items-center justify-between">
-                                                        <span>🌫️ Dimensi Area Etsa / Sandblast:</span>
-                                                        <span className="text-[10px] text-slate-400 font-mono">(Tarif: Rp 50.000 / m²)</span>
-                                                    </label>
-                                                    
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Panjang Etsa (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.etsa_length_cm !== undefined ? item.etsa_length_cm : (item.length_cm || '')} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_length_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                                placeholder={item.length_cm}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Lebar Etsa (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="any"
-                                                                min="0"
-                                                                value={item.etsa_width_cm !== undefined ? item.etsa_width_cm : (item.width_cm || '')} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_width_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                                placeholder={item.width_cm}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Jumlah Area (Pcs):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                min="0"
-                                                                value={item.etsa_qty ?? ''} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_qty', e.target.value)} 
-                                                                placeholder="1"
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* TRANSPARENT PRICING BREAKDOWN BADGES */}
-                                            <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-mono border-t border-slate-800/80">
-                                                <span className="text-slate-400 font-semibold">Rincian Harga:</span>
-                                                <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-300">
-                                                    Kaca: Rp {item.baseGlassPrice.toLocaleString()}
-                                                </span>
-                                                {item.feeGM > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        GM: +Rp {item.feeGM.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeHT > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        HT: +Rp {item.feeHT.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeBV > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Bevel: +Rp {item.feeBV.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeBor > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Bor ({item.holeRuasCm}cm ruas): +Rp {item.feeBor.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeEtsa > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Etsa ({item.etsaAreaM2 ? (item.etsaAreaM2 * (item.etsa_qty || 1)).toFixed(2) : '0'}m²): +Rp {item.feeEtsa.toLocaleString()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* SECTION 4: TAMBAHAN AKSESORIS TERINTEGRASI STOK GUDANG (viii) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs flex items-center gap-1.5">
-                                        📦 Tambahan Aksesoris / Hardware Proyek (Stock Integrated)
-                                    </h4>
-                                    <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                                        ✓ Stok Terhubung Gudang
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                    <select
-                                        className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-100 font-medium focus:border-cyan-400 flex-1 cursor-pointer"
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                handleAddAccessoryFromStock(e.target.value);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                    >
-                                        <option value="">+ Tambah Aksesoris dari Master Stok Inventory Gudang...</option>
-                                        {MASTER_ACCESSORY_STOCK.map(item => (
-                                            <option key={item.id} value={item.id} disabled={item.stock <= 0}>
-                                                {item.name} — Rp {item.price.toLocaleString()}/{item.unit} ({item.stock > 0 ? `Stok: ${item.stock} ${item.unit}` : 'Stok Habis'})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {Array.isArray(orderForm.accessories) && orderForm.accessories.length > 0 ? (
-                                    <div className="space-y-2 pt-1">
-                                        {orderForm.accessories.map((acc, accIdx) => {
-                                            const isObj = typeof acc === 'object' && acc !== null;
-                                            const accName = isObj ? acc.name : acc;
-                                            const accPrice = isObj ? (parseFloat(acc.price) || 0) : 0;
-                                            const accUnit = isObj ? (acc.unit || 'pcs') : 'pcs';
-                                            const accStock = isObj ? (acc.stock || 50) : 50;
-                                            const accQty = isObj ? (parseInt(acc.qty) || 1) : 1;
-                                            const accTotal = accPrice * accQty;
-
-                                            return (
-                                                <div key={accIdx} className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-                                                    <div className="flex items-center gap-2 flex-1">
-                                                        <span className="font-bold text-slate-200">{accName}</span>
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${accStock < 10 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                                                            Stok: {accStock} {accUnit}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-3 w-full sm:w-auto justify-between">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[10px] text-slate-400">Jumlah Terpakai:</span>
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                value={accQty}
-                                                                onChange={e => handleAccessoryQtyChange(accIdx, e.target.value)}
-                                                                className="w-16 bg-slate-950 border border-slate-700 rounded p-1 text-center text-xs font-mono font-bold text-cyan-300"
-                                                            />
-                                                            <span className="text-[10px] text-slate-400">{accUnit}</span>
-                                                        </div>
-
-                                                        <span className="font-mono text-cyan-300 font-bold min-w-[90px] text-right">
-                                                            Rp {accTotal.toLocaleString()}
-                                                        </span>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleRemoveAccessory(accIdx)}
-                                                            className="text-red-400 hover:text-red-300 text-xs font-bold p-1 rounded hover:bg-red-500/10"
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="p-3 bg-slate-900/50 rounded-lg border border-dashed border-slate-800 text-center text-slate-500 text-xs">
-                                        Belum ada aksesoris ditambahkan. Pilih dari dropdown stok di atas jika proyek memerlukan hardware/fitting pendukung.
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* SECTION 5: DESKRIPSI & SKETSA GAMBAR (ix, x) */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                        📝 Deskripsi (Penjelasan Pesanan)
-                                    </h4>
-                                    <textarea rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
-                                </div>
-
-                                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                        🖼️ Gambar / Sketsa Kaca (JPG/PNG)
-                                    </h4>
-                                    <input type="file" accept="image/*" onChange={handleFileChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-slate-300 text-xs cursor-pointer" />
-                                    {sketchPreview && (
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <img src={sketchPreview} alt="Preview Sketsa" className="w-14 h-14 object-cover rounded-lg border border-cyan-500" />
-                                            <span className="text-[10px] text-emerald-400 font-bold">✓ Sketsa Berhasil Terpasang</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-
-                            {/* SECTION 6: BURU-BURU TEU? / PRIORITAS (xi) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <h4 className="font-bold text-amber-400 text-xs border-b border-slate-800 pb-2">
-                                    ⚡ Status Prioritas & Tanggal Selesai
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Status Pengerjaan:</label>
-                                        <select 
-                                            value={orderForm.priority_status} 
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setOrderForm(d => ({
-                                                    ...d,
-                                                    priority_status: val,
-                                                    priority_fee: val === 'Prioritas' ? (d.priority_fee || '') : 0
-                                                }));
-                                            }} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold focus:border-cyan-400"
-                                        >
-                                            <option value="Biasa">Biasa (Standard)</option>
-                                            <option value="Prioritas">Prioritas (Buru-buru / Fee Custom)</option>
-                                        </select>
-                                    </div>
-                                    {orderForm.priority_status === 'Prioritas' && (
-                                        <div>
-                                            <label className="text-slate-400 block mb-1 font-semibold">Nominal Fee Prioritas (Rp):</label>
-                                            <input 
-                                                type="text" 
-                                                inputMode="numeric"
-                                                value={formatRupiahInput(orderForm.priority_fee)} 
-                                                onChange={e => setOrderForm('priority_fee', parseRupiahInput(e.target.value))} 
-                                                className="w-full bg-slate-900 border border-amber-500/40 rounded-lg p-2 text-amber-400 font-bold font-mono focus:border-amber-400" 
-                                                placeholder="cth: 150.000 atau 200.000" 
-                                            />
-                                            <span className="text-[10px] text-amber-400/80 block mt-1">*Admin isi manual (bisa ketik koma/titik)</span>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Harus diselesaikan pada (Deadline):</label>
-                                        <input type="date" value={orderForm.deadline_date} onChange={e => setOrderForm('deadline_date', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* SECTION 8: METODE & OPSI PEMBAYARAN CUSTOMER */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                                <h4 className="font-bold text-emerald-400 text-xs border-b border-slate-800 pb-2 flex items-center justify-between">
-                                    <span>💳 Metode & Opsi Pembayaran Customer</span>
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                        Total Tagihan: <strong className="text-emerald-400 font-extrabold text-sm">Rp {calcTotalPrice.toLocaleString()}</strong>
-                                    </span>
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Metode Pembayaran Customer:</label>
-                                        <select 
-                                            value={orderForm.payment_method || 'cash'} 
-                                            onChange={e => setOrderForm('payment_method', e.target.value)} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold focus:border-cyan-400"
-                                        >
-                                            <option value="cash">💵 Cash / Tunai</option>
-                                            <option value="transfer">🏦 Transfer Bank (BCA/Mandiri/BRI)</option>
-                                            <option value="qris">📱 QRIS (Scan Barcode)</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Jumlah Uang Diterima / Dibayar (Rp):</label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            value={formatRupiahInput(orderForm.custom_paid_amount)} 
-                                            onChange={e => {
-                                                const num = parseRupiahInput(e.target.value);
-                                                const pct = calcTotalPrice > 0 ? Math.round((num / calcTotalPrice) * 100) : 50;
-                                                setOrderForm(d => ({ ...d, custom_paid_amount: num, dp_percent: pct }));
-                                            }} 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-emerald-400 font-mono font-bold text-sm focus:border-cyan-400" 
-                                            placeholder="cth: 500.000 atau 1.000.000" 
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-[11px] text-slate-400">Tombol Cepat Bayar:</span>
-                                        {[
-                                            { label: 'Rp 100rb', val: 100000 },
-                                            { label: 'Rp 200rb', val: 200000 },
-                                            { label: 'Rp 300rb', val: 300000 },
-                                            { label: 'Rp 500rb', val: 500000 },
-                                            { label: '50% (DP Half)', val: Math.round(calcTotalPrice * 0.5) },
-                                            { label: '⚡ Bayar Full / Lunas (100%)', val: calcTotalPrice }
-                                        ].map((preset, pIdx) => (
-                                            <button 
-                                                key={pIdx}
-                                                type="button"
-                                                onClick={() => {
-                                                    const pct = calcTotalPrice > 0 ? Math.round((preset.val / calcTotalPrice) * 100) : 50;
-                                                    setOrderForm(d => ({ ...d, custom_paid_amount: preset.val, dp_percent: pct }));
-                                                }}
-                                                className={`px-2.5 py-1 border rounded text-[11px] font-mono transition ${preset.val === calcTotalPrice && calcTotalPrice > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold' : 'bg-slate-900 hover:bg-cyan-500/20 text-slate-300 border-slate-700'}`}
-                                            >
-                                                {preset.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* OTOMATIS PENENTUAN STATUS (DP VS LUNAS) */}
-                                <div className="bg-slate-900/90 p-3 rounded-lg border border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs">
-                                    <div>
-                                        <span className="text-slate-400 block text-[11px]">Otomatis Penentuan Status Pembayaran:</span>
-                                        <span className="font-mono font-extrabold text-sm">
-                                            {(() => {
-                                                const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                                    ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                                    : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                                const pct = calcTotalPrice > 0 ? Math.round((paid / calcTotalPrice) * 100) : (orderForm.dp_percent || 50);
-                                                const methodText = (orderForm.payment_method || 'cash').toUpperCase();
-                                                
-                                                if (paid >= calcTotalPrice && calcTotalPrice > 0) {
-                                                    return <span className="text-emerald-400">✅ Lunas Langsung (100%) — {methodText}</span>;
-                                                } else if (paid > 0) {
-                                                    return <span className="text-amber-300">💵 Uang Muka / DP Rp {paid.toLocaleString()} ({pct}% dari Total) — {methodText}</span>;
-                                                } else {
-                                                    return <span className="text-slate-400">⚪ Belum Ada Pembayaran (DP 0%)</span>;
-                                                }
-                                            })()}
-                                        </span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-slate-400 block text-[11px]">Sisa Pelunasan (COD):</span>
-                                        <span className="font-mono font-bold text-slate-200">
-                                            {(() => {
-                                                const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                                    ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                                    : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                                const sisa = Math.max(0, calcTotalPrice - paid);
-                                                return sisa === 0 ? <span className="text-emerald-400 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`;
-                                            })()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* SECTION 7: RINCIAN STRUK ORDERAN & KALKULASI HARGA (xii) */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-cyan-500/40 space-y-3 font-mono">
-                                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                    <h4 className="font-bold text-cyan-300 text-xs flex items-center gap-1.5 font-sans">
-                                        🧾 Rincian Struk Orderan & Kalkulasi Harga
-                                    </h4>
-                                    <span className="text-[10px] text-slate-400">
-                                        Luas Total Kaca: <strong className="text-cyan-400">{calcItems.reduce((sum, i) => sum + i.areaM2, 0).toFixed(2)} m²</strong>
-                                    </span>
-                                </div>
-
-                                {/* LIST ITEM KACA RECEIPT LINES */}
-                                <div className="space-y-3 text-xs">
-                                    {calcItems.map((it, iIdx) => {
-                                        const processFeeSum = (it.feeGM || 0) + (it.feeHT || 0) + (it.feeBV || 0) + (it.feeBor || 0) + (it.feeEtsa || 0);
-                                        return (
-                                            <div key={iIdx} className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-2">
-                                                <div className="flex justify-between text-slate-100 font-bold border-b border-slate-800 pb-1.5">
-                                                    <span>
-                                                        #{iIdx + 1}. {it.glass_type || 'Kaca Dasar'} ({it.length_cm || 0} x {it.width_cm || 0} cm)
-                                                    </span>
-                                                    <span className="text-cyan-400 font-mono">
-                                                        {it.qty} Unit (Total {it.areaM2.toFixed(2)} m²)
-                                                    </span>
-                                                </div>
-
-                                                {/* RINCIAN HARGA BAHAN KACA DIBELI */}
-                                                <div className="space-y-1 text-[11px] text-slate-300 pl-1">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">1. Harga Kaca yang Dibeli (Bahan):</span>
-                                                        <strong className="text-slate-200">Rp {it.baseGlassPrice.toLocaleString()}</strong>
-                                                    </div>
-
-                                                    {/* RINCIAN BIAYA EKSEKUSI KACA */}
-                                                    <div className="space-y-0.5 pl-2 border-l-2 border-slate-700/60 my-1">
-                                                        <div className="text-[10px] text-cyan-400/90 font-semibold">2. Rincian Biaya Eksekusi / Proses Kaca:</div>
-                                                        {it.processes && it.processes.includes('HT') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Potong & Halus Tepi (HT)</span>
-                                                                <span>+ Rp {(it.feeHT || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('GM') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Gosok Mesin (GM)</span>
-                                                                <span>+ Rp {(it.feeGM || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('BV') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Beveling (BV {it.bevel_width_cm || 1} cm)</span>
-                                                                <span>+ Rp {(it.feeBV || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('Bor') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Bor Coakan Lubang ({it.hole_qty || 1} lubang)</span>
-                                                                <span>+ Rp {(it.feeBor || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {it.processes && it.processes.includes('Etsa') && (
-                                                            <div className="flex justify-between text-[10px] text-slate-400">
-                                                                <span>• Etsa Sandblast</span>
-                                                                <span>+ Rp {(it.feeEtsa || 0).toLocaleString()}</span>
-                                                            </div>
-                                                        )}
-                                                        {(!it.processes || it.processes.length === 0) && (
-                                                            <div className="text-[10px] text-slate-500 italic">• Polos (Tanpa Proses Lanjutan)</div>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex justify-between text-[11px] text-slate-300 font-semibold pt-0.5">
-                                                        <span className="text-slate-400">• Total Biaya Eksekusi Item Ini:</span>
-                                                        <strong className="text-cyan-300">+ Rp {processFeeSum.toLocaleString()}</strong>
-                                                    </div>
-                                                </div>
-
-                                                <div className="text-right text-xs font-extrabold text-slate-100 border-t border-slate-800 pt-1.5">
-                                                    Subtotal Item Kaca #{iIdx + 1}: <span className="text-emerald-400">Rp {it.subtotal.toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* AKSESORIS TAMBAHAN JIKA ADA */}
-                                    {orderForm.accessories && orderForm.accessories.length > 0 && (
-                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-1">
-                                            <div className="font-bold text-slate-200 text-xs flex justify-between border-b border-slate-800 pb-1">
-                                                <span>🛠️ Aksesoris & Hardware Tambahan:</span>
-                                                <span className="text-cyan-400">Rp {calcTotalAccessoryFees.toLocaleString()}</span>
-                                            </div>
-                                            {orderForm.accessories.map((acc, aIdx) => {
-                                                const price = typeof acc === 'object' ? (acc.price || 0) : 0;
-                                                const qty = typeof acc === 'object' ? (acc.qty || 1) : 1;
-                                                const name = typeof acc === 'object' ? (acc.name || 'Aksesoris') : acc;
-                                                return (
-                                                    <div key={aIdx} className="flex justify-between text-[11px] text-slate-300 pl-1">
-                                                        <span>- {name} ({qty} {acc.unit || 'pcs'})</span>
-                                                        <strong className="text-slate-200">Rp {(price * qty).toLocaleString()}</strong>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* GARIS PEMBATAS STRUK (DASHED BORDER) */}
-                                <div className="border-t border-dashed border-slate-700 my-2"></div>
-
-                                {/* RINCIAN AKHIR SUB-TOTAL, BIAYA PRIORITAS & GRAND TOTAL */}
-                                <div className="space-y-1.5 text-xs font-sans">
-                                    <div className="flex justify-between text-slate-300">
-                                        <span>• Total Harga Kaca Dibeli (Bahan):</span>
-                                        <strong className="font-mono text-slate-200">Rp {calcTotalGlassBasePrice.toLocaleString()}</strong>
-                                    </div>
-
-                                    <div className="flex justify-between text-slate-300">
-                                        <span>• Total Biaya Eksekusi / Proses Kaca:</span>
-                                        <strong className="font-mono text-cyan-300">+ Rp {calcTotalProcessFees.toLocaleString()}</strong>
-                                    </div>
-
-                                    {calcTotalAccessoryFees > 0 && (
-                                        <div className="flex justify-between text-slate-300">
-                                            <span>• Total Aksesoris & Hardware:</span>
-                                            <strong className="font-mono text-slate-200">+ Rp {calcTotalAccessoryFees.toLocaleString()}</strong>
-                                        </div>
-                                    )}
-
-                                    {/* BIAYA PRIORITAS PENGERJAAN */}
-                                    <div className="flex justify-between items-center bg-slate-900/80 p-2 rounded-lg border border-amber-500/30">
-                                        <span className="text-amber-300 font-bold flex items-center gap-1">
-                                            ⚡ Biaya Prioritas Pengerjaan (Buru-buru):
-                                            {orderForm.priority_status !== 'Prioritas' && <span className="text-[10px] text-slate-400 font-normal ml-1">(Status: Biasa)</span>}
-                                        </span>
-                                        <strong className="font-mono text-amber-400 font-extrabold text-sm">
-                                            + Rp {calcPriorityFee.toLocaleString()}
-                                        </strong>
-                                    </div>
-
-                                    {/* BIAYA CUSTOM ADMIN */}
-                                    <div className="flex justify-between items-center bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                                        <label className="text-slate-300 font-medium">
-                                            ➕ Biaya Tambahan / Custom Admin (Rp):
-                                        </label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            value={formatRupiahInput(orderForm.custom_fee)} 
-                                            onChange={e => setOrderForm('custom_fee', parseRupiahInput(e.target.value))} 
-                                            className="w-36 bg-slate-950 border border-slate-700 rounded p-1 text-slate-100 font-mono font-bold text-xs text-right focus:border-cyan-400" 
-                                            placeholder="0" 
-                                        />
-                                    </div>
-
-                                    <div className="border-t border-dashed border-slate-700 pt-2 flex justify-between items-center bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/40">
-                                        <div>
-                                            <span className="text-slate-200 block font-bold text-xs">GRAND TOTAL HARGA ORDER:</span>
-                                            <span className="text-[10px] text-slate-400 font-mono">Bahan + Eksekusi + Prioritas + Custom</span>
-                                        </div>
-                                        <span className="font-mono font-black text-emerald-400 text-lg">
-                                            Rp {calcTotalPrice.toLocaleString()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* MODAL ACTIONS */}
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={handleCloseEditModal} className="px-4 py-2 bg-slate-800 rounded text-slate-300 text-xs font-semibold cursor-pointer">Batal</button>
-                                {editingOrder.status === 'pengerjaan' ? (
-                                    <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'pengerjaan')} className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 font-extrabold text-slate-950 rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer">
-                                        🚀 Simpan Revisi & Kirim Peringatan Divisi
-                                    </button>
-                                ) : (
-                                    <>
-                                        <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'draft')} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 font-bold text-white rounded text-xs flex items-center gap-1 shadow-md shadow-blue-600/20 cursor-pointer">
-                                            💾 Simpan Perubahan Draf
-                                        </button>
-                                        <button type="button" onClick={(e) => handleUpdateOrderSubmit(e, 'pengerjaan')} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-slate-950 rounded text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 cursor-pointer">
-                                            🚀 Deal & Terbit Order ({orderForm.payment_option === 'lunas' ? 'Lunas' : `DP ${orderForm.dp_percent || 50}%`})
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-            {showDispatchModal && selectedDispatchOrder && (() => {
-                const relevantDivisions = getOrderRelevantDivisions(selectedDispatchOrder);
-                return (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-                            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                                <h3 className="font-bold text-base text-slate-100 flex items-center gap-2">
-                                    📤 Disposisi Order Admin Gudang
-                                </h3>
-                                <button onClick={() => setShowDispatchModal(false)} className="text-slate-400 hover:text-white text-xl">&times;</button>
-                            </div>
-
-                            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
-                                <div className="text-cyan-400 font-bold">{selectedDispatchOrder.spo_number} - {selectedDispatchOrder.customer_name}</div>
-                                <div className="text-slate-300">Spesifikasi Kaca: {selectedDispatchOrder.glass_type} ({selectedDispatchOrder.length_cm} x {selectedDispatchOrder.width_cm} cm)</div>
-                                {selectedDispatchOrder.sketch_photo_path && (
-                                    <div className="pt-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenSketchLightbox(selectedDispatchOrder.sketch_photo_path, selectedDispatchOrder.spo_number)}
-                                            className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-2 flex items-center justify-between gap-2 text-xs transition cursor-pointer"
-                                        >
-                                            <div className="flex items-center gap-2 overflow-hidden">
-                                                <img 
-                                                    src={selectedDispatchOrder.sketch_photo_path.startsWith('http') || selectedDispatchOrder.sketch_photo_path.startsWith('/') ? selectedDispatchOrder.sketch_photo_path : `/storage/${selectedDispatchOrder.sketch_photo_path}`}
-                                                    alt="Sketsa Pola"
-                                                    className="w-8 h-8 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
-                                                />
-                                                <span className="font-bold text-xs truncate">📐 Sketsa Sambungan Kaca</span>
-                                            </div>
-                                            <span className="text-[10px] bg-cyan-400/20 text-cyan-200 px-2 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* NOTIFIKASI PENGIRIMAN DIVISI BERSANGKATAN */}
-                            <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2 text-xs">
-                                <div className="font-bold text-amber-300 flex items-center gap-1.5">
-                                    <span>⚠️ Notifikasi Pengiriman Ke Divisi</span>
-                                </div>
-                                <p className="text-slate-300 leading-relaxed text-[11px]">
-                                    Orderan ini akan dikirim ke <strong className="text-amber-200">divisi yang bersangkutan</strong> sesuai kebutuhan pesanan:
-                                </p>
-                                
-                                <div className="flex flex-wrap gap-1.5 pt-1">
-                                    {relevantDivisions.map(d => (
-                                        <span key={d.key} className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1 ${d.bg}`}>
-                                            <span>{d.icon}</span>
-                                            <span>{d.name}</span>
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <form onSubmit={handleDispatchOrderSubmit} className="space-y-4 text-xs">
-                                <div>
-                                    <label className="text-slate-400 block mb-1.5 font-semibold">Divisi Awal Mulai Pengerjaan:</label>
-                                    <select 
-                                        value={targetDivChoice} 
-                                        onChange={e => setTargetDivChoice(e.target.value)}
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-semibold focus:border-cyan-400"
-                                    >
-                                        {relevantDivisions.map(d => (
-                                            <option key={d.key} value={d.key}>
-                                                {d.icon} {d.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                    <button type="button" onClick={() => setShowDispatchModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-semibold transition">
-                                        Batal
-                                    </button>
-                                    <button type="submit" className="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 font-extrabold text-slate-950 rounded shadow-md transition cursor-pointer flex items-center gap-1 shadow-cyan-500/20">
-                                        <span>Ya, Kirim Ke Divisi Bersangkutan →</span>
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                );
-            })()}
-
+            {/* MODAL DISPATCH GUDANG */}
+            <DispatchModal 
+                show={showDispatchModal}
+                onClose={() => setShowDispatchModal(false)}
+                selectedDispatchOrder={selectedDispatchOrder}
+                targetDivChoice={targetDivChoice}
+                setTargetDivChoice={setTargetDivChoice}
+                handleDispatchOrderSubmit={handleDispatchOrderSubmit}
+            />
             {/* MODAL RESTOCK BARANG LEMBARAN */}
             {showRestockModal && selectedStockItem && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -8035,133 +6698,15 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                     </div>
                 </div>
             )}
-            {/* MODAL PRINT SURAT BARANG KELUAR (GATE PASS GUDANG) */}
-            {showBarangKeluarModal && selectedBarangKeluarData && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl">📋</span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    Surat Barang Keluar / Gate Pass Gudang
-                                </h3>
-                            </div>
-                            <button onClick={() => setShowBarangKeluarModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
-                        </div>
+                        {/* MODAL PRINT SURAT BARANG KELUAR (GATE PASS GUDANG) */}
+            <GatePassModal 
+                show={showBarangKeluarModal}
+                onClose={() => setShowBarangKeluarModal(false)}
+                selectedBarangKeluarData={selectedBarangKeluarData}
+                userName={userName}
+            />
 
-                        {/* DOKUMEN CETAK DENGAN EMBEDDED PRINT LAYOUT */}
-                        <div className="bg-white text-slate-900 p-6 rounded-xl space-y-4 font-sans border-2 border-slate-400">
-                            {/* HEADER KOP DOKUMEN */}
-                            <div className="flex justify-between items-start border-b-2 border-slate-900 pb-3">
-                                <div>
-                                    <h2 className="font-black text-lg tracking-wider text-slate-950">CV CAHYA KARUNIA JAYA</h2>
-                                    <p className="text-xs text-slate-700">SYP GLASS OPERATIONAL - FABRIKASI & DISTRIBUSI KACA</p>
-                                    <p className="text-[11px] text-slate-600">Jl. Raya Industri Kaca No. 88, Bandung | WA: 0812-3456-7890</p>
-                                </div>
-                                <div className="text-right">
-                                    <span className="bg-slate-950 text-white px-3 py-1 rounded text-xs font-black tracking-widest block uppercase mb-1">
-                                        SURAT BARANG KELUAR
-                                    </span>
-                                    <div className="text-xs font-mono font-bold">No: {selectedBarangKeluarData.sbk_number}</div>
-                                    <div className="text-[11px] text-slate-600">Tanggal: {selectedBarangKeluarData.date}</div>
-                                </div>
-                            </div>
-
-                            {/* DETAIL TUJUAN & ARMADA */}
-                            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-100 p-3 rounded-lg border border-slate-300">
-                                <div className="space-y-1">
-                                    <div><strong>No. Referensi SPO:</strong> <span className="font-mono text-blue-700 font-bold">{selectedBarangKeluarData.order.spo_number}</span></div>
-                                    <div><strong>Nama Customer:</strong> {selectedBarangKeluarData.order.customer_name} ({selectedBarangKeluarData.order.customer_phone})</div>
-                                    <div><strong>Alamat Pengiriman:</strong> {selectedBarangKeluarData.order.customer_address}</div>
-                                </div>
-                                <div className="space-y-1 border-l border-slate-300 pl-3">
-                                    <div><strong>Supir / Driver:</strong> <span className="font-bold">{selectedBarangKeluarData.driver}</span></div>
-                                    <div><strong>Kendaraan & Plat:</strong> <span className="font-bold">{selectedBarangKeluarData.vehicle}</span></div>
-                                    <div><strong>Status Tagihan:</strong> <span className="font-mono font-bold text-emerald-700">{selectedBarangKeluarData.order.payment_status}</span></div>
-                                </div>
-                            </div>
-
-                            {/* TABEL ITEM BARANG KELUAR GUDANG */}
-                            <div>
-                                <h4 className="font-bold text-xs uppercase mb-1">Rincian Fisik Barang Kaca Keluar dari Pabrik/Gudang:</h4>
-                                <table className="w-full text-xs text-left border-collapse border border-slate-400">
-                                    <thead className="bg-slate-200 uppercase font-bold text-[11px]">
-                                        <tr>
-                                            <th className="border border-slate-400 p-2">No</th>
-                                            <th className="border border-slate-400 p-2">Spesifikasi Kaca / Item</th>
-                                            <th className="border border-slate-400 p-2 text-center">Ukuran (P x L)</th>
-                                            <th className="border border-slate-400 p-2 text-center">Tebal</th>
-                                            <th className="border border-slate-400 p-2 text-center">Qty</th>
-                                            <th className="border border-slate-400 p-2 text-center">Status QC Gudang</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(Array.isArray(selectedBarangKeluarData.order.items) && selectedBarangKeluarData.order.items.length > 0 
-                                            ? selectedBarangKeluarData.order.items 
-                                            : [{
-                                                glass_type: selectedBarangKeluarData.order.glass_type,
-                                                length_cm: selectedBarangKeluarData.order.length_cm,
-                                                width_cm: selectedBarangKeluarData.order.width_cm,
-                                                thickness_mm: selectedBarangKeluarData.order.thickness_mm,
-                                                qty: selectedBarangKeluarData.order.qty || 1
-                                              }]
-                                        ).map((it, idx) => (
-                                            <tr key={idx} className="border-b border-slate-300">
-                                                <td className="border border-slate-400 p-2 text-center font-mono">{idx + 1}</td>
-                                                <td className="border border-slate-400 p-2 font-bold">{it.glass_type}</td>
-                                                <td className="border border-slate-400 p-2 text-center font-mono font-bold">{it.length_cm} x {it.width_cm} cm</td>
-                                                <td className="border border-slate-400 p-2 text-center font-mono">{it.thickness_mm || 5} mm</td>
-                                                <td className="border border-slate-400 p-2 text-center font-mono font-bold text-blue-700">{it.qty || 1} Pcs/Lembar</td>
-                                                <td className="border border-slate-400 p-2 text-center text-emerald-700 font-bold">✓ OK (Lolos QC)</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* 4 KOTAK TANDA TANGAN VERIFIKASI RESMI */}
-                            <div className="grid grid-cols-4 gap-2 text-center text-[10px] pt-4">
-                                <div className="border border-slate-400 p-2 rounded">
-                                    <div className="font-bold mb-8">Disetujui Admin Toko:</div>
-                                    <div className="border-t border-slate-400 pt-1 font-bold">( {userName} )</div>
-                                </div>
-                                <div className="border border-slate-400 p-2 rounded">
-                                    <div className="font-bold mb-8">Dikeluarkan Gudang:</div>
-                                    <div className="border-t border-slate-400 pt-1 font-bold">( Ka. Gudang Pabrik )</div>
-                                </div>
-                                <div className="border border-slate-400 p-2 rounded">
-                                    <div className="font-bold mb-8">Diterima Supir/Driver:</div>
-                                    <div className="border-t border-slate-400 pt-1 font-bold">( {selectedBarangKeluarData.driver} )</div>
-                                </div>
-                                <div className="border border-slate-400 p-2 rounded">
-                                    <div className="font-bold mb-8">Verifikasi Pos Security:</div>
-                                    <div className="border-t border-slate-400 pt-1 font-bold">( Petugas Satpam Gate )</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ACTION PRINT BUTTON */}
-                        <div className="flex justify-end gap-3 pt-2 border-t border-slate-800">
-                            <button
-                                type="button"
-                                onClick={() => setShowBarangKeluarModal(false)}
-                                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition text-xs"
-                            >
-                                Tutup
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => window.print()}
-                                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-emerald-500/20 text-xs flex items-center gap-1.5"
-                            >
-                                🖨️ Cetak Surat Barang Keluar (PDF/Print)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL KONFIRMASI PERSETUJUAN DEAL & PENGATURAN DP */}
+{/* MODAL KONFIRMASI PERSETUJUAN DEAL & PENGATURAN DP */}
             {showPromoteModal && targetPromoteOrder && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
@@ -9214,694 +7759,52 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 </div>
             )}
 
-            {/* MODAL POPUP DETAIL EKSEKUSI PENGERJAAN ORDER (PREMIUM REDESIGN) */}
-            {showExecutionModal && selectedExecutionOrder && (
-                <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-                    <div className="bg-slate-900/95 border border-cyan-500/30 rounded-3xl w-full max-w-4xl p-6 sm:p-8 shadow-[0_0_60px_rgba(6,182,212,0.15)] space-y-6 relative my-auto overflow-hidden">
-                        
-                        {/* DEKORASI ACCENT BG */}
-                        <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
-                        <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-                        {/* MODAL HEADER BAR */}
-                        <div className="flex justify-between items-start border-b border-slate-800/90 pb-4 relative z-10 gap-3">
-                            <div className="space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="bg-cyan-500/10 text-cyan-300 font-extrabold text-[11px] px-3 py-1 rounded-full border border-cyan-500/30 flex items-center gap-1.5 shadow-sm">
-                                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                                        <span>MODAL EKSEKUSI WORKSTATION</span>
-                                    </span>
-                                    <span className="font-black text-cyan-400 font-mono text-2xl tracking-tight">{selectedExecutionOrder.spo_number}</span>
-                                    <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border shadow-sm ${selectedExecutionOrder.priority_status === 'Prioritas' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse' : 'bg-slate-800/80 text-slate-400 border-slate-700'}`}>
-                                        {selectedExecutionOrder.priority_status === 'Prioritas' ? '🔥 PRIORITAS TINGGI' : '🔵 Standar / Biasa'}
-                                    </span>
-                                </div>
-                                <h3 className="font-extrabold text-slate-100 text-xl tracking-tight mt-1">{selectedExecutionOrder.customer_name}</h3>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <span className="hidden sm:inline-block text-xs font-bold px-3.5 py-1.5 rounded-xl bg-slate-950 text-cyan-300 border border-slate-800 font-mono shadow-inner">
-                                    Divisi: {roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}
-                                </span>
-                                <button 
-                                    onClick={() => setShowExecutionModal(false)}
-                                    className="bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-9 h-9 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
-                                    title="Tutup Modal"
-                                >&times;</button>
-                            </div>
-                        </div>
-
-                        {/* PERINGATAN REVISI BANNER IN EXECUTION MODAL */}
-                        {selectedExecutionOrder.revision_status === 'pending_division' && (
-                            <div className="bg-rose-950/90 border-2 border-rose-500 rounded-2xl p-4 text-rose-200 text-xs space-y-2 animate-pulse shadow-lg relative z-10">
-                                <div className="font-extrabold text-rose-300 flex items-center justify-between text-sm">
-                                    <span className="flex items-center gap-2">
-                                        <span>⚠️ PERINGATAN REVISI ORDERAN DARI ADMIN TOKO!</span>
-                                    </span>
-                                    <span className="bg-rose-500 text-white font-mono px-2.5 py-0.5 rounded-full text-[10px]">
-                                        REVISI PENDING
-                                    </span>
-                                </div>
-                                <p className="text-xs text-slate-200 leading-relaxed">
-                                    Admin Toko telah merevisi deskripsi, foto sketsa project, atau dimensi ukuran item kaca. <strong>Pekerja divisi wajib mengonfirmasi/menerima revisian ini terlebih dahulu</strong> sebelum melanjutkan/menyelesaikan pengerjaan.
-                                </p>
-                                {selectedExecutionOrder.revision_notes && (
-                                    <div className="bg-slate-950/90 p-2.5 rounded-xl border border-rose-500/40 text-xs text-amber-300 font-mono">
-                                        📝 Catatan Revisi Admin Toko: <strong>{selectedExecutionOrder.revision_notes}</strong>
-                                    </div>
-                                )}
-                                <div className="flex justify-end pt-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            handleAcknowledgeRevision(selectedExecutionOrder.id);
-                                            setShowExecutionModal(false);
-                                        }}
-                                        className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xl shadow-amber-500/30 cursor-pointer"
-                                    >
-                                        🔄 Terima & Eksekusi Revisi SPO
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* WATERMARK BADGE FOR COMPLETED & REVISED ORDERS */}
-                        {selectedExecutionOrder.is_revised && (
-                            <div className="border-2 border-dashed border-amber-500/60 bg-amber-500/10 p-3.5 rounded-2xl text-center shadow-lg relative overflow-hidden my-2 z-10">
-                                <div className="text-xl sm:text-2xl font-black text-amber-400 tracking-widest uppercase rotate-[-1deg] drop-shadow">
-                                    🏆 ORDERAN SELESAI & SUDAH DIREVISI
-                                </div>
-                                <p className="text-[11px] text-amber-200/90 font-mono mt-1">
-                                    SPO-{selectedExecutionOrder.spo_number} telah berhasil diproses & diselesaikan dengan penyesuaian revisi dari Admin Toko ({selectedExecutionOrder.revision_count || 1}x Revisi).
-                                </p>
-                            </div>
-                        )}
-
-                        {/* CUSTOMER & ORDER INFO GRID PANEL */}
-                        <div className="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-24">📞 Telepon:</span>
-                                    <strong className="text-slate-200 font-mono">{selectedExecutionOrder.customer_phone}</strong>
-                                </div>
-                                <div className="flex items-start gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-24 shrink-0">📍 Alamat Kirim:</span>
-                                    <span className="text-slate-300">{selectedExecutionOrder.customer_address}</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 md:border-l md:border-slate-800/80 md:pl-5">
-                                <div className="flex items-center gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-28">📅 Target Deadline:</span>
-                                    <strong className="text-amber-300 font-mono font-bold">{selectedExecutionOrder.deadline_date || '-'}</strong>
-                                </div>
-                                <div className="flex items-center gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-28">📍 Posisi Divisi:</span>
-                                    <span className="text-cyan-300 font-semibold">{roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* LAMPIRAN SKETSA POLA & GAMBAR SAMBUNGAN KACA */}
-                        {selectedExecutionOrder.sketch_photo_path && (
-                            <div className="bg-gradient-to-r from-slate-950 via-cyan-950/30 to-slate-950 border border-cyan-500/40 p-4 rounded-2xl space-y-3 relative z-10 shadow-lg">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-xs font-black text-cyan-300 uppercase tracking-wider flex items-center gap-2">
-                                        <span>📐 SKETSA POLA & GAMBAR SAMBUNGAN KACA (ACUAN PEKERJA DIVISI)</span>
-                                    </h4>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
-                                        className="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
-                                    >
-                                        🔍 Perbesar Gambar Sketsa
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div 
-                                        onClick={() => handleOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
-                                        className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden border-2 border-cyan-400/50 bg-black shrink-0 shadow-lg"
-                                    >
-                                        <img 
-                                            src={selectedExecutionOrder.sketch_photo_path.startsWith('http') || selectedExecutionOrder.sketch_photo_path.startsWith('/') ? selectedExecutionOrder.sketch_photo_path : `/storage/${selectedExecutionOrder.sketch_photo_path}`}
-                                            alt="Sketsa Pola Kaca"
-                                            className="w-full h-full object-contain transition transform group-hover:scale-105"
-                                        />
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-bold gap-1">
-                                            🔍 Klik Perbesar
-                                        </div>
-                                    </div>
-                                    <div className="text-xs text-slate-300 space-y-1.5">
-                                        <div className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
-                                            <span>📌 Acuan Pemotongan & Sambungan Pola Kaca</span>
-                                        </div>
-                                        <p className="text-slate-400 text-[11px] leading-relaxed">
-                                            Admin Gudang dan Pekerja Divisi (Potong/HT, Gosok/GM, Bevel/BV, Etsa) wajib melihat sketsa ini sebagai acuan pola fisik, arah sambungan gambar/cermin, dan ukuran pemotongan kaca.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TIMELINE TANGGAL LIFECYCLE ORDER */}
-                        <div className="space-y-2">
-                            <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <span>📅 Lifecycle Timeline Tanggal Track:</span>
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-cyan-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">📅 Pembuatan Order (Toko):</span>
-                                    <strong className="text-cyan-400 font-bold block text-xs">{formatIndonesianDate(selectedExecutionOrder.order_date)}</strong>
-                                </div>
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-blue-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">📦 Diturunkan Gudang:</span>
-                                    <strong className="text-blue-300 font-bold block text-xs">{selectedExecutionOrder.gudang_released_at ? formatIndonesianDateTime(selectedExecutionOrder.gudang_released_at) : 'Belum Diturunkan'}</strong>
-                                </div>
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-emerald-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">✅ Selesai Eksekusi:</span>
-                                    <strong className="text-emerald-400 font-bold block text-xs">{selectedExecutionOrder.execution_completed_at ? formatIndonesianDateTime(selectedExecutionOrder.execution_completed_at) : 'Sedang Eksekusi'}</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* TAHAPAN PROGRES WORKFLOW PIPELINE DENGAN TANGGAL MASUK & SELESAI PER DIVISI */}
-                        <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 space-y-3">
-                            <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                                <span>📋 Track Tanggal Pengerjakan Per Divisi:</span>
-                                <span className="text-[10px] text-slate-500 font-mono">Diperbarui Otomatis Per Transisi Divisi</span>
-                            </div>
-                            {(() => {
-                                const allProcs = [
-                                    { code: 'HT', name: 'Potong & Bor (HT)' },
-                                    { code: 'GM', name: 'Gosok Mesin (GM)' },
-                                    { code: 'BV', name: 'Bevel (BV)' },
-                                    { code: 'Etsa', name: 'Etsa Blur (Etsa)' }
-                                ];
-
-                                const reqSet = new Set();
-                                if (Array.isArray(selectedExecutionOrder.processes)) {
-                                    selectedExecutionOrder.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
-                                }
-                                if (Array.isArray(selectedExecutionOrder.items)) {
-                                    selectedExecutionOrder.items.forEach(it => {
-                                        if (Array.isArray(it.processes)) {
-                                            it.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
-                                        }
-                                    });
-                                }
-
-                                const activeProcs = allProcs.filter(proc => {
-                                    // HT (Potong) is ALWAYS mandatory for every glass order
-                                    if (proc.code === 'HT') return true;
-                                    const status = (selectedExecutionOrder.division_progress && selectedExecutionOrder.division_progress[proc.code]) 
-                                        ? selectedExecutionOrder.division_progress[proc.code] 
-                                        : 'Belum';
-                                    if (status !== 'N/A') return true;
-                                    if (reqSet.has(proc.code.toUpperCase())) return true;
-                                    return false;
-                                });
-
-                                const renderList = activeProcs.length > 0 ? activeProcs : allProcs;
-
-                                return (
-                                    <div className={`grid grid-cols-1 ${renderList.length === 1 ? 'sm:grid-cols-1' : renderList.length === 2 ? 'sm:grid-cols-2' : renderList.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 md:grid-cols-4'} gap-3`}>
-                                        {renderList.map(proc => {
-                                            const status = (selectedExecutionOrder.division_progress && selectedExecutionOrder.division_progress[proc.code]) ? selectedExecutionOrder.division_progress[proc.code] : 'Belum';
-                                            const isDone = status === 'Selesai';
-                                            const isWorking = status === 'Sedang Dikerjakan';
-                                            const isNA = status === 'N/A';
-
-                                            const ts = (selectedExecutionOrder.division_timestamps && selectedExecutionOrder.division_timestamps[proc.code]) 
-                                                ? selectedExecutionOrder.division_timestamps[proc.code] 
-                                                : {};
-                                            const startedAt = ts.started_at;
-                                            const completedAt = ts.completed_at;
-
-                                            return (
-                                                <div 
-                                                    key={proc.code} 
-                                                    className={`p-3.5 rounded-2xl border flex flex-col justify-between space-y-2 transition ${isDone ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : isWorking ? 'bg-cyan-500/10 text-cyan-300 border-cyan-400 animate-pulse shadow-md shadow-cyan-500/10' : isNA ? 'bg-slate-900/40 text-slate-600 border-slate-800' : 'bg-slate-900/60 text-slate-400 border-slate-800'}`}
-                                                >
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="text-[11px] font-extrabold font-mono">{proc.code}: {proc.name}</div>
-                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${isDone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : isWorking ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400' : isNA ? 'bg-slate-950 text-slate-600 border-slate-900' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
-                                                            {isDone ? '✅ Selesai' : isWorking ? '⚙️ Dikerjakan' : isNA ? '⚪ N/A' : '⏳ Belum'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="space-y-1 text-[10px] font-mono pt-2 border-t border-slate-800/80">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-slate-500">📥 Tgl Masuk / Mulai:</span>
-                                                            <strong className={startedAt ? 'text-cyan-300' : 'text-slate-600'}>
-                                                                {startedAt ? formatIndonesianDateTime(startedAt) : '-'}
-                                                            </strong>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-slate-500">🏁 Tgl Selesai Eksekusi:</span>
-                                                            <strong className={completedAt ? 'text-emerald-300' : 'text-slate-600'}>
-                                                                {completedAt ? formatIndonesianDateTime(completedAt) : '-'}
-                                                            </strong>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })()}
-                        </div>
-
-                        {/* RINCIAN ITEM SPESIFIKASI KACA DETAIL & TOMBOL [+ SISA POTONG] */}
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                                <h4 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                                    <span>📋 Detail Spesifikasi Item Kaca:</span>
-                                </h4>
-                                <span className="text-[11px] text-slate-400 font-mono">Klik "+ Input Sisa Potong" untuk mencatat scrap ke rak</span>
-                            </div>
-
-                            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                                {(Array.isArray(selectedExecutionOrder.items) && selectedExecutionOrder.items.length > 0 
-                                    ? selectedExecutionOrder.items 
-                                    : [{
-                                        glass_type: selectedExecutionOrder.glass_type,
-                                        length_cm: selectedExecutionOrder.length_cm,
-                                        width_cm: selectedExecutionOrder.width_cm,
-                                        thickness_mm: selectedExecutionOrder.thickness_mm,
-                                        qty: 1,
-                                        processes: selectedExecutionOrder.processes || ['HT']
-                                    }]).map((it, idx) => (
-                                    <div key={idx} className="bg-slate-950 p-4 rounded-2xl border border-slate-800/90 hover:border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition shadow-md">
-                                        <div className="space-y-1.5 flex-1">
-                                            <div className="font-extrabold text-cyan-300 text-sm flex items-center gap-2">
-                                                <span>Item #{idx + 1}: {it.glass_type}</span>
-                                                <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold">Qty: {it.qty || 1} Pcs</span>
-                                            </div>
-                                            <div className="text-slate-300 font-mono text-xs flex flex-wrap items-center gap-2">
-                                                <span>Ukuran: <strong className="text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{it.length_cm} cm × {it.width_cm} cm</strong></span>
-                                                <span>Tebal: <strong className="text-amber-300">{it.thickness_mm} mm</strong></span>
-                                            </div>
-                                            {Array.isArray(it.processes) && (
-                                                <div className="text-xs text-slate-400 pt-0.5">
-                                                    Proses Divisi: <span className="text-cyan-200 font-mono font-bold">{it.processes.join(', ')}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* TOMBOL POPUP INPUT SISA (KHUSUS DIVISI POTONG / HT) */}
-                                        {selectedExecutionOrder.current_division === 'divisi_ht' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleOpenScrapPopup(it)}
-                                                className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500 hover:to-orange-500 text-amber-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-amber-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-amber-500/10"
-                                            >
-                                                <span>🧩 + Input Sisa Potong</span>
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* KETERANGAN & POTONGAN RAK */}
-                        {selectedExecutionOrder.description && (
-                            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs text-slate-300 italic flex items-center gap-2">
-                                <span>📝 Catatan Order:</span>
-                                <strong>{selectedExecutionOrder.description}</strong>
-                            </div>
-                        )}
-
-                        {/* ACTION FOOTER MODAL BAR */}
-                        <div className="pt-4 border-t border-slate-800 flex flex-wrap justify-between items-center gap-4 relative z-10">
-                            <button 
-                                type="button" 
-                                onClick={() => setShowExecutionModal(false)}
-                                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition border border-slate-700"
-                            >
-                                ✕ Tutup Modal
-                            </button>
-
-                            <div className="flex flex-wrap items-center gap-2">
-                                {(() => {
-                                    const isHistoryOrder = (isDivisionWorker && selectedExecutionOrder.current_division !== userRole) || 
-                                                           selectedExecutionOrder.current_division === 'QC_Ready' || 
-                                                           selectedExecutionOrder.status === 'selesai' ||
-                                                           productionSubTab.endsWith('_history');
-
-                                    if (isHistoryOrder) {
-                                        return (
-                                            <div className="flex items-center gap-2">
-                                                {selectedExecutionOrder.is_revised && (
-                                                    <span className="text-xs font-black text-amber-300 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-500/40 font-mono">
-                                                        🏆 SELESAI & SUDAH DIREVISI
-                                                    </span>
-                                                )}
-                                                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/30 flex items-center gap-1.5 shadow-sm font-mono">
-                                                    <span>✅ Order Selesai Dikerjakan</span>
-                                                </span>
-                                            </div>
-                                        );
-                                    }
-
-                                    if (selectedExecutionOrder.complaint_status === 'pending_gudang') {
-                                        return (
-                                            <span className="text-xs font-bold text-amber-300 bg-amber-500/20 px-4 py-2 rounded-xl border border-amber-500/40 flex items-center gap-1.5 font-mono shadow-sm">
-                                                <span>⏳ MENUNGGU DECISION ADMIN GUDANG (TERKUNCI)</span>
-                                            </span>
-                                        );
-                                    }
-
-                                    if (selectedExecutionOrder.revision_status === 'pending_division') {
-                                        return (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    handleAcknowledgeRevision(selectedExecutionOrder.id);
-                                                    setShowExecutionModal(false);
-                                                }}
-                                                className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer"
-                                            >
-                                                🔄 Terima & Eksekusi Revisi SPO
-                                            </button>
-                                        );
-                                    }
-
-                                    return (
-                                        <>
-                                            {/* BUTTON LAPORKAN KACA CACAT / BARET UNTUK DIVISI SELAIN HT */}
-                                            {selectedExecutionOrder.current_division !== 'divisi_ht' && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleOpenComplaintModal(selectedExecutionOrder)}
-                                                    className="bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500 hover:to-amber-500 text-rose-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-rose-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-rose-500/10 cursor-pointer"
-                                                >
-                                                    <span>⚠️ Laporkan Kaca Cacat / Baret</span>
-                                                </button>
-                                            )}
-
-                                            <select 
-                                                id={`exec_modal_next_div_${selectedExecutionOrder.id}`}
-                                                defaultValue="QC_Ready"
-                                                className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner"
-                                            >
-                                                <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
-                                                <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
-                                                <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
-                                                <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
-                                                <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
-                                            </select>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const sel = document.getElementById(`exec_modal_next_div_${selectedExecutionOrder.id}`);
-                                                    const nextVal = sel ? sel.value : 'QC_Ready';
-                                                    handleFinishJobSubmit(selectedExecutionOrder.id, nextVal);
-                                                }}
-                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xl shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
-                                            >
-                                                <span>✅ Selesai & Teruskan Pekerjaan</span>
-                                            </button>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            )}
+                        {/* MODAL POPUP DETAIL EKSEKUSI PENGERJAAN ORDER (PREMIUM REDESIGN) */}
+            <DivisionExecutionModal
+                show={showExecutionModal}
+                onClose={() => { setShowExecutionModal(false); setSelectedExecutionOrder(null); }}
+                selectedExecutionOrder={selectedExecutionOrder}
+                roleTitles={roleTitles}
+                userRole={userRole}
+                productionSubTab={productionSubTab}
+                isDivisionWorker={isDivisionWorker}
+                onAcknowledgeRevision={handleAcknowledgeRevision}
+                onOpenComplaintModal={handleOpenComplaintModal}
+                onOpenScrapPopup={handleOpenScrapPopup}
+                onFinishJobSubmit={handleFinishJobSubmit}
+                formatIndonesianDate={formatIndonesianDate}
+                formatIndonesianDateTime={formatIndonesianDateTime}
+                onOpenSketchLightbox={handleOpenSketchLightbox}
+            />
 
             {/* MODAL POPUP FORM SISA UNTUK POTONG (INPUT SCRAP GLASS - REDESIGN) */}
-            {showScrapPopupModal && (
-                <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-[60] flex items-center justify-center p-4 overflow-y-auto">
-                    <div className="bg-slate-900 border border-amber-500/40 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-[0_0_50px_rgba(245,158,11,0.18)] space-y-5 relative overflow-hidden my-auto">
-                        
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3.5">
-                            <h3 className="font-extrabold text-base text-amber-400 flex items-center gap-2">
-                                🧩 Input Kaca Sisa Potongan (Rak Storage)
-                            </h3>
-                            <button 
-                                onClick={() => setShowScrapPopupModal(false)} 
-                                className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
-                            >&times;</button>
-                        </div>
-
-                        <form onSubmit={handleSaveScrapFromPopup} className="space-y-4 text-xs">
-                            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                                <span className="text-[11px] text-slate-400 block font-semibold">Jenis Kaca Kategori Potongan:</span>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    value={scrapPopupForm.glass_type} 
-                                    onChange={e => setScrapPopupForm(s => ({ ...s, glass_type: e.target.value }))}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-cyan-300 font-extrabold focus:border-amber-400 text-sm" 
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-slate-300 font-bold block">Panjang Sisa (cm):</label>
-                                    <input 
-                                        type="number" 
-                                        step="0.1" 
-                                        required 
-                                        placeholder="cth: 40.5"
-                                        value={scrapPopupForm.length_cm} 
-                                        onChange={e => setScrapPopupForm(s => ({ ...s, length_cm: e.target.value }))}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-amber-300 font-mono font-bold text-lg focus:border-amber-400" 
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-slate-300 font-bold block">Lebar Sisa (cm):</label>
-                                    <input 
-                                        type="number" 
-                                        step="0.1" 
-                                        required 
-                                        placeholder="cth: 30.0"
-                                        value={scrapPopupForm.width_cm} 
-                                        onChange={e => setScrapPopupForm(s => ({ ...s, width_cm: e.target.value }))}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-amber-300 font-mono font-bold text-lg focus:border-amber-400" 
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-slate-300 font-bold block">Lokasi Rak Penimpanan Sisa:</label>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    placeholder="cth: Rak A02"
-                                    value={scrapPopupForm.rak_location} 
-                                    onChange={e => setScrapPopupForm(s => ({ ...s, rak_location: e.target.value }))}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono font-bold focus:border-amber-400 text-sm" 
-                                />
-                            </div>
-
-                            {/* RINGKASAN STOK RAK TERSIMPAN */}
-                            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-[11px] space-y-1.5">
-                                <div className="text-slate-400 font-bold flex justify-between">
-                                    <span>📦 Pilih Lokasi Rak Cepat:</span>
-                                    <span className="text-amber-400 font-mono">Format Sisa Layak Pakai</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5 pt-1">
-                                    {['Rak A01', 'Rak A02', 'Rak F7', 'Rak B03', 'Rak C01'].map(r => (
-                                        <button 
-                                            key={r}
-                                            type="button" 
-                                            onClick={() => setScrapPopupForm(s => ({ ...s, rak_location: r }))}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition ${scrapPopupForm.rak_location === r ? 'bg-amber-500/20 text-amber-300 border-amber-400 shadow-sm' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'}`}
-                                        >
-                                            📍 {r}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowScrapPopupModal(false)} className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition">Batal</button>
-                                <button type="submit" className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-1.5 text-xs">
-                                    <span>+ Simpan Ke Rak Sisa</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <ScrapPopupModal 
+                show={showScrapPopupModal}
+                onClose={() => setShowScrapPopupModal(false)}
+                form={scrapPopupForm}
+                setForm={setScrapPopupForm}
+                onSubmit={handleSaveScrapFromPopup}
+            />
 
             {/* MODAL POPUP LAPORKAN KACA CACAT / BARET */}
-            {showComplaintModal && selectedExecutionOrder && (
-                <div className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 shadow-[0_0_50px_rgba(244,63,94,0.18)] relative my-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <span className="text-2xl">⚠️</span>
-                                <div>
-                                    <h3 className="font-extrabold text-white text-base">Laporkan Kaca Cacat / Baret</h3>
-                                    <p className="text-xs text-slate-400 font-mono">SPO #{selectedExecutionOrder.spo_number} — Divisi {userRole.replace('divisi_', '').toUpperCase()}</p>
-                                </div>
-                            </div>
-                            <button 
-                                type="button" 
-                                onClick={() => setShowComplaintModal(false)}
-                                className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmitComplaint} className="space-y-4 text-xs">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-300">Pilih Alasan Kendala / Cacat Kaca:</label>
-                                <select
-                                    value={complaintForm.reason}
-                                    onChange={(e) => setComplaintForm({...complaintForm, reason: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-rose-400"
-                                >
-                                    <option value="Kaca Baret / Gores">🔍 Kaca Baret / Gores (Scratch)</option>
-                                    <option value="Kaca Retak / Pecah">💥 Kaca Retak / Pecah (Cracked/Broken)</option>
-                                    <option value="Cacat Pabrik / Gelembung">🏭 Cacat Pabrik / Gelembung / Flek</option>
-                                    <option value="Miskomunikasi Ukuran / Salah Potong HT">📏 Miskomunikasi Ukuran / Salah Potong HT</option>
-                                    <option value="Kendala Lainnya">⚠️ Kendala Lainnya</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-300">Catatan & Detail Keluhan:</label>
-                                <textarea
-                                    required
-                                    rows={3}
-                                    value={complaintForm.notes}
-                                    onChange={(e) => setComplaintForm({...complaintForm, notes: e.target.value})}
-                                    placeholder="Jelaskan lokasi baret/cacat atau kronologi singkat... (Wajib diisi, jika tidak ada ketik '-')"
-                                    className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-3 text-xs focus:border-rose-400 font-mono"
-                                />
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-300">Foto Bukti Kaca Cacat / Baret (Opsional):</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleComplaintPhotoChange}
-                                    className="w-full bg-slate-950 border border-slate-700 text-slate-300 rounded-xl p-2 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-rose-500/20 file:text-rose-300 hover:file:bg-rose-500/30 cursor-pointer"
-                                />
-                                {complaintForm.photoPreview && (
-                                    <div className="mt-2 relative rounded-xl overflow-hidden border border-slate-700 max-h-40">
-                                        <img src={complaintForm.photoPreview} alt="Preview Bukti" className="w-full h-full object-cover" />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-amber-950/50 border border-amber-500/30 p-3 rounded-xl text-[11px] text-amber-200 space-y-0.5">
-                                <span className="font-bold block text-amber-300">💡 Informasi Workflow Laporkan:</span>
-                                <p>Setelah dikirim, SPO ini akan otomatis masuk ke <strong>Admin Gudang</strong> untuk peninjauan. Pengerjaan divisi dipause sementara sampai Admin Gudang memberikan instruksi lanjutan.</p>
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowComplaintModal(false)}
-                                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs transition shadow-lg shadow-rose-500/20 flex items-center gap-1.5 cursor-pointer"
-                                >
-                                    <span>📤 Kirim Laporan ke Admin Gudang</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <ComplaintModal 
+                show={showComplaintModal}
+                onClose={() => setShowComplaintModal(false)}
+                form={complaintForm}
+                setForm={setComplaintForm}
+                onSubmit={handleSubmitComplaint}
+                onPhotoChange={handleComplaintPhotoChange}
+                selectedExecutionOrder={selectedExecutionOrder}
+                userRole={userRole}
+            />
 
             {/* MODAL DECISION ADMIN GUDANG UNTUK KOMPLAIN KACA */}
-            {showGudangDecisionModal && selectedComplaintOrder && (
-                <div className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 shadow-[0_0_50px_rgba(245,158,11,0.18)] relative my-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <span className="text-2xl">⚖️</span>
-                                <div>
-                                    <h3 className="font-extrabold text-white text-base">Keputusan Admin Gudang - Komplain Kaca</h3>
-                                    <p className="text-xs text-slate-400 font-mono">SPO #{selectedComplaintOrder.spo_number} — Pelapor: Divisi {selectedComplaintOrder.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''}</p>
-                                </div>
-                            </div>
-                            <button 
-                                type="button" 
-                                onClick={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
-                                className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <div className="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
-                            <div className="space-y-1">
-                                <div className="text-slate-400">Pelanggan: <strong className="text-slate-200">{selectedComplaintOrder.customer_name}</strong></div>
-                                <div className="text-slate-400">Alasan Komplain: <strong className="text-rose-400 font-bold">{selectedComplaintOrder.complaint_data?.reason || 'Kaca Cacat / Baret'}</strong></div>
-                                {selectedComplaintOrder.complaint_data?.notes && (
-                                    <div className="text-slate-400">Catatan Pekerja: <span className="text-amber-200 italic font-mono">"{selectedComplaintOrder.complaint_data.notes}"</span></div>
-                                )}
-                                <div className="text-slate-400 text-[10px] pt-1">Dilaporkan pada: <span className="text-cyan-300 font-mono">{selectedComplaintOrder.complaint_data?.reported_at || '-'}</span></div>
-                            </div>
-
-                            {selectedComplaintOrder.complaint_data?.photo_path && (
-                                <div className="space-y-1 pt-1">
-                                    <span className="text-[11px] font-bold text-slate-300">Foto Bukti Kaca Cacat:</span>
-                                    <div className="rounded-xl overflow-hidden border border-slate-700 max-h-48">
-                                        <img src={`/storage/${selectedComplaintOrder.complaint_data.photo_path}`} alt="Bukti Cacat Kaca" className="w-full h-full object-contain bg-black" />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="space-y-2.5">
-                            <h4 className="text-xs font-bold text-slate-300">Pilih Langkah Konfirmasi Admin Gudang:</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => handleResolveComplaint(selectedComplaintOrder.id, 'continue')}
-                                    className="p-3.5 bg-slate-950 hover:bg-emerald-950/60 border border-slate-800 hover:border-emerald-500/60 rounded-2xl text-left space-y-1 group transition shadow-md cursor-pointer"
-                                >
-                                    <div className="font-extrabold text-emerald-400 text-xs flex items-center gap-1.5 group-hover:underline">
-                                        <span>✅ Lanjutkan Pengerjaan</span>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 leading-tight">
-                                        Lanjutkan di divisi asal tanpa ganti kaca (kaca dinilai masih layak pakai).
-                                    </p>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => handleResolveComplaint(selectedComplaintOrder.id, 'replace_glass')}
-                                    className="p-3.5 bg-slate-950 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/60 rounded-2xl text-left space-y-1 group transition shadow-md cursor-pointer"
-                                >
-                                    <div className="font-extrabold text-rose-400 text-xs flex items-center gap-1.5 group-hover:underline">
-                                        <span>🚨 Setujui Ganti Kaca (Potong Ulang)</span>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 leading-tight">
-                                        SPO dikembalikan ke <strong>Divisi Potong (HT)</strong> untuk dipotong ulang lembaran baru.
-                                    </p>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end pt-2 border-t border-slate-800">
-                            <button 
-                                type="button" 
-                                onClick={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
-                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition"
-                            >
-                                Tutup
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <GudangDecisionModal 
+                show={showGudangDecisionModal}
+                onClose={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
+                selectedComplaintOrder={selectedComplaintOrder}
+                onResolveComplaint={handleResolveComplaint}
+            />
 
             {/* GLOBAL SKETCH LIGHTBOX MODAL */}
             {sketchLightbox.isOpen && (
