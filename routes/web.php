@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SypOperationalController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderExecutionController;
+use App\Http\Controllers\OrderRevisionController;
+use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\ScrapController;
 use Illuminate\Support\Facades\Route;
 
 // Public Landing Page (Awal Running -> Landing Page)
@@ -24,14 +29,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{id}/cancel-revision-lock', [SypOperationalController::class, 'cancelRevisionLock'])->name('orders.cancel_revision_lock');
     Route::post('/orders/{id}/acknowledge-revision', [SypOperationalController::class, 'acknowledgeRevision'])->name('orders.acknowledge_revision');
     Route::post('/orders/{id}/finish-job', [SypOperationalController::class, 'finishDivisionJob'])->name('orders.finish');
-    Route::post('/orders/{id}/complete-delivery', [SypOperationalController::class, 'completeDelivery'])->name('orders.complete_delivery');
 
     // Division Defect Complaint Operations
-    Route::post('/orders/{id}/complaint', [SypOperationalController::class, 'submitGlassComplaint'])->name('orders.complaint');
-    Route::post('/orders/{id}/resolve-complaint', [SypOperationalController::class, 'resolveGlassComplaint'])->name('orders.resolve_complaint');
+    Route::post('/orders/{id}/complaint', [ComplaintController::class, 'submitGlassComplaint'])->name('orders.complaint');
+    Route::post('/orders/{id}/resolve-complaint', [ComplaintController::class, 'resolveGlassComplaint'])->name('orders.resolve_complaint');
 
     // Scrap Glass Operations
-    Route::post('/scrap', [SypOperationalController::class, 'storeScrap'])->name('scrap.store');
+    Route::post('/scrap', [ScrapController::class, 'storeScrap'])->name('scrap.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
