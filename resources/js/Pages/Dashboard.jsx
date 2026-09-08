@@ -8,6 +8,7 @@ import ScrapPopupModal from '@/Components/Modals/ScrapPopupModal';
 import GudangDecisionModal from '@/Components/Modals/GudangDecisionModal';
 import GatePassModal from '@/Components/Modals/GatePassModal';
 import DivisionExecutionModal from '@/Components/Modals/DivisionExecutionModal';
+import WaybillModal from '@/Components/Modals/WaybillModal';
 
 export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], metrics = {} }) {
     const { auth } = usePage().props;
@@ -52,6 +53,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [showScrapModal, setShowScrapModal] = useState(false);
     const [showWaybillModal, setShowWaybillModal] = useState(false);
     const [selectedWaybillOrder, setSelectedWaybillOrder] = useState(null);
+
+    const donutSlices = [
+        { id: 'tempered', label: 'Kaca Tempered (8mm-12mm)', shortLabel: 'Tempered', percent: 45, color: '#06b6d4', strokeDasharray: '183.78 408.4', strokeDashoffset: '0', rp: 'Rp 57.8M', volume: '26 SPO' },
+        { id: 'laminated', label: 'Kaca Laminated (5+5mm)', shortLabel: 'Laminated', percent: 25, color: '#3b82f6', strokeDasharray: '102.1 408.4', strokeDashoffset: '-188.78', rp: 'Rp 32.1M', volume: '15 SPO' },
+        { id: 'bevel', label: 'Kaca Bevel & Cermin Decorative', shortLabel: 'Bevel/Cermin', percent: 18, color: '#10b981', strokeDasharray: '73.51 408.4', strokeDashoffset: '-295.88', rp: 'Rp 23.1M', volume: '10 SPO' },
+        { id: 'float', label: 'Kaca Polos / Float Standard', shortLabel: 'Float', percent: 12, color: '#8b5cf6', strokeDasharray: '49.0 408.4', strokeDashoffset: '-374.39', rp: 'Rp 15.5M', volume: '7 SPO' },
+    ];
 
     // Admin Gudang Dispatch Modal State
     const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -407,31 +415,31 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     ]);
 
     const [toolBorrowings, setToolBorrowings] = useState([
-        { 
-            id: 1, 
-            tool_id: 1, 
-            tool_code: 'ALT-001', 
-            tool_name: 'Mesin Bor Kaca Portable Heavy Duty', 
-            borrower_name: 'Teknisi Asep', 
-            purpose: 'Pengerjaan bor lubang engsel sekat kaca Dago (SPO-0129)', 
-            borrow_date: '2026-08-20', 
-            expected_return: '2026-08-21', 
-            actual_return: null, 
-            qty_borrowed: 1, 
-            status: 'Sedang Dipinjam' 
+        {
+            id: 1,
+            tool_id: 1,
+            tool_code: 'ALT-001',
+            tool_name: 'Mesin Bor Kaca Portable Heavy Duty',
+            borrower_name: 'Teknisi Asep',
+            purpose: 'Pengerjaan bor lubang engsel sekat kaca Dago (SPO-0129)',
+            borrow_date: '2026-08-20',
+            expected_return: '2026-08-21',
+            actual_return: null,
+            qty_borrowed: 1,
+            status: 'Sedang Dipinjam'
         },
-        { 
-            id: 2, 
-            tool_id: 5, 
-            tool_code: 'ALT-005', 
-            tool_name: 'Tangga Alumunium Lipat Multi-Fungsi 4.7 Meter', 
-            borrower_name: 'Teknisi Budi', 
-            purpose: 'Pemasangan kanopi kaca tempered Gedung Wisma', 
-            borrow_date: '2026-08-20', 
-            expected_return: '2026-08-22', 
-            actual_return: null, 
-            qty_borrowed: 1, 
-            status: 'Sedang Dipinjam' 
+        {
+            id: 2,
+            tool_id: 5,
+            tool_code: 'ALT-005',
+            tool_name: 'Tangga Alumunium Lipat Multi-Fungsi 4.7 Meter',
+            borrower_name: 'Teknisi Budi',
+            purpose: 'Pemasangan kanopi kaca tempered Gedung Wisma',
+            borrow_date: '2026-08-20',
+            expected_return: '2026-08-22',
+            actual_return: null,
+            qty_borrowed: 1,
+            status: 'Sedang Dipinjam'
         }
     ]);
 
@@ -809,7 +817,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         setShowRequestRestockModal(false);
 
         const waMsg = `Halo Admin Toko SYP Glass,%0A%0AMeminta pengajuan RESTOK PERLENGKAPAN GUDANG:%0A• Kode & Barang: [${supplyObj.item_code}] ${supplyObj.name}%0A• Sisa Stok Gudang: ${supplyObj.stock_qty} ${supplyObj.unit}%0A• Jumlah Pengajuan Restok: ${reqQty} ${supplyObj.unit}%0A• Prioritas: ${requestRestockForm.priority}%0A• Catatan: ${requestRestockForm.notes || '-'}`;
-        
+
         if (confirm(`✅ Pengajuan restok "${supplyObj.name}" (${reqQty} ${supplyObj.unit}) BERHASIL dikirim ke Admin Toko!\n\nApakah Anda ingin membuka kirim pesan WhatsApp otomatis ke Admin Toko?`)) {
             window.open(`https://api.whatsapp.com/send?text=${waMsg}`, '_blank');
         }
@@ -891,7 +899,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
         const currentlyBorrowed = (selectedToolForEdit.total_qty - selectedToolForEdit.available_qty - (selectedToolForEdit.damaged_qty || 0) - (selectedToolForEdit.lost_qty || 0));
         const safeBorrowed = Math.max(0, currentlyBorrowed);
-        
+
         const newAvailable = Math.max(0, tot - safeBorrowed - dmg - lst);
 
         setToolsList(prev => prev.map(t => {
@@ -1298,8 +1306,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const handleTriggerPrintSuratJalan = (e) => {
         e.preventDefault();
         const orderList = initialDeliveries.length > 0 ? initialDeliveries : initialOrders;
-        const found = orderList.find(d => 
-            (d.order?.spo_number === selectedDispatchOrderForPrint) || 
+        const found = orderList.find(d =>
+            (d.order?.spo_number === selectedDispatchOrderForPrint) ||
             (d.spo_number === selectedDispatchOrderForPrint)
         ) || orderList[0];
 
@@ -1316,8 +1324,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const handleTriggerPrintBarangKeluar = (e) => {
         e.preventDefault();
         const orderList = initialDeliveries.length > 0 ? initialDeliveries : initialOrders;
-        const found = orderList.find(d => 
-            (d.order?.spo_number === selectedDispatchOrderForPrint) || 
+        const found = orderList.find(d =>
+            (d.order?.spo_number === selectedDispatchOrderForPrint) ||
             (d.spo_number === selectedDispatchOrderForPrint)
         ) || orderList[0];
 
@@ -1543,9 +1551,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
     const filteredSheetGlasses = sheetGlasses.filter(g => {
         const matchesSearch = g.item_code.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
-                              g.name.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
-                              g.category.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
-                              g.size.toLowerCase().includes(stockSearchTerm.toLowerCase());
+            g.name.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
+            g.category.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
+            g.size.toLowerCase().includes(stockSearchTerm.toLowerCase());
 
         if (activeStockCard === 'aman') return g.status === 'Aman' && matchesSearch;
         if (activeStockCard === 'menipis') return g.status === 'Menipis' && matchesSearch;
@@ -2015,8 +2023,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const calcTotalProcessFees = calcItems.reduce((sum, it) => sum + ((it.feeGM || 0) + (it.feeHT || 0) + (it.feeBV || 0) + (it.feeBor || 0) + (it.feeEtsa || 0)), 0);
     const calcTotalAccessoryFees = (orderForm.accessories || []).reduce((sum, acc) => sum + (typeof acc === 'object' ? (acc.price || 0) * (acc.qty || 1) : 0), 0);
     const calcSubtotal = calcTotalGlassBasePrice + calcTotalProcessFees + calcTotalAccessoryFees;
-    const calcPriorityFee = orderForm.priority_status === 'Prioritas' 
-        ? (parseFloat(orderForm.priority_fee) || 0) 
+    const calcPriorityFee = orderForm.priority_status === 'Prioritas'
+        ? (parseFloat(orderForm.priority_fee) || 0)
         : 0;
     const calcCustomFee = parseFloat(orderForm.custom_fee) || 0;
     const calcTotalPrice = calcSubtotal + calcPriorityFee + calcCustomFee;
@@ -2096,7 +2104,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 thickness_mm: it.thickness_mm || 5,
                 qty: it.qty || 1,
                 processes: Array.isArray(it.processes) ? it.processes : ['HT']
-              }))
+            }))
             : [{
                 id: 1,
                 glass_type: order.glass_type || 'Kaca Cermin 5 mm polos',
@@ -2105,7 +2113,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 thickness_mm: order.thickness_mm || 5,
                 qty: 1,
                 processes: Array.isArray(order.processes) ? order.processes : ['HT']
-              }];
+            }];
 
         const isLunas = order.payment_status === 'Lunas';
         let initialDpPercent = 50;
@@ -2240,7 +2248,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     {divOrder.map((d, idx) => {
                         const isRequired = procs.includes(d.key);
                         const statusText = divProgress[d.key];
-                        
+
                         let badgeStyle = "bg-slate-900/60 text-slate-500 border-slate-800 opacity-50";
                         let statusIcon = "⚪";
 
@@ -2257,9 +2265,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         }
 
                         return (
-                            <span 
-                                key={d.key} 
-                                className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${badgeStyle}`} 
+                            <span
+                                key={d.key}
+                                className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${badgeStyle}`}
                                 title={`${d.label}: ${statusText || (currentDiv === d.divKey ? 'Aktif Pengerjaan' : 'Antrean')}`}
                             >
                                 <span>{statusIcon}</span>
@@ -2359,34 +2367,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             return false;
         }
         const matchesSearch = o.spo_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              o.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
+            o.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
         if (activeOrderCard === 'draft') return o.status === 'draft' && matchesSearch;
         if (activeOrderCard === 'pengerjaan') return o.status === 'pengerjaan' && matchesSearch;
         if (activeOrderCard === 'pengiriman') return o.status === 'pengiriman' && matchesSearch;
         if (activeOrderCard === 'pembayaran') return o.payment_status !== 'Lunas' && matchesSearch;
         if (activeOrderCard === 'selesai') return o.status === 'selesai' && matchesSearch;
         return matchesSearch;
-    }).sort((a, b) => b.id - a.id);
-
-    const glassCategoriesData = [
-        { id: 'cermin', label: 'Kaca Cermin Grey & Polos 5mm', shortLabel: 'Cermin 5mm', percent: 38, volume: '22 SPO', rp: 'Rp 48.830.000', color: '#06b6d4', textClass: 'text-cyan-400' },
-        { id: 'tempered', label: 'Kaca Tempered 8mm - 12mm', shortLabel: 'Tempered', percent: 32, volume: '19 SPO', rp: 'Rp 41.120.000', color: '#10b981', textClass: 'text-emerald-400' },
-        { id: 'tinted', label: 'Kaca Tinted & Dark Grey', shortLabel: 'Tinted / Dark', percent: 18, volume: '10 SPO', rp: 'Rp 23.130.000', color: '#f59e0b', textClass: 'text-amber-400' },
-        { id: 'laminated', label: 'Kaca Laminated & Etsa Blur', shortLabel: 'Laminated / Etsa', percent: 12, volume: '7 SPO', rp: 'Rp 15.420.000', color: '#a855f7', textClass: 'text-purple-400' },
-    ];
-
-    const donutCircumference = 2 * Math.PI * 65; // ~408.407
-    let donutAccumOffset = 0;
-    const donutSlices = glassCategoriesData.map(cat => {
-        const sliceLength = (cat.percent / 100) * donutCircumference;
-        const strokeDasharray = `${sliceLength} ${donutCircumference}`;
-        const strokeDashoffset = -donutAccumOffset;
-        donutAccumOffset += sliceLength;
-        return {
-            ...cat,
-            strokeDasharray,
-            strokeDashoffset
-        };
     });
 
     return (
@@ -2447,7 +2434,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 📊 <span>Dashboard Utama</span>
                             </button>
                         )}
-                        
+
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                             <button onClick={() => { setActiveTab('orders'); if (userRole === 'driver') setActiveOrderCard('pengiriman'); else if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 📝 <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
@@ -2540,7 +2527,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                 {/* CONTENT MAIN */}
                 <main className="flex-1 p-8 overflow-y-auto">
-                    
+
                     {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
                     {activeTab === 'dashboard' && userRole !== 'admin_gudang' && (
                         <div className="space-y-6">
@@ -2555,8 +2542,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     </div>
                                     <h2 className="text-2xl font-black text-slate-100 tracking-tight">Selamat Datang, {userName}!</h2>
                                     <p className="text-slate-400 text-xs mt-0.5">
-                                        {canViewPricing 
-                                            ? 'Monitoring Penjualan Kaca, Omset Usaha, dan Performa Divisi Pengerjaan SYP GLASS.' 
+                                        {canViewPricing
+                                            ? 'Monitoring Penjualan Kaca, Omset Usaha, dan Performa Divisi Pengerjaan SYP GLASS.'
                                             : 'Monitoring Pengerjaan Kaca, Alur Disposisi Antar Divisi, dan Kinerja Operasional SYP GLASS.'}
                                     </p>
                                 </div>
@@ -2634,7 +2621,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             {/* MAIN CHARTS SECTION: GRAFIK TREN PENJUALAN & PERFORMANCE PRODUK */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                
+
                                 {/* GRAFIK 1: TREN PENJUALAN BULANAN (BAR & TREND VISUAL) */}
                                 <div className="lg:col-span-2 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
                                     <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800 pb-4">
@@ -2838,17 +2825,16 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             key={cat.id}
                                                             onMouseEnter={() => setHoveredDonutSegment(cat)}
                                                             onMouseLeave={() => setHoveredDonutSegment(null)}
-                                                            className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer border ${
-                                                                isHovered 
-                                                                    ? 'bg-slate-800/90 border-cyan-500/50 shadow-md scale-[1.01]' 
-                                                                    : 'bg-slate-950/70 border-slate-800/70 hover:bg-slate-900/80 hover:border-slate-700'
-                                                            }`}
+                                                            className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer border ${isHovered
+                                                                ? 'bg-slate-800/90 border-cyan-500/50 shadow-md scale-[1.01]'
+                                                                : 'bg-slate-950/70 border-slate-800/70 hover:bg-slate-900/80 hover:border-slate-700'
+                                                                }`}
                                                         >
                                                             <div className="flex items-center gap-2.5 min-w-0">
-                                                                <span 
+                                                                <span
                                                                     className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-transform duration-200"
-                                                                    style={{ 
-                                                                        backgroundColor: cat.color, 
+                                                                    style={{
+                                                                        backgroundColor: cat.color,
                                                                         boxShadow: isHovered ? `0 0 10px ${cat.color}` : 'none',
                                                                         transform: isHovered ? 'scale(1.3)' : 'scale(1)'
                                                                     }}
@@ -2922,7 +2908,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     { key: 'pembayaran', label: 'Pembayaran / COD', count: initialOrders.filter(o => o.payment_status !== 'Lunas' && (userRole === 'admin_toko' || userRole === 'owner' ? true : o.status !== 'draft')).length, icon: '💵' },
                                     { key: 'selesai', label: 'Selesai', count: initialOrders.filter(o => o.status === 'selesai').length, icon: '✅' },
                                 ].map(card => (
-                                    <div 
+                                    <div
                                         key={card.key}
                                         onClick={() => setActiveOrderCard(card.key)}
                                         className={`cursor-pointer border rounded-xl p-4 text-center transition ${activeOrderCard === card.key ? 'bg-cyan-500/15 border-cyan-400 text-slate-100 shadow-lg shadow-cyan-500/10' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/40'}`}
@@ -2936,8 +2922,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {/* CREATE ORDER BUTTON DIRECTLY BELOW DRAFT CARD */}
                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                 <div className="flex justify-start">
-                                    <button 
-                                        onClick={handleOpenNewOrderModal} 
+                                    <button
+                                        onClick={handleOpenNewOrderModal}
                                         className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50"
                                     >
                                         <span className="text-base">✨</span> + Orderan Baru
@@ -2962,9 +2948,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     </div>
 
                                     <div className="flex items-center gap-3">
-                                        <input 
-                                            type="text" 
-                                            placeholder="🔍 Cari SPO / Customer..." 
+                                        <input
+                                            type="text"
+                                            placeholder="🔍 Cari SPO / Customer..."
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
                                             className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-400 focus:outline-none"
@@ -2996,274 +2982,274 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-800/40 text-slate-400 uppercase text-xs">
-                                        <tr>
-                                            <th className="p-3">No SPO</th>
-                                            <th className="p-3">Customer</th>
-                                            <th className="p-3">Spesifikasi Kaca</th>
-                                            <th className="p-3">Posisi Divisi & Tracking Progres</th>
-                                            <th className="p-3">Total Tagihan</th>
-                                            <th className="p-3">Status Bayar</th>
-                                            <th className="p-3">Aksi Alur</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-800">
-                                        {filteredOrders.map(o => (
-                                            <tr key={o.id} className="hover:bg-slate-800/30">
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <div className="font-bold text-cyan-400 font-mono text-sm">{o.spo_number}</div>
-                                                        {o.is_revised && (
-                                                            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1 font-mono shadow-sm" title="Orderan ini memiliki riwayat revisi">
-                                                                🔔 Telah Direvisi ({o.revision_count || 1}x)
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="mt-1.5 space-y-1 text-[11px] font-mono">
-                                                        <div className="text-slate-300 flex items-center gap-1" title="1. Tanggal Pembuatan / Input Draf (Admin Toko)">
-                                                            <span className="text-cyan-400">📅 Input Toko:</span>
-                                                            <span>{formatIndonesianDate(o.order_date)}</span>
+                                        <thead className="bg-slate-800/40 text-slate-400 uppercase text-xs">
+                                            <tr>
+                                                <th className="p-3">No SPO</th>
+                                                <th className="p-3">Customer</th>
+                                                <th className="p-3">Spesifikasi Kaca</th>
+                                                <th className="p-3">Posisi Divisi & Tracking Progres</th>
+                                                <th className="p-3">Total Tagihan</th>
+                                                <th className="p-3">Status Bayar</th>
+                                                <th className="p-3">Aksi Alur</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800">
+                                            {filteredOrders.map(o => (
+                                                <tr key={o.id} className="hover:bg-slate-800/30">
+                                                    <td className="p-3">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <div className="font-bold text-cyan-400 font-mono text-sm">{o.spo_number}</div>
+                                                            {o.is_revised && (
+                                                                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1 font-mono shadow-sm" title="Orderan ini memiliki riwayat revisi">
+                                                                    🔔 Telah Direvisi ({o.revision_count || 1}x)
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        {o.gudang_released_at && (
-                                                            <div className="text-blue-300 flex items-center gap-1 text-[10px]" title="2. Tanggal Diturunkan / Disposisi Admin Gudang ke Divisi">
-                                                                <span>📦 Disposisi Gudang:</span>
-                                                                <span>{formatIndonesianDateTime(o.gudang_released_at)}</span>
+                                                        <div className="mt-1.5 space-y-1 text-[11px] font-mono">
+                                                            <div className="text-slate-300 flex items-center gap-1" title="1. Tanggal Pembuatan / Input Draf (Admin Toko)">
+                                                                <span className="text-cyan-400">📅 Input Toko:</span>
+                                                                <span>{formatIndonesianDate(o.order_date)}</span>
                                                             </div>
-                                                        )}
-                                                        {o.execution_completed_at && (
-                                                            <div className="text-emerald-300 flex items-center gap-1 text-[10px]" title="3. Tanggal Selesai Eksekusi Kaca & Lolos QC Pabrik">
-                                                                <span>⚙️ Selesai Pabrik:</span>
-                                                                <span>{formatIndonesianDateTime(o.execution_completed_at)}</span>
-                                                            </div>
-                                                        )}
-                                                        {o.shipped_at && (
-                                                            <div className="text-cyan-300 flex items-center gap-1 text-[10px]" title="4. Tanggal Mulai Pengiriman Armada / Surat Jalan">
-                                                                <span>🚚 Mulai Kirim:</span>
-                                                                <span>{formatIndonesianDateTime(o.shipped_at)}</span>
-                                                            </div>
-                                                        )}
-                                                        {o.delivered_at && (
-                                                            <div className="text-emerald-400 flex items-center gap-1 text-[10px] font-bold" title="5. Tanggal Selesai Terkirim & Diterima Konsumen">
-                                                                <span>✅ Selesai Terkirim:</span>
-                                                                <span>{formatIndonesianDateTime(o.delivered_at)}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-3">
-                                                    <div className="font-bold">{o.customer_name}</div>
-                                                    <div className="text-xs text-slate-400">{o.customer_phone}</div>
-                                                </td>
-                                                <td className="p-3 space-y-1 max-w-xs">
-                                                    {Array.isArray(o.items) && o.items.length > 0 ? (
-                                                        <div className="space-y-1">
-                                                            {o.items.map((it, idx) => (
-                                                                <div key={idx} className="bg-slate-950/60 p-2 rounded border border-slate-800 text-xs space-y-1">
-                                                                    
-                                                                    <div className="font-bold text-cyan-300">
-                                                                        #{idx + 1}. {it.glass_type}
-                                                                    </div>
-                                                                    <div className="text-xs text-slate-100 font-mono font-bold">
-                                                                        {it.length_cm} x {it.width_cm} = {it.qty || 1}
-                                                                    </div>
-                                                                    <div className="text-[11px] text-slate-400 font-mono flex items-center justify-between gap-1">
-                                                                        <span>{it.thickness_mm} mm</span>
-                                                                        {Array.isArray(it.processes) && it.processes.length > 0 && (
-                                                                            <div className="flex flex-wrap gap-1">
-                                                                                {it.processes.map(p => (
-                                                                                    <span key={p} className="text-[9px] bg-cyan-500/20 text-cyan-300 font-bold px-1.5 py-0.5 rounded border border-cyan-500/30">
-                                                                                        {p}
-                                                                                    </span>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
+                                                            {o.gudang_released_at && (
+                                                                <div className="text-blue-300 flex items-center gap-1 text-[10px]" title="2. Tanggal Diturunkan / Disposisi Admin Gudang ke Divisi">
+                                                                    <span>📦 Disposisi Gudang:</span>
+                                                                    <span>{formatIndonesianDateTime(o.gudang_released_at)}</span>
                                                                 </div>
-                                                            ))}
+                                                            )}
+                                                            {o.execution_completed_at && (
+                                                                <div className="text-emerald-300 flex items-center gap-1 text-[10px]" title="3. Tanggal Selesai Eksekusi Kaca & Lolos QC Pabrik">
+                                                                    <span>⚙️ Selesai Pabrik:</span>
+                                                                    <span>{formatIndonesianDateTime(o.execution_completed_at)}</span>
+                                                                </div>
+                                                            )}
+                                                            {o.shipped_at && (
+                                                                <div className="text-cyan-300 flex items-center gap-1 text-[10px]" title="4. Tanggal Mulai Pengiriman Armada / Surat Jalan">
+                                                                    <span>🚚 Mulai Kirim:</span>
+                                                                    <span>{formatIndonesianDateTime(o.shipped_at)}</span>
+                                                                </div>
+                                                            )}
+                                                            {o.delivered_at && (
+                                                                <div className="text-emerald-400 flex items-center gap-1 text-[10px] font-bold" title="5. Tanggal Selesai Terkirim & Diterima Konsumen">
+                                                                    <span>✅ Selesai Terkirim:</span>
+                                                                    <span>{formatIndonesianDateTime(o.delivered_at)}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <>
-                                                            <div className="font-semibold text-slate-200">{o.glass_type}</div>
-                                                            <div className="text-xs text-slate-400 font-mono">
-                                                                {o.length_cm} x {o.width_cm} cm | {o.thickness_mm} mm
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-1 pt-0.5">
-                                                                {Array.isArray(o.processes) && o.processes.map(p => (
-                                                                    <span key={p} className="text-[10px] bg-cyan-500/20 text-cyan-300 font-bold px-1.5 py-0.5 rounded border border-cyan-500/30">
-                                                                        {p}
-                                                                    </span>
+                                                    </td>
+                                                    <td className="p-3">
+                                                        <div className="font-bold">{o.customer_name}</div>
+                                                        <div className="text-xs text-slate-400">{o.customer_phone}</div>
+                                                    </td>
+                                                    <td className="p-3 space-y-1 max-w-xs">
+                                                        {Array.isArray(o.items) && o.items.length > 0 ? (
+                                                            <div className="space-y-1">
+                                                                {o.items.map((it, idx) => (
+                                                                    <div key={idx} className="bg-slate-950/60 p-2 rounded border border-slate-800 text-xs space-y-1">
+
+                                                                        <div className="font-bold text-cyan-300">
+                                                                            #{idx + 1}. {it.glass_type}
+                                                                        </div>
+                                                                        <div className="text-xs text-slate-100 font-mono font-bold">
+                                                                            {it.length_cm} x {it.width_cm} = {it.qty || 1}
+                                                                        </div>
+                                                                        <div className="text-[11px] text-slate-400 font-mono flex items-center justify-between gap-1">
+                                                                            <span>{it.thickness_mm} mm</span>
+                                                                            {Array.isArray(it.processes) && it.processes.length > 0 && (
+                                                                                <div className="flex flex-wrap gap-1">
+                                                                                    {it.processes.map(p => (
+                                                                                        <span key={p} className="text-[9px] bg-cyan-500/20 text-cyan-300 font-bold px-1.5 py-0.5 rounded border border-cyan-500/30">
+                                                                                            {p}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
                                                                 ))}
                                                             </div>
-                                                        </>
-                                                    )}
-
-                                                    {o.sketch_photo_path && (
-                                                        <div className="mt-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
-                                                                className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-sm cursor-pointer"
-                                                                title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
-                                                            >
-                                                                <div className="flex items-center gap-1.5 overflow-hidden">
-                                                                    <img 
-                                                                        src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
-                                                                        alt="Sketsa Pola"
-                                                                        className="w-8 h-8 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
-                                                                    />
-                                                                    <span className="font-bold text-[11px] truncate">📐 Sketsa Sambungan Kaca</span>
-                                                                </div>
-                                                                <span className="text-[10px] bg-cyan-400/20 text-cyan-200 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    {Array.isArray(o.accessories) && o.accessories.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 pt-1">
-                                                            {o.accessories.map((a, accIdx) => {
-                                                                const isObj = typeof a === 'object' && a !== null;
-                                                                const accName = isObj ? (a.name || 'Aksesoris') : a;
-                                                                const accQty = isObj && a.qty ? ` (${a.qty}x)` : '';
-                                                                return (
-                                                                    <span key={accIdx} className="text-[10px] bg-blue-500/20 text-blue-300 font-semibold px-1.5 py-0.5 rounded border border-blue-500/30">
-                                                                        +{accName}{accQty}
-                                                                    </span>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-
-                                                    {o.description && (
-                                                        <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-xs">
-                                                            <span className="font-bold flex items-center gap-1 text-amber-400 text-[11px] mb-0.5">
-                                                                📝 Catatan / Revisi:
-                                                            </span>
-                                                            <div className="text-slate-200 font-medium whitespace-pre-wrap text-[11px] leading-relaxed">
-                                                                {o.description}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="p-3">
-                                                    {renderProgressTracker(o)}
-                                                </td>
-                                                <td className="p-3 font-bold">
-                                                    {canViewPricing ? (
-                                                        `Rp ${Number(o.total_price).toLocaleString()}`
-                                                    ) : (
-                                                        <span className="text-slate-500 text-xs italic flex items-center gap-1 font-normal">🔒 Rahasia</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-3">
-                                                    {canViewPricing ? (
-                                                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${o.payment_status === 'Lunas' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : o.payment_status === 'DP (50%)' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-700 text-slate-300'}`}>
-                                                            {o.payment_status}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-500 text-xs italic font-normal">🔒 Terverifikasi</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-3 flex flex-wrap items-center gap-2">
-                                                    {o.status === 'draft' && (
-                                                        (userRole === 'admin_toko' || userRole === 'owner') ? (
+                                                        ) : (
                                                             <>
-                                                                <button 
-                                                                    onClick={() => handleOpenEditModal(o)}
-                                                                    className="bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-blue-500/20 cursor-pointer"
-                                                                >
-                                                                    ✏️ Edit Draf
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => handleOpenPromoteModal(o)}
-                                                                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer"
-                                                                >
-                                                                    ✅ Setuju & DP (50%)
-                                                                </button>
+                                                                <div className="font-semibold text-slate-200">{o.glass_type}</div>
+                                                                <div className="text-xs text-slate-400 font-mono">
+                                                                    {o.length_cm} x {o.width_cm} cm | {o.thickness_mm} mm
+                                                                </div>
+                                                                <div className="flex flex-wrap gap-1 pt-0.5">
+                                                                    {Array.isArray(o.processes) && o.processes.map(p => (
+                                                                        <span key={p} className="text-[10px] bg-cyan-500/20 text-cyan-300 font-bold px-1.5 py-0.5 rounded border border-cyan-500/30">
+                                                                            {p}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
                                                             </>
+                                                        )}
+
+                                                        {o.sketch_photo_path && (
+                                                            <div className="mt-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
+                                                                    className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-sm cursor-pointer"
+                                                                    title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
+                                                                >
+                                                                    <div className="flex items-center gap-1.5 overflow-hidden">
+                                                                        <img
+                                                                            src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
+                                                                            alt="Sketsa Pola"
+                                                                            className="w-8 h-8 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
+                                                                        />
+                                                                        <span className="font-bold text-[11px] truncate">📐 Sketsa Sambungan Kaca</span>
+                                                                    </div>
+                                                                    <span className="text-[10px] bg-cyan-400/20 text-cyan-200 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">🔍 Lihat</span>
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {Array.isArray(o.accessories) && o.accessories.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 pt-1">
+                                                                {o.accessories.map((a, accIdx) => {
+                                                                    const isObj = typeof a === 'object' && a !== null;
+                                                                    const accName = isObj ? (a.name || 'Aksesoris') : a;
+                                                                    const accQty = isObj && a.qty ? ` (${a.qty}x)` : '';
+                                                                    return (
+                                                                        <span key={accIdx} className="text-[10px] bg-blue-500/20 text-blue-300 font-semibold px-1.5 py-0.5 rounded border border-blue-500/30">
+                                                                            +{accName}{accQty}
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+
+                                                        {o.description && (
+                                                            <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-xs">
+                                                                <span className="font-bold flex items-center gap-1 text-amber-400 text-[11px] mb-0.5">
+                                                                    📝 Catatan / Revisi:
+                                                                </span>
+                                                                <div className="text-slate-200 font-medium whitespace-pre-wrap text-[11px] leading-relaxed">
+                                                                    {o.description}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3">
+                                                        {renderProgressTracker(o)}
+                                                    </td>
+                                                    <td className="p-3 font-bold">
+                                                        {canViewPricing ? (
+                                                            `Rp ${Number(o.total_price).toLocaleString()}`
                                                         ) : (
-                                                            <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20 text-xs font-semibold flex items-center gap-1">
-                                                                <i className="bi bi-hourglass-split"></i> Draf Toko (Belum DP)
+                                                            <span className="text-slate-500 text-xs italic flex items-center gap-1 font-normal">🔒 Rahasia</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3">
+                                                        {canViewPricing ? (
+                                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${o.payment_status === 'Lunas' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : o.payment_status === 'DP (50%)' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-700 text-slate-300'}`}>
+                                                                {o.payment_status}
                                                             </span>
-                                                        )
-                                                    )}
-
-                                                    {o.status === 'pengerjaan' && (userRole === 'admin_toko' || userRole === 'owner') && (
-                                                        <button 
-                                                            onClick={() => handleOpenEditModal(o)}
-                                                            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-amber-500/20 cursor-pointer"
-                                                            title="Klik untuk merevisi deskripsi, foto sketsa project, atau dimensi/spesifikasi item kaca"
-                                                        >
-                                                            🔄 Revisi / Edit Order
-                                                        </button>
-                                                    )}
-
-                                                    {o.status === 'pengerjaan' && o.current_division === 'admin_gudang' && (userRole === 'admin_gudang' || userRole === 'owner') && (
-                                                        o.revision_status === 'editing' ? (
-                                                            <button 
-                                                                disabled
-                                                                className="bg-slate-800 text-slate-400 font-extrabold px-3 py-1.5 rounded text-xs cursor-not-allowed opacity-75 flex items-center gap-1.5 shadow-inner"
-                                                                title="Tombol terblokir sementara karena Admin Toko sedang mengedit/merevisi orderan ini"
-                                                            >
-                                                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-                                                                <span>🔒 Terkunci (Sedang Direvisi Toko...)</span>
-                                                            </button>
                                                         ) : (
-                                                            <button 
-                                                                onClick={() => handleOpenDispatchModal(o)}
-                                                                className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-500/20"
-                                                            >
-                                                                <span>📤 Kirim Ke Divisi</span>
-                                                                {o.revision_status === 'pending_gudang' && (
-                                                                    <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded font-mono font-extrabold animate-pulse">
-                                                                        (Revisi Baru)
-                                                                    </span>
-                                                                )}
-                                                            </button>
-                                                        )
-                                                    )}
+                                                            <span className="text-slate-500 text-xs italic font-normal">🔒 Terverifikasi</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3 flex flex-wrap items-center gap-2">
+                                                        {o.status === 'draft' && (
+                                                            (userRole === 'admin_toko' || userRole === 'owner') ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleOpenEditModal(o)}
+                                                                        className="bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-blue-500/20 cursor-pointer"
+                                                                    >
+                                                                        ✏️ Edit Draf
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleOpenPromoteModal(o)}
+                                                                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer"
+                                                                    >
+                                                                        ✅ Setuju & DP (50%)
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20 text-xs font-semibold flex items-center gap-1">
+                                                                    <i className="bi bi-hourglass-split"></i> Draf Toko (Belum DP)
+                                                                </span>
+                                                            )
+                                                        )}
 
-                                                    {o.status === 'pengiriman' && (
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <button 
-                                                                onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }} 
-                                                                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
-                                                                title="Cetak 4 Warna Surat Jalan Pengiriman (Putih, Merah, Kuning, Hijau)"
+                                                        {o.status === 'pengerjaan' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                                                            <button
+                                                                onClick={() => handleOpenEditModal(o)}
+                                                                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold px-3 py-1.5 rounded text-xs transition flex items-center gap-1 shadow-md shadow-amber-500/20 cursor-pointer"
+                                                                title="Klik untuk merevisi deskripsi, foto sketsa project, atau dimensi/spesifikasi item kaca"
                                                             >
-                                                                🖨️ Surat Jalan (4 Warna)
+                                                                🔄 Revisi / Edit Order
                                                             </button>
-                                                            <button 
-                                                                onClick={() => handleCompleteDelivery(o.id, true)} 
-                                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black shadow-md shadow-emerald-500/20 transition flex items-center gap-1 cursor-pointer transform hover:scale-105"
-                                                                title="Klik jika barang telah sampai dan diterima konsumen (Status otomatis berubah jadi Selesai)"
-                                                            >
-                                                                ✅ Konfirmasi Selesai Terkirim
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                        )}
 
-                                                    {o.status === 'selesai' && (
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1">
-                                                                <span>✅</span> Selesai Terkirim
-                                                            </span>
-                                                            <button 
-                                                                onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }} 
-                                                                className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-1"
-                                                                title="Cetak Ulang Arsip Surat Jalan"
-                                                            >
-                                                                🖨️ Surat Jalan (Arsip)
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                        {o.status === 'pengerjaan' && o.current_division === 'admin_gudang' && (userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                            o.revision_status === 'editing' ? (
+                                                                <button
+                                                                    disabled
+                                                                    className="bg-slate-800 text-slate-400 font-extrabold px-3 py-1.5 rounded text-xs cursor-not-allowed opacity-75 flex items-center gap-1.5 shadow-inner"
+                                                                    title="Tombol terblokir sementara karena Admin Toko sedang mengedit/merevisi orderan ini"
+                                                                >
+                                                                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                                                                    <span>🔒 Terkunci (Sedang Direvisi Toko...)</span>
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleOpenDispatchModal(o)}
+                                                                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-500/20"
+                                                                >
+                                                                    <span>📤 Kirim Ke Divisi</span>
+                                                                    {o.revision_status === 'pending_gudang' && (
+                                                                        <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded font-mono font-extrabold animate-pulse">
+                                                                            (Revisi Baru)
+                                                                        </span>
+                                                                    )}
+                                                                </button>
+                                                            )
+                                                        )}
+
+                                                        {o.status === 'pengiriman' && (
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <button
+                                                                    onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }}
+                                                                    className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
+                                                                    title="Cetak 4 Warna Surat Jalan Pengiriman (Putih, Merah, Kuning, Hijau)"
+                                                                >
+                                                                    🖨️ Surat Jalan (4 Warna)
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleCompleteDelivery(o.id, true)}
+                                                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black shadow-md shadow-emerald-500/20 transition flex items-center gap-1 cursor-pointer transform hover:scale-105"
+                                                                    title="Klik jika barang telah sampai dan diterima konsumen (Status otomatis berubah jadi Selesai)"
+                                                                >
+                                                                    ✅ Konfirmasi Selesai Terkirim
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {o.status === 'selesai' && (
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1">
+                                                                    <span>✅</span> Selesai Terkirim
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }}
+                                                                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-1"
+                                                                    title="Cetak Ulang Arsip Surat Jalan"
+                                                                >
+                                                                    🖨️ Surat Jalan (Arsip)
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
                     {/* TAB 3: WORKSTATION DIVISI & DISPOSISI */}
                     {activeTab === 'production' && (
@@ -3449,7 +3435,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                     <div className="flex justify-between items-center pt-1">
                                                         <span className="text-[11px] text-slate-400 font-mono">📅 Deadline: {o.deadline_date || '-'}</span>
                                                         {o.revision_status === 'editing' ? (
-                                                            <button 
+                                                            <button
                                                                 disabled
                                                                 className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 bg-slate-800 border border-slate-700 cursor-not-allowed opacity-75 flex items-center gap-1.5"
                                                                 title="SPO sedang di-edit oleh Admin Toko. Tombol akan otomatis aktif setelah revisi disimpan."
@@ -3458,8 +3444,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                 <span>🔒 Terkunci (Sedang Direvisi Admin Toko...)</span>
                                                             </button>
                                                         ) : (
-                                                            <button 
-                                                                onClick={() => handleOpenDispatchModal(o)} 
+                                                            <button
+                                                                onClick={() => handleOpenDispatchModal(o)}
                                                                 className="group relative inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40 hover:scale-[1.03] active:scale-95 transition-all duration-200 border border-cyan-300/40 overflow-hidden cursor-pointer"
                                                             >
                                                                 <span>Disposisi Divisi</span>
@@ -3753,22 +3739,10 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             return checkOrderDivisi(o, productionSubTab);
                                         });
 
+                                        // CRITICAL REQUIREMENT FROM SKETCH: *urutan jadi prioritas + paling atas
                                         const sortedWorkstationOrders = [...rawFiltered].sort((a, b) => {
-                                            if (isDivisionWorker) {
-                                                // 1. REVISION INTERRUPTION: pending_division has highest urgency for division workers (HT, BV, GM, Etsa)
-                                                const aRev = a.revision_status === 'pending_division';
-                                                const bRev = b.revision_status === 'pending_division';
-                                                if (aRev && !bRev) return -1;
-                                                if (!aRev && bRev) return 1;
-                                            }
-
-                                            // 2. PRIORITY: Prioritas
-                                            const aPri = a.priority_status === 'Prioritas';
-                                            const bPri = b.priority_status === 'Prioritas';
-                                            if (aPri && !bPri) return -1;
-                                            if (!aPri && bPri) return 1;
-
-                                            // 3. Regular Queue: Newest ID first
+                                            if (a.priority_status === 'Prioritas' && b.priority_status !== 'Prioritas') return -1;
+                                            if (a.priority_status !== 'Prioritas' && b.priority_status === 'Prioritas') return 1;
                                             return b.id - a.id;
                                         });
 
@@ -3905,7 +3879,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                                     title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
                                                                                 >
                                                                                     <div className="flex items-center gap-1.5 overflow-hidden">
-                                                                                        <img 
+                                                                                        <img
                                                                                             src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
                                                                                             alt="Sketsa Pola"
                                                                                             className="w-7 h-7 rounded object-cover border border-cyan-400/50 bg-slate-900 shrink-0"
@@ -3962,15 +3936,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                                     const isNA = status === 'N/A';
 
                                                                                     const ts = (o.division_timestamps && o.division_timestamps[proc]) ? o.division_timestamps[proc] : {};
-                                                                                    const timeStr = isDone && ts.completed_at 
+                                                                                    const timeStr = isDone && ts.completed_at
                                                                                         ? formatIndonesianDate(ts.completed_at)
-                                                                                        : (isWorking || ts.started_at) 
-                                                                                        ? formatIndonesianDate(ts.started_at) 
-                                                                                        : null;
+                                                                                        : (isWorking || ts.started_at)
+                                                                                            ? formatIndonesianDate(ts.started_at)
+                                                                                            : null;
 
                                                                                     return (
                                                                                         <div key={proc} className="flex flex-col">
-                                                                                            <span 
+                                                                                            <span
                                                                                                 className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono border flex items-center gap-1 ${isDone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : isWorking ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 animate-pulse' : isNA ? 'bg-slate-950 text-slate-600 border-slate-900' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
                                                                                             >
                                                                                                 <span>{proc}: {status}</span>
@@ -3989,9 +3963,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                                                                     <td className="p-3 text-right">
                                                                         {(() => {
-                                                                            const isHistoryRow = productionSubTab.endsWith('_history') || 
-                                                                                                productionSubTab === 'QC_Ready' || 
-                                                                                                (isDivisionWorker && o.current_division !== userRole);
+                                                                            const isHistoryRow = productionSubTab.endsWith('_history') ||
+                                                                                productionSubTab === 'QC_Ready' ||
+                                                                                (isDivisionWorker && o.current_division !== userRole);
 
                                                                             if (!isDivisionWorker || isHistoryRow) {
                                                                                 return (
@@ -4104,7 +4078,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             { key: 'menipis', label: 'Menipis', count: sheetGlasses.filter(g => g.status === 'Menipis').length, icon: '⚠️' },
                                             { key: 'pengajuan', label: 'Pengajuan Proses Restock', count: sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length, icon: '⏳' },
                                         ].map(card => (
-                                            <div 
+                                            <div
                                                 key={card.key}
                                                 onClick={() => setActiveStockCard(card.key)}
                                                 className={`relative cursor-pointer border rounded-xl p-4 text-center transition ${activeStockCard === card.key ? 'bg-cyan-500/15 border-cyan-400 text-slate-100 shadow-lg shadow-cyan-500/10' : card.key === 'pengajuan' && card.count > 0 ? 'bg-rose-950/20 border-rose-500/60 text-slate-100 shadow-lg shadow-rose-500/20 animate-pulse' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/40'}`}
@@ -4124,8 +4098,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     {/* BUTTON TAMBAH BARANG BARU DIRECTLY BELOW CARDS */}
                                     {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                                         <div className="flex justify-start">
-                                            <button 
-                                                onClick={() => setShowAddStockModal(true)} 
+                                            <button
+                                                onClick={() => setShowAddStockModal(true)}
                                                 className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50"
                                             >
                                                 <span className="text-base">✨</span> + Tambah Jenis Barang Baru
@@ -4149,11 +4123,10 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowTableSupplierInfo(prev => !prev)}
-                                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${
-                                                        showTableSupplierInfo 
-                                                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' 
-                                                            : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
-                                                    }`}
+                                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${showTableSupplierInfo
+                                                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                                                        : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
+                                                        }`}
                                                     title="Klik untuk menayangkan / menyembunyikan info supplier di tabel"
                                                 >
                                                     {showTableSupplierInfo ? '👁️ Supplier: Tampil' : '🙈 Supplier: Sembunyi'}
@@ -4161,19 +4134,18 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowTablePricingInfo(prev => !prev)}
-                                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${
-                                                        showTablePricingInfo 
-                                                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
-                                                            : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
-                                                    }`}
+                                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${showTablePricingInfo
+                                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                                        : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
+                                                        }`}
                                                     title="Klik untuk menayangkan / menyembunyikan modal harga beli supplier di tabel"
                                                 >
                                                     {showTablePricingInfo ? '👁️ Modal Beli: Tampil' : '🙈 Modal Beli: Sembunyi'}
                                                 </button>
 
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="🔍 Cari Kode / Nama / Jenis Kaca..." 
+                                                <input
+                                                    type="text"
+                                                    placeholder="🔍 Cari Kode / Nama / Jenis Kaca..."
                                                     value={stockSearchTerm}
                                                     onChange={e => setStockSearchTerm(e.target.value)}
                                                     className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-400 focus:outline-none"
@@ -4250,7 +4222,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                         {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                                             <>
                                                                                 {item.status === 'Pengajuan Proses Restock' && (
-                                                                                    <button 
+                                                                                    <button
                                                                                         onClick={() => handleOpenSupplierWaModal(item)}
                                                                                         className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs transition shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 animate-bounce"
                                                                                         title="Setujui pengajuan restock dan langsung chat supplier via WhatsApp"
@@ -4258,8 +4230,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                                         💬 Setujui & Chat WA Supplier
                                                                                     </button>
                                                                                 )}
-                                                                                
-                                                                                <button 
+
+                                                                                <button
                                                                                     onClick={() => handleOpenRestockModal(item)}
                                                                                     className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-md flex items-center gap-1"
                                                                                 >
@@ -4493,15 +4465,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 proof_photo_path: null
                                             }))).map(d => {
                                                 const ord = d.order || d;
-                                                const itemsList = Array.isArray(ord.items) && ord.items.length > 0 
-                                                    ? ord.items 
+                                                const itemsList = Array.isArray(ord.items) && ord.items.length > 0
+                                                    ? ord.items
                                                     : [{
                                                         glass_type: ord.glass_type || 'Kaca Cermin 5 mm polos',
                                                         length_cm: ord.length_cm || 150,
                                                         width_cm: ord.width_cm || 120,
                                                         thickness_mm: ord.thickness_mm || 5,
                                                         qty: ord.qty || 1
-                                                      }];
+                                                    }];
 
                                                 return (
                                                     <tr key={d.id} className="hover:bg-slate-800/30 transition">
@@ -4591,7 +4563,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                     Surat Jalan {d.waybill_color || 'Putih'} {d.waybill_color === 'Merah' ? '(COD)' : '(Lunas)'}
                                                                 </span>
                                                             </div>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
                                                                 className="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 mt-1 shadow"
                                                             >
@@ -4658,8 +4630,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {/* BUTTON TAMBAH SUPPLIER DIRECTLY BELOW CARDS */}
                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                 <div className="flex justify-start">
-                                    <button 
-                                        onClick={() => setShowAddSupplierModal(true)} 
+                                    <button
+                                        onClick={() => setShowAddSupplierModal(true)}
                                         className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50"
                                     >
                                         <span className="text-base">✨</span> + Tambah Supplier Baru
@@ -4679,9 +4651,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         </span>
                                     </div>
 
-                                    <input 
-                                        type="text" 
-                                        placeholder="🔍 Cari Supplier / PIC / Kategori..." 
+                                    <input
+                                        type="text"
+                                        placeholder="🔍 Cari Supplier / PIC / Kategori..."
                                         value={supplierSearchTerm}
                                         onChange={e => setSupplierSearchTerm(e.target.value)}
                                         className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-400 focus:outline-none"
@@ -4702,7 +4674,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800">
-                                            {suppliersList.filter(s => 
+                                            {suppliersList.filter(s =>
                                                 s.name.toLowerCase().includes(supplierSearchTerm.toLowerCase()) ||
                                                 s.category.toLowerCase().includes(supplierSearchTerm.toLowerCase()) ||
                                                 s.pic.toLowerCase().includes(supplierSearchTerm.toLowerCase())
@@ -4735,7 +4707,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                     </td>
                                                     <td className="p-3">
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <a 
+                                                            <a
                                                                 href={`https://wa.me/${sup.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Halo ${sup.name} (${sup.pic}),\n\nKami dari CV Cahya Karunia Jaya (SYP GLASS OPERATIONAL).\nIngin menanyakan katalog dan penawaran bahan kaca terbaru.\nTerima kasih!`)}`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
@@ -4746,14 +4718,14 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             </a>
                                                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                                 <>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleOpenEditSupplierModal(sup)}
                                                                         className="bg-[#2563EB] hover:bg-blue-600 text-white font-extrabold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow-md shadow-blue-500/20"
                                                                         title="Edit Data Supplier"
                                                                     >
                                                                         ✏️ Edit
                                                                     </button>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleDeleteSupplier(sup.id)}
                                                                         className="bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 px-2 py-1.5 rounded-lg text-xs font-bold transition"
                                                                         title="Hapus Supplier"
@@ -4812,8 +4784,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {/* BUTTON TAMBAH AKSESORIS DIRECTLY BELOW CARDS */}
                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                 <div className="flex justify-start">
-                                    <button 
-                                        onClick={() => setShowAddAccModal(true)} 
+                                    <button
+                                        onClick={() => setShowAddAccModal(true)}
                                         className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50"
                                     >
                                         <span className="text-base">✨</span> + Tambah Aksesoris Baru
@@ -4833,9 +4805,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         </span>
                                     </div>
 
-                                    <input 
-                                        type="text" 
-                                        placeholder="🔍 Cari Kode / Nama Aksesoris..." 
+                                    <input
+                                        type="text"
+                                        placeholder="🔍 Cari Kode / Nama Aksesoris..."
                                         value={accSearchTerm}
                                         onChange={e => setAccSearchTerm(e.target.value)}
                                         className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-400 focus:outline-none"
@@ -4855,7 +4827,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800">
-                                            {accessoriesList.filter(a => 
+                                            {accessoriesList.filter(a =>
                                                 a.acc_code.toLowerCase().includes(accSearchTerm.toLowerCase()) ||
                                                 a.name.toLowerCase().includes(accSearchTerm.toLowerCase())
                                             ).map(acc => (
@@ -4909,7 +4881,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                     </td>
                                                     <td className="p-3">
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <button 
+                                                            <button
                                                                 onClick={() => { setSelectedAccItem(acc); setAccRestockQty(10); setShowRestockAccModal(true); }}
                                                                 className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-2.5 py-1.5 rounded-lg text-xs transition shadow-md shadow-cyan-500/20"
                                                                 title="Restock Aksesoris Masuk"
@@ -4927,14 +4899,14 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             )}
                                                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                                 <>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleOpenEditAccModal(acc)}
                                                                         className="bg-[#2563EB] hover:bg-blue-600 text-white font-extrabold px-2.5 py-1.5 rounded-lg text-xs transition shadow-md shadow-blue-500/20"
                                                                         title="Edit Aksesoris"
                                                                     >
                                                                         ✏️ Edit
                                                                     </button>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleDeleteAcc(acc.id)}
                                                                         className="bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 px-2 py-1.5 rounded-lg text-xs font-bold transition"
                                                                         title="Hapus Aksesoris"
@@ -4997,20 +4969,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {/* BUTTON ACTION & SUBTAB TOGGLE */}
                             <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
                                 <div className="flex items-center gap-2">
-                                    <button 
-                                        onClick={() => setSupplySubTab('katalog')} 
+                                    <button
+                                        onClick={() => setSupplySubTab('katalog')}
                                         className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${supplySubTab === 'katalog' ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
                                     >
                                         📦 Katalog Perlengkapan ({warehouseSuppliesList.length})
                                     </button>
-                                    <button 
-                                        onClick={() => setSupplySubTab('usage_log')} 
+                                    <button
+                                        onClick={() => setSupplySubTab('usage_log')}
                                         className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${supplySubTab === 'usage_log' ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
                                     >
                                         📋 Log Pemakaian Gudang ({supplyUsageLogs.length})
                                     </button>
-                                    <button 
-                                        onClick={() => setSupplySubTab('restock_requests')} 
+                                    <button
+                                        onClick={() => setSupplySubTab('restock_requests')}
                                         className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${supplySubTab === 'restock_requests' ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
                                     >
                                         <span>📩 Pengajuan Restok ke Admin Toko</span>
@@ -5025,20 +4997,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 <div className="flex items-center gap-2">
                                     {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                         <>
-                                            <button 
-                                                onClick={() => handleOpenRequestRestockModal(null)} 
+                                            <button
+                                                onClick={() => handleOpenRequestRestockModal(null)}
                                                 className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-md shadow-amber-500/20"
                                             >
                                                 <span>📩</span> + Ajukan Restok ke Admin Toko
                                             </button>
-                                            <button 
-                                                onClick={() => setShowAddSupplyModal(true)} 
+                                            <button
+                                                onClick={() => setShowAddSupplyModal(true)}
                                                 className="bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold px-4 py-2 rounded-lg border border-cyan-500/30 text-xs flex items-center gap-1.5 transition"
                                             >
                                                 <span>✨</span> + Tambah Perlengkapan Baru
                                             </button>
-                                            <button 
-                                                onClick={() => setShowUseSupplyModal(true)} 
+                                            <button
+                                                onClick={() => setShowUseSupplyModal(true)}
                                                 className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-md shadow-cyan-500/20"
                                             >
                                                 <span>📝</span> + Catat Pemakaian Barang
@@ -5053,10 +5025,10 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
                                     <div className="flex flex-wrap justify-between items-center gap-4">
                                         <h3 className="font-extrabold text-slate-200 text-base">📋 Master Inventory Perlengkapan Gudang</h3>
-                                        <input 
-                                            type="text" 
-                                            placeholder="🔍 Cari Kode / Nama Perlengkapan / Kategori..." 
-                                            value={supplySearchTerm} 
+                                        <input
+                                            type="text"
+                                            placeholder="🔍 Cari Kode / Nama Perlengkapan / Kategori..."
+                                            value={supplySearchTerm}
                                             onChange={e => setSupplySearchTerm(e.target.value)}
                                             className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 w-64 focus:border-cyan-400"
                                         />
@@ -5077,9 +5049,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             </thead>
                                             <tbody className="divide-y divide-slate-800">
                                                 {warehouseSuppliesList
-                                                    .filter(s => 
-                                                        s.name.toLowerCase().includes(supplySearchTerm.toLowerCase()) || 
-                                                        s.item_code.toLowerCase().includes(supplySearchTerm.toLowerCase()) || 
+                                                    .filter(s =>
+                                                        s.name.toLowerCase().includes(supplySearchTerm.toLowerCase()) ||
+                                                        s.item_code.toLowerCase().includes(supplySearchTerm.toLowerCase()) ||
                                                         s.category.toLowerCase().includes(supplySearchTerm.toLowerCase())
                                                     )
                                                     .map(s => (
@@ -5098,7 +5070,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             </td>
                                                             <td className="p-3 text-right">
                                                                 {(userRole === 'admin_gudang' || userRole === 'owner') && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleOpenRequestRestockModal(s)}
                                                                         className={`px-3 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 ml-auto ${s.status !== 'Aman' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse' : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30'}`}
                                                                         title="Ajukan Restok Barang ini ke Admin Toko"
@@ -5163,7 +5135,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             <p className="text-xs text-slate-400">Monitoring pengajuan restok barang gudang yang diajukan Admin Gudang ke Admin Toko/Purchasing.</p>
                                         </div>
                                         {(userRole === 'admin_gudang' || userRole === 'owner') && (
-                                            <button 
+                                            <button
                                                 onClick={() => handleOpenRequestRestockModal(null)}
                                                 className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-md shadow-amber-500/20"
                                             >
@@ -5212,7 +5184,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                         <td className="p-3 text-right">
                                                             <div className="flex justify-end gap-1.5">
                                                                 {req.status === 'Menunggu Persetujuan Admin Toko' && (userRole === 'admin_toko' || userRole === 'owner') && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleApproveRestockRequest(req.id)}
                                                                         className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-2.5 py-1 rounded text-[11px] transition shadow"
                                                                         title="Setujui dan pesan barang dari supplier"
@@ -5222,7 +5194,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                 )}
 
                                                                 {req.status === 'Disetujui & Dipesan' && (userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleCompleteRestockRequest(req)}
                                                                         className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] transition shadow"
                                                                         title="Konfirmasi barang dari supplier sudah tiba di gudang (stok otomatis bertambah)"
@@ -5231,7 +5203,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                     </button>
                                                                 )}
 
-                                                                <button 
+                                                                <button
                                                                     onClick={() => {
                                                                         const waMsg = `Halo Admin Toko SYP Glass,%0A%0AFollow-up Pengajuan Restok Perlengkapan Gudang:%0A• Barang: [${req.item_code}] ${req.item_name}%0A• Jumlah: ${req.request_qty} ${req.unit}%0A• Status Saat Ini: ${req.status}`;
                                                                         window.open(`https://api.whatsapp.com/send?text=${waMsg}`, '_blank');
@@ -5285,20 +5257,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="flex flex-wrap justify-between items-center gap-4">
                                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                                     <div className="flex flex-wrap items-center gap-3">
-                                        <button 
-                                            onClick={() => setShowAddToolModal(true)} 
+                                        <button
+                                            onClick={() => setShowAddToolModal(true)}
                                             className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50"
                                         >
                                             <span className="text-base">✨</span> + Tambah Alat Penunjang Baru
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 if (toolsList.length === 0) {
                                                     alert('Belum ada alat di katalog! Silakan tambah alat baru terlebih dahulu.');
                                                     return;
                                                 }
                                                 setShowBorrowToolModal(true);
-                                            }} 
+                                            }}
                                             className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-cyan-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-blue-300/50"
                                         >
                                             <span className="text-base">📋</span> + Catat Peminjaman Alat
@@ -5342,9 +5314,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             </span>
                                         </div>
 
-                                        <input 
-                                            type="text" 
-                                            placeholder="🔍 Cari Kode / Nama Alat / Kategori..." 
+                                        <input
+                                            type="text"
+                                            placeholder="🔍 Cari Kode / Nama Alat / Kategori..."
                                             value={toolSearchTerm}
                                             onChange={e => setToolSearchTerm(e.target.value)}
                                             className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-400 focus:outline-none"
@@ -5366,7 +5338,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-800">
-                                                {toolsList.filter(t => 
+                                                {toolsList.filter(t =>
                                                     t.tool_code.toLowerCase().includes(toolSearchTerm.toLowerCase()) ||
                                                     t.name.toLowerCase().includes(toolSearchTerm.toLowerCase()) ||
                                                     t.category.toLowerCase().includes(toolSearchTerm.toLowerCase())
@@ -5377,7 +5349,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                         </td>
                                                     </tr>
                                                 ) : (
-                                                    toolsList.filter(t => 
+                                                    toolsList.filter(t =>
                                                         t.tool_code.toLowerCase().includes(toolSearchTerm.toLowerCase()) ||
                                                         t.name.toLowerCase().includes(toolSearchTerm.toLowerCase()) ||
                                                         t.category.toLowerCase().includes(toolSearchTerm.toLowerCase())
@@ -5501,30 +5473,30 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                 </span>
                                                             </td>
                                                             <td className="p-3">
-                                                                 {b.status === 'Sedang Dipinjam' ? (
-                                                                     (userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                                                         <button 
-                                                                             onClick={() => handleOpenReturnModal(b)}
-                                                                             className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs transition shadow-md flex items-center gap-1"
-                                                                         >
-                                                                             ✅ Konfirmasi Kembalikan
-                                                                         </button>
-                                                                     )
-                                                                 ) : (
-                                                                     <div className="flex flex-col items-start gap-1">
-                                                                         <span className="text-xs text-emerald-400 font-bold font-mono">
-                                                                             Selesai ({b.actual_return})
-                                                                         </span>
-                                                                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                                                             <button 
-                                                                                 onClick={() => handleOpenReturnModal(b)}
-                                                                                 className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-semibold flex items-center gap-0.5"
-                                                                             >
-                                                                                 ✏️ Edit Tgl Kembali
-                                                                             </button>
-                                                                         )}
-                                                                     </div>
-                                                                 )}
+                                                                {b.status === 'Sedang Dipinjam' ? (
+                                                                    (userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                                        <button
+                                                                            onClick={() => handleOpenReturnModal(b)}
+                                                                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs transition shadow-md flex items-center gap-1"
+                                                                        >
+                                                                            ✅ Konfirmasi Kembalikan
+                                                                        </button>
+                                                                    )
+                                                                ) : (
+                                                                    <div className="flex flex-col items-start gap-1">
+                                                                        <span className="text-xs text-emerald-400 font-bold font-mono">
+                                                                            Selesai ({b.actual_return})
+                                                                        </span>
+                                                                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                                            <button
+                                                                                onClick={() => handleOpenReturnModal(b)}
+                                                                                className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-semibold flex items-center gap-0.5"
+                                                                            >
+                                                                                ✏️ Edit Tgl Kembali
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </td>
                                                         </tr>
                                                     ))
@@ -5839,7 +5811,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             />
 
             {/* MODAL DISPATCH GUDANG */}
-            <DispatchModal 
+            <DispatchModal
                 show={showDispatchModal}
                 onClose={() => setShowDispatchModal(false)}
                 selectedDispatchOrder={selectedDispatchOrder}
@@ -5940,8 +5912,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Kode Barang (Opsional):</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         placeholder="e.g. KCB-003"
                                         value={newStockForm.item_code}
                                         onChange={e => setNewStockForm({ ...newStockForm, item_code: e.target.value })}
@@ -5966,8 +5938,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Barang Kaca Baru:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     placeholder="e.g. Kaca Cermin Riben 5mm"
                                     value={newStockForm.name}
@@ -5979,8 +5951,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Ukuran Standard (cm):</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         placeholder="e.g. 152 x 213 cm"
                                         value={newStockForm.size}
@@ -5990,8 +5962,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Stok Awal (Qty Lembar):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
                                         required
                                         value={newStockForm.qty}
@@ -6005,8 +5977,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-3 gap-3 border-t border-b border-slate-800 py-3 my-1">
                                 <div>
                                     <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         inputMode="numeric"
                                         placeholder="e.g. 250.000"
                                         value={formatNumberDots(newStockForm.buy_price)}
@@ -6016,8 +5988,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                                 <div>
                                     <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         inputMode="numeric"
                                         placeholder="e.g. 450.000"
                                         value={formatNumberDots(newStockForm.sell_price)}
@@ -6027,8 +5999,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                                 <div>
                                     <label className="text-cyan-400 block mb-1 font-semibold">Ketebalan (mm):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="1"
                                         placeholder="e.g. 5"
                                         value={newStockForm.thickness_mm}
@@ -6084,8 +6056,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-slate-400 block mb-1 font-semibold">No WhatsApp Supplier:</label>
-                                        <input 
-                                            type="text" 
+                                        <input
+                                            type="text"
                                             placeholder="e.g. 6281234567890"
                                             value={newStockForm.supplier_phone}
                                             onChange={e => setNewStockForm({ ...newStockForm, supplier_phone: e.target.value })}
@@ -6094,8 +6066,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     </div>
                                     <div>
                                         <label className="text-slate-400 block mb-1 font-semibold">Nama PIC Supplier:</label>
-                                        <input 
-                                            type="text" 
+                                        <input
+                                            type="text"
                                             placeholder="e.g. Pak Gunawan"
                                             value={newStockForm.supplier_pic}
                                             onChange={e => setNewStockForm({ ...newStockForm, supplier_pic: e.target.value })}
@@ -6142,8 +6114,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         <form onSubmit={handleAddSupplierSubmit} className="space-y-4 text-xs">
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     placeholder="e.g. PT Asahimas Flat Glass Tbk"
                                     value={newSupplierForm.name}
@@ -6155,8 +6127,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         placeholder="e.g. Kaca Cermin & Bening"
                                         value={newSupplierForm.category}
@@ -6182,8 +6154,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         placeholder="e.g. Pak Gunawan"
                                         value={newSupplierForm.pic}
@@ -6193,8 +6165,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         placeholder="e.g. 6281234567890"
                                         value={newSupplierForm.phone}
@@ -6206,7 +6178,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
-                                <textarea 
+                                <textarea
                                     rows="2"
                                     placeholder="e.g. Kawasan Industri Ancol, Jl. Ancol IX No. 5, Jakarta Utara"
                                     value={newSupplierForm.address}
@@ -6252,8 +6224,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         <form onSubmit={handleEditSupplierSubmit} className="space-y-4 text-xs">
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     value={editSupplierForm.name}
                                     onChange={e => setEditSupplierForm({ ...editSupplierForm, name: e.target.value })}
@@ -6264,8 +6236,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         value={editSupplierForm.category}
                                         onChange={e => setEditSupplierForm({ ...editSupplierForm, category: e.target.value })}
@@ -6290,8 +6262,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         value={editSupplierForm.pic}
                                         onChange={e => setEditSupplierForm({ ...editSupplierForm, pic: e.target.value })}
@@ -6300,8 +6272,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         value={editSupplierForm.phone}
                                         onChange={e => setEditSupplierForm({ ...editSupplierForm, phone: e.target.value })}
@@ -6312,7 +6284,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
-                                <textarea 
+                                <textarea
                                     rows="2"
                                     value={editSupplierForm.address}
                                     onChange={e => setEditSupplierForm({ ...editSupplierForm, address: e.target.value })}
@@ -6357,8 +6329,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         <form onSubmit={handleAddAccSubmit} className="space-y-4 text-xs">
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Kode Barang (Opsional):</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     placeholder="e.g. ACC-007"
                                     value={newAccForm.acc_code}
                                     onChange={e => setNewAccForm({ ...newAccForm, acc_code: e.target.value })}
@@ -6368,8 +6340,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Aksesoris Kaca Baru:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     placeholder="e.g. Lem Silikon Bening Glass Sealant"
                                     value={newAccForm.name}
@@ -6381,8 +6353,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
                                         placeholder="e.g. 25000"
                                         value={newAccForm.buy_price}
@@ -6392,8 +6364,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                                 <div>
                                     <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
                                         placeholder="e.g. 45000"
                                         value={newAccForm.sell_price}
@@ -6406,8 +6378,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Stok Awal (Qty):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
                                         required
                                         value={newAccForm.qty}
@@ -6469,8 +6441,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         <form onSubmit={handleEditAccSubmit} className="space-y-4 text-xs">
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Kode Barang:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     value={editAccForm.acc_code}
                                     onChange={e => setEditAccForm({ ...editAccForm, acc_code: e.target.value })}
@@ -6480,8 +6452,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Aksesoris Kaca:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     value={editAccForm.name}
                                     onChange={e => setEditAccForm({ ...editAccForm, name: e.target.value })}
@@ -6492,8 +6464,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
                                         value={editAccForm.buy_price}
                                         onChange={e => setEditAccForm({ ...editAccForm, buy_price: e.target.value })}
@@ -6502,8 +6474,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                                 <div>
                                     <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
                                         value={editAccForm.sell_price}
                                         onChange={e => setEditAccForm({ ...editAccForm, sell_price: e.target.value })}
@@ -6515,8 +6487,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Stok Quantity:</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
                                         required
                                         value={editAccForm.qty}
@@ -6735,7 +6707,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     <span className="text-[10px] text-emerald-400 font-mono">Auto-generated</span>
                                 </label>
                                 <div className="bg-[#0b141a] border border-emerald-500/30 p-3 rounded-xl font-mono text-[11px] text-slate-200 whitespace-pre-wrap leading-relaxed">
-{`Halo ${supplierName},
+                                    {`Halo ${supplierName},
 
 Kami dari CV Cahya Karunia Jaya (SYP GLASS OPERATIONAL).
 Kami ingin memesan/restock bahan kaca berikut:
@@ -6770,15 +6742,15 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                     </div>
                 </div>
             )}
-                        {/* MODAL PRINT SURAT BARANG KELUAR (GATE PASS GUDANG) */}
-            <GatePassModal 
+            {/* MODAL PRINT SURAT BARANG KELUAR (GATE PASS GUDANG) */}
+            <GatePassModal
                 show={showBarangKeluarModal}
                 onClose={() => setShowBarangKeluarModal(false)}
                 selectedBarangKeluarData={selectedBarangKeluarData}
                 userName={userName}
             />
 
-{/* MODAL KONFIRMASI PERSETUJUAN DEAL & PENGATURAN DP */}
+            {/* MODAL KONFIRMASI PERSETUJUAN DEAL & PENGATURAN DP */}
             {showPromoteModal && targetPromoteOrder && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
@@ -6874,7 +6846,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                             { label: 'Rp 1 Jt', val: 1000000 },
                                             { label: '50%', val: Math.round(targetPromoteOrder.total_price * 0.5) }
                                         ].map((preset, pIdx) => (
-                                            <button 
+                                            <button
                                                 key={pIdx}
                                                 type="button"
                                                 onClick={() => setPromoteCustomPaidAmount(preset.val)}
@@ -6892,7 +6864,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 <div className="flex justify-between font-bold">
                                     <span>Nominal DP Diterima:</span>
                                     <span className="font-mono text-sm">
-                                        Rp {Number(getPromotePaidAmount()).toLocaleString()} 
+                                        Rp {Number(getPromotePaidAmount()).toLocaleString()}
                                         <span className="text-[11px] ml-1 opacity-80">
                                             ({targetPromoteOrder.total_price > 0 ? Math.round((getPromotePaidAmount() / targetPromoteOrder.total_price) * 100) : 0}%)
                                         </span>
@@ -6943,18 +6915,18 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Kode Barang (Opsional):</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Otomatis jika kosong" 
-                                        value={newSupplyForm.item_code} 
+                                    <input
+                                        type="text"
+                                        placeholder="Otomatis jika kosong"
+                                        value={newSupplyForm.item_code}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, item_code: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono focus:border-cyan-400"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Kategori Perlengkapan:</label>
-                                    <select 
-                                        value={newSupplyForm.category} 
+                                    <select
+                                        value={newSupplyForm.category}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, category: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                     >
@@ -6970,10 +6942,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Perlengkapan / Barang Habis Pakai:*</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Contoh: Sarung Tangan Safety Antigores / Cutter Blade Refill" 
-                                    value={newSupplyForm.name} 
+                                <input
+                                    type="text"
+                                    placeholder="Contoh: Sarung Tangan Safety Antigores / Cutter Blade Refill"
+                                    value={newSupplyForm.name}
                                     onChange={e => setNewSupplyForm({ ...newSupplyForm, name: e.target.value })}
                                     required
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
@@ -6983,10 +6955,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Stok Awal:*</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="0"
-                                        value={newSupplyForm.stock_qty} 
+                                        value={newSupplyForm.stock_qty}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, stock_qty: e.target.value })}
                                         required
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
@@ -6994,20 +6966,20 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Min. Stok (Alert):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="1"
-                                        value={newSupplyForm.min_stock} 
+                                        value={newSupplyForm.min_stock}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, min_stock: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Satuan Unit:</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Pcs/Pasang/Roll/Box" 
-                                        value={newSupplyForm.unit} 
+                                    <input
+                                        type="text"
+                                        placeholder="Pcs/Pasang/Roll/Box"
+                                        value={newSupplyForm.unit}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, unit: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                     />
@@ -7016,10 +6988,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Lokasi Simpan di Gudang:</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Contoh: Rak APD A1 / Gudang Packaging" 
-                                    value={newSupplyForm.location} 
+                                <input
+                                    type="text"
+                                    placeholder="Contoh: Rak APD A1 / Gudang Packaging"
+                                    value={newSupplyForm.location}
                                     onChange={e => setNewSupplyForm({ ...newSupplyForm, location: e.target.value })}
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                 />
@@ -7048,8 +7020,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                         <form onSubmit={handleUseSupplySubmit} className="space-y-4 text-xs">
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Pilih Barang Perlengkapan:*</label>
-                                <select 
-                                    value={useSupplyForm.supply_id} 
+                                <select
+                                    value={useSupplyForm.supply_id}
                                     onChange={e => setUseSupplyForm({ ...useSupplyForm, supply_id: e.target.value })}
                                     required
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
@@ -7066,10 +7038,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Jumlah Dipakai:*</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="1"
-                                        value={useSupplyForm.used_qty} 
+                                        value={useSupplyForm.used_qty}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, used_qty: e.target.value })}
                                         required
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
@@ -7077,9 +7049,9 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Tanggal Pemakaian:</label>
-                                    <input 
-                                        type="date" 
-                                        value={useSupplyForm.usage_date} 
+                                    <input
+                                        type="date"
+                                        value={useSupplyForm.usage_date}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, usage_date: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                     />
@@ -7089,8 +7061,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Divisi Pengambil:*</label>
-                                    <select 
-                                        value={useSupplyForm.user_division} 
+                                    <select
+                                        value={useSupplyForm.user_division}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, user_division: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                     >
@@ -7105,10 +7077,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Nama Pengambil/Pekerja:*</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Contoh: Supri / Bambang" 
-                                        value={useSupplyForm.taker_name} 
+                                    <input
+                                        type="text"
+                                        placeholder="Contoh: Supri / Bambang"
+                                        value={useSupplyForm.taker_name}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, taker_name: e.target.value })}
                                         required
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
@@ -7118,10 +7090,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Catatan / Keperluan Pemakaian:</label>
-                                <textarea 
-                                    rows="2" 
-                                    placeholder="Contoh: Penggantian APD bulanan / packing peti kayu SPO-0129" 
-                                    value={useSupplyForm.notes} 
+                                <textarea
+                                    rows="2"
+                                    placeholder="Contoh: Penggantian APD bulanan / packing peti kayu SPO-0129"
+                                    value={useSupplyForm.notes}
                                     onChange={e => setUseSupplyForm({ ...useSupplyForm, notes: e.target.value })}
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                 ></textarea>
@@ -7150,8 +7122,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                         <form onSubmit={handleRequestRestockSubmit} className="space-y-4 text-xs">
                             <div>
                                 <label className="text-slate-300 block mb-1 font-bold">Pilih Barang Perlengkapan:*</label>
-                                <select 
-                                    value={requestRestockForm.supply_id} 
+                                <select
+                                    value={requestRestockForm.supply_id}
                                     onChange={e => setRequestRestockForm({ ...requestRestockForm, supply_id: e.target.value })}
                                     required
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
@@ -7168,10 +7140,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-slate-300 block mb-1 font-bold">Jumlah Pengajuan Restok:*</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         min="1"
-                                        value={requestRestockForm.request_qty} 
+                                        value={requestRestockForm.request_qty}
                                         onChange={e => setRequestRestockForm({ ...requestRestockForm, request_qty: e.target.value })}
                                         required
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-amber-300 font-extrabold focus:border-amber-400"
@@ -7179,8 +7151,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                                 <div>
                                     <label className="text-slate-300 block mb-1 font-bold">Tingkat Prioritas:</label>
-                                    <select 
-                                        value={requestRestockForm.priority} 
+                                    <select
+                                        value={requestRestockForm.priority}
                                         onChange={e => setRequestRestockForm({ ...requestRestockForm, priority: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
                                     >
@@ -7193,10 +7165,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-300 block mb-1 font-bold">Catatan & Alasan Pengajuan ke Admin Toko:</label>
-                                <textarea 
-                                    rows="3" 
-                                    placeholder="Contoh: Stok sisa 6 galon di gudang B1, dibutuhkan untuk pengerjaan finishing beveling proyek minggu depan." 
-                                    value={requestRestockForm.notes} 
+                                <textarea
+                                    rows="3"
+                                    placeholder="Contoh: Stok sisa 6 galon di gudang B1, dibutuhkan untuk pengerjaan finishing beveling proyek minggu depan."
+                                    value={requestRestockForm.notes}
                                     onChange={e => setRequestRestockForm({ ...requestRestockForm, notes: e.target.value })}
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
                                 ></textarea>
@@ -7233,18 +7205,18 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Kode Alat (Opsional):</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Otomatis jika kosong" 
-                                        value={newToolForm.tool_code} 
+                                    <input
+                                        type="text"
+                                        placeholder="Otomatis jika kosong"
+                                        value={newToolForm.tool_code}
                                         onChange={e => setNewToolForm({ ...newToolForm, tool_code: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono focus:border-cyan-400"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Kategori Alat / Mesin:</label>
-                                    <select 
-                                        value={newToolForm.category} 
+                                    <select
+                                        value={newToolForm.category}
                                         onChange={e => setNewToolForm({ ...newToolForm, category: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                     >
@@ -7260,11 +7232,11 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Alat / Mesin Penunjang:*</label>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    placeholder="Contoh: Mesin Bor Kaca Portable / Tangga Alumunium 4m" 
-                                    value={newToolForm.name} 
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Contoh: Mesin Bor Kaca Portable / Tangga Alumunium 4m"
+                                    value={newToolForm.name}
                                     onChange={e => setNewToolForm({ ...newToolForm, name: e.target.value })}
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-bold focus:border-cyan-400"
                                 />
@@ -7273,20 +7245,20 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Total Jumlah Unit:*</label>
-                                    <input 
-                                        type="number" 
-                                        min="1" 
-                                        required 
-                                        value={newToolForm.total_qty} 
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        value={newToolForm.total_qty}
                                         onChange={e => setNewToolForm({ ...newToolForm, total_qty: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-emerald-400 font-mono font-bold focus:border-cyan-400"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Satuan Unit:</label>
-                                    <input 
-                                        type="text" 
-                                        value={newToolForm.unit} 
+                                    <input
+                                        type="text"
+                                        value={newToolForm.unit}
                                         onChange={e => setNewToolForm({ ...newToolForm, unit: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                         placeholder="Unit / Set / Pcs"
@@ -7294,8 +7266,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Kondisi Alat:</label>
-                                    <select 
-                                        value={newToolForm.condition} 
+                                    <select
+                                        value={newToolForm.condition}
                                         onChange={e => setNewToolForm({ ...newToolForm, condition: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                     >
@@ -7308,10 +7280,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Lokasi Penyimpanan / Rak Storage:</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Contoh: Rak Alat A1 / Gudang Belakang" 
-                                    value={newToolForm.location} 
+                                <input
+                                    type="text"
+                                    placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
+                                    value={newToolForm.location}
                                     onChange={e => setNewToolForm({ ...newToolForm, location: e.target.value })}
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                 />
@@ -7344,8 +7316,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     <label className="text-slate-200 font-extrabold text-xs flex items-center gap-1.5">
                                         🛠️ Daftar Alat / Mesin Yang Dipinjam ({borrowToolForm.selected_items.length} Alat):
                                     </label>
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={handleAddBorrowItemRow}
                                         className="bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/40 px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow"
                                     >
@@ -7357,9 +7329,9 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-slate-900 p-2.5 rounded-lg border border-slate-800">
                                         <span className="font-mono text-xs text-cyan-400 font-bold px-1">#{idx + 1}</span>
                                         <div className="flex-1 min-w-[200px]">
-                                            <select 
-                                                required 
-                                                value={item.tool_id} 
+                                            <select
+                                                required
+                                                value={item.tool_id}
                                                 onChange={e => handleBorrowItemChange(idx, 'tool_id', e.target.value)}
                                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-bold focus:border-cyan-400 text-xs"
                                             >
@@ -7372,19 +7344,19 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                             </select>
                                         </div>
                                         <div className="w-28">
-                                            <input 
-                                                type="number" 
-                                                min="1" 
-                                                required 
-                                                value={item.qty} 
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                required
+                                                value={item.qty}
                                                 onChange={e => handleBorrowItemChange(idx, 'qty', e.target.value)}
                                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-amber-400 font-mono font-bold focus:border-cyan-400 text-xs text-center"
                                                 placeholder="Qty Unit"
                                             />
                                         </div>
                                         {borrowToolForm.selected_items.length > 1 && (
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 onClick={() => handleRemoveBorrowItemRow(idx)}
                                                 className="bg-rose-500/20 text-rose-300 hover:bg-rose-500 hover:text-white px-2.5 py-2 rounded-lg text-xs font-bold transition"
                                                 title="Hapus item ini"
@@ -7398,11 +7370,11 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Nama Peminjam / Teknisi:*</label>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    placeholder="Contoh: Teknisi Asep / Pak Mulyadi" 
-                                    value={borrowToolForm.borrower_name} 
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Contoh: Teknisi Asep / Pak Mulyadi"
+                                    value={borrowToolForm.borrower_name}
                                     onChange={e => setBorrowToolForm({ ...borrowToolForm, borrower_name: e.target.value })}
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
                                 />
@@ -7410,11 +7382,11 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-400 block mb-1 font-semibold">Keperluan Pekerjaan / Project:*</label>
-                                <textarea 
-                                    required 
+                                <textarea
+                                    required
                                     rows="2"
-                                    placeholder="Contoh: Pengeboran engsel sekat kaca tempered SPO-0129 Dago Pakar" 
-                                    value={borrowToolForm.purpose} 
+                                    placeholder="Contoh: Pengeboran engsel sekat kaca tempered SPO-0129 Dago Pakar"
+                                    value={borrowToolForm.purpose}
                                     onChange={e => setBorrowToolForm({ ...borrowToolForm, purpose: e.target.value })}
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
                                 ></textarea>
@@ -7423,18 +7395,18 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Tanggal Pinjam:</label>
-                                    <input 
-                                        type="date" 
-                                        value={borrowToolForm.borrow_date} 
+                                    <input
+                                        type="date"
+                                        value={borrowToolForm.borrow_date}
                                         onChange={e => setBorrowToolForm({ ...borrowToolForm, borrow_date: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-slate-400 block mb-1 font-semibold">Estimasi Tanggal Kembali:</label>
-                                    <input 
-                                        type="date" 
-                                        value={borrowToolForm.expected_return} 
+                                    <input
+                                        type="date"
+                                        value={borrowToolForm.expected_return}
                                         onChange={e => setBorrowToolForm({ ...borrowToolForm, expected_return: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
                                     />
@@ -7506,11 +7478,11 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     <span>📅 Tanggal Pengembalian Sebenarnya:</span>
                                     <span className="text-[10px] text-slate-400 font-normal">(Bisa diedit lebih cepat/lebih lama)</span>
                                 </label>
-                                <input 
-                                    type="date" 
-                                    required 
-                                    value={actualReturnDate} 
-                                    onChange={e => setActualReturnDate(e.target.value)} 
+                                <input
+                                    type="date"
+                                    required
+                                    value={actualReturnDate}
+                                    onChange={e => setActualReturnDate(e.target.value)}
                                     className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono font-bold focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
                                 />
 
@@ -7553,12 +7525,12 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     <div className="pt-2 grid grid-cols-2 gap-3 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
                                         <div>
                                             <label className="text-[11px] text-amber-300 font-bold block mb-1">Jumlah Unit Rusak:</label>
-                                            <input 
-                                                type="number" 
-                                                min="1" 
-                                                value={returnDamagedQty} 
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={returnDamagedQty}
                                                 onChange={e => setReturnDamagedQty(e.target.value)}
-                                                className="w-full bg-slate-950 border border-amber-500/40 rounded p-1.5 text-xs text-amber-300 font-mono font-bold" 
+                                                className="w-full bg-slate-950 border border-amber-500/40 rounded p-1.5 text-xs text-amber-300 font-mono font-bold"
                                             />
                                         </div>
                                         <div className="text-[10px] text-slate-400 self-center">
@@ -7571,12 +7543,12 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     <div className="pt-2 grid grid-cols-2 gap-3 bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/20">
                                         <div>
                                             <label className="text-[11px] text-rose-300 font-bold block mb-1">Jumlah Unit Hilang:</label>
-                                            <input 
-                                                type="number" 
-                                                min="1" 
-                                                value={returnLostQty} 
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={returnLostQty}
                                                 onChange={e => setReturnLostQty(e.target.value)}
-                                                className="w-full bg-slate-950 border border-rose-500/40 rounded p-1.5 text-xs text-rose-300 font-mono font-bold" 
+                                                className="w-full bg-slate-950 border border-rose-500/40 rounded p-1.5 text-xs text-rose-300 font-mono font-bold"
                                             />
                                         </div>
                                         <div className="text-[10px] text-slate-400 self-center">
@@ -7589,26 +7561,26 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             {/* OPTIONAL NOTES */}
                             <div>
                                 <label className="text-xs text-slate-400 block mb-1">Catatan Pengembalian / Kondisi Alat (Opsional):</label>
-                                <input 
-                                    type="text" 
-                                    value={returnNotes} 
-                                    onChange={e => setReturnNotes(e.target.value)} 
-                                    placeholder="Contoh: Alat dikembalikan dalam kondisi lengkap & bersih." 
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:border-cyan-400" 
+                                <input
+                                    type="text"
+                                    value={returnNotes}
+                                    onChange={e => setReturnNotes(e.target.value)}
+                                    placeholder="Contoh: Alat dikembalikan dalam kondisi lengkap & bersih."
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:border-cyan-400"
                                 />
                             </div>
 
                             {/* MODAL ACTIONS */}
                             <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowReturnToolModal(false)} 
+                                <button
+                                    type="button"
+                                    onClick={() => setShowReturnToolModal(false)}
                                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-semibold transition"
                                 >
                                     Batal
                                 </button>
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-extrabold text-slate-950 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition"
                                 >
                                     ✓ Konfirmasi & Simpan Pengembalian
@@ -7637,17 +7609,17 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
                                 <div>
                                     <label className="text-slate-400 font-semibold block mb-1">Total Unit Dimiliki:</label>
-                                    <input 
-                                        type="number" 
-                                        min="1" 
-                                        value={toolEditForm.total_qty} 
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={toolEditForm.total_qty}
                                         onChange={e => setToolEditForm({ ...toolEditForm, total_qty: e.target.value })}
                                         className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:border-cyan-400"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-slate-400 font-semibold block mb-1">Status Utama Alat:</label>
-                                    <select 
+                                    <select
                                         value={toolEditForm.condition}
                                         onChange={e => setToolEditForm({ ...toolEditForm, condition: e.target.value })}
                                         className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold focus:border-cyan-400"
@@ -7663,9 +7635,9 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
                                 <div>
                                     <label className="text-amber-400 font-bold block mb-1">Jumlah Unit Rusak (Perlu Servis):</label>
-                                    <input 
-                                        type="number" 
-                                        min="0" 
+                                    <input
+                                        type="number"
+                                        min="0"
                                         value={toolEditForm.damaged_qty}
                                         onChange={e => setToolEditForm({ ...toolEditForm, damaged_qty: e.target.value })}
                                         className="w-full bg-slate-900 border border-amber-500/40 rounded-lg p-2 text-amber-300 font-mono font-bold focus:border-amber-400"
@@ -7673,9 +7645,9 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                                 <div>
                                     <label className="text-rose-400 font-bold block mb-1">Jumlah Unit Hilang:</label>
-                                    <input 
-                                        type="number" 
-                                        min="0" 
+                                    <input
+                                        type="number"
+                                        min="0"
                                         value={toolEditForm.lost_qty}
                                         onChange={e => setToolEditForm({ ...toolEditForm, lost_qty: e.target.value })}
                                         className="w-full bg-slate-900 border border-rose-500/40 rounded-lg p-2 text-rose-300 font-mono font-bold focus:border-rose-400"
@@ -7685,7 +7657,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-300 font-semibold block mb-1">Catatan Perbaikan / Kronologi Kerusakan / Hilang:</label>
-                                <textarea 
+                                <textarea
                                     rows="2"
                                     placeholder="Contoh: 1 unit mata bor diamond patah saat pengerjaan sekat kaca tempered SPO-0129 Dago."
                                     value={toolEditForm.condition_notes}
@@ -7696,8 +7668,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-300 font-semibold block mb-1">Lokasi Penyimpanan Alat:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={toolEditForm.location}
                                     onChange={e => setToolEditForm({ ...toolEditForm, location: e.target.value })}
                                     placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
@@ -7706,15 +7678,15 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     onClick={() => setShowEditToolModal(false)}
                                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-semibold transition"
                                 >
                                     Batal
                                 </button>
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 font-extrabold text-slate-950 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition"
                                 >
                                     ✓ Simpan Perubahan Kondisi Alat
@@ -7743,8 +7715,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-3">
                                 <div>
                                     <label className="text-amber-400 font-extrabold block mb-1">📌 Bagian Mesin / Alat Yang Rusak:</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         placeholder="Contoh: Mata bor diamond retak & motor carbon brush aus"
                                         value={repairForm.damaged_part}
@@ -7755,7 +7727,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                                 <div>
                                     <label className="text-cyan-400 font-extrabold block mb-1">🛠️ Tindakan Perbaikan Yang Dilakukan:</label>
-                                    <textarea 
+                                    <textarea
                                         rows="2"
                                         required
                                         placeholder="Contoh: Pembersihan motor rotor, penyetelan presisi & penggantian sparepart aus"
@@ -7767,7 +7739,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                                 <div>
                                     <label className="text-teal-300 font-extrabold block mb-1">🔩 Komponen / Sparepart Yang Diganti (Opsional):</label>
-                                    <textarea 
+                                    <textarea
                                         rows="2"
                                         placeholder="Contoh: Carbon Brush Heavy Duty 2 pcs, Bearing SKF 608 1 pc"
                                         value={repairForm.replaced_components}
@@ -7780,8 +7752,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             <div className="grid grid-cols-2 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
                                 <div>
                                     <label className="text-slate-300 font-bold block mb-1">💵 Biaya Servis / Sparepart (Rp):</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         placeholder="e.g. 75000"
                                         value={repairForm.repair_cost}
                                         onChange={e => setRepairForm({ ...repairForm, repair_cost: e.target.value })}
@@ -7790,8 +7762,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                                 <div>
                                     <label className="text-slate-300 font-bold block mb-1">📅 Tanggal Selesai:</label>
-                                    <input 
-                                        type="date" 
+                                    <input
+                                        type="date"
                                         required
                                         value={repairForm.completion_date}
                                         onChange={e => setRepairForm({ ...repairForm, completion_date: e.target.value })}
@@ -7802,8 +7774,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             <div>
                                 <label className="text-slate-300 font-bold block mb-1">👨‍🔧 Teknisi / Tempat Perbaikan (Servis):</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     placeholder="Contoh: Bengkel Teknik Maju / Servis Internal Toko"
                                     value={repairForm.technician_name}
                                     onChange={e => setRepairForm({ ...repairForm, technician_name: e.target.value })}
@@ -7812,15 +7784,15 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     onClick={() => setShowCompleteRepairModal(false)}
                                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-semibold transition"
                                 >
                                     Batal
                                 </button>
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-extrabold text-slate-950 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition"
                                 >
                                     ✓ Simpan Detail Perbaikan & Kembalikan Ke Stok
@@ -7831,7 +7803,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 </div>
             )}
 
-                        {/* MODAL POPUP DETAIL EKSEKUSI PENGERJAAN ORDER (PREMIUM REDESIGN) */}
+            {/* MODAL POPUP DETAIL EKSEKUSI PENGERJAAN ORDER (PREMIUM REDESIGN) */}
             <DivisionExecutionModal
                 show={showExecutionModal}
                 onClose={() => { setShowExecutionModal(false); setSelectedExecutionOrder(null); }}
@@ -7850,7 +7822,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
             />
 
             {/* MODAL POPUP FORM SISA UNTUK POTONG (INPUT SCRAP GLASS - REDESIGN) */}
-            <ScrapPopupModal 
+            <ScrapPopupModal
                 show={showScrapPopupModal}
                 onClose={() => setShowScrapPopupModal(false)}
                 form={scrapPopupForm}
@@ -7859,7 +7831,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
             />
 
             {/* MODAL POPUP LAPORKAN KACA CACAT / BARET */}
-            <ComplaintModal 
+            <ComplaintModal
                 show={showComplaintModal}
                 onClose={() => setShowComplaintModal(false)}
                 form={complaintForm}
@@ -7871,11 +7843,20 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
             />
 
             {/* MODAL DECISION ADMIN GUDANG UNTUK KOMPLAIN KACA */}
-            <GudangDecisionModal 
+            <GudangDecisionModal
                 show={showGudangDecisionModal}
                 onClose={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
                 selectedComplaintOrder={selectedComplaintOrder}
                 onResolveComplaint={handleResolveComplaint}
+            />
+
+            {/* MODAL SURAT JALAN / WAYBILL PRINT (4-COLOR COPY) */}
+            <WaybillModal
+                show={showWaybillModal}
+                onClose={() => { setShowWaybillModal(false); setSelectedWaybillOrder(null); }}
+                selectedWaybillOrder={selectedWaybillOrder}
+                order={selectedWaybillOrder}
+                userName={userName}
             />
 
             {/* GLOBAL SKETCH LIGHTBOX MODAL */}
@@ -7893,25 +7874,25 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <a 
-                                    href={sketchLightbox.url} 
-                                    target="_blank" 
-                                    rel="noreferrer" 
+                                <a
+                                    href={sketchLightbox.url}
+                                    target="_blank"
+                                    rel="noreferrer"
                                     download
                                     className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-cyan-500/20"
                                 >
                                     ⬇️ Unduh Gambar
                                 </a>
-                                <button 
-                                    onClick={() => setSketchLightbox({ isOpen: false, url: '', title: '' })} 
+                                <button
+                                    onClick={() => setSketchLightbox({ isOpen: false, url: '', title: '' })}
                                     className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition cursor-pointer"
                                 >&times;</button>
                             </div>
                         </div>
                         <div className="flex-1 p-6 bg-black/95 flex items-center justify-center overflow-auto">
-                            <img 
-                                src={sketchLightbox.url} 
-                                alt="Detail Sketsa Kaca" 
+                            <img
+                                src={sketchLightbox.url}
+                                alt="Detail Sketsa Kaca"
                                 className="max-w-full max-h-[75vh] object-contain rounded-xl border border-slate-800 shadow-2xl"
                             />
                         </div>
