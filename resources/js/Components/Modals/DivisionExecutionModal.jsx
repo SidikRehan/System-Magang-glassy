@@ -12,7 +12,8 @@ export default function DivisionExecutionModal({
     onOpenScrapPopup,
     onFinishJobSubmit,
     formatIndonesianDate = (d) => d || '-',
-    formatIndonesianDateTime = (d) => d || '-'
+    formatIndonesianDateTime = (d) => d || '-',
+    onOpenSketchLightbox = () => {}
 }) {
     if (!show || !selectedExecutionOrder) return null;
     return (
@@ -121,6 +122,47 @@ export default function DivisionExecutionModal({
                                 </div>
                             </div>
                         </div>
+
+                        {/* LAMPIRAN SKETSA POLA & GAMBAR SAMBUNGAN KACA */}
+                        {selectedExecutionOrder.sketch_photo_path && (
+                            <div className="bg-gradient-to-r from-slate-950 via-cyan-950/30 to-slate-950 border border-cyan-500/40 p-4 rounded-2xl space-y-3 relative z-10 shadow-lg">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-xs font-black text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+                                        <span>📐 SKETSA POLA & GAMBAR SAMBUNGAN KACA (ACUAN PEKERJA DIVISI)</span>
+                                    </h4>
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        className="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
+                                    >
+                                        🔍 Perbesar Gambar Sketsa
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div 
+                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden border-2 border-cyan-400/50 bg-black shrink-0 shadow-lg"
+                                    >
+                                        <img 
+                                            src={selectedExecutionOrder.sketch_photo_path.startsWith('http') || selectedExecutionOrder.sketch_photo_path.startsWith('/') ? selectedExecutionOrder.sketch_photo_path : `/storage/${selectedExecutionOrder.sketch_photo_path}`}
+                                            alt="Sketsa Pola Kaca"
+                                            className="w-full h-full object-contain transition transform group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-bold gap-1">
+                                            🔍 Klik Perbesar
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-slate-300 space-y-1.5">
+                                        <div className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
+                                            <span>📌 Acuan Pemotongan & Sambungan Pola Kaca</span>
+                                        </div>
+                                        <p className="text-slate-400 text-[11px] leading-relaxed">
+                                            Admin Gudang dan Pekerja Divisi (Potong/HT, Gosok/GM, Bevel/BV, Etsa) wajib melihat sketsa ini sebagai acuan pola fisik, arah sambungan gambar/cermin, dan ukuran pemotongan kaca.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* TIMELINE TANGGAL LIFECYCLE ORDER */}
                         <div className="space-y-2">

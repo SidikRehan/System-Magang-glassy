@@ -237,6 +237,7 @@ class GlassSystemSeeder extends Seeder
             ],
             'used_scrap_rak' => 'Rak A09',
             'gudang_released_at' => now()->subDays(1)->addHours(3),
+            'sketch_photo_path' => 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
         ]);
 
         // 5. Order SPO Sample 5: Pengerjaan di Divisi BV (Beveling)
