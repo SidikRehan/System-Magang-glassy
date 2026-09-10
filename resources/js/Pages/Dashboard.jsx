@@ -10,6 +10,7 @@ import GatePassModal from '@/Components/Modals/GatePassModal';
 import DivisionExecutionModal from '@/Components/Modals/DivisionExecutionModal';
 import WaybillModal from '@/Components/Modals/WaybillModal';
 import MultiAddressWaybillModal from '@/Components/Modals/MultiAddressWaybillModal';
+import BatchWaybillModal from '@/Components/Modals/BatchWaybillModal';
 
 export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], metrics = {} }) {
     const { auth } = usePage().props;
@@ -1308,6 +1309,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [selectedBatchOrderIds, setSelectedBatchOrderIds] = useState([]);
     const [showMultiAddressModal, setShowMultiAddressModal] = useState(false);
     const [selectedTripDataForModal, setSelectedTripDataForModal] = useState(null);
+    const [showBatchWaybillModal, setShowBatchWaybillModal] = useState(false);
+    const [selectedBatchWaybillTrip, setSelectedBatchWaybillTrip] = useState(null);
     const [dispatchNotesInput, setDispatchNotesInput] = useState('');
 
     const toggleSelectOrderForBatch = (orderId) => {
@@ -4502,9 +4505,19 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             {/* SECTION DAFTAR TRIP MOBIL AKTIF & RUTE MANIFEST MULTI-STOP */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-                                    🚛 Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif
-                                </h3>
+                                <div className="flex flex-wrap justify-between items-center gap-2">
+                                    <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
+                                        🚛 Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2 text-xs">
+                                        <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                                            🏭 Admin Gudang: Siap Cetak SJ 4 Warna & Gate Pass
+                                        </span>
+                                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                                            🚚 Divisi Supir: Terbit di Tugas Pengiriman Driver
+                                        </span>
+                                    </div>
+                                </div>
 
                                 {(() => {
                                     const readyAndShipped = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver);
@@ -4568,6 +4581,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             </p>
                                                         </div>
                                                         <div className="flex flex-wrap gap-1.5 justify-end">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedBatchWaybillTrip(trip);
+                                                                    setShowBatchWaybillModal(true);
+                                                                }}
+                                                                className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                            >
+                                                                🖨️ Cetak Semua SJ Trip
+                                                            </button>
                                                             <button
                                                                 onClick={() => {
                                                                     setSelectedTripDataForModal(trip);
@@ -8067,6 +8089,14 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 show={showBarangKeluarModal}
                 onClose={() => { setShowBarangKeluarModal(false); setSelectedBarangKeluarData(null); }}
                 selectedBarangKeluarData={selectedBarangKeluarData}
+                userName={userName}
+            />
+
+            {/* MODAL CETAK SEKALIGUS (BATCH PRINT) SURAT JALAN SELURUH TRIP */}
+            <BatchWaybillModal
+                show={showBatchWaybillModal}
+                onClose={() => { setShowBatchWaybillModal(false); setSelectedBatchWaybillTrip(null); }}
+                tripData={selectedBatchWaybillTrip}
                 userName={userName}
             />
 

@@ -560,7 +560,7 @@ class SypOperationalController extends Controller
             );
         }
 
-        return redirect()->back()->with('message', '🚚 Rute Pengiriman Armada #' . $tripCode . ' Berhasil Ditetapkan untuk ' . count($orders) . ' Alamat Tujuan (' . $driverName . ' — ' . $vehiclePlate . ')!');
+        return redirect()->back()->with('message', '🚚 Rute Pengiriman Armada #' . $tripCode . ' Berhasil Ditetapkan (' . $driverName . ' — ' . $vehiclePlate . ')! Otomatis masuk ke Admin Gudang (Siap Cetak SJ 4 Warna & Gate Pass) & terbit di Tugas Pengiriman Divisi Supir.');
     }
 
     /**
