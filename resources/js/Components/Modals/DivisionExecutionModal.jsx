@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { router } from '@inertiajs/react';
+
 export default function DivisionExecutionModal({
     show,
     onClose,
@@ -13,9 +15,128 @@ export default function DivisionExecutionModal({
     onFinishJobSubmit,
     formatIndonesianDate = (d) => d || '-',
     formatIndonesianDateTime = (d) => d || '-',
-    onOpenSketchLightbox = () => {}
+    onOpenSketchLightbox = () => {},
+    sheetGlasses = [],
+    scrapGlasses = [],
+    onRecordRawMaterialSuccess = () => {}
 }) {
     if (!show || !selectedExecutionOrder) return null;
+
+    const orderedItems = Array.isArray(selectedExecutionOrder.items) && selectedExecutionOrder.items.length > 0
+        ? selectedExecutionOrder.items
+        : [{ glass_type: selectedExecutionOrder.glass_type || 'Kaca Cermin 5 mm polos', qty: 1 }];
+
+    const initialGlassType = orderedItems[0]?.glass_type || selectedExecutionOrder.glass_type || '';
+
+    const [rawGlassType, setRawGlassType] = useState(initialGlassType);
+    const [rawSheetsUsed, setRawSheetsUsed] = useState(1);
+    const [rawNotes, setRawNotes] = useState('');
+    const [isSubmittingRaw, setIsSubmittingRaw] = useState(false);
+
+    // State untuk Penolakan Kaca Sisa oleh Divisi HT
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectReasonType, setRejectReasonType] = useState('baret_cacat');
+    const [rejectNotes, setRejectNotes] = useState('');
+    const [isSubmittingReject, setIsSubmittingReject] = useState(false);
+
+    // State untuk Edit / Potong Ulang Kaca Sisa di Rak
+    const [showEditScrapModal, setShowEditScrapModal] = useState(false);
+    const [selectedScrapToEdit, setSelectedScrapToEdit] = useState(null);
+    const [editScrapForm, setEditScrapForm] = useState({
+        id: null,
+        length_cm: '',
+        width_cm: '',
+        rak_location: '',
+        status: 'Layak Pakai',
+        notes: ''
+    });
+    const [isSubmittingScrapEdit, setIsSubmittingScrapEdit] = useState(false);
+
+    React.useEffect(() => {
+        if (selectedExecutionOrder) {
+            const firstItem = Array.isArray(selectedExecutionOrder.items) && selectedExecutionOrder.items.length > 0
+                ? selectedExecutionOrder.items[0].glass_type
+                : selectedExecutionOrder.glass_type;
+            setRawGlassType(firstItem || '');
+            setRawSheetsUsed(1);
+        }
+    }, [selectedExecutionOrder]);
+
+    const currentStockItem = sheetGlasses.find(g =>
+        g.name.toLowerCase().includes(rawGlassType.toLowerCase()) ||
+        rawGlassType.toLowerCase().includes(g.name.toLowerCase())
+    );
+
+    const handleRecordRawMaterial = (e) => {
+        e.preventDefault();
+        if (!rawGlassType || rawSheetsUsed < 1) return;
+
+        setIsSubmittingRaw(true);
+        router.post(route('orders.raw_material', selectedExecutionOrder.id), {
+            glass_type: rawGlassType,
+            sheets_used: rawSheetsUsed,
+            notes: rawNotes
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSubmittingRaw(false);
+                onRecordRawMaterialSuccess(rawGlassType, parseInt(rawSheetsUsed) || 1);
+                setRawSheetsUsed(1);
+                setRawNotes('');
+            },
+        });
+    };
+
+    const handleRejectScrapSubmit = (e) => {
+        e.preventDefault();
+        setIsSubmittingReject(true);
+        router.post(route('orders.reject_scrap', selectedExecutionOrder.id), {
+            reason_type: rejectReasonType,
+            notes: rejectNotes
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSubmittingReject(false);
+                setShowRejectModal(false);
+                setRejectNotes('');
+            },
+            onError: () => {
+                setIsSubmittingReject(false);
+            }
+        });
+    };
+
+    const handleOpenEditScrapModal = (scrapItem) => {
+        if (!scrapItem) return;
+        setSelectedScrapToEdit(scrapItem);
+        setEditScrapForm({
+            id: scrapItem.id,
+            length_cm: scrapItem.length_cm,
+            width_cm: scrapItem.width_cm,
+            rak_location: scrapItem.rak_location,
+            status: scrapItem.status || 'Layak Pakai',
+            notes: ''
+        });
+        setShowEditScrapModal(true);
+    };
+
+    const handleUpdateScrapSubmit = (e) => {
+        e.preventDefault();
+        if (!editScrapForm.id) return;
+
+        setIsSubmittingScrapEdit(true);
+        router.post(route('scrap.update', editScrapForm.id), editScrapForm, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSubmittingScrapEdit(false);
+                setShowEditScrapModal(false);
+            },
+            onError: () => {
+                setIsSubmittingScrapEdit(false);
+            }
+        });
+    };
+
     return (
                 <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
                     <div className="bg-slate-900/95 border border-cyan-500/30 rounded-3xl w-full max-w-4xl p-6 sm:p-8 shadow-[0_0_60px_rgba(6,182,212,0.15)] space-y-6 relative my-auto overflow-hidden">
@@ -122,6 +243,85 @@ export default function DivisionExecutionModal({
                                 </div>
                             </div>
                         </div>
+
+                        {/* REKOMENDASI ALOKASI KACA SISA RAK (DARI ADMIN TOKO) */}
+                        {selectedExecutionOrder.used_scrap_rak && selectedExecutionOrder.used_scrap_rak !== '-' && selectedExecutionOrder.used_scrap_rak.trim() !== '' && (
+                            selectedExecutionOrder.used_scrap_rak.startsWith('❌') ? (
+                                <div className="bg-rose-950/80 border-2 border-rose-500/80 rounded-2xl p-4 space-y-2 shadow-xl shadow-rose-950/30">
+                                    <div className="flex items-center justify-between gap-2 border-b border-rose-500/30 pb-2">
+                                        <div className="flex items-center gap-2 font-black text-xs text-rose-300 uppercase tracking-wider">
+                                            <span className="text-base">🚨</span>
+                                            <span>STATUS REKOMENDASI KACA SISA: DITOLAK DIVISI HT</span>
+                                        </div>
+                                        <span className="bg-rose-500 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                            Penolakan Di-Log Ke System
+                                        </span>
+                                    </div>
+                                    <div className="text-xs font-mono font-extrabold text-rose-200 bg-slate-950 p-3 rounded-xl border border-rose-500/40 leading-relaxed">
+                                        {selectedExecutionOrder.used_scrap_rak}
+                                    </div>
+                                    <p className="text-[10px] text-rose-300/90 font-mono">
+                                        ℹ️ Divisi Potong (HT) wajib memotong dari bahan kaca lembaran baru di bawah karena rekomendasi kaca sisa telah ditolak (baret/cacat/ukuran kurang).
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="bg-gradient-to-r from-amber-950/90 via-amber-900/60 to-slate-950 border-2 border-amber-500/60 rounded-2xl p-4 space-y-3 shadow-xl shadow-amber-950/30">
+                                    <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2">
+                                        <div className="flex items-center gap-2 font-black text-xs text-amber-300 uppercase tracking-wider">
+                                            <span className="text-base">🧩</span>
+                                            <span>REKOMENDASI / ALOKASI KACA SISA RAK DARI TOKO</span>
+                                        </div>
+                                        <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                            Ambil & Potong Dari Scrap Dulu
+                                        </span>
+                                    </div>
+                                    <div className="text-xs sm:text-sm font-mono font-extrabold text-amber-200 bg-slate-950 p-3 rounded-xl border border-amber-500/40 leading-relaxed shadow-inner">
+                                        {selectedExecutionOrder.used_scrap_rak}
+                                    </div>
+
+                                    {/* ACTION BUTTONS KHUSUS DIVISI POTONG (HT) */}
+                                    {(selectedExecutionOrder.current_division === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-500/20">
+                                            <p className="text-[10px] text-amber-300/90 font-mono flex-1 min-w-[180px]">
+                                                💡 Periksa fisik kaca di rak storage sebelum dipotong.
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const foundScrap = scrapGlasses.find(s => selectedExecutionOrder.used_scrap_rak.includes(s.scrap_code));
+                                                        if (foundScrap) {
+                                                            handleOpenEditScrapModal(foundScrap);
+                                                        } else {
+                                                            handleOpenEditScrapModal({
+                                                                id: scrapGlasses[0]?.id || 1,
+                                                                scrap_code: 'SCRAP-X',
+                                                                glass_type: selectedExecutionOrder.glass_type || 'Kaca',
+                                                                length_cm: selectedExecutionOrder.length_cm || 50,
+                                                                width_cm: selectedExecutionOrder.width_cm || 50,
+                                                                rak_location: 'Rak Storage',
+                                                                status: 'Layak Pakai'
+                                                            });
+                                                        }
+                                                    }}
+                                                    className="bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-extrabold px-3 py-1.5 rounded-xl text-xs transition border border-amber-500/40 flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    <span>✂️ Potong Ulang / Edit Scrap</span>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowRejectModal(true)}
+                                                    className="bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white font-extrabold px-3 py-1.5 rounded-xl text-xs transition border border-rose-500/40 flex items-center gap-1 cursor-pointer shadow"
+                                                >
+                                                    <span>❌ Tolak Kaca Sisa (Baret / Ukuran Kurang)</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        )}
 
                         {/* LAMPIRAN SKETSA POLA & GAMBAR SAMBUNGAN KACA */}
                         {selectedExecutionOrder.sketch_photo_path && (
@@ -324,6 +524,117 @@ export default function DivisionExecutionModal({
                             </div>
                         </div>
 
+                        {/* PENCATATAN PEMAKAIAN KACA LEMBARAN BARU (KHUSUS DIVISI POTONG / HT / GUDANG) */}
+                        {(selectedExecutionOrder.current_division === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                            <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/30 space-y-3 relative z-10 shadow-lg">
+                                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                                    <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                                        <span>📄 PENCATATAN PEMAKAIAN BAHAN KACA LEMBARAN BARU (DIVISI HT POTONG)</span>
+                                    </h4>
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                        Pekerja Divisi HT mencatat jumlah lembaran baru yang diambil dari stok
+                                    </span>
+                                </div>
+
+                                {selectedExecutionOrder.used_scrap_rak && selectedExecutionOrder.used_scrap_rak !== '-' && selectedExecutionOrder.used_scrap_rak.trim() !== '' && (
+                                    <div className="bg-amber-950/60 border border-amber-500/40 rounded-xl p-2 text-xs font-mono text-amber-300 flex items-center justify-between gap-2">
+                                        <span>🧩 Rekomendasi Scrap Toko: <strong>{selectedExecutionOrder.used_scrap_rak}</strong></span>
+                                        <span className="text-[10px] text-amber-400/80 font-sans shrink-0">(Kurangi catat lembar baru jika pakai scrap)</span>
+                                    </div>
+                                )}
+
+                                <form onSubmit={handleRecordRawMaterial} className="space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                                        <div className="sm:col-span-2 space-y-1">
+                                            <label className="text-[11px] font-bold text-slate-300 block">Pilih Bahan Kaca Lembaran Baru:</label>
+                                            <select
+                                                value={rawGlassType}
+                                                onChange={(e) => setRawGlassType(e.target.value)}
+                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-amber-400 font-mono font-bold cursor-pointer"
+                                            >
+                                                <optgroup label="✨ Spesifikasi Kaca yang Dipesan pada SPO Ini">
+                                                    {orderedItems.map((it, idx) => (
+                                                        <option key={'spo_' + idx} value={it.glass_type}>
+                                                            {it.glass_type} (Order SPO: {it.qty || 1} Pcs)
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                                <optgroup label="📦 Katalog Master Stok Bahan Kaca Gudang">
+                                                    {sheetGlasses.map((g) => (
+                                                        <option key={'cat_' + g.id} value={g.name}>
+                                                            [{g.item_code}] {g.name} — (Stok Tersedia: {g.qty} {g.unit})
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[11px] font-bold text-slate-300 block">Jumlah Lembar Dipakai:</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={rawSheetsUsed}
+                                                onChange={(e) => setRawSheetsUsed(e.target.value)}
+                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-amber-400 font-mono font-black text-center"
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmittingRaw}
+                                            className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
+                                        >
+                                            <span>📉</span>
+                                            <span>{isSubmittingRaw ? 'Menyimpan...' : '+ Catat & Potong Stok'}</span>
+                                        </button>
+                                    </div>
+
+                                    {/* LIVE INDIKATOR SISA STOK MASTER GUDANG */}
+                                    {currentStockItem ? (
+                                        <div className="text-[11px] bg-slate-900 border border-cyan-500/30 rounded-xl p-2.5 font-mono flex flex-wrap items-center justify-between gap-2 text-slate-200">
+                                            <span className="flex items-center gap-1.5">
+                                                <span>📦 Stok Master Gudang saat Ini:</span>
+                                                <strong className="text-cyan-300 font-extrabold">{currentStockItem.name}</strong>
+                                                <span className="bg-slate-950 px-2 py-0.5 rounded text-cyan-400 border border-slate-800">
+                                                    {currentStockItem.qty} {currentStockItem.unit}
+                                                </span>
+                                            </span>
+                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1) >= 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse'}`}>
+                                                {currentStockItem.qty - (parseInt(rawSheetsUsed) || 1) >= 0
+                                                    ? `Sisa Stok Setelah Dipotong: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1)} ${currentStockItem.unit}`
+                                                    : `⚠️ Stok Kurang! (Sisa sisa: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1)} ${currentStockItem.unit})`}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2 rounded-xl font-mono flex items-center gap-2">
+                                            <span>⚠️ Bahan kaca <strong>"{rawGlassType}"</strong> belum terdaftar langsung di Katalog Master. Memotong stok berdasarkan nama item terdaftar.</span>
+                                        </div>
+                                    )}
+                                </form>
+
+                                {/* RIWAYAT PENCATATAN PEMAKAIAN BAHAN UNTUK SPO INI */}
+                                {Array.isArray(selectedExecutionOrder.raw_materials_used) && selectedExecutionOrder.raw_materials_used.length > 0 && (
+                                    <div className="pt-2 border-t border-slate-900 space-y-1.5">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Riwayat Bahan Kaca Lembaran Terpakai ({selectedExecutionOrder.raw_materials_used.length}x Input):
+                                        </span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedExecutionOrder.raw_materials_used.map((rm, rmIdx) => (
+                                                <div key={rmIdx} className="bg-slate-900 border border-amber-500/20 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 font-mono">
+                                                    <span className="text-amber-400 font-bold">📄 {rm.glass_type}</span>
+                                                    <span className="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded text-[10px] font-black">
+                                                        {rm.sheets_used} Lembar
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400">({rm.recorded_by})</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* KETERANGAN & POTONGAN RAK */}
                         {selectedExecutionOrder.description && (
                             <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs text-slate-300 italic flex items-center gap-2">
@@ -428,6 +739,200 @@ export default function DivisionExecutionModal({
                                 })()}
                             </div>
                         </div>
+
+                        {/* MODAL POPUP SUB-FORM PENOLAKAN KACA SISA (DIVISI HT) */}
+                        {showRejectModal && (
+                            <div className="fixed inset-0 bg-black/85 backdrop-blur-xl z-[70] flex items-center justify-center p-4 overflow-y-auto">
+                                <div className="bg-slate-900 border border-rose-500/50 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto">
+                                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                        <h3 className="font-extrabold text-sm text-rose-400 flex items-center gap-2">
+                                            <span>❌ Form Penolakan Kaca Sisa (Divisi HT)</span>
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowRejectModal(false)}
+                                            className="text-slate-400 hover:text-white text-xl font-bold"
+                                        >&times;</button>
+                                    </div>
+
+                                    <form onSubmit={handleRejectScrapSubmit} className="space-y-4 text-xs">
+                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                                            <span className="text-[10px] text-slate-400 font-mono block">Order SPO #: {selectedExecutionOrder.spo_number}</span>
+                                            <div className="font-bold text-cyan-300">{selectedExecutionOrder.customer_name}</div>
+                                            <div className="text-[11px] text-amber-300 font-mono bg-slate-900 p-2 rounded border border-amber-500/30">
+                                                {selectedExecutionOrder.used_scrap_rak}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-slate-300 font-bold block">Pilih Alasan Utama Penolakan:</label>
+                                            <div className="space-y-1.5 font-mono text-[11px]">
+                                                {[
+                                                    { id: 'baret_cacat', label: '⚠️ Kaca Baret / Cacat / Retak Fisik' },
+                                                    { id: 'ukuran_kurang', label: '📐 Ukuran Fisik Kaca Sisa Tidak Cukup' },
+                                                    { id: 'tidak_ditemukan', label: '🔍 Kaca Tidak Ditemukan di Rak Storage' },
+                                                    { id: 'alasan_lain', label: '💬 Alasan Lainnya (Input Teks)' },
+                                                ].map(opt => (
+                                                    <label key={opt.id} className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition ${rejectReasonType === opt.id ? 'bg-rose-950/60 border-rose-500 text-rose-200' : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-900'}`}>
+                                                        <input
+                                                            type="radio"
+                                                            name="rejectReasonType"
+                                                            value={opt.id}
+                                                            checked={rejectReasonType === opt.id}
+                                                            onChange={e => setRejectReasonType(e.target.value)}
+                                                            className="text-rose-500 focus:ring-rose-400"
+                                                        />
+                                                        <span>{opt.label}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-slate-300 font-bold block">Catatan Penolakan (Opsional / Detail Baret):</label>
+                                            <textarea
+                                                rows={2}
+                                                placeholder="cth: Baret di bagian tengah kaca, retak pada sudut..."
+                                                value={rejectNotes}
+                                                onChange={e => setRejectNotes(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:border-rose-400 text-xs"
+                                            ></textarea>
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowRejectModal(false)}
+                                                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold cursor-pointer"
+                                            >Batal</button>
+                                            <button
+                                                type="submit"
+                                                disabled={isSubmittingReject}
+                                                className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer"
+                                            >
+                                                <span>{isSubmittingReject ? '⏳ Menyimpan...' : '❌ Tolak Kaca Sisa & Log Aktivitas'}</span>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* MODAL POPUP FORM POTONG ULANG / EDIT UKURAN KACA SISA DI RAK */}
+                        {showEditScrapModal && (
+                            <div className="fixed inset-0 bg-black/85 backdrop-blur-xl z-[70] flex items-center justify-center p-4 overflow-y-auto">
+                                <div className="bg-slate-900 border border-amber-500/50 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto">
+                                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                        <h3 className="font-extrabold text-sm text-amber-400 flex items-center gap-2">
+                                            <span>✂️ Potong Ulang & Edit Ukuran Scrap (Rak)</span>
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowEditScrapModal(false)}
+                                            className="text-slate-400 hover:text-white text-xl font-bold cursor-pointer"
+                                        >&times;</button>
+                                    </div>
+
+                                    <form onSubmit={handleUpdateScrapSubmit} className="space-y-4 text-xs">
+                                        {Array.isArray(scrapGlasses) && scrapGlasses.length > 0 && (
+                                            <div className="space-y-1">
+                                                <label className="text-slate-300 font-bold block">Pilih Kaca Sisa yang Dipotong Ulang:</label>
+                                                <select
+                                                    value={editScrapForm.id || ''}
+                                                    onChange={(e) => {
+                                                        const found = scrapGlasses.find(s => String(s.id) === String(e.target.value));
+                                                        if (found) handleOpenEditScrapModal(found);
+                                                    }}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono font-bold cursor-pointer"
+                                                >
+                                                    {scrapGlasses.map(s => (
+                                                        <option key={s.id} value={s.id}>
+                                                            [{s.scrap_code}] {s.glass_type} ({s.length_cm}x{s.width_cm} cm) — {s.rak_location} ({s.status})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="text-slate-300 font-bold block">Panjang Baru (cm):</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    required
+                                                    value={editScrapForm.length_cm}
+                                                    onChange={e => setEditScrapForm(f => ({ ...f, length_cm: e.target.value }))}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono font-bold"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-slate-300 font-bold block">Lebar Baru (cm):</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    required
+                                                    value={editScrapForm.width_cm}
+                                                    onChange={e => setEditScrapForm(f => ({ ...f, width_cm: e.target.value }))}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono font-bold"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="text-slate-300 font-bold block">Lokasi Rak Storage:</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={editScrapForm.rak_location}
+                                                    onChange={e => setEditScrapForm(f => ({ ...f, rak_location: e.target.value }))}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono font-bold"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-slate-300 font-bold block">Status Kondisi Kaca:</label>
+                                                <select
+                                                    value={editScrapForm.status}
+                                                    onChange={e => setEditScrapForm(f => ({ ...f, status: e.target.value }))}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-bold cursor-pointer"
+                                                >
+                                                    <option value="Layak Pakai">✅ Layak Pakai</option>
+                                                    <option value="Baret/Cacat">⚠️ Baret / Cacat</option>
+                                                    <option value="Afval/Pecah">🔴 Afval / Pecah</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-slate-300 font-bold block">Catatan Pemotongan Ulang:</label>
+                                            <input
+                                                type="text"
+                                                placeholder="cth: Dipotong ulang karena baret pinggir..."
+                                                value={editScrapForm.notes || ''}
+                                                onChange={e => setEditScrapForm(f => ({ ...f, notes: e.target.value }))}
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100"
+                                            />
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowEditScrapModal(false)}
+                                                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold cursor-pointer"
+                                            >Batal</button>
+                                            <button
+                                                type="submit"
+                                                disabled={isSubmittingScrapEdit}
+                                                className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer"
+                                            >
+                                                <span>{isSubmittingScrapEdit ? '⏳ Menyimpan...' : '💾 Simpan Perubahan & Log Aktivitas'}</span>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
 
                     </div>
                 </div>

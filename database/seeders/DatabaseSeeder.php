@@ -68,8 +68,26 @@ class DatabaseSeeder extends Seeder
                 'password' => $password,
             ],
             [
-                'name' => 'Pak Budi (Supir Driver DC)',
+                'name' => 'Pak Budi (Supir Utama DC)',
                 'email' => 'driver@sypglass.co.id',
+                'role' => 'driver',
+                'password' => $password,
+            ],
+            [
+                'name' => 'Pak Mulyadi (Driver Engkel)',
+                'email' => 'mulyadi.driver@sypglass.co.id',
+                'role' => 'driver',
+                'password' => $password,
+            ],
+            [
+                'name' => 'Pak Asep (Driver L300)',
+                'email' => 'asep.driver@sypglass.co.id',
+                'role' => 'driver',
+                'password' => $password,
+            ],
+            [
+                'name' => 'Pak Hendra (Driver Subcon)',
+                'email' => 'hendra.driver@sypglass.co.id',
                 'role' => 'driver',
                 'password' => $password,
             ],

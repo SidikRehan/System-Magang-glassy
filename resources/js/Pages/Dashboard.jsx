@@ -11,15 +11,20 @@ import DivisionExecutionModal from '@/Components/Modals/DivisionExecutionModal';
 import WaybillModal from '@/Components/Modals/WaybillModal';
 import MultiAddressWaybillModal from '@/Components/Modals/MultiAddressWaybillModal';
 import BatchWaybillModal from '@/Components/Modals/BatchWaybillModal';
+import EmployeeModal from '@/Components/Modals/EmployeeModal';
 
-export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], metrics = {} }) {
+export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], users: initialUsersList = [], activityLogs: initialActivityLogsList = [], metrics = {} }) {
     const { auth } = usePage().props;
     const userRole = auth.user?.role || 'admin_toko';
     const userName = auth.user?.name || 'User Syp';
     const userEmail = auth.user?.email || 'user@sypglass.co.id';
     const canViewPricing = userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance';
 
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const [activeTab, setActiveTab] = useState(
+        userRole === 'driver' ? 'deliveries' :
+        userRole.startsWith('divisi_') ? 'production' :
+        userRole === 'admin_gudang' ? 'orders' : 'dashboard'
+    );
 
     const formatIndonesianDate = (dateStr) => {
         if (!dateStr) return '-';
@@ -55,6 +60,35 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [showScrapModal, setShowScrapModal] = useState(false);
     const [showWaybillModal, setShowWaybillModal] = useState(false);
     const [selectedWaybillOrder, setSelectedWaybillOrder] = useState(null);
+
+    // Employee & Staff Accounts State
+    const [employeesList, setEmployeesList] = useState(initialUsersList);
+    const [activityLogsList, setActivityLogsList] = useState(initialActivityLogsList);
+    const [employeeSubTab, setEmployeeSubTab] = useState('karyawan');
+    const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+    const [selectedEmployeeForEdit, setSelectedEmployeeForEdit] = useState(null);
+    const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+    const [employeeRoleFilter, setEmployeeRoleFilter] = useState('semua');
+
+    useEffect(() => {
+        setEmployeesList(initialUsersList);
+    }, [initialUsersList]);
+
+    useEffect(() => {
+        setActivityLogsList(initialActivityLogsList);
+    }, [initialActivityLogsList]);
+
+    const handleDeleteEmployee = (user) => {
+        if (auth.user?.id === user.id) {
+            alert('Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif digunakan!');
+            return;
+        }
+        if (confirm(`Apakah Anda yakin ingin menghapus/menonaktifkan akun karyawan "${user.name}" (${user.email})?`)) {
+            router.delete(route('users.destroy', user.id), {
+                preserveScroll: true
+            });
+        }
+    };
 
     const donutSlices = [
         { id: 'tempered', label: 'Kaca Tempered (8mm-12mm)', shortLabel: 'Tempered', percent: 45, color: '#06b6d4', strokeDasharray: '183.78 408.4', strokeDashoffset: '0', rp: 'Rp 57.8M', volume: '26 SPO' },
@@ -414,6 +448,11 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         { id: 6, tool_code: 'ALT-006', name: 'Set Obeng Presisi & Kunci L Heavy Duty', category: 'Handtool & Kunci', total_qty: 6, available_qty: 6, unit: 'Set', condition: 'Bagus', location: 'Toolbox Teknisi 1' },
         { id: 7, tool_code: 'ALT-007', name: 'Mesin Potong Rumput Area Pabrik', category: 'Peralatan Umum & Kebersihan', total_qty: 1, available_qty: 1, unit: 'Unit', condition: 'Bagus', location: 'Gudang Kebersihan' },
         { id: 8, tool_code: 'ALT-008', name: 'Cangkul & Sekop Heavy Duty Operasional', category: 'Peralatan Umum & Kebersihan', total_qty: 3, available_qty: 3, unit: 'Set', condition: 'Bagus', location: 'Gudang Kebersihan' },
+        { id: 9, tool_code: 'ALT-009', name: 'Suction Cup Vakum Heavy Duty (Pengangkat Kaca Driver)', category: 'Mesin & Alat Vakum', total_qty: 8, available_qty: 6, unit: 'Pcs', condition: 'Bagus', location: 'Rak Armada Supir' },
+        { id: 10, tool_code: 'ALT-010', name: 'Helm Safety & Kacamata Anti-Pecah Kaca', category: 'Peralatan Lapangan', total_qty: 10, available_qty: 10, unit: 'Set', condition: 'Bagus', location: 'Loker Supir' },
+        { id: 11, tool_code: 'ALT-011', name: 'Sarung Tangan Cut-Resistant / Anti Gores', category: 'Peralatan Lapangan', total_qty: 15, available_qty: 12, unit: 'Pasang', condition: 'Bagus', location: 'Loker Supir' },
+        { id: 12, tool_code: 'ALT-012', name: 'Tali Webbing Ratchet Tie Down 5 Ton (Pengikat Kaca)', category: 'Peralatan Lapangan', total_qty: 12, available_qty: 10, unit: 'Set', condition: 'Bagus', location: 'Gudang Logistik Mobil' },
+        { id: 13, tool_code: 'ALT-013', name: 'Matras Busa Pelindung Kaca Armada', category: 'Peralatan Lapangan', total_qty: 6, available_qty: 4, unit: 'Pcs', condition: 'Bagus', location: 'Gudang Logistik Mobil' },
     ]);
 
     const [toolBorrowings, setToolBorrowings] = useState([
@@ -1507,8 +1546,39 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             supplier_phone: '6281288990011',
             last_restock: '2026-08-24',
             status: 'Aman'
+        },
+        {
+            id: 9,
+            item_code: 'BRG-009',
+            name: 'Kaca Laminated 5+5 mm Bening Safety',
+            category: 'Kaca Laminated',
+            size: '214 x 305 cm',
+            buy_price: 620000,
+            sell_price: 850000,
+            qty: 12,
+            unit: 'Lembar',
+            supplier_name: 'PT Kaca Tempered Nusantara',
+            supplier_phone: '6281908070605',
+            last_restock: '2026-08-28',
+            status: 'Aman'
         }
     ]);
+
+    const handleRecordRawMaterialSuccess = (glassTypeName, sheetsUsed) => {
+        setSheetGlasses(prev => prev.map(item => {
+            const matchName = item.name.toLowerCase().includes(glassTypeName.toLowerCase()) || glassTypeName.toLowerCase().includes(item.name.toLowerCase());
+            if (matchName) {
+                const newQty = Math.max(0, item.qty - sheetsUsed);
+                const newStatus = newQty > 10 ? 'Aman' : (newQty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
+                return {
+                    ...item,
+                    qty: newQty,
+                    status: newStatus
+                };
+            }
+            return item;
+        }));
+    };
 
     const MASTER_SUPPLIERS = [
         { id: 1, name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)', phone: '6281234567890', pic: 'Pak Gunawan' },
@@ -2475,14 +2545,14 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     </div>
 
                     <nav className="space-y-1">
-                        {userRole !== 'admin_gudang' && (
+                        {!userRole.startsWith('divisi_') && userRole !== 'driver' && userRole !== 'admin_gudang' && (
                             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 📊 <span>Dashboard Utama</span>
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
-                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'driver') setActiveOrderCard('pengiriman'); else if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 📝 <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
                             </button>
                         )}
@@ -2490,7 +2560,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                             <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 <div className="flex items-center gap-3">
-                                    🚚 <span>Pengiriman Multi-Alamat</span>
+                                    🚚 <span>{userRole === 'driver' ? 'Pengiriman Saya' : 'Pengiriman Multi-Alamat'}</span>
                                 </div>
                                 <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-cyan-500/30 font-mono">
                                     {initialOrders.filter(o => o.status === 'pengiriman').length} Siap
@@ -2540,7 +2610,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'admin_gudang') && (
+                        {(userRole === 'admin_toko' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 <div className="flex items-center gap-3">
                                     🔌 <span>Aksesoris Konsumen</span>
@@ -2568,9 +2638,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_')) && (
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
                             <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'tools' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 🛠️ <span>Alat Penunjang</span>
+                            </button>
+                        )}
+
+                        {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                            <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'employees' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <div className="flex items-center gap-3">
+                                    👥 <span>Pengelolaan Karyawan</span>
+                                </div>
+                                <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-cyan-500/30 font-mono">
+                                    {employeesList.length} Staff
+                                </span>
                             </button>
                         )}
 
@@ -2585,8 +2666,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {/* CONTENT MAIN */}
                 <main className="flex-1 p-8 overflow-y-auto">
 
-                    {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
-                    {activeTab === 'dashboard' && userRole !== 'admin_gudang' && (
+                    {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN (KHUSUS ADMIN TOKO, OWNER, FINANCE) */}
+                    {activeTab === 'dashboard' && !userRole.startsWith('divisi_') && userRole !== 'driver' && userRole !== 'admin_gudang' && (
                         <div className="space-y-6">
                             {/* WELCOME BANNER & PERFORMANCE HIGHLIGHT */}
                             <div className="flex flex-wrap justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 p-6 rounded-2xl border border-cyan-500/20 shadow-2xl">
@@ -2955,14 +3036,16 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </div>
 
                             {/* DYNAMIC CARDS HEADER */}
-                            <div className={`grid ${userRole === 'admin_toko' || userRole === 'owner' ? 'grid-cols-5' : 'grid-cols-4'} gap-4`}>
+                            <div className={`grid ${userRole === 'admin_toko' || userRole === 'owner' ? 'grid-cols-5' : 'grid-cols-3'} gap-4`}>
                                 {[
                                     ...(userRole === 'admin_toko' || userRole === 'owner' ? [
                                         { key: 'draft', label: 'Draf (Belum Deal)', count: initialOrders.filter(o => o.status === 'draft').length, icon: '📄' }
                                     ] : []),
                                     { key: 'pengerjaan', label: 'Order Pengerjaan', count: initialOrders.filter(o => o.status === 'pengerjaan').length, icon: '⚙️' },
                                     { key: 'pengiriman', label: 'Pengiriman & Surat Jalan', count: initialOrders.filter(o => o.status === 'pengiriman').length, icon: '🚚' },
-                                    { key: 'pembayaran', label: 'Pembayaran / COD', count: initialOrders.filter(o => o.payment_status !== 'Lunas' && (userRole === 'admin_toko' || userRole === 'owner' ? true : o.status !== 'draft')).length, icon: '💵' },
+                                    ...(userRole === 'admin_toko' || userRole === 'owner' ? [
+                                        { key: 'pembayaran', label: 'Pembayaran / COD', count: initialOrders.filter(o => o.payment_status !== 'Lunas').length, icon: '💵' }
+                                    ] : []),
                                     { key: 'selesai', label: 'Selesai', count: initialOrders.filter(o => o.status === 'selesai').length, icon: '✅' },
                                 ].map(card => (
                                     <div
@@ -3058,8 +3141,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 <th className="p-3">Customer</th>
                                                 <th className="p-3">Spesifikasi Kaca</th>
                                                 <th className="p-3">Posisi Divisi & Tracking Progres</th>
-                                                <th className="p-3">Total Tagihan</th>
-                                                <th className="p-3">Status Bayar</th>
+                                                {canViewPricing && <th className="p-3">Total Tagihan</th>}
+                                                {canViewPricing && <th className="p-3">Status Bayar</th>}
                                                 <th className="p-3">Aksi Alur</th>
                                             </tr>
                                         </thead>
@@ -3203,22 +3286,18 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                     <td className="p-3">
                                                         {renderProgressTracker(o)}
                                                     </td>
-                                                    <td className="p-3 font-bold">
-                                                        {canViewPricing ? (
-                                                            `Rp ${Number(o.total_price).toLocaleString()}`
-                                                        ) : (
-                                                            <span className="text-slate-500 text-xs italic flex items-center gap-1 font-normal">🔒 Rahasia</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-3">
-                                                        {canViewPricing ? (
+                                                    {canViewPricing && (
+                                                        <td className="p-3 font-bold">
+                                                            Rp {Number(o.total_price).toLocaleString()}
+                                                        </td>
+                                                    )}
+                                                    {canViewPricing && (
+                                                        <td className="p-3">
                                                             <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${o.payment_status === 'Lunas' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : o.payment_status === 'DP (50%)' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-700 text-slate-300'}`}>
                                                                 {o.payment_status}
                                                             </span>
-                                                        ) : (
-                                                            <span className="text-slate-500 text-xs italic font-normal">🔒 Terverifikasi</span>
-                                                        )}
-                                                    </td>
+                                                        </td>
+                                                    )}
                                                     <td className="p-3 flex flex-wrap items-center gap-2">
                                                         {o.status === 'draft' && (
                                                             (userRole === 'admin_toko' || userRole === 'owner') ? (
@@ -3661,6 +3740,17 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                     <div className="text-slate-300 font-mono text-xs">{activeOngoingOrder.length_cm} x {activeOngoingOrder.width_cm} cm ({activeOngoingOrder.thickness_mm}mm)</div>
                                                                 </div>
                                                             )}
+
+                                                            {activeOngoingOrder.used_scrap_rak && activeOngoingOrder.used_scrap_rak !== '-' && activeOngoingOrder.used_scrap_rak.trim() !== '' && (
+                                                                <div className="mt-2 bg-amber-950/90 border border-amber-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
+                                                                    <div className="font-extrabold text-[11px] text-amber-400 flex items-center gap-1">
+                                                                        <span>🧩 Rekomendasi Scrap Toko:</span>
+                                                                    </div>
+                                                                    <div className="text-amber-200 bg-slate-950 px-2 py-1 rounded border border-amber-500/30 font-bold text-[11px]">
+                                                                        {activeOngoingOrder.used_scrap_rak}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* COL 3: DIGITAL RUNNING TIMER (4 Cols) */}
@@ -3974,6 +4064,17 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                             <div className="bg-slate-950/60 p-2 rounded border border-slate-800 text-[11px]">
                                                                                 <div className="font-bold text-cyan-300">{o.glass_type}</div>
                                                                                 <div className="text-slate-300 font-mono">{o.length_cm} x {o.width_cm} cm ({o.thickness_mm}mm)</div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {o.used_scrap_rak && o.used_scrap_rak !== '-' && o.used_scrap_rak.trim() !== '' && (
+                                                                            <div className="bg-amber-950/90 border border-amber-500/70 rounded-xl p-2 text-[11px] font-mono space-y-0.5 shadow-md">
+                                                                                <div className="font-extrabold text-[10px] text-amber-400 flex items-center gap-1">
+                                                                                    <span>🧩 Rekomendasi Scrap Toko:</span>
+                                                                                </div>
+                                                                                <div className="text-amber-200 bg-slate-950 px-2 py-1 rounded border border-amber-500/30 font-bold text-[10px] whitespace-pre-wrap leading-tight">
+                                                                                    {o.used_scrap_rak}
+                                                                                </div>
                                                                             </div>
                                                                         )}
                                                                     </td>
@@ -4410,15 +4511,18 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     )}
 
                     {/* TAB 5: PENGIRIMAN & SURAT JALAN MULTI-ALAMAT */}
+                    {/* TAB 5: PENGIRIMAN & SURAT JALAN MULTI-ALAMAT / PENGIRIMAN SAYA */}
                     {activeTab === 'deliveries' && (
                         <div className="space-y-6">
                             <div className="flex flex-wrap justify-between items-center gap-4">
                                 <div>
                                     <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
-                                        🚚 Penugasan Pengiriman Multi-Alamat & Surat Jalan 4 Warna
+                                        🚚 {userRole === 'driver' ? `Pengiriman Saya (${userName})` : 'Penugasan Pengiriman Multi-Alamat & Surat Jalan 4 Warna'}
                                     </h2>
                                     <p className="text-slate-400 text-sm">
-                                        Admin dapat memilih beberapa alamat/SPO konsumen sekaligus untuk diangkut 1 armada & supir, serta mencetak Rute Manifest Multi-Stop.
+                                        {userRole === 'driver' 
+                                            ? `Daftar penugasan trip & manifest pengiriman alamat konsumen yang ditugaskan khusus untuk akun supir Anda (${userName}).`
+                                            : 'Admin dapat memilih beberapa alamat/SPO konsumen sekaligus untuk diangkut 1 armada & supir, serta mencetak Rute Manifest Multi-Stop.'}
                                     </p>
                                 </div>
                                 <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs font-bold text-cyan-400 flex items-center gap-2">
@@ -4429,93 +4533,103 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                             </div>
 
-                            {/* PANEL ATAS: PENUGASAN MULTI-ALAMAT ARMADA (CHECKBOX BATCH DISPATCH) */}
-                            <div className="bg-slate-900/90 border-2 border-cyan-500/40 rounded-2xl p-5 shadow-2xl space-y-4">
-                                <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
-                                        <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
-                                            📋 Form Penugasan Rute Mobil Multi-Alamat (Admin Toko / WMS Logistics)
-                                        </h3>
+                            {/* PANEL ATAS: PENUGASAN MULTI-ALAMAT ARMADA (KHUSUS ADMIN TOKO / WMS LOGISTICS, BUKAN DRIVER) */}
+                            {userRole !== 'driver' && (
+                                <div className="bg-slate-900/90 border-2 border-cyan-500/40 rounded-2xl p-5 shadow-2xl space-y-4">
+                                    <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
+                                            <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                                                📋 Form Penugasan Rute Mobil Multi-Alamat (Admin Toko / WMS Logistics)
+                                            </h3>
+                                        </div>
+                                        <span className="text-xs bg-cyan-500/10 text-cyan-300 px-3 py-1 rounded-full border border-cyan-500/30 font-bold">
+                                            Pilih {selectedBatchOrderIds.length} Alamat → Tetapkan Supir & Mobil
+                                        </span>
                                     </div>
-                                    <span className="text-xs bg-cyan-500/10 text-cyan-300 px-3 py-1 rounded-full border border-cyan-500/30 font-bold">
-                                        Pilih {selectedBatchOrderIds.length} Alamat → Tetapkan Supir & Mobil
-                                    </span>
+
+                                    <form onSubmit={handleAssignBatchDeliverySubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                                        {/* 1. PILIH SUPIR / DRIVER */}
+                                        <div>
+                                            <label className="text-slate-300 block mb-1 font-bold">1. Pilih Supir / Driver Armada:</label>
+                                            <select
+                                                value={dispatchDriverInput}
+                                                onChange={e => setDispatchDriverInput(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
+                                            >
+                                                <option value="Pak Budi (Supir Utama DC)">👨‍✈️ Pak Budi (Supir Utama DC)</option>
+                                                <option value="Pak Mulyadi (Driver Engkel)">👨‍✈️ Pak Mulyadi (Driver Engkel)</option>
+                                                <option value="Pak Asep (Driver L300)">👨‍✈️ Pak Asep (Driver Pick Up)</option>
+                                                <option value="Pak Hendra (Driver Subcon)">👨‍✈️ Pak Hendra (Driver Subcon)</option>
+                                            </select>
+                                        </div>
+
+                                        {/* 2. PILIH KENDARAAN & PLAT */}
+                                        <div>
+                                            <label className="text-slate-300 block mb-1 font-bold">2. Jenis & No. Plat Mobil:</label>
+                                            <select
+                                                value={dispatchVehicleInput}
+                                                onChange={e => setDispatchVehicleInput(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
+                                            >
+                                                <option value="Engkel Box (D 8472 AB)">🚚 Engkel Box (D 8472 AB)</option>
+                                                <option value="Pick Up L300 (D 8192 XY)">🛻 Pick Up L300 (D 8192 XY)</option>
+                                                <option value="Truck Engkel Long (D 8011 GH)">🚛 Truck Engkel Long (D 8011 GH)</option>
+                                                <option value="Armada Subcon (B 9920 FK)">🚚 Armada Subcon (B 9920 FK)</option>
+                                            </select>
+                                        </div>
+
+                                        {/* 3. CATATAN INTRO PENGIRIMAN */}
+                                        <div>
+                                            <label className="text-slate-300 block mb-1 font-bold">3. Catatan Rute / Instruksi Supir:</label>
+                                            <input
+                                                type="text"
+                                                value={dispatchNotesInput}
+                                                onChange={e => setDispatchNotesInput(e.target.value)}
+                                                placeholder="Contoh: Dahulukan Alamat Antapani sebelum jam 12..."
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-cyan-400"
+                                            />
+                                        </div>
+
+                                        {/* 4. SUBMIT BATCH ASSIGNMENT */}
+                                        <div className="flex flex-col justify-end">
+                                            <button
+                                                type="submit"
+                                                disabled={selectedBatchOrderIds.length === 0}
+                                                className={`w-full font-extrabold px-4 py-2.5 rounded-lg text-xs shadow-lg flex items-center justify-center gap-2 transition ${
+                                                    selectedBatchOrderIds.length > 0
+                                                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-cyan-500/20 cursor-pointer transform hover:-translate-y-0.5'
+                                                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                🚀 Tugaskan Mobil ke {selectedBatchOrderIds.length} Alamat Terpilih
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
-
-                                <form onSubmit={handleAssignBatchDeliverySubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-                                    {/* 1. PILIH SUPIR / DRIVER */}
-                                    <div>
-                                        <label className="text-slate-300 block mb-1 font-bold">1. Pilih Supir / Driver Armada:</label>
-                                        <select
-                                            value={dispatchDriverInput}
-                                            onChange={e => setDispatchDriverInput(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
-                                        >
-                                            <option value="Pak Budi (Supir Utama DC)">👨‍✈️ Pak Budi (Supir Utama DC)</option>
-                                            <option value="Pak Mulyadi (Driver Engkel)">👨‍✈️ Pak Mulyadi (Driver Engkel)</option>
-                                            <option value="Pak Asep (Driver L300)">👨‍✈️ Pak Asep (Driver Pick Up)</option>
-                                            <option value="Pak Hendra (Driver Subcon)">👨‍✈️ Pak Hendra (Driver Subcon)</option>
-                                        </select>
-                                    </div>
-
-                                    {/* 2. PILIH KENDARAAN & PLAT */}
-                                    <div>
-                                        <label className="text-slate-300 block mb-1 font-bold">2. Jenis & No. Plat Mobil:</label>
-                                        <select
-                                            value={dispatchVehicleInput}
-                                            onChange={e => setDispatchVehicleInput(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
-                                        >
-                                            <option value="Engkel Box (D 8472 AB)">🚚 Engkel Box (D 8472 AB)</option>
-                                            <option value="Pick Up L300 (D 8192 XY)">🛻 Pick Up L300 (D 8192 XY)</option>
-                                            <option value="Truck Engkel Long (D 8011 GH)">🚛 Truck Engkel Long (D 8011 GH)</option>
-                                            <option value="Armada Subcon (B 9920 FK)">🚚 Armada Subcon (B 9920 FK)</option>
-                                        </select>
-                                    </div>
-
-                                    {/* 3. CATATAN INTRO PENGIRIMAN */}
-                                    <div>
-                                        <label className="text-slate-300 block mb-1 font-bold">3. Catatan Rute / Instruksi Supir:</label>
-                                        <input
-                                            type="text"
-                                            value={dispatchNotesInput}
-                                            onChange={e => setDispatchNotesInput(e.target.value)}
-                                            placeholder="Contoh: Dahulukan Alamat Antapani sebelum jam 12..."
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-cyan-400"
-                                        />
-                                    </div>
-
-                                    {/* 4. SUBMIT BATCH ASSIGNMENT */}
-                                    <div className="flex flex-col justify-end">
-                                        <button
-                                            type="submit"
-                                            disabled={selectedBatchOrderIds.length === 0}
-                                            className={`w-full font-extrabold px-4 py-2.5 rounded-lg text-xs shadow-lg flex items-center justify-center gap-2 transition ${
-                                                selectedBatchOrderIds.length > 0
-                                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-cyan-500/20 cursor-pointer transform hover:-translate-y-0.5'
-                                                    : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                                            }`}
-                                        >
-                                            🚀 Tugaskan Mobil ke {selectedBatchOrderIds.length} Alamat Terpilih
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
+                            )}
 
                             {/* SECTION DAFTAR TRIP MOBIL AKTIF & RUTE MANIFEST MULTI-STOP */}
                             <div className="space-y-4">
                                 <div className="flex flex-wrap justify-between items-center gap-2">
                                     <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-                                        🚛 Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif
+                                        🚛 {userRole === 'driver' ? `Daftar Penugasan Trip Akun Supir: ${userName}` : 'Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif'}
                                     </h3>
                                     <div className="flex flex-wrap gap-2 text-xs">
-                                        <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                                            🏭 Admin Gudang: Siap Cetak SJ 4 Warna & Gate Pass
-                                        </span>
-                                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                                            🚚 Divisi Supir: Terbit di Tugas Pengiriman Driver
-                                        </span>
+                                        {userRole === 'driver' ? (
+                                            <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                                                👤 Akun Supir Aktif: {userName}
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                                                    🏭 Admin Gudang: Siap Cetak SJ 4 Warna & Gate Pass
+                                                </span>
+                                                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                                                    🚚 Divisi Supir: Terbit di Tugas Pengiriman Driver
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -4526,7 +4640,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         waybill_number: 'SJ-' + (o.spo_number || o.id),
                                         trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
                                         order: o,
-                                        driver_name: o.assigned_driver || 'Pak Budi (Supir DC)',
+                                        driver_name: o.assigned_driver || 'Pak Budi (Supir Utama DC)',
                                         vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
                                         waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
                                         delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman'
@@ -4539,7 +4653,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         if (!grouped[key]) {
                                             grouped[key] = {
                                                 trip_code: d.trip_code || key,
-                                                driver_name: d.driver_name || 'Pak Budi (Supir DC)',
+                                                driver_name: d.driver_name || 'Pak Budi (Supir Utama DC)',
                                                 vehicle_plate: d.vehicle_plate || 'Engkel Box (D 8472 AB)',
                                                 deliveries: [],
                                                 orders: []
@@ -4552,12 +4666,26 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         }
                                     });
 
-                                    const trips = Object.values(grouped);
+                                    let trips = Object.values(grouped);
+
+                                    // Filter for logged-in driver if userRole === 'driver'
+                                    if (userRole === 'driver') {
+                                        const driverFirstName = userName.split(' ')[0] || userName;
+                                        const myTrips = trips.filter(t => 
+                                            t.driver_name.toLowerCase().includes(driverFirstName.toLowerCase()) || 
+                                            t.driver_name.toLowerCase().includes(userName.toLowerCase())
+                                        );
+                                        if (myTrips.length > 0) {
+                                            trips = myTrips;
+                                        }
+                                    }
 
                                     if (trips.length === 0) {
                                         return (
                                             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-8 text-center text-slate-400">
-                                                Belum ada trip pengiriman aktif. Silakan centang alamat pada tabel di bawah untuk menugaskan armada!
+                                                {userRole === 'driver' 
+                                                    ? `Belum ada trip pengiriman yang ditugaskan untuk ${userName}. Silakan konfirmasi ke Admin Gudang.`
+                                                    : 'Belum ada trip pengiriman aktif. Silakan centang alamat pada tabel di bawah untuk menugaskan armada!'}
                                             </div>
                                         );
                                     }
@@ -4962,8 +5090,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         </div>
                     )}
 
-                    {/* TAB 8: STOK AKSESORIS */}
-                    {activeTab === 'accessories' && (
+                    {/* TAB 8: STOK AKSESORIS (KHUSUS ADMIN TOKO & OWNER) */}
+                    {activeTab === 'accessories' && (userRole === 'admin_toko' || userRole === 'owner') && (
                         <div className="space-y-6">
                             <div className="flex flex-wrap justify-between items-center gap-4">
                                 <div>
@@ -5472,25 +5600,34 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             {/* BUTTON ACTION & SUBTAB TOGGLE DIRECTLY BELOW CARDS */}
                             <div className="flex flex-wrap justify-between items-center gap-4">
-                                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                                     <div className="flex flex-wrap items-center gap-3">
-                                        <button
-                                            onClick={() => setShowAddToolModal(true)}
-                                            className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50"
-                                        >
-                                            <span className="text-base">✨</span> + Tambah Alat Penunjang Baru
-                                        </button>
+                                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                            <button
+                                                onClick={() => setShowAddToolModal(true)}
+                                                className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50"
+                                            >
+                                                <span className="text-base">✨</span> + Tambah Alat Penunjang Baru
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => {
                                                 if (toolsList.length === 0) {
                                                     alert('Belum ada alat di katalog! Silakan tambah alat baru terlebih dahulu.');
                                                     return;
                                                 }
+                                                if (userRole === 'driver') {
+                                                    setNewBorrowForm(prev => ({
+                                                        ...prev,
+                                                        borrower_name: userName,
+                                                        purpose: 'Operasional Pengiriman Armada Supir (' + userName + ')'
+                                                    }));
+                                                }
                                                 setShowBorrowToolModal(true);
                                             }}
                                             className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-cyan-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-blue-300/50"
                                         >
-                                            <span className="text-base">📋</span> + Catat Peminjaman Alat
+                                            <span className="text-base">📋</span> {userRole === 'driver' ? '🛠️ + Pinjam Alat Penunjang Supir' : '📋 + Catat Peminjaman Alat'}
                                         </button>
                                     </div>
                                 )}
@@ -5932,6 +6069,289 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             </td>
                                                         </tr>
                                                     ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* TAB: PENGELOLAAN KARYAWAN & AKUN STAFF */}
+                    {activeTab === 'employees' && (userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                        <div className="space-y-6">
+                            <div className="flex flex-wrap justify-between items-center gap-4">
+                                <div>
+                                    <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+                                        👥 Sistem Pengelolaan Karyawan & Audit Log Admin
+                                    </h2>
+                                    <p className="text-slate-400 text-sm">
+                                        Kelola pendaftaran karyawan baru, rotasi pergantian supir & teknisi, serta audit trail riwayat aktivitas admin.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => { setSelectedEmployeeForEdit(null); setShowEmployeeModal(true); }}
+                                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-cyan-500/20 text-xs flex items-center gap-2 transition transform hover:scale-105 cursor-pointer"
+                                >
+                                    <span className="text-base">➕</span> Tambah Karyawan Baru
+                                </button>
+                            </div>
+
+                            {/* 4 STATS CARDS */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block font-semibold">Total Akun Terdaftar</span>
+                                    <h3 className="text-2xl font-black text-cyan-400 mt-1">{employeesList.length} Karyawan</h3>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block font-semibold">Supir & Armada Logistik</span>
+                                    <h3 className="text-2xl font-black text-emerald-400 mt-1">{employeesList.filter(u => u.role === 'driver').length} Supir</h3>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block font-semibold">Staff Divisi Manufaktur</span>
+                                    <h3 className="text-2xl font-black text-amber-400 mt-1">{employeesList.filter(u => u.role.startsWith('divisi_')).length} Teknisi</h3>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+                                    <span className="text-xs text-slate-400 block font-semibold">Total Audit Log Aktivitas</span>
+                                    <h3 className="text-2xl font-black text-purple-400 mt-1">{activityLogsList.length} Catatan</h3>
+                                </div>
+                            </div>
+
+                            {/* SUB TAB TOGGLE (DAFTAR KARYAWAN VS LOG AKTIVITAS ADMIN) */}
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div className="flex items-center bg-slate-900 border border-slate-800 p-1.5 rounded-xl shadow-lg gap-1">
+                                    <button
+                                        onClick={() => setEmployeeSubTab('karyawan')}
+                                        className={`px-4 py-2 rounded-lg text-xs font-extrabold transition cursor-pointer ${employeeSubTab === 'karyawan' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        👥 Daftar Akun Karyawan ({employeesList.length})
+                                    </button>
+                                    <button
+                                        onClick={() => setEmployeeSubTab('log')}
+                                        className={`px-4 py-2 rounded-lg text-xs font-extrabold transition cursor-pointer ${employeeSubTab === 'log' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        📜 Riwayat Aktivitas Admin ({activityLogsList.length})
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* SUB TAB 1: DAFTAR AKUN KARYAWAN */}
+                            {employeeSubTab === 'karyawan' && (
+                                <div className="space-y-4">
+                                    {/* FILTER & SEARCH BAR */}
+                                    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-4">
+                                        <div className="flex-1 min-w-[240px]">
+                                            <input
+                                                type="text"
+                                                placeholder="🔍 Cari nama karyawan / email login..."
+                                                value={employeeSearchTerm}
+                                                onChange={e => setEmployeeSearchTerm(e.target.value)}
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-slate-200 focus:border-cyan-400"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-slate-400 font-bold">Filter Divisi:</span>
+                                            <select
+                                                value={employeeRoleFilter}
+                                                onChange={e => setEmployeeRoleFilter(e.target.value)}
+                                                className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-bold focus:border-cyan-400 cursor-pointer"
+                                            >
+                                                <option value="semua">🌐 Semua Peran ({employeesList.length})</option>
+                                                <option value="driver">🚚 Supir / Driver ({employeesList.filter(u => u.role === 'driver').length})</option>
+                                                <option value="divisi_ht">✂️ Divisi HT ({employeesList.filter(u => u.role === 'divisi_ht').length})</option>
+                                                <option value="divisi_gm">✨ Divisi GM ({employeesList.filter(u => u.role === 'divisi_gm').length})</option>
+                                                <option value="divisi_bv">💎 Divisi BV ({employeesList.filter(u => u.role === 'divisi_bv').length})</option>
+                                                <option value="divisi_etsa">🌫️ Divisi Etsa ({employeesList.filter(u => u.role === 'divisi_etsa').length})</option>
+                                                <option value="admin_gudang">🏭 Admin Gudang ({employeesList.filter(u => u.role === 'admin_gudang').length})</option>
+                                                <option value="admin_toko">🏪 Admin Toko ({employeesList.filter(u => u.role === 'admin_toko').length})</option>
+                                                <option value="owner">📈 Owner ({employeesList.filter(u => u.role === 'owner').length})</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* EMPLOYEES TABLE */}
+                                    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-xs text-slate-300">
+                                                <thead className="bg-slate-950/80 text-cyan-400 font-bold uppercase tracking-wider border-b border-slate-800">
+                                                    <tr>
+                                                        <th className="p-4">Karyawan / Staff</th>
+                                                        <th className="p-4">Email Login</th>
+                                                        <th className="p-4">Peran / Divisi</th>
+                                                        <th className="p-4">Tanggal Terdaftar</th>
+                                                        <th className="p-4 text-center">Aksi / Tindakan</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-800/60 font-medium">
+                                                    {(() => {
+                                                        const filtered = employeesList.filter(emp => {
+                                                            const matchSearch = emp.name.toLowerCase().includes(employeeSearchTerm.toLowerCase()) || emp.email.toLowerCase().includes(employeeSearchTerm.toLowerCase());
+                                                            const matchRole = employeeRoleFilter === 'semua' || emp.role === employeeRoleFilter;
+                                                            return matchSearch && matchRole;
+                                                        });
+
+                                                        if (filtered.length === 0) {
+                                                            return (
+                                                                <tr>
+                                                                    <td colSpan="5" className="p-8 text-center text-slate-500">
+                                                                        Tidak ditemukan data karyawan sesuai pencarian/filter.
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        }
+
+                                                        return filtered.map(emp => {
+                                                            const roleBadgeColor = 
+                                                                emp.role === 'driver' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' :
+                                                                emp.role.startsWith('divisi_') ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                                                                emp.role === 'admin_gudang' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
+                                                                emp.role === 'owner' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                                                                'bg-blue-500/20 text-blue-300 border-blue-500/30';
+
+                                                            return (
+                                                                <tr key={emp.id} className="hover:bg-slate-800/40 transition">
+                                                                    <td className="p-4">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-cyan-300 text-sm shrink-0">
+                                                                                {emp.name.charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="font-extrabold text-slate-100 block text-sm">{emp.name}</span>
+                                                                                {auth.user?.id === emp.id && (
+                                                                                    <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.2 rounded border border-cyan-500/30 font-bold">
+                                                                                        (Akun Anda)
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="p-4 font-mono text-slate-300">
+                                                                        {emp.email}
+                                                                    </td>
+                                                                    <td className="p-4">
+                                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${roleBadgeColor}`}>
+                                                                            {roleTitles[emp.role] || emp.role}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="p-4 text-slate-400">
+                                                                        {formatIndonesianDate(emp.created_at)}
+                                                                    </td>
+                                                                    <td className="p-4 text-center">
+                                                                        <div className="flex items-center justify-center gap-2">
+                                                                            <button
+                                                                                onClick={() => { setSelectedEmployeeForEdit(emp); setShowEmployeeModal(true); }}
+                                                                                className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                                title="Edit Data / Reset Password"
+                                                                            >
+                                                                                ✏️ Edit / Reset Pass
+                                                                            </button>
+                                                                            {auth.user?.id !== emp.id && (
+                                                                                <button
+                                                                                    onClick={() => handleDeleteEmployee(emp)}
+                                                                                    className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                                    title="Hapus / Non-aktifkan Akun"
+                                                                                >
+                                                                                    🗑️ Hapus
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        });
+                                                    })()}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SUB TAB 2: RIWAYAT AKTIVITAS ADMIN & AUDIT LOG */}
+                            {employeeSubTab === 'log' && (
+                                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl space-y-4 p-5">
+                                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                        <div>
+                                            <h3 className="font-extrabold text-slate-100 text-base flex items-center gap-2">
+                                                📜 Audit Log - Catatan Riwayat Aktivitas Admin
+                                            </h3>
+                                            <p className="text-xs text-slate-400 mt-0.5">
+                                                Pencatatan otomatis seluruh pembuatan akun baru, edit profil, reset password, dan penghapusan karyawan.
+                                            </p>
+                                        </div>
+                                        <span className="bg-cyan-500/20 text-cyan-300 text-xs font-mono font-bold px-3 py-1 rounded-full border border-cyan-500/30">
+                                            Total {activityLogsList.length} Log Aktivitas
+                                        </span>
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs text-slate-300">
+                                            <thead className="bg-slate-950/80 text-cyan-400 font-bold uppercase tracking-wider border-b border-slate-800">
+                                                <tr>
+                                                    <th className="p-4">Waktu Log</th>
+                                                    <th className="p-4">Admin Eksekutor</th>
+                                                    <th className="p-4">Jenis Action</th>
+                                                    <th className="p-4">Target Karyawan</th>
+                                                    <th className="p-4">Detail Deskripsi Log</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800/60 font-medium">
+                                                {activityLogsList.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="5" className="p-8 text-center text-slate-500">
+                                                            Belum ada catatan aktivitas admin yang terekam di sistem.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    activityLogsList.map(log => {
+                                                        const badgeStyle = 
+                                                            log.action_type === 'BUAT_AKUN' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                                                            log.action_type === 'RESET_PASSWORD' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                                                            log.action_type === 'HAPUS_AKUN' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' :
+                                                            log.action_type === 'TOLAK_SCRAP' ? 'bg-rose-500/20 text-rose-300 border-rose-500/50' :
+                                                            log.action_type === 'EDIT_SCRAP' ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' :
+                                                            log.action_type === 'INPUT_SCRAP' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' :
+                                                            log.action_type === 'CATAT_BAHAN_KACA' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50' :
+                                                            'bg-blue-500/20 text-blue-300 border-blue-500/40';
+
+                                                        const actionIcon = 
+                                                            log.action_type === 'BUAT_AKUN' ? '🟢 BUAT AKUN' :
+                                                            log.action_type === 'RESET_PASSWORD' ? '🔑 RESET PASSWORD' :
+                                                            log.action_type === 'HAPUS_AKUN' ? '🔴 HAPUS AKUN' :
+                                                            log.action_type === 'TOLAK_SCRAP' ? '❌ TOLAK SCRAP' :
+                                                            log.action_type === 'EDIT_SCRAP' ? '✂️ EDIT SCRAP' :
+                                                            log.action_type === 'INPUT_SCRAP' ? '🧩 INPUT SCRAP' :
+                                                            log.action_type === 'CATAT_BAHAN_KACA' ? '📄 CATAT BAHAN' :
+                                                            '🔵 EDIT AKUN';
+
+                                                        return (
+                                                            <tr key={log.id} className="hover:bg-slate-800/40 transition">
+                                                                <td className="p-4 text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                                                                    {formatIndonesianDateTime(log.created_at)}
+                                                                </td>
+                                                                <td className="p-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-cyan-400 text-xs shrink-0">
+                                                                            👮
+                                                                        </span>
+                                                                        <span className="font-extrabold text-slate-200">{log.admin_name}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-4 whitespace-nowrap">
+                                                                    <span className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-black border ${badgeStyle}`}>
+                                                                        {actionIcon}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-4 font-bold text-slate-200">
+                                                                    {log.target_user_name || '-'}
+                                                                </td>
+                                                                <td className="p-4 text-slate-300 font-sans">
+                                                                    {log.description}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
                                                 )}
                                             </tbody>
                                         </table>
@@ -8036,6 +8456,9 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 formatIndonesianDate={formatIndonesianDate}
                 formatIndonesianDateTime={formatIndonesianDateTime}
                 onOpenSketchLightbox={handleOpenSketchLightbox}
+                sheetGlasses={sheetGlasses}
+                scrapGlasses={scrapGlasses}
+                onRecordRawMaterialSuccess={handleRecordRawMaterialSuccess}
             />
 
             {/* MODAL POPUP FORM SISA UNTUK POTONG (INPUT SCRAP GLASS - REDESIGN) */}
@@ -8098,6 +8521,14 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 onClose={() => { setShowBatchWaybillModal(false); setSelectedBatchWaybillTrip(null); }}
                 tripData={selectedBatchWaybillTrip}
                 userName={userName}
+            />
+
+            {/* MODAL KELOLA KARYAWAN & AKUN STAFF */}
+            <EmployeeModal
+                isOpen={showEmployeeModal}
+                onClose={() => { setShowEmployeeModal(false); setSelectedEmployeeForEdit(null); }}
+                employeeToEdit={selectedEmployeeForEdit}
+                roleTitles={roleTitles}
             />
 
             {/* GLOBAL SKETCH LIGHTBOX MODAL */}

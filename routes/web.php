@@ -29,6 +29,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{id}/cancel-revision-lock', [SypOperationalController::class, 'cancelRevisionLock'])->name('orders.cancel_revision_lock');
     Route::post('/orders/{id}/acknowledge-revision', [SypOperationalController::class, 'acknowledgeRevision'])->name('orders.acknowledge_revision');
     Route::post('/orders/{id}/finish-job', [SypOperationalController::class, 'finishDivisionJob'])->name('orders.finish');
+    Route::post('/orders/{id}/raw-material', [SypOperationalController::class, 'recordRawMaterialUsage'])->name('orders.raw_material');
     Route::post('/orders/{id}/complete-delivery', [SypOperationalController::class, 'completeDelivery'])->name('orders.complete_delivery');
     Route::post('/orders/batch-delivery', [SypOperationalController::class, 'assignBatchDelivery'])->name('orders.batch_delivery');
 
@@ -36,8 +37,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{id}/complaint', [ComplaintController::class, 'submitGlassComplaint'])->name('orders.complaint');
     Route::post('/orders/{id}/resolve-complaint', [ComplaintController::class, 'resolveGlassComplaint'])->name('orders.resolve_complaint');
 
-    // Scrap Glass Operations
+    // Scrap Glass & Rejection Operations
     Route::post('/scrap', [ScrapController::class, 'storeScrap'])->name('scrap.store');
+    Route::post('/scrap/{id}/update', [ScrapController::class, 'updateScrap'])->name('scrap.update');
+    Route::post('/orders/{id}/reject-scrap', [SypOperationalController::class, 'rejectScrapRecommendation'])->name('orders.reject_scrap');
+
+    // Employee & User Account Management Operations
+    Route::post('/users', [SypOperationalController::class, 'storeUser'])->name('users.store');
+    Route::post('/users/{id}/update', [SypOperationalController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{id}', [SypOperationalController::class, 'destroyUser'])->name('users.destroy');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

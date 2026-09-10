@@ -20,9 +20,15 @@ export default function DispatchModal({
                     <button onClick={() => onClose()} className="text-slate-400 hover:text-white text-xl">&times;</button>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1.5">
                     <div className="text-cyan-400 font-bold">{selectedDispatchOrder.spo_number} - {selectedDispatchOrder.customer_name}</div>
                     <div className="text-slate-300">Kaca: {selectedDispatchOrder.glass_type} ({selectedDispatchOrder.length_cm} x {selectedDispatchOrder.width_cm} cm)</div>
+                    {selectedDispatchOrder.used_scrap_rak && selectedDispatchOrder.used_scrap_rak !== '-' && selectedDispatchOrder.used_scrap_rak.trim() !== '' && (
+                        <div className="bg-amber-950/80 border border-amber-500/50 rounded-lg p-2 text-amber-300 font-mono text-[11px] space-y-0.5">
+                            <span className="font-extrabold text-amber-400 block">🧩 Rekomendasi Scrap Toko:</span>
+                            <span className="text-slate-100 font-bold block">{selectedDispatchOrder.used_scrap_rak}</span>
+                        </div>
+                    )}
                 </div>
 
                 <form onSubmit={handleDispatchOrderSubmit} className="space-y-4 text-xs">

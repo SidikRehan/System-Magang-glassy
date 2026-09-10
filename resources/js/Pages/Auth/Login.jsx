@@ -28,11 +28,14 @@ export default function Login({ status, canResetPassword }) {
     const demoAccounts = [
         { label: '🏪 Admin Toko', email: 'toko@sypglass.co.id' },
         { label: '🏭 Admin Gudang', email: 'gudang@sypglass.co.id' },
-        { label: '✂️ Divisi HT (Potong)', email: 'ht@sypglass.co.id' },
-        { label: '✨ Divisi GM (Gosok)', email: 'gm@sypglass.co.id' },
-        { label: '💎 Divisi BV (Bevel)', email: 'bv@sypglass.co.id' },
-        { label: '🌫️ Divisi Etsa (Blur)', email: 'etsa@sypglass.co.id' },
-        { label: '🚚 Driver / Supir', email: 'driver@sypglass.co.id' },
+        { label: '✂️ Divisi HT', email: 'ht@sypglass.co.id' },
+        { label: '✨ Divisi GM', email: 'gm@sypglass.co.id' },
+        { label: '💎 Divisi BV', email: 'bv@sypglass.co.id' },
+        { label: '🌫️ Divisi Etsa', email: 'etsa@sypglass.co.id' },
+        { label: '🚚 Supir 1 (Pak Budi)', email: 'driver@sypglass.co.id' },
+        { label: '🚚 Supir 2 (Pak Mulyadi)', email: 'mulyadi.driver@sypglass.co.id' },
+        { label: '🚚 Supir 3 (Pak Asep)', email: 'asep.driver@sypglass.co.id' },
+        { label: '🚚 Supir 4 (Pak Hendra)', email: 'hendra.driver@sypglass.co.id' },
         { label: '📈 Owner & Akuntan', email: 'owner@sypglass.co.id' },
     ];
 

@@ -7,6 +7,9 @@ use Inertia\Inertia;
 use App\Models\Order;
 use App\Models\ScrapGlass;
 use App\Models\Delivery;
+use App\Models\User;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Hash;
 
 class SypOperationalController extends Controller
 {
@@ -30,6 +33,8 @@ class SypOperationalController extends Controller
             'orders' => Order::orderBy('id', 'desc')->get(),
             'scrapGlasses' => ScrapGlass::latest()->get(),
             'deliveries' => Delivery::with('order')->latest()->get(),
+            'users' => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get(),
+            'activityLogs' => ActivityLog::latest()->take(100)->get(),
             'metrics' => [
                 'totalOrders' => Order::count(),
                 'inProcess' => Order::where('status', 'pengerjaan')->count(),
@@ -784,6 +789,93 @@ class SypOperationalController extends Controller
     }
 
     /**
+     * Record Raw Material (Sheet Glass) Usage for Order (Divisi HT Potong)
+     */
+    public function recordRawMaterialUsage(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $userRole = auth()->user()->role ?? '';
+
+        if ($userRole !== 'divisi_ht' && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Hanya Divisi Potong (HT) atau Admin Gudang yang dapat mencatat pemakaian bahan lembaran!');
+        }
+
+        $validated = $request->validate([
+            'glass_type' => 'required|string',
+            'sheets_used' => 'required|numeric|min:1',
+            'notes' => 'nullable|string',
+        ]);
+
+        $rawUsage = (array) ($order->raw_materials_used ?? []);
+        $rawUsage[] = [
+            'id' => time() . rand(100, 999),
+            'glass_type' => $validated['glass_type'],
+            'sheets_used' => (int) $validated['sheets_used'],
+            'notes' => $validated['notes'] ?? 'Pemotongan bahan lembaran baru Divisi HT',
+            'recorded_by' => auth()->user()->name ?? 'Pekerja Divisi HT',
+            'recorded_at' => now()->toDateTimeString(),
+        ];
+
+        $order->raw_materials_used = $rawUsage;
+        $order->save();
+
+        ActivityLog::create([
+            'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
+            'action_type' => 'CATAT_BAHAN_KACA',
+            'target_user' => $order->spo_number,
+            'description' => 'Mencatat pemakaian ' . $validated['sheets_used'] . ' lembar bahan kaca (' . $validated['glass_type'] . ') untuk SPO ' . $order->spo_number,
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '✅ Pemakaian ' . $validated['sheets_used'] . ' lembar bahan kaca (' . $validated['glass_type'] . ') berhasil dicatat untuk SPO ' . $order->spo_number . '!');
+    }
+
+    /**
+     * Reject Scrap Recommendation by Divisi HT (Kaca Baret / Ukuran Tidak Cukup / Rusak)
+     */
+    public function rejectScrapRecommendation(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $userRole = auth()->user()->role ?? '';
+
+        if ($userRole !== 'divisi_ht' && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Hanya Divisi Potong (HT) atau Admin Gudang yang dapat menolak rekomendasi kaca sisa!');
+        }
+
+        $validated = $request->validate([
+            'reason_type' => 'required|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        $reasonLabels = [
+            'baret_cacat' => 'Kaca Baret / Cacat / Retak Fisik',
+            'ukuran_kurang' => 'Ukuran Fisik Kaca Sisa Tidak Cukup',
+            'tidak_ditemukan' => 'Kaca Tidak Ditemukan di Rak Storage',
+            'alasan_lain' => 'Alasan Lainnya',
+        ];
+
+        $label = $reasonLabels[$validated['reason_type']] ?? $validated['reason_type'];
+        $notesStr = !empty(trim($validated['notes'] ?? '')) ? ' ("' . trim($validated['notes']) . '")' : '';
+
+        $oldScrapStr = $order->used_scrap_rak ?: '-';
+        $rejectionStr = '❌ [DITOLAK DIVISI HT] ' . $label . $notesStr . ' | (Rekomendasi Toko Semula: ' . $oldScrapStr . ')';
+
+        $order->used_scrap_rak = $rejectionStr;
+        $order->save();
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
+            'action_type' => 'TOLAK_SCRAP',
+            'target_user_name' => $order->spo_number,
+            'description' => 'Divisi HT Menolak rekomendasi penggunaan kaca sisa pada SPO #' . $order->spo_number . '. Alasan: ' . $label . $notesStr . '.',
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '❌ Penolakan penggunaan kaca sisa untuk SPO ' . $order->spo_number . ' berhasil dicatat!');
+    }
+
+    /**
      * Submit Glass Defect / Scratch Complaint from Division
      */
     public function submitGlassComplaint(Request $request, $id)
@@ -998,5 +1090,107 @@ class SypOperationalController extends Controller
             }
         }
         return $progress;
+    }
+
+    /**
+     * Store New Employee Account (Admin Gudang / Admin Toko / Owner)
+     */
+    public function storeUser(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner',
+            'password' => 'required|string|min:6',
+        ]);
+
+        $newUser = User::create([
+            'name' => $validated['name'],
+            'email' => strtolower(trim($validated['email'])),
+            'role' => $validated['role'],
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        // Record Audit Activity Log
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Admin System',
+            'action_type' => 'BUAT_AKUN',
+            'target_user_name' => $newUser->name,
+            'description' => 'Membuat akun karyawan baru (' . $newUser->name . ' - ' . $newUser->email . ') dengan peran ' . strtoupper($newUser->role),
+        ]);
+
+        return redirect()->back()->with('message', 'Akun karyawan baru (' . $validated['name'] . ') berhasil dibuat!');
+    }
+
+    /**
+     * Update Employee Account Info or Password
+     */
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $id,
+            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $updateData = [
+            'name' => $validated['name'],
+            'email' => strtolower(trim($validated['email'])),
+            'role' => $validated['role'],
+        ];
+
+        $isPasswordChanged = !empty($validated['password']);
+        if ($isPasswordChanged) {
+            $updateData['password'] = Hash::make($validated['password']);
+        }
+
+        $user->update($updateData);
+
+        // Record Audit Activity Log
+        $actionType = $isPasswordChanged ? 'RESET_PASSWORD' : 'EDIT_AKUN';
+        $logDesc = $isPasswordChanged 
+            ? 'Melakukan reset/pembaruan password & data untuk karyawan (' . $user->name . ' - ' . $user->email . ')'
+            : 'Memperbarui informasi profil/peran karyawan (' . $user->name . ' - peran: ' . strtoupper($user->role) . ')';
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Admin System',
+            'action_type' => $actionType,
+            'target_user_name' => $user->name,
+            'description' => $logDesc,
+        ]);
+
+        return redirect()->back()->with('message', 'Data karyawan (' . $user->name . ') berhasil diperbarui!');
+    }
+
+    /**
+     * Delete / Deactivate Employee Account
+     */
+    public function destroyUser(Request $request, $id)
+    {
+        if (auth()->id() == $id) {
+            return redirect()->back()->withErrors(['message' => 'Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif digunakan!']);
+        }
+
+        $user = User::findOrFail($id);
+        $deletedName = $user->name;
+        $deletedEmail = $user->email;
+        $deletedRole = $user->role;
+        $user->delete();
+
+        // Record Audit Activity Log
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Admin System',
+            'action_type' => 'HAPUS_AKUN',
+            'target_user_name' => $deletedName,
+            'description' => 'Menghapus/menonaktifkan akun karyawan (' . $deletedName . ' - ' . $deletedEmail . ' - peran: ' . strtoupper($deletedRole) . ')',
+        ]);
+
+        return redirect()->back()->with('message', 'Akun karyawan (' . $deletedName . ') berhasil dihapus/dinonaktifkan dari sistem.');
     }
 }
