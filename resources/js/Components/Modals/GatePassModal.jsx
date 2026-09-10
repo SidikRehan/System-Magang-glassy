@@ -42,49 +42,67 @@ export default function GatePassModal({
                     {/* DETAIL TUJUAN & ARMADA */}
                     <div className="grid grid-cols-2 gap-4 text-xs bg-slate-100 p-3 rounded-lg border border-slate-300">
                         <div className="space-y-1">
-                            <div><strong>No. Referensi SPO:</strong> <span className="font-mono text-blue-700 font-bold">{selectedBarangKeluarData.order.spo_number}</span></div>
-                            <div><strong>Nama Customer:</strong> {selectedBarangKeluarData.order.customer_name} ({selectedBarangKeluarData.order.customer_phone})</div>
-                            <div><strong>Alamat Pengiriman:</strong> {selectedBarangKeluarData.order.customer_address}</div>
+                            <div><strong>No. Referensi SPO:</strong> <span className="font-mono text-blue-700 font-bold">{selectedBarangKeluarData.orders ? selectedBarangKeluarData.orders.map(o => o.spo_number || o.id).join(', ') : selectedBarangKeluarData.order?.spo_number}</span></div>
+                            <div><strong>Jumlah Tujuan / Alamat:</strong> <span className="font-bold">{selectedBarangKeluarData.orders ? selectedBarangKeluarData.orders.length + ' Alamat Tujuan' : selectedBarangKeluarData.order?.customer_name}</span></div>
+                            <div><strong>Alamat Tujuan:</strong> {selectedBarangKeluarData.orders ? selectedBarangKeluarData.orders.map(o => o.customer_name + ' (' + (o.customer_address || '-') + ')').join('; ') : selectedBarangKeluarData.order?.customer_address}</div>
                         </div>
                         <div className="space-y-1 border-l border-slate-300 pl-3">
                             <div><strong>Supir / Driver:</strong> <span className="font-bold">{selectedBarangKeluarData.driver}</span></div>
                             <div><strong>Kendaraan & Plat:</strong> <span className="font-bold">{selectedBarangKeluarData.vehicle}</span></div>
-                            <div><strong>Status Tagihan:</strong> <span className="font-mono font-bold text-emerald-700">{selectedBarangKeluarData.order.payment_status}</span></div>
+                            <div><strong>Kode Trip:</strong> <span className="font-mono font-bold text-cyan-800">{selectedBarangKeluarData.trip_code || '-'}</span></div>
                         </div>
                     </div>
 
                     {/* TABEL ITEM BARANG KELUAR GUDANG */}
                     <div>
-                        <h4 className="font-bold text-xs uppercase mb-1">Rincian Fisik Barang Kaca Keluar dari Pabrik/Gudang:</h4>
+                        <h4 className="font-bold text-xs uppercase mb-1">Rincian Fisik Barang Kaca Keluar dari Pabrik/Gudang (Total Muatan Mobil):</h4>
                         <table className="w-full text-xs text-left border-collapse border border-slate-400">
                             <thead className="bg-slate-200 uppercase font-bold text-[11px]">
                                 <tr>
                                     <th className="border border-slate-400 p-2">No</th>
+                                    <th className="border border-slate-400 p-2">Tujuan / SPO</th>
                                     <th className="border border-slate-400 p-2">Spesifikasi Kaca / Item</th>
                                     <th className="border border-slate-400 p-2 text-center">Ukuran (P x L)</th>
                                     <th className="border border-slate-400 p-2 text-center">Tebal</th>
                                     <th className="border border-slate-400 p-2 text-center">Qty</th>
-                                    <th className="border border-slate-400 p-2 text-center">Status QC Gudang</th>
+                                    <th className="border border-slate-400 p-2 text-center">Status QC</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {(Array.isArray(selectedBarangKeluarData.order.items) && selectedBarangKeluarData.order.items.length > 0 
-                                    ? selectedBarangKeluarData.order.items 
+                                {(selectedBarangKeluarData.orders ? selectedBarangKeluarData.orders.flatMap(ord => {
+                                    const items = Array.isArray(ord.items) && ord.items.length > 0
+                                        ? ord.items
+                                        : [{
+                                            glass_type: ord.glass_type,
+                                            length_cm: ord.length_cm,
+                                            width_cm: ord.width_cm,
+                                            thickness_mm: ord.thickness_mm,
+                                            qty: ord.qty || 1
+                                        }];
+                                    return items.map(it => ({ ...it, spo_number: ord.spo_number, customer_name: ord.customer_name }));
+                                }) : (Array.isArray(selectedBarangKeluarData.order?.items) && selectedBarangKeluarData.order.items.length > 0 
+                                    ? selectedBarangKeluarData.order.items.map(it => ({ ...it, spo_number: selectedBarangKeluarData.order.spo_number, customer_name: selectedBarangKeluarData.order.customer_name }))
                                     : [{
-                                        glass_type: selectedBarangKeluarData.order.glass_type,
-                                        length_cm: selectedBarangKeluarData.order.length_cm,
-                                        width_cm: selectedBarangKeluarData.order.width_cm,
-                                        thickness_mm: selectedBarangKeluarData.order.thickness_mm,
-                                        qty: selectedBarangKeluarData.order.qty || 1
+                                        spo_number: selectedBarangKeluarData.order?.spo_number,
+                                        customer_name: selectedBarangKeluarData.order?.customer_name,
+                                        glass_type: selectedBarangKeluarData.order?.glass_type,
+                                        length_cm: selectedBarangKeluarData.order?.length_cm,
+                                        width_cm: selectedBarangKeluarData.order?.width_cm,
+                                        thickness_mm: selectedBarangKeluarData.order?.thickness_mm,
+                                        qty: selectedBarangKeluarData.order?.qty || 1
                                       }]
-                                ).map((it, idx) => (
+                                )).map((it, idx) => (
                                     <tr key={idx} className="border-b border-slate-300">
                                         <td className="border border-slate-400 p-2 text-center font-mono">{idx + 1}</td>
+                                        <td className="border border-slate-400 p-2 font-mono text-[11px]">
+                                            <strong className="text-cyan-800">{it.spo_number}</strong>
+                                            <div className="text-[10px] text-slate-600">{it.customer_name}</div>
+                                        </td>
                                         <td className="border border-slate-400 p-2 font-bold">{it.glass_type}</td>
                                         <td className="border border-slate-400 p-2 text-center font-mono font-bold">{it.length_cm} x {it.width_cm} cm</td>
                                         <td className="border border-slate-400 p-2 text-center font-mono">{it.thickness_mm || 5} mm</td>
-                                        <td className="border border-slate-400 p-2 text-center font-mono font-bold text-blue-700">{it.qty || 1} Pcs/Lembar</td>
-                                        <td className="border border-slate-400 p-2 text-center text-emerald-700 font-bold">✓ OK (Lolos QC)</td>
+                                        <td className="border border-slate-400 p-2 text-center font-mono font-bold text-blue-700">{it.qty || 1} Pcs</td>
+                                        <td className="border border-slate-400 p-2 text-center text-emerald-700 font-bold">✓ OK (QC)</td>
                                     </tr>
                                 ))}
                             </tbody>

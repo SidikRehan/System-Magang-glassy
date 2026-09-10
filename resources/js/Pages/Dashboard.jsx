@@ -9,6 +9,7 @@ import GudangDecisionModal from '@/Components/Modals/GudangDecisionModal';
 import GatePassModal from '@/Components/Modals/GatePassModal';
 import DivisionExecutionModal from '@/Components/Modals/DivisionExecutionModal';
 import WaybillModal from '@/Components/Modals/WaybillModal';
+import MultiAddressWaybillModal from '@/Components/Modals/MultiAddressWaybillModal';
 
 export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], metrics = {} }) {
     const { auth } = usePage().props;
@@ -1303,6 +1304,48 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [showBarangKeluarModal, setShowBarangKeluarModal] = useState(false);
     const [selectedBarangKeluarData, setSelectedBarangKeluarData] = useState(null);
 
+    // Multi-Address Delivery Dispatch States
+    const [selectedBatchOrderIds, setSelectedBatchOrderIds] = useState([]);
+    const [showMultiAddressModal, setShowMultiAddressModal] = useState(false);
+    const [selectedTripDataForModal, setSelectedTripDataForModal] = useState(null);
+    const [dispatchNotesInput, setDispatchNotesInput] = useState('');
+
+    const toggleSelectOrderForBatch = (orderId) => {
+        setSelectedBatchOrderIds(prev =>
+            prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+        );
+    };
+
+    const toggleSelectAllReadyOrders = () => {
+        const readyOrders = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan');
+        const readyIds = readyOrders.map(o => o.id);
+        if (selectedBatchOrderIds.length === readyIds.length) {
+            setSelectedBatchOrderIds([]);
+        } else {
+            setSelectedBatchOrderIds(readyIds);
+        }
+    };
+
+    const handleAssignBatchDeliverySubmit = (e) => {
+        e.preventDefault();
+        if (selectedBatchOrderIds.length === 0) {
+            alert('Silakan pilih (centang) minimal 1 SPO / Alamat pengiriman terlebih dahulu!');
+            return;
+        }
+
+        router.post('/orders/batch-delivery', {
+            order_ids: selectedBatchOrderIds,
+            driver_name: dispatchDriverInput,
+            vehicle_plate: dispatchVehicleInput,
+            notes: dispatchNotesInput
+        }, {
+            onSuccess: () => {
+                setSelectedBatchOrderIds([]);
+                setDispatchNotesInput('');
+            }
+        });
+    };
+
     const handleTriggerPrintSuratJalan = (e) => {
         e.preventDefault();
         const orderList = initialDeliveries.length > 0 ? initialDeliveries : initialOrders;
@@ -2441,6 +2484,17 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </button>
                         )}
 
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                            <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <div className="flex items-center gap-3">
+                                    🚚 <span>Pengiriman Multi-Alamat</span>
+                                </div>
+                                <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-cyan-500/30 font-mono">
+                                    {initialOrders.filter(o => o.status === 'pengiriman').length} Siap
+                                </span>
+                            </button>
+                        )}
+
                         {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('production')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'production' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 <div className="flex items-center gap-3">
@@ -2910,7 +2964,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 ].map(card => (
                                     <div
                                         key={card.key}
-                                        onClick={() => setActiveOrderCard(card.key)}
+                                        onClick={() => {
+                                            if (card.key === 'pengiriman') {
+                                                setActiveTab('deliveries');
+                                            } else {
+                                                setActiveOrderCard(card.key);
+                                            }
+                                        }}
                                         className={`cursor-pointer border rounded-xl p-4 text-center transition ${activeOrderCard === card.key ? 'bg-cyan-500/15 border-cyan-400 text-slate-100 shadow-lg shadow-cyan-500/10' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/40'}`}
                                     >
                                         <div className="text-2xl font-black text-cyan-400">{card.count}</div>
@@ -2959,13 +3019,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
 
                                 {activeOrderCard === 'pengiriman' && (
-                                    <div className="bg-cyan-950/60 border border-cyan-500/40 p-3 rounded-xl text-xs text-cyan-200 flex flex-wrap justify-between items-center gap-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base">🚚</span>
-                                            <span>
-                                                <strong>Fitur Pengiriman & Surat Jalan:</strong> Orderan di tabel ini telah selesai dikerjakan pabrik dan siap/sedang dikirim armada. Klik <strong>🖨️ Surat Jalan (4 Warna)</strong> untuk mencetak dokumen resmi, dan klik <strong>✅ Konfirmasi Selesai Terkirim</strong> untuk memindahkan order ke status <strong>Selesai</strong>.
-                                            </span>
+                                    <div className="bg-gradient-to-r from-cyan-950 to-blue-950 border-2 border-cyan-500/50 p-4 rounded-xl text-xs text-cyan-100 flex flex-wrap justify-between items-center gap-3 shadow-lg">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl animate-bounce">🚚</span>
+                                            <div>
+                                                <strong className="text-cyan-300 text-sm font-extrabold block">Fitur Baru: Penugasan Mobil Multi-Alamat & Rute Manifest</strong>
+                                                <p className="text-slate-300 text-xs">Admin dapat memilih beberapa alamat tujuan konsumen sekaligus untuk diangkut 1 armada & supir, serta mencetak Rute Manifest Multi-Stop.</p>
+                                            </div>
                                         </div>
+                                        <button
+                                            onClick={() => setActiveTab('deliveries')}
+                                            className="bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black px-4 py-2 rounded-lg transition shadow-lg shadow-cyan-400/20 flex items-center gap-1.5 cursor-pointer text-xs shrink-0"
+                                        >
+                                            🚀 Buka Panel Penugasan Multi-Alamat
+                                        </button>
                                     </div>
                                 )}
 
@@ -4339,61 +4406,48 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         </div>
                     )}
 
-                    {/* TAB 5: PENGIRIMAN & SURAT JALAN */}
+                    {/* TAB 5: PENGIRIMAN & SURAT JALAN MULTI-ALAMAT */}
                     {activeTab === 'deliveries' && (
                         <div className="space-y-6">
                             <div className="flex flex-wrap justify-between items-center gap-4">
                                 <div>
-                                    <h2 className="text-2xl font-extrabold text-slate-100">Jadwal Pengiriman & Surat Jalan 4 Warna</h2>
-                                    <p className="text-slate-400 text-sm">Kelola pengiriman armada, supir, alamat tujuan, dan dokumen surat jalan</p>
+                                    <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+                                        🚚 Penugasan Pengiriman Multi-Alamat & Surat Jalan 4 Warna
+                                    </h2>
+                                    <p className="text-slate-400 text-sm">
+                                        Admin dapat memilih beberapa alamat/SPO konsumen sekaligus untuk diangkut 1 armada & supir, serta mencetak Rute Manifest Multi-Stop.
+                                    </p>
                                 </div>
                                 <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs font-bold text-cyan-400 flex items-center gap-2">
-                                    <span>🚚 Total Antrean Kirim:</span>
+                                    <span>🚚 Order Siap / Sedang Kirim:</span>
                                     <span className="bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
-                                        {(initialDeliveries.length > 0 ? initialDeliveries : initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai')).length} Pengiriman
+                                        {initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan').length} SPO
                                     </span>
                                 </div>
                             </div>
 
-                            {/* PANEL ATAS TABEL: PENUGASAN DRIVER / KENDARAAN & 2 BUTTON PRINT (SURAT JALAN & SURAT BARANG KELUAR) */}
-                            <div className="bg-slate-900/90 border-2 border-cyan-500/40 rounded-xl p-5 shadow-xl space-y-4">
+                            {/* PANEL ATAS: PENUGASAN MULTI-ALAMAT ARMADA (CHECKBOX BATCH DISPATCH) */}
+                            <div className="bg-slate-900/90 border-2 border-cyan-500/40 rounded-2xl p-5 shadow-2xl space-y-4">
                                 <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-2">
                                     <div className="flex items-center gap-2">
                                         <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
                                         <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
-                                            📋 Panel Penugasan Armada & Cetak Dokumen Resmi Pengiriman (Admin Toko)
+                                            📋 Form Penugasan Rute Mobil Multi-Alamat (Admin Toko / WMS Logistics)
                                         </h3>
                                     </div>
-                                    <span className="text-xs bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full border border-cyan-500/30 font-bold">
-                                        Pilih Driver + Kendaraan → Print Surat Jalan / Surat Barang Keluar
+                                    <span className="text-xs bg-cyan-500/10 text-cyan-300 px-3 py-1 rounded-full border border-cyan-500/30 font-bold">
+                                        Pilih {selectedBatchOrderIds.length} Alamat → Tetapkan Supir & Mobil
                                     </span>
                                 </div>
 
-                                <form onSubmit={(e) => e.preventDefault()} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                                    {/* 1. PILIH ORDER / SPO */}
+                                <form onSubmit={handleAssignBatchDeliverySubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                                    {/* 1. PILIH SUPIR / DRIVER */}
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">1. Pilih Order SPO Pengiriman:</label>
-                                        <select
-                                            value={selectedDispatchOrderForPrint}
-                                            onChange={e => setSelectedDispatchOrderForPrint(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-bold focus:border-cyan-400"
-                                        >
-                                            <option value="">-- Pilih SPO Pengiriman --</option>
-                                            {initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai').map(o => (
-                                                <option key={o.id} value={o.spo_number}>
-                                                    {o.spo_number} — {o.customer_name} ({o.payment_status})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* 2. PILIH SUPIR / DRIVER */}
-                                    <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">2. Pilih Supir / Driver Armada:</label>
+                                        <label className="text-slate-300 block mb-1 font-bold">1. Pilih Supir / Driver Armada:</label>
                                         <select
                                             value={dispatchDriverInput}
                                             onChange={e => setDispatchDriverInput(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
                                         >
                                             <option value="Pak Budi (Supir Utama DC)">👨‍✈️ Pak Budi (Supir Utama DC)</option>
                                             <option value="Pak Mulyadi (Driver Engkel)">👨‍✈️ Pak Mulyadi (Driver Engkel)</option>
@@ -4402,13 +4456,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         </select>
                                     </div>
 
-                                    {/* 3. PILIH KENDARAAN & PLAT */}
+                                    {/* 2. PILIH KENDARAAN & PLAT */}
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">3. Jenis & No. Plat Kendaraan:</label>
+                                        <label className="text-slate-300 block mb-1 font-bold">2. Jenis & No. Plat Mobil:</label>
                                         <select
                                             value={dispatchVehicleInput}
                                             onChange={e => setDispatchVehicleInput(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
                                         >
                                             <option value="Engkel Box (D 8472 AB)">🚚 Engkel Box (D 8472 AB)</option>
                                             <option value="Pick Up L300 (D 8192 XY)">🛻 Pick Up L300 (D 8192 XY)</option>
@@ -4417,157 +4471,298 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         </select>
                                     </div>
 
-                                    {/* 4. DUA TOMBOL PRINT DOKUMEN */}
-                                    <div className="flex flex-col justify-end gap-2">
+                                    {/* 3. CATATAN INTRO PENGIRIMAN */}
+                                    <div>
+                                        <label className="text-slate-300 block mb-1 font-bold">3. Catatan Rute / Instruksi Supir:</label>
+                                        <input
+                                            type="text"
+                                            value={dispatchNotesInput}
+                                            onChange={e => setDispatchNotesInput(e.target.value)}
+                                            placeholder="Contoh: Dahulukan Alamat Antapani sebelum jam 12..."
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-cyan-400"
+                                        />
+                                    </div>
+
+                                    {/* 4. SUBMIT BATCH ASSIGNMENT */}
+                                    <div className="flex flex-col justify-end">
                                         <button
-                                            type="button"
-                                            onClick={handleTriggerPrintSuratJalan}
-                                            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold px-3 py-2 rounded-lg text-xs shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5"
+                                            type="submit"
+                                            disabled={selectedBatchOrderIds.length === 0}
+                                            className={`w-full font-extrabold px-4 py-2.5 rounded-lg text-xs shadow-lg flex items-center justify-center gap-2 transition ${
+                                                selectedBatchOrderIds.length > 0
+                                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-cyan-500/20 cursor-pointer transform hover:-translate-y-0.5'
+                                                    : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                            }`}
                                         >
-                                            🖨️ Print Surat Jalan (4 Warna)
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleTriggerPrintBarangKeluar}
-                                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold px-3 py-2 rounded-lg text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5"
-                                        >
-                                            📋 Print Surat Barang Keluar (Gate Pass)
+                                            🚀 Tugaskan Mobil ke {selectedBatchOrderIds.length} Alamat Terpilih
                                         </button>
                                     </div>
                                 </form>
                             </div>
 
-                            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4 shadow-xl">
+                            {/* SECTION DAFTAR TRIP MOBIL AKTIF & RUTE MANIFEST MULTI-STOP */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
+                                    🚛 Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif
+                                </h3>
+
+                                {(() => {
+                                    const readyAndShipped = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver);
+                                    const deliveryList = initialDeliveries.length > 0 ? initialDeliveries : readyAndShipped.map(o => ({
+                                        id: o.id,
+                                        waybill_number: 'SJ-' + (o.spo_number || o.id),
+                                        trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
+                                        order: o,
+                                        driver_name: o.assigned_driver || 'Pak Budi (Supir DC)',
+                                        vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
+                                        waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
+                                        delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman'
+                                    }));
+
+                                    // Group by trip_code
+                                    const grouped = {};
+                                    deliveryList.forEach(d => {
+                                        const key = d.trip_code || (d.driver_name + '_' + d.vehicle_plate);
+                                        if (!grouped[key]) {
+                                            grouped[key] = {
+                                                trip_code: d.trip_code || key,
+                                                driver_name: d.driver_name || 'Pak Budi (Supir DC)',
+                                                vehicle_plate: d.vehicle_plate || 'Engkel Box (D 8472 AB)',
+                                                deliveries: [],
+                                                orders: []
+                                            };
+                                        }
+                                        grouped[key].deliveries.push(d);
+                                        const ord = d.order || d;
+                                        if (ord && !grouped[key].orders.find(o => o.id === ord.id)) {
+                                            grouped[key].orders.push(ord);
+                                        }
+                                    });
+
+                                    const trips = Object.values(grouped);
+
+                                    if (trips.length === 0) {
+                                        return (
+                                            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-8 text-center text-slate-400">
+                                                Belum ada trip pengiriman aktif. Silakan centang alamat pada tabel di bawah untuk menugaskan armada!
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            {trips.map((trip, idx) => (
+                                                <div key={idx} className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-5 shadow-xl space-y-3 relative">
+                                                    <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="bg-cyan-500/20 text-cyan-300 font-mono font-extrabold text-xs px-2.5 py-0.5 rounded border border-cyan-500/30">
+                                                                    {trip.trip_code}
+                                                                </span>
+                                                                <h4 className="font-extrabold text-slate-100 text-sm">
+                                                                    👨‍✈️ {trip.driver_name}
+                                                                </h4>
+                                                            </div>
+                                                            <p className="text-xs text-slate-400 mt-0.5">
+                                                                🚚 {trip.vehicle_plate} — <strong className="text-cyan-400">{trip.orders.length} Alamat Tujuan</strong>
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5 justify-end">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedTripDataForModal(trip);
+                                                                    setShowMultiAddressModal(true);
+                                                                }}
+                                                                className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                            >
+                                                                🖨️ Manifest Rute Multi-Alamat
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedBarangKeluarData({
+                                                                        orders: trip.orders,
+                                                                        sbk_number: 'SBK/' + (trip.trip_code.replace('TRIP-', '')),
+                                                                        driver: trip.driver_name,
+                                                                        vehicle: trip.vehicle_plate,
+                                                                        trip_code: trip.trip_code,
+                                                                        date: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+                                                                    });
+                                                                    setShowBarangKeluarModal(true);
+                                                                }}
+                                                                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                            >
+                                                                📋 Gate Pass Mobil
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* TIMELINE STOP DESTINATIONS */}
+                                                    <div className="space-y-2 text-xs">
+                                                        {trip.orders.map((ord, stopIdx) => {
+                                                            const isLunas = ord.payment_status === 'Lunas';
+                                                            return (
+                                                                <div key={ord.id} className="flex items-start gap-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                                                                    <span className="bg-cyan-950 text-cyan-300 border border-cyan-700/50 text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 mt-0.5">
+                                                                        STOP #{stopIdx + 1}
+                                                                    </span>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex justify-between items-center gap-2">
+                                                                            <span className="font-extrabold text-slate-200 truncate">
+                                                                                SPO: {ord.spo_number} — {ord.customer_name}
+                                                                            </span>
+                                                                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded shrink-0 font-bold ${isLunas ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                                                                                {isLunas ? 'LUNAS' : 'COD'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-slate-400 text-[11px] truncate mt-0.5">
+                                                                            📍 {ord.customer_address || '-'} ({ord.customer_phone})
+                                                                        </p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
+                                                                        className="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-1 rounded text-[11px] font-bold transition shrink-0 cursor-pointer"
+                                                                        title="Cetak Surat Jalan 4 Warna khusus Alamat Ini"
+                                                                    >
+                                                                        🖨️ SJ
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* TABEL PILIHAN SPO & ALAMAT PENGIRIMAN (WITH CHECKBOXES) */}
+                            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
+                                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-3">
+                                    <div>
+                                        <h3 className="text-base font-extrabold text-slate-100">
+                                            📦 Daftar Order SPO Siap Kirim & Pilihan Alamat Tujuan
+                                        </h3>
+                                        <p className="text-xs text-slate-400">Centang kotak pada sebelah kiri nomor SPO untuk memilih beberapa alamat sekaligus yang akan dikirim mobil.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={toggleSelectAllReadyOrders}
+                                        className="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
+                                    >
+                                        {selectedBatchOrderIds.length > 0 ? '❌ Batal Pilih Semua' : '☑️ Pilih Semua Order'}
+                                    </button>
+                                </div>
+
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-slate-800/60 text-slate-400 uppercase text-xs">
                                             <tr>
+                                                <th className="p-3 w-10 text-center">Pilih</th>
                                                 <th className="p-3">Nomor SPO</th>
-                                                <th className="p-3">Nama Cust</th>
-                                                <th className="p-3">Alamat</th>
-                                                <th className="p-3">Jenis Barang Dipesan</th>
-                                                <th className="p-3">Ukuran Barang</th>
-                                                <th className="p-3">Quantity</th>
-                                                <th className="p-3">Supir</th>
-                                                <th className="p-3">Kendaraan</th>
-                                                <th className="p-3">Status</th>
+                                                <th className="p-3">Nama Cust & Telp</th>
+                                                <th className="p-3">Alamat Tujuan Pengiriman</th>
+                                                <th className="p-3">Spesifikasi Barang Kaca</th>
+                                                <th className="p-3">Supir & Mobil Assigned</th>
+                                                <th className="p-3">Status Payment</th>
+                                                <th className="p-3 text-center">Aksi Dokumen</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800">
-                                            {(initialDeliveries.length > 0 ? initialDeliveries : initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai').map(o => ({
-                                                id: o.id,
-                                                waybill_number: 'SJ-' + o.spo_number,
-                                                order: o,
-                                                driver_name: 'Pak Budi (Driver DC)',
-                                                vehicle_plate: 'Engkel Box (D 8472 AB)',
-                                                waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
-                                                delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman',
-                                                proof_photo_path: null
-                                            }))).map(d => {
-                                                const ord = d.order || d;
+                                            {initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan' || o.status === 'selesai').map(ord => {
+                                                const isSelected = selectedBatchOrderIds.includes(ord.id);
                                                 const itemsList = Array.isArray(ord.items) && ord.items.length > 0
                                                     ? ord.items
                                                     : [{
-                                                        glass_type: ord.glass_type || 'Kaca Cermin 5 mm polos',
+                                                        glass_type: ord.glass_type || 'Kaca Cermin 5 mm',
                                                         length_cm: ord.length_cm || 150,
                                                         width_cm: ord.width_cm || 120,
                                                         thickness_mm: ord.thickness_mm || 5,
                                                         qty: ord.qty || 1
                                                     }];
 
+                                                const isLunas = ord.payment_status === 'Lunas';
+
                                                 return (
-                                                    <tr key={d.id} className="hover:bg-slate-800/30 transition">
-                                                        {/* 1. NOMOR SPO */}
+                                                    <tr key={ord.id} className={`transition ${isSelected ? 'bg-cyan-950/40 border-l-4 border-l-cyan-400' : 'hover:bg-slate-800/30'}`}>
+                                                        {/* CHECKBOX SELECTION */}
+                                                        <td className="p-3 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => toggleSelectOrderForBatch(ord.id)}
+                                                                className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 bg-slate-950 border-slate-700 cursor-pointer"
+                                                            />
+                                                        </td>
+
+                                                        {/* NOMOR SPO */}
                                                         <td className="p-3">
                                                             <div className="font-extrabold text-cyan-400 font-mono text-sm">
-                                                                {ord.spo_number || d.spo_number || 'SPO-0002'}
+                                                                {ord.spo_number}
                                                             </div>
-                                                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                                                SJ: <strong className="text-slate-300">{d.waybill_number || 'SJ-2026-001'}</strong>
-                                                            </div>
-                                                        </td>
-
-                                                        {/* 2. NAMA CUST */}
-                                                        <td className="p-3">
-                                                            <div className="font-bold text-slate-100">{ord.customer_name || d.customer_name || 'Pelanggan'}</div>
-                                                            <div className="text-xs text-cyan-300 font-mono mt-0.5">{ord.customer_phone || d.customer_phone || '-'}</div>
-                                                        </td>
-
-                                                        {/* 3. ALAMAT */}
-                                                        <td className="p-3 max-w-xs">
-                                                            <div className="text-xs text-slate-300 leading-snug line-clamp-2" title={ord.customer_address || d.customer_address}>
-                                                                📍 {ord.customer_address || d.customer_address || 'Alamat lokasi pengiriman'}
-                                                            </div>
-                                                        </td>
-
-                                                        {/* 4. JENIS BARANG YANG DIPESAN APA SAJA */}
-                                                        <td className="p-3 space-y-1 max-w-xs">
-                                                            {itemsList.map((it, idx) => (
-                                                                <div key={idx} className="bg-slate-950/60 p-1.5 rounded border border-slate-800 text-xs">
-                                                                    <span className="font-bold text-cyan-300">#{idx + 1}. {it.glass_type}</span>
-                                                                </div>
-                                                            ))}
-                                                            {Array.isArray(ord.accessories) && ord.accessories.length > 0 && (
-                                                                <div className="flex flex-wrap gap-1 pt-1">
-                                                                    {ord.accessories.map((acc, accIdx) => (
-                                                                        <span key={accIdx} className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-500/30">
-                                                                            +{typeof acc === 'object' ? acc.name : acc}
-                                                                        </span>
-                                                                    ))}
+                                                            {ord.trip_code && (
+                                                                <div className="text-[10px] text-cyan-300 font-mono mt-0.5">
+                                                                    Trip: {ord.trip_code}
                                                                 </div>
                                                             )}
                                                         </td>
 
-                                                        {/* 5. UKURAN BARANG NYA BERAPA */}
-                                                        <td className="p-3 space-y-1">
+                                                        {/* NAMA CUST */}
+                                                        <td className="p-3">
+                                                            <div className="font-bold text-slate-100">{ord.customer_name}</div>
+                                                            <div className="text-xs text-cyan-300 font-mono mt-0.5">{ord.customer_phone}</div>
+                                                        </td>
+
+                                                        {/* ALAMAT */}
+                                                        <td className="p-3 max-w-xs">
+                                                            <div className="text-xs text-slate-200 font-medium leading-snug line-clamp-2" title={ord.customer_address}>
+                                                                📍 {ord.customer_address || 'Alamat lokasi pengiriman'}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* SPESIFIKASI BARANG */}
+                                                        <td className="p-3 space-y-1 max-w-xs">
                                                             {itemsList.map((it, idx) => (
-                                                                <div key={idx} className="font-mono text-xs font-bold text-slate-200">
-                                                                    {it.length_cm} x {it.width_cm} cm <span className="text-[11px] text-slate-400">({it.thickness_mm || 5}mm)</span>
+                                                                <div key={idx} className="bg-slate-950/60 p-1.5 rounded border border-slate-800 text-xs flex justify-between gap-2">
+                                                                    <span className="font-bold text-cyan-300 truncate">#{idx + 1}. {it.glass_type}</span>
+                                                                    <span className="font-mono text-slate-300 text-[11px] shrink-0">{it.qty || 1} Pcs</span>
                                                                 </div>
                                                             ))}
                                                         </td>
 
-                                                        {/* 6. QUANTITY NYA BERAPA */}
-                                                        <td className="p-3 space-y-1">
-                                                            {itemsList.map((it, idx) => (
-                                                                <div key={idx}>
-                                                                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-xs font-extrabold font-mono inline-block">
-                                                                        {it.qty || 1} Lembar
-                                                                    </span>
-                                                                </div>
-                                                            ))}
-                                                        </td>
-
-                                                        {/* 7. SUPIR */}
+                                                        {/* SUPIR & MOBIL ASSIGNED */}
                                                         <td className="p-3">
-                                                            <div className="font-bold text-slate-100 text-xs">
-                                                                👨‍✈️ {d.driver_name || 'Pak Budi (Supir DC)'}
-                                                            </div>
-                                                        </td>
-
-                                                        {/* 8. KENDARAAN */}
-                                                        <td className="p-3">
-                                                            <div className="font-semibold text-slate-200 text-xs">
-                                                                🚚 {d.vehicle_plate || 'Engkel Box (D 8472 AB)'}
-                                                            </div>
-                                                        </td>
-
-                                                        {/* 9. STATUS & SURAT JALAN */}
-                                                        <td className="p-3 space-y-1.5">
-                                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold inline-flex items-center gap-1 border ${d.delivery_status === 'Selesai Terkirim' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'}`}>
-                                                                <span className={`w-2 h-2 rounded-full ${d.delivery_status === 'Selesai Terkirim' ? 'bg-emerald-400' : 'bg-blue-400 animate-ping'}`}></span>
-                                                                {d.delivery_status || 'Dalam Pengiriman'}
-                                                            </span>
-                                                            <div>
-                                                                <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold border ${d.waybill_color === 'Merah' ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'}`}>
-                                                                    Surat Jalan {d.waybill_color || 'Putih'} {d.waybill_color === 'Merah' ? '(COD)' : '(Lunas)'}
+                                                            {ord.assigned_driver ? (
+                                                                <>
+                                                                    <div className="font-bold text-slate-100 text-xs">
+                                                                        👨‍✈️ {ord.assigned_driver}
+                                                                    </div>
+                                                                    <div className="text-[11px] text-cyan-300 font-semibold mt-0.5">
+                                                                        🚚 {ord.assigned_vehicle}
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold inline-block">
+                                                                    ⏳ Belum Ditugaskan
                                                                 </span>
-                                                            </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* STATUS PAYMENT */}
+                                                        <td className="p-3">
+                                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold inline-block ${isLunas ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`}>
+                                                                {isLunas ? 'LUNAS (Surat Jalan Putih)' : 'COD (Surat Jalan Merah)'}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* AKSI DOKUMEN */}
+                                                        <td className="p-3 text-center">
                                                             <button
+                                                                type="button"
                                                                 onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
-                                                                className="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 mt-1 shadow"
+                                                                className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-extrabold transition inline-flex items-center gap-1 shadow cursor-pointer"
                                                             >
-                                                                🖨️ Surat Jalan
+                                                                🖨️ Cetak SJ 4 Warna
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -7856,6 +8051,22 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 onClose={() => { setShowWaybillModal(false); setSelectedWaybillOrder(null); }}
                 selectedWaybillOrder={selectedWaybillOrder}
                 order={selectedWaybillOrder}
+                userName={userName}
+            />
+
+            {/* MODAL SURAT JALAN RUTE MULTI-ALAMAT (DELIVERY MANIFEST) */}
+            <MultiAddressWaybillModal
+                show={showMultiAddressModal}
+                onClose={() => { setShowMultiAddressModal(false); setSelectedTripDataForModal(null); }}
+                tripData={selectedTripDataForModal}
+                userName={userName}
+            />
+
+            {/* MODAL SURAT BARANG KELUAR / GATE PASS GUDANG */}
+            <GatePassModal
+                show={showBarangKeluarModal}
+                onClose={() => { setShowBarangKeluarModal(false); setSelectedBarangKeluarData(null); }}
+                selectedBarangKeluarData={selectedBarangKeluarData}
                 userName={userName}
             />
 

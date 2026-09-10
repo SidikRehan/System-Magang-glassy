@@ -512,6 +512,58 @@ class SypOperationalController extends Controller
     }
 
     /**
+     * Assign Batch Multi-Address Delivery to Vehicle and Driver
+     */
+    public function assignBatchDelivery(Request $request)
+    {
+        $validated = $request->validate([
+            'order_ids' => 'required|array|min:1',
+            'order_ids.*' => 'required|exists:orders,id',
+            'driver_name' => 'required|string',
+            'vehicle_plate' => 'required|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        $tripCode = 'TRIP-' . date('Ymd') . '-' . rand(1000, 9999);
+        $driverName = $validated['driver_name'];
+        $vehiclePlate = $validated['vehicle_plate'];
+        $notes = $validated['notes'] ?? null;
+
+        $orders = Order::whereIn('id', $validated['order_ids'])->get();
+
+        foreach ($orders as $index => $order) {
+            $stopOrder = $index + 1;
+
+            $order->assigned_driver = $driverName;
+            $order->assigned_vehicle = $vehiclePlate;
+            $order->trip_code = $tripCode;
+            if ($order->status !== 'selesai') {
+                $order->status = 'pengiriman';
+                $order->current_division = 'pengiriman';
+            }
+            $order->shipped_at = $order->shipped_at ?? now();
+            $order->save();
+
+            $waybillColor = $order->payment_status === 'Lunas' ? 'Putih' : 'Merah';
+            Delivery::updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'waybill_number' => 'SJ-' . ($order->spo_number ?? $order->id),
+                    'trip_code' => $tripCode,
+                    'stop_order' => $stopOrder,
+                    'driver_name' => $driverName,
+                    'vehicle_plate' => $vehiclePlate,
+                    'waybill_color' => $waybillColor,
+                    'delivery_status' => 'Dalam Pengiriman',
+                    'notes' => $notes,
+                ]
+            );
+        }
+
+        return redirect()->back()->with('message', '🚚 Rute Pengiriman Armada #' . $tripCode . ' Berhasil Ditetapkan untuk ' . count($orders) . ' Alamat Tujuan (' . $driverName . ' — ' . $vehiclePlate . ')!');
+    }
+
+    /**
      * Store Scrap Glass (Divisi HT)
      */
     public function storeScrap(Request $request)

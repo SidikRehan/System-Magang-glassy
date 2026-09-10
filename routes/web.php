@@ -30,6 +30,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{id}/acknowledge-revision', [SypOperationalController::class, 'acknowledgeRevision'])->name('orders.acknowledge_revision');
     Route::post('/orders/{id}/finish-job', [SypOperationalController::class, 'finishDivisionJob'])->name('orders.finish');
     Route::post('/orders/{id}/complete-delivery', [SypOperationalController::class, 'completeDelivery'])->name('orders.complete_delivery');
+    Route::post('/orders/batch-delivery', [SypOperationalController::class, 'assignBatchDelivery'])->name('orders.batch_delivery');
 
     // Division Defect Complaint Operations
     Route::post('/orders/{id}/complaint', [ComplaintController::class, 'submitGlassComplaint'])->name('orders.complaint');
