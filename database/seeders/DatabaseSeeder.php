@@ -108,6 +108,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             GlassSystemSeeder::class,
+            FinanceTransactionSeeder::class,
         ]);
     }
 }

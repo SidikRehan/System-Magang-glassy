@@ -9,6 +9,7 @@ use App\Models\ScrapGlass;
 use App\Models\Delivery;
 use App\Models\User;
 use App\Models\ActivityLog;
+use App\Models\FinanceTransaction;
 use Illuminate\Support\Facades\Hash;
 
 class SypOperationalController extends Controller
@@ -29,19 +30,49 @@ class SypOperationalController extends Controller
      */
     public function dashboard()
     {
+        $otherRevenue = (float) FinanceTransaction::where('approval_status', 'approved')->where('type', 'pemasukan_lain')->sum('amount');
+        $totalRevenue = (float) Order::sum('total_price') + $otherRevenue;
+        $paidRevenue = (float) Order::sum('paid_amount') + $otherRevenue;
+        $pendingCOD = (float) (Order::where('payment_status', '!=', 'Lunas')->sum('total_price') - Order::where('payment_status', '!=', 'Lunas')->sum('paid_amount'));
+        if ($pendingCOD <= 0) {
+            $pendingCOD = (float) Order::where('payment_status', '!=', 'Lunas')->sum('total_price');
+        }
+
+        $cogsPurchases = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['pembelian_bahan', 'pembelian_aksesoris'])->sum('amount');
+        $opexExpenses = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['biaya_operasional', 'pembelian_alat'])->sum('amount');
+        $totalExpenses = $cogsPurchases + $opexExpenses;
+        $grossProfit = $totalRevenue - $cogsPurchases;
+        $netProfit = $totalRevenue - $totalExpenses;
+        $netMarginPct = $totalRevenue > 0 ? round(($netProfit / $totalRevenue) * 100, 1) : 0;
+        $grossMarginPct = $totalRevenue > 0 ? round(($grossProfit / $totalRevenue) * 100, 1) : 0;
+        $scrapGlassLoss = (float) ScrapGlass::where('status', 'Layak Pakai')->count() * 125000;
+        $pendingApprovalCount = FinanceTransaction::where('approval_status', 'pending')->count();
+
         return Inertia::render('Dashboard', [
             'orders' => Order::orderBy('id', 'desc')->get(),
             'scrapGlasses' => ScrapGlass::latest()->get(),
             'deliveries' => Delivery::with('order')->latest()->get(),
             'users' => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get(),
             'activityLogs' => ActivityLog::latest()->take(100)->get(),
+            'financeTransactions' => FinanceTransaction::with(['user', 'approver'])->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get(),
             'metrics' => [
                 'totalOrders' => Order::count(),
                 'inProcess' => Order::where('status', 'pengerjaan')->count(),
                 'readyShip' => Order::where('status', 'pengiriman')->count(),
                 'scrapCount' => ScrapGlass::count(),
-                'totalRevenue' => Order::sum('total_price'),
-                'pendingCOD' => Order::where('payment_status', '!=', 'Lunas')->sum('total_price'),
+                'scrapGlassLoss' => $scrapGlassLoss,
+                'pendingApprovalCount' => $pendingApprovalCount,
+                'totalRevenue' => $totalRevenue,
+                'otherRevenue' => $otherRevenue,
+                'paidRevenue' => $paidRevenue,
+                'pendingCOD' => $pendingCOD,
+                'cogsPurchases' => $cogsPurchases,
+                'opexExpenses' => $opexExpenses,
+                'totalExpenses' => $totalExpenses,
+                'grossProfit' => $grossProfit,
+                'netProfit' => $netProfit,
+                'grossMarginPct' => $grossMarginPct,
+                'netMarginPct' => $netMarginPct,
             ]
         ]);
     }
@@ -877,9 +908,10 @@ class SypOperationalController extends Controller
         $order->save();
 
         ActivityLog::create([
+            'user_id' => auth()->id(),
             'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
             'action_type' => 'CATAT_BAHAN_KACA',
-            'target_user' => $order->spo_number,
+            'target_user_name' => $order->spo_number,
             'description' => 'Mencatat pemakaian ' . $validated['sheets_used'] . ' lembar bahan kaca (' . $validated['glass_type'] . ') untuk SPO ' . $order->spo_number,
             'created_at' => now(),
         ]);
@@ -1250,4 +1282,183 @@ class SypOperationalController extends Controller
 
         return redirect()->back()->with('message', 'Akun karyawan (' . $deletedName . ') berhasil dihapus/dinonaktifkan dari sistem.');
     }
+
+    /**
+     * Store New Financial Transaction (Pembelian Bahan, Alat, Aksesoris, Beban Operasional)
+     */
+    public function storeFinanceTransaction(Request $request)
+    {
+        $user = auth()->user();
+        $isDriver = ($user && $user->role === 'driver') || $request->input('source_role') === 'driver';
+
+        $validated = $request->validate([
+            'type' => 'required|string|in:pembelian_bahan,pembelian_aksesoris,pembelian_alat,biaya_operasional,pemasukan_lain',
+            'category' => 'required|string|max:255',
+            'title' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0',
+            'supplier_name' => 'nullable|string|max:255',
+            'invoice_number' => 'nullable|string|max:255',
+            'payment_method' => 'nullable|string|max:255',
+            'payment_status' => 'nullable|string|in:Lunas,Tempo,DP',
+            'transaction_date' => 'required|date',
+            'due_date' => 'nullable|date',
+            'notes' => 'nullable|string',
+            'vehicle_plate' => 'nullable|string|max:255',
+            'source_role' => 'nullable|string|max:50',
+            'approval_status' => 'nullable|string|in:approved,pending,rejected',
+        ]);
+
+        $prefixMap = [
+            'pembelian_bahan' => 'PO-BB',
+            'pembelian_aksesoris' => 'PO-ACC',
+            'pembelian_alat' => 'PO-ALT',
+            'biaya_operasional' => $isDriver ? 'KLM-DRV' : 'EXP',
+            'pemasukan_lain' => 'REV-ADD',
+        ];
+
+        $prefix = $prefixMap[$validated['type']] ?? 'TRX';
+        $period = date('Ym', strtotime($validated['transaction_date']));
+        $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+
+        $approvalStatus = $isDriver ? 'pending' : ($validated['approval_status'] ?? 'approved');
+        $sourceRole = $validated['source_role'] ?? ($user ? $user->role : 'admin_toko');
+
+        $trx = FinanceTransaction::create([
+            'transaction_code' => $trxCode,
+            'type' => $validated['type'],
+            'category' => $validated['category'],
+            'title' => $validated['title'],
+            'amount' => $validated['amount'],
+            'supplier_name' => $validated['supplier_name'] ?? null,
+            'invoice_number' => $validated['invoice_number'] ?? null,
+            'payment_method' => $validated['payment_method'] ?? 'Kas Tunai',
+            'payment_status' => $validated['payment_status'] ?? 'Lunas',
+            'approval_status' => $approvalStatus,
+            'source_role' => $sourceRole,
+            'vehicle_plate' => $validated['vehicle_plate'] ?? null,
+            'transaction_date' => $validated['transaction_date'],
+            'due_date' => $validated['due_date'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'user_id' => auth()->id(),
+            'approved_by_user_id' => $approvalStatus === 'approved' ? auth()->id() : null,
+            'approved_at' => $approvalStatus === 'approved' ? now() : null,
+        ]);
+
+        $logDesc = $isDriver
+            ? 'Supir (' . ($user->name ?? 'Driver') . ') mengajukan klaim biaya armada ' . $trx->title . ' sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . ' (Status: Menunggu Persetujuan)'
+            : 'Mencatat transaksi ' . strtoupper(str_replace('_', ' ', $trx->type)) . ' (' . $trx->title . ') sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . ' (' . $trx->payment_method . ')';
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Staff Operasional',
+            'action_type' => $isDriver ? 'KLAIM_ARMADA_DRIVER' : 'TRANSAKSI_FINANCE',
+            'target_user_name' => $trx->transaction_code,
+            'description' => $logDesc,
+            'created_at' => now(),
+        ]);
+
+        $msg = $isDriver
+            ? '✅ Klaim biaya armada #' . $trx->transaction_code . ' berhasil diajukan! Menunggu persetujuan Tim Akuntan / Owner.'
+            : '✅ Transaksi keuangan #' . $trx->transaction_code . ' (' . $trx->title . ') berhasil dicatat!';
+
+        return redirect()->back()->with('message', $msg);
+    }
+
+    /**
+     * Approve Finance Transaction (Owner & Admin Toko)
+     */
+    public function approveFinanceTransaction(Request $request, $id)
+    {
+        $trx = FinanceTransaction::findOrFail($id);
+        $trx->update([
+            'approval_status' => 'approved',
+            'approved_by_user_id' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Owner & Akuntan',
+            'action_type' => 'APPROVE_KLAIM_FINANCE',
+            'target_user_name' => $trx->transaction_code,
+            'description' => 'Menyetujui klaim ' . $trx->transaction_code . ' (' . $trx->title . ') sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . ' untuk dibayarkan dari kas operasional.',
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '✅ Klaim biaya #' . $trx->transaction_code . ' berhasil DISETUJUI dan langsung dibukukan ke Laporan Keuangan!');
+    }
+
+    /**
+     * Reject Finance Transaction (Owner & Admin Toko)
+     */
+    public function rejectFinanceTransaction(Request $request, $id)
+    {
+        $trx = FinanceTransaction::findOrFail($id);
+        $reason = $request->input('rejection_reason', 'Klaim ditolak oleh verifikator');
+        
+        $trx->update([
+            'approval_status' => 'rejected',
+            'rejection_reason' => $reason,
+        ]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Owner & Akuntan',
+            'action_type' => 'TOLAK_KLAIM_FINANCE',
+            'target_user_name' => $trx->transaction_code,
+            'description' => 'Menolak klaim ' . $trx->transaction_code . ' (' . $trx->title . '). Alasan: ' . $reason,
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '⚠️ Klaim biaya #' . $trx->transaction_code . ' telah DITOLAK.');
+    }
+
+    /**
+     * Settle COD Payment Handover from Driver to Cashier
+     */
+    public function settleCodHandover(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $sisaCod = max(0, (float)($order->total_price - $order->paid_amount));
+
+        $order->payment_status = 'Lunas';
+        $order->paid_amount = $order->total_price;
+        $order->save();
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Kasir & Finance',
+            'action_type' => 'SETORAN_COD_DITERIMA',
+            'target_user_name' => $order->spo_number,
+            'description' => 'Konfirmasi serah terima uang kas pelunasan COD Surat Jalan Merah Order #' . $order->spo_number . ' sebesar Rp ' . number_format($sisaCod, 0, ',', '.') . ' (' . $order->customer_name . ') disetorkan ke Kasir.',
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '🎉 Serah terima uang kas COD Order #' . $order->spo_number . ' (Rp ' . number_format($sisaCod, 0, ',', '.') . ') BERHASIL dikonfirmasi masuk ke Kas Toko!');
+    }
+
+    /**
+     * Delete Financial Transaction
+     */
+    public function destroyFinanceTransaction(Request $request, $id)
+    {
+        $trx = FinanceTransaction::findOrFail($id);
+        $code = $trx->transaction_code;
+        $title = $trx->title;
+        $amount = $trx->amount;
+        $trx->delete();
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Owner & Akuntan',
+            'action_type' => 'HAPUS_TRANSAKSI_FINANCE',
+            'target_user_name' => $code,
+            'description' => 'Menghapus transaksi keuangan ' . $code . ' (' . $title . ') sebesar Rp ' . number_format($amount, 0, ',', '.'),
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', 'Transaksi keuangan #' . $code . ' berhasil dihapus.');
+    }
 }
+

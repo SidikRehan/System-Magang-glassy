@@ -47,6 +47,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/users/{id}/update', [SypOperationalController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{id}', [SypOperationalController::class, 'destroyUser'])->name('users.destroy');
 
+    // Finance & Accounting Operations
+    Route::post('/finance/transactions', [SypOperationalController::class, 'storeFinanceTransaction'])->name('finance.transactions.store');
+    Route::post('/finance/transactions/{id}/approve', [SypOperationalController::class, 'approveFinanceTransaction'])->name('finance.transactions.approve');
+    Route::post('/finance/transactions/{id}/reject', [SypOperationalController::class, 'rejectFinanceTransaction'])->name('finance.transactions.reject');
+    Route::delete('/finance/transactions/{id}', [SypOperationalController::class, 'destroyFinanceTransaction'])->name('finance.transactions.destroy');
+    Route::post('/orders/{id}/settle-cod', [SypOperationalController::class, 'settleCodHandover'])->name('orders.settle_cod');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
