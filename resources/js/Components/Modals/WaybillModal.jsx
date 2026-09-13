@@ -6,7 +6,8 @@ export default function WaybillModal({
     selectedWaybillOrder,
     order,
     selectedOrder,
-    userName
+    userName,
+    onOpenStickerModal
 }) {
     const waybillOrder = selectedWaybillOrder || order || selectedOrder;
 
@@ -95,7 +96,19 @@ export default function WaybillModal({
                             <p className="text-xs text-slate-400 font-mono">SPO: {waybillOrder.spo_number || waybillOrder.id}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl font-bold cursor-pointer">&times;</button>
+                    <div className="flex items-center gap-2">
+                        {onOpenStickerModal && (
+                            <button
+                                type="button"
+                                onClick={() => onOpenStickerModal(waybillOrder)}
+                                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                title="Cetak Stiker Label Orderan Kaca untuk Admin Gudang & Divisi"
+                            >
+                                🏷️ Cetak Stiker Label
+                            </button>
+                        )}
+                        <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl font-bold cursor-pointer px-2">&times;</button>
+                    </div>
                 </div>
 
                 {/* PILIHAN WARNA SURAT JALAN */}

@@ -12,6 +12,7 @@ import WaybillModal from '@/Components/Modals/WaybillModal';
 import MultiAddressWaybillModal from '@/Components/Modals/MultiAddressWaybillModal';
 import BatchWaybillModal from '@/Components/Modals/BatchWaybillModal';
 import EmployeeModal from '@/Components/Modals/EmployeeModal';
+import GlassStickerModal from '@/Components/Modals/GlassStickerModal';
 
 export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], users: initialUsersList = [], activityLogs: initialActivityLogsList = [], metrics = {} }) {
     const { auth } = usePage().props;
@@ -160,6 +161,16 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     });
     const [showGudangDecisionModal, setShowGudangDecisionModal] = useState(false);
     const [selectedComplaintOrder, setSelectedComplaintOrder] = useState(null);
+
+    // Glass Sticker Label Modal State
+    const [showStickerModal, setShowStickerModal] = useState(false);
+    const [selectedStickerOrder, setSelectedStickerOrder] = useState(null);
+
+    const handleOpenStickerModal = (order) => {
+        if (!order) return;
+        setSelectedStickerOrder(order);
+        setShowStickerModal(true);
+    };
 
     // Sketch Lightbox Modal State
     const [sketchLightbox, setSketchLightbox] = useState({ isOpen: false, url: '', title: '' });
@@ -1665,11 +1676,100 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         }));
     };
 
+    const handleSearchChange = (val) => {
+        setSearchTerm(val);
+        setStockSearchTerm(val);
+        setSupplierSearchTerm(val);
+        setAccessorySearchTerm(val);
+        setSupplySearchTerm(val);
+        setToolSearchTerm(val);
+        setEmployeeSearchTerm(val);
+    };
+
+    const isMatchSearch = (item, customTerm = null) => {
+        const term = (customTerm !== null && typeof customTerm === 'string') ? customTerm : (typeof customTerm === 'object' && customTerm !== null ? searchTerm : (customTerm || searchTerm));
+        const q = String(term || '').toLowerCase().trim();
+        if (!q) return true;
+
+        if (typeof item === 'object' && item !== null) {
+            const textValues = [
+                item.spo_number,
+                item.customer_name,
+                item.customer_phone,
+                item.customer_address,
+                item.glass_type,
+                item.type,
+                item.description,
+                item.revision_notes,
+                item.item_name,
+                item.item_code,
+                item.code,
+                item.trip_code,
+                item.driver_name,
+                item.vehicle_plate,
+                item.waybill_number,
+                item.name,
+                item.email,
+                item.role,
+                item.notes,
+                item.rak_location,
+                item.rak,
+                item.category,
+                item.details,
+                item.used_scrap_rak,
+                item.user_name,
+                item.action,
+                item.priority_status,
+                item.payment_status,
+                item.status,
+                item.supplier_name,
+                item.pic_name,
+                item.pic_phone,
+            ];
+
+            for (const val of textValues) {
+                if (val && String(val).toLowerCase().includes(q)) return true;
+            }
+
+            if (item.length_cm && String(item.length_cm).includes(q)) return true;
+            if (item.width_cm && String(item.width_cm).includes(q)) return true;
+            if (item.len && String(item.len).includes(q)) return true;
+            if (item.wid && String(item.wid).includes(q)) return true;
+            if (item.thickness_mm && String(item.thickness_mm).includes(q)) return true;
+
+            if (Array.isArray(item.items)) {
+                for (const it of item.items) {
+                    if (it.glass_type && String(it.glass_type).toLowerCase().includes(q)) return true;
+                    if (it.length_cm && String(it.length_cm).includes(q)) return true;
+                    if (it.width_cm && String(it.width_cm).includes(q)) return true;
+                    if (Array.isArray(it.processes) && it.processes.some(p => String(p).toLowerCase().includes(q))) return true;
+                }
+            }
+
+            if (Array.isArray(item.processes)) {
+                if (item.processes.some(p => String(p).toLowerCase().includes(q))) return true;
+            }
+
+            if (Array.isArray(item.accessories)) {
+                if (item.accessories.some(a => (typeof a === 'string' ? a : (a.name || '')).toLowerCase().includes(q))) return true;
+            }
+
+            if (Array.isArray(item.revision_history)) {
+                if (item.revision_history.some(r => (r.notes || '').toLowerCase().includes(q))) return true;
+            }
+        } else if (typeof item === 'string') {
+            return item.toLowerCase().includes(q);
+        }
+
+        return false;
+    };
+
     const filteredSheetGlasses = sheetGlasses.filter(g => {
-        const matchesSearch = g.item_code.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
-            g.name.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
-            g.category.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
-            g.size.toLowerCase().includes(stockSearchTerm.toLowerCase());
+        const matchesSearch = isMatchSearch(g, stockSearchTerm) ||
+            (g.item_code || '').toLowerCase().includes((stockSearchTerm || '').toLowerCase()) ||
+            (g.name || '').toLowerCase().includes((stockSearchTerm || '').toLowerCase()) ||
+            (g.category || '').toLowerCase().includes((stockSearchTerm || '').toLowerCase()) ||
+            (g.size || '').toLowerCase().includes((stockSearchTerm || '').toLowerCase());
 
         if (activeStockCard === 'aman') return g.status === 'Aman' && matchesSearch;
         if (activeStockCard === 'menipis') return g.status === 'Menipis' && matchesSearch;
@@ -2482,8 +2582,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         if (o.status === 'draft' && userRole !== 'admin_toko' && userRole !== 'owner') {
             return false;
         }
-        const matchesSearch = o.spo_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            o.customer_name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = isMatchSearch(o);
         if (activeOrderCard === 'draft') return o.status === 'draft' && matchesSearch;
         if (activeOrderCard === 'pengerjaan') return o.status === 'pengerjaan' && matchesSearch;
         if (activeOrderCard === 'pengiriman') return o.status === 'pengiriman' && matchesSearch;
@@ -2519,6 +2618,29 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     <div>
                         <h1 className="font-extrabold text-lg tracking-wider text-slate-100">SYP GLASS OPERATIONAL</h1>
                         <p className="text-xs text-slate-400 uppercase tracking-widest">Logged in as: {userName} ({userEmail})</p>
+                    </div>
+                </div>
+
+                {/* GLOBAL SEARCH INPUT BAR */}
+                <div className="flex-1 max-w-lg mx-6 hidden sm:block">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="🔍 Cari global (SPO, Customer, HP, Alamat, Kaca, Ukuran, Driver, Supplier)..."
+                            value={searchTerm}
+                            onChange={e => handleSearchChange(e.target.value)}
+                            className="w-full bg-slate-950/90 border border-cyan-500/30 rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-slate-400 focus:border-cyan-400 focus:outline-none shadow-inner transition font-medium"
+                        />
+                        {searchTerm && (
+                            <button
+                                type="button"
+                                onClick={() => handleSearchChange('')}
+                                className="absolute right-3 top-2 text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
+                                title="Hapus pencarian"
+                            >
+                                ✕
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -3189,9 +3311,19 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="p-3">
-                                                        <div className="font-bold">{o.customer_name}</div>
-                                                        <div className="text-xs text-slate-400">{o.customer_phone}</div>
+                                                    <td className="p-3 text-xs space-y-1 min-w-[210px]">
+                                                        <div className="font-bold text-slate-100">
+                                                            <span className="text-slate-400 font-normal">Nama : </span>
+                                                            <span>{o.customer_name || '-'}</span>
+                                                        </div>
+                                                        <div className="text-slate-300 font-mono">
+                                                            <span className="text-slate-400 font-normal font-sans">No Phone : </span>
+                                                            <span>{o.customer_phone || '-'}</span>
+                                                        </div>
+                                                        <div className="text-cyan-300 font-medium whitespace-pre-line leading-snug">
+                                                            <span className="text-slate-400 font-normal">Alamat : </span>
+                                                            <span>{o.customer_address || '-'}</span>
+                                                        </div>
                                                     </td>
                                                     <td className="p-3 space-y-1 max-w-xs">
                                                         {Array.isArray(o.items) && o.items.length > 0 ? (
@@ -3343,17 +3475,26 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                     <span>🔒 Terkunci (Sedang Direvisi Toko...)</span>
                                                                 </button>
                                                             ) : (
-                                                                <button
-                                                                    onClick={() => handleOpenDispatchModal(o)}
-                                                                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-500/20"
-                                                                >
-                                                                    <span>📤 Kirim Ke Divisi</span>
-                                                                    {o.revision_status === 'pending_gudang' && (
-                                                                        <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded font-mono font-extrabold animate-pulse">
-                                                                            (Revisi Baru)
-                                                                        </span>
-                                                                    )}
-                                                                </button>
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <button
+                                                                        onClick={() => handleOpenDispatchModal(o)}
+                                                                        className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-500/20"
+                                                                    >
+                                                                        <span>📤 Kirim Ke Divisi</span>
+                                                                        {o.revision_status === 'pending_gudang' && (
+                                                                            <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded font-mono font-extrabold animate-pulse">
+                                                                                (Revisi Baru)
+                                                                            </span>
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleOpenStickerModal(o)}
+                                                                        className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2.5 py-1.5 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
+                                                                        title="Cetak Stiker Label Orderan Kaca untuk Admin Gudang & Divisi"
+                                                                    >
+                                                                        🏷️ Stiker Label
+                                                                    </button>
+                                                                </div>
                                                             )
                                                         )}
 
@@ -3529,7 +3670,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                     <div className="flex justify-between items-start">
                                                         <div>
                                                             <span className="font-extrabold text-cyan-400 font-mono text-base">{o.spo_number}</span>
-                                                            <h4 className="font-bold text-slate-200 text-sm mt-0.5">{o.customer_name}</h4>
+                                                            <div className="text-xs space-y-0.5 mt-1">
+                                                                <div className="font-bold text-slate-100">
+                                                                    <span className="text-slate-400 font-normal">Nama : </span>
+                                                                    <span>{o.customer_name || '-'}</span>
+                                                                </div>
+                                                                <div className="text-slate-300 font-mono">
+                                                                    <span className="text-slate-400 font-normal font-sans">No Phone : </span>
+                                                                    <span>{o.customer_phone || '-'}</span>
+                                                                </div>
+                                                                <div className="text-cyan-300 font-medium whitespace-pre-line leading-snug">
+                                                                    <span className="text-slate-400 font-normal">Alamat : </span>
+                                                                    <span>{o.customer_address || '-'}</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${o.priority_status === 'Prioritas' ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
                                                             {o.priority_status === 'Prioritas' ? '🔥 PRIORITAS' : '🔵 Biasa'}
@@ -3707,9 +3861,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                         {/* COL 1: INFO CUSTOMER & ORDER (4 Cols) */}
                                                         <div className="md:col-span-4 space-y-2">
                                                             <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Pemesan / Proyek:</div>
-                                                            <h3 className="text-xl font-black text-white tracking-tight leading-snug">
-                                                                {activeOngoingOrder.customer_name}
-                                                            </h3>
+                                                            <div className="text-xs space-y-1 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                                                                <div className="font-bold text-base text-white">
+                                                                    <span className="text-slate-400 font-normal text-xs">Nama : </span>
+                                                                    <span>{activeOngoingOrder.customer_name || '-'}</span>
+                                                                </div>
+                                                                <div className="text-slate-300 font-mono text-xs">
+                                                                    <span className="text-slate-400 font-normal font-sans">No Phone : </span>
+                                                                    <span>{activeOngoingOrder.customer_phone || '-'}</span>
+                                                                </div>
+                                                                <div className="text-cyan-300 font-medium text-xs whitespace-pre-line leading-snug">
+                                                                    <span className="text-slate-400 font-normal">Alamat : </span>
+                                                                    <span>{activeOngoingOrder.customer_address || '-'}</span>
+                                                                </div>
+                                                            </div>
                                                             <div className="text-xs text-slate-300 space-y-1 pt-1 font-mono">
                                                                 <div className="flex items-center gap-2 text-slate-400">
                                                                     <span>📅 Order:</span>
@@ -8457,8 +8622,9 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 formatIndonesianDateTime={formatIndonesianDateTime}
                 onOpenSketchLightbox={handleOpenSketchLightbox}
                 sheetGlasses={sheetGlasses}
-                scrapGlasses={scrapGlasses}
+                scrapGlasses={initialScrap}
                 onRecordRawMaterialSuccess={handleRecordRawMaterialSuccess}
+                onOpenStickerModal={handleOpenStickerModal}
             />
 
             {/* MODAL POPUP FORM SISA UNTUK POTONG (INPUT SCRAP GLASS - REDESIGN) */}
@@ -8496,6 +8662,15 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 onClose={() => { setShowWaybillModal(false); setSelectedWaybillOrder(null); }}
                 selectedWaybillOrder={selectedWaybillOrder}
                 order={selectedWaybillOrder}
+                userName={userName}
+                onOpenStickerModal={handleOpenStickerModal}
+            />
+
+            {/* MODAL PRINT STIKER LABEL ORDERAN KACA (ADMIN GUDANG & DIVISI) */}
+            <GlassStickerModal
+                show={showStickerModal}
+                onClose={() => { setShowStickerModal(false); setSelectedStickerOrder(null); }}
+                selectedOrder={selectedStickerOrder}
                 userName={userName}
             />
 

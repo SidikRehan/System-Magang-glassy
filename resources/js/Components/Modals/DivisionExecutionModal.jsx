@@ -18,7 +18,8 @@ export default function DivisionExecutionModal({
     onOpenSketchLightbox = () => {},
     sheetGlasses = [],
     scrapGlasses = [],
-    onRecordRawMaterialSuccess = () => {}
+    onRecordRawMaterialSuccess = () => {},
+    onOpenStickerModal = null
 }) {
     if (!show || !selectedExecutionOrder) return null;
 
@@ -161,7 +162,17 @@ export default function DivisionExecutionModal({
                                 <h3 className="font-extrabold text-slate-100 text-xl tracking-tight mt-1">{selectedExecutionOrder.customer_name}</h3>
                             </div>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                {onOpenStickerModal && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenStickerModal(selectedExecutionOrder)}
+                                        className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                        title="Cetak Stiker Label Orderan Kaca"
+                                    >
+                                        🏷️ Cetak Stiker
+                                    </button>
+                                )}
                                 <span className="hidden sm:inline-block text-xs font-bold px-3.5 py-1.5 rounded-xl bg-slate-950 text-cyan-300 border border-slate-800 font-mono shadow-inner">
                                     Divisi: {roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}
                                 </span>
@@ -216,6 +227,30 @@ export default function DivisionExecutionModal({
                                 <p className="text-[11px] text-amber-200/90 font-mono mt-1">
                                     SPO-{selectedExecutionOrder.spo_number} telah berhasil diproses & diselesaikan dengan penyesuaian revisi dari Admin Toko ({selectedExecutionOrder.revision_count || 1}x Revisi).
                                 </p>
+                            </div>
+                        )}
+
+                        {/* REVISION HISTORY TIMELINE FOR ADMIN GUDANG & OPERATORS */}
+                        {Array.isArray(selectedExecutionOrder.revision_history) && selectedExecutionOrder.revision_history.length > 0 && (
+                            <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 space-y-2 text-xs">
+                                <div className="flex items-center justify-between border-b border-amber-500/30 pb-2">
+                                    <span className="font-extrabold text-amber-300 flex items-center gap-1.5 uppercase font-mono tracking-wider">
+                                        📜 Riwayat & Perincian Perubahan Revisi ({selectedExecutionOrder.revision_history.length}x Revisi)
+                                    </span>
+                                </div>
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                    {selectedExecutionOrder.revision_history.map((rev, rIdx) => (
+                                        <div key={rIdx} className="bg-slate-950/80 p-3 rounded-xl border border-amber-500/30 space-y-1">
+                                            <div className="flex justify-between items-center text-[11px] font-mono">
+                                                <span className="font-bold text-amber-400">Revisi #{rev.revision_number || (rIdx + 1)} — oleh {rev.revised_by || 'Admin Toko'}</span>
+                                                <span className="text-slate-400">{rev.revised_at || '-'}</span>
+                                            </div>
+                                            <p className="text-slate-100 font-bold text-xs whitespace-pre-line leading-relaxed">
+                                                {rev.notes || rev.user_notes || '-'}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
