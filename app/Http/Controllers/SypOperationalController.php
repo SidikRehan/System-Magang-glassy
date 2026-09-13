@@ -340,9 +340,61 @@ class SypOperationalController extends Controller
         if ($isRevisionUpdate) {
             $order->is_revised = true;
             $order->revision_count = ($order->revision_count ?? 0) + 1;
+            
             $rawRevNotes = trim($request->input('revision_notes', ''));
-            $revNotes = !empty($rawRevNotes) ? $rawRevNotes : (!empty(trim($validated['description'] ?? '')) ? $validated['description'] : 'Revisi ukuran & spesifikasi dari Admin Toko.');
-            $order->revision_notes = $revNotes;
+
+            // Calculate automatic detailed diffs
+            $diffs = [];
+
+            // 1. Qty comparison
+            $oldTotalQty = 0;
+            if (!empty($order->items) && is_array($order->items)) {
+                foreach ($order->items as $it) {
+                    $oldTotalQty += max(1, (int)($it['qty'] ?? 1));
+                }
+            } else {
+                $oldTotalQty = max(1, (int)($order->qty ?? 1));
+            }
+
+            $newTotalQty = 0;
+            foreach ($items as $it) {
+                $newTotalQty += max(1, (int)($it['qty'] ?? 1));
+            }
+
+            if ($oldTotalQty !== $newTotalQty) {
+                $diffs[] = "Total Qty Kaca: diubah dari {$oldTotalQty} pcs ➔ {$newTotalQty} pcs";
+            }
+
+            // 2. Glass type / summary comparison
+            if ($order->glass_type !== $summaryGlassType) {
+                $diffs[] = "Jenis Kaca: diubah dari '{$order->glass_type}' ➔ '{$summaryGlassType}'";
+            }
+
+            // 3. Dimensions comparison
+            $oldLen = (float)$order->length_cm;
+            $oldWid = (float)$order->width_cm;
+            $newLen = (float)$primaryItem['length_cm'];
+            $newWid = (float)$primaryItem['width_cm'];
+            if ($oldLen !== $newLen || $oldWid !== $newWid) {
+                $diffs[] = "Ukuran Kaca Utama: diubah dari {$oldLen}x{$oldWid} cm ➔ {$newLen}x{$newWid} cm";
+            }
+
+            // 4. Customer Address comparison
+            $newAddress = !empty(trim($validated['customer_address'] ?? '')) ? $validated['customer_address'] : '-';
+            if ($order->customer_address !== $newAddress) {
+                $diffs[] = "Alamat Pengiriman: diubah dari '{$order->customer_address}' ➔ '{$newAddress}'";
+            }
+
+            // 5. Custom notes typed by Toko
+            if (!empty($rawRevNotes) && $rawRevNotes !== '-') {
+                $diffs[] = "Catatan Toko: \"{$rawRevNotes}\"";
+            }
+
+            $autoDiffText = !empty($diffs) 
+                ? implode(' | ', $diffs) 
+                : (!empty($rawRevNotes) ? $rawRevNotes : 'Revisi spesifikasi/desain dari Admin Toko.');
+
+            $order->revision_notes = $autoDiffText;
             
             if ($order->current_division === 'admin_gudang') {
                 $order->revision_status = 'pending_gudang';
@@ -352,10 +404,15 @@ class SypOperationalController extends Controller
 
             $history = (array) ($order->revision_history ?? []);
             $history[] = [
+                'revision_number' => $order->revision_count,
                 'revised_at' => now()->toDateTimeString(),
                 'revised_by' => auth()->user()->name ?? 'Admin Toko',
-                'notes' => $revNotes,
+                'notes' => $autoDiffText,
+                'user_notes' => $rawRevNotes,
+                'changes_list' => $diffs,
                 'glass_summary' => $summaryGlassType,
+                'old_qty' => $oldTotalQty,
+                'new_qty' => $newTotalQty,
             ];
             $order->revision_history = $history;
         }

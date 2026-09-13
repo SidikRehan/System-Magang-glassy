@@ -29,6 +29,16 @@ export default function DispatchModal({
                             <span className="text-slate-100 font-bold block">{selectedDispatchOrder.used_scrap_rak}</span>
                         </div>
                     )}
+                    {selectedDispatchOrder.revision_notes && (
+                        <div className="bg-amber-950/90 border-2 border-amber-500/60 rounded-lg p-2.5 text-amber-200 text-xs space-y-1 shadow-md">
+                            <span className="font-extrabold text-amber-300 flex items-center gap-1">
+                                📝 PERINCIAN REVISI DARI ADMIN TOKO:
+                            </span>
+                            <p className="text-slate-100 font-bold leading-relaxed whitespace-pre-line">
+                                {selectedDispatchOrder.revision_notes}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <form onSubmit={handleDispatchOrderSubmit} className="space-y-4 text-xs">
