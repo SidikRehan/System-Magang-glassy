@@ -97,14 +97,15 @@ class GlassSystemSeeder extends Seeder
             $status = $statuses[$index % count($statuses)];
             $glass = $glassTypes[$index % count($glassTypes)];
 
-            $len = rand(120, 300);
-            $wid = rand(80, 200);
-            $qty = rand(1, 4);
+            $isCommercial = str_contains($cust['name'], 'PT ') || str_contains($cust['name'], 'Hotel') || str_contains($cust['name'], 'Apt.') || str_contains($cust['name'], 'Konstruksi');
+            $len = $isCommercial ? rand(180, 260) : rand(120, 220);
+            $wid = $isCommercial ? rand(100, 180) : rand(80, 140);
+            $qty = $isCommercial ? rand(5, 14) : rand(1, 4);
 
             $areaM2 = ($len * $wid / 10000) * $qty;
             $subtotal = round($areaM2 * $glass['price_m2']);
-            $priorityFee = ($index % 5 === 0) ? 150000 : 0;
-            $customFee = ($index % 7 === 0) ? 75000 : 0;
+            $priorityFee = ($index % 5 === 0) ? 250000 : 0;
+            $customFee = ($index % 7 === 0) ? 150000 : 0;
             $totalPrice = $subtotal + $priorityFee + $customFee;
 
             $paidRatio = match($status) {

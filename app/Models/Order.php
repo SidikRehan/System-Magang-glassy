@@ -51,6 +51,7 @@ class Order extends Model
         'revision_history',
         'complaint_status',
         'complaint_data',
+        'raw_materials_used',
     ];
 
     protected $casts = [
@@ -66,6 +67,7 @@ class Order extends Model
         'division_timestamps' => 'array',
         'revision_history' => 'array',
         'complaint_data' => 'array',
+        'raw_materials_used' => 'array',
         'is_revised' => 'boolean',
         'revision_count' => 'integer',
         'deadline_date' => 'date',
