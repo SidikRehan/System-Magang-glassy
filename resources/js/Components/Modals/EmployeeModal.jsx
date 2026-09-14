@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 
-export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, roleTitles = {} }) {
+export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, roleTitles = {}, userRole = 'hrd' }) {
     const isEdit = Boolean(employeeToEdit && employeeToEdit.id);
+    const isOwner = userRole === 'owner';
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '',
@@ -119,9 +120,19 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, 
                             <option value="divisi_etsa">🌫️ Staff Divisi Etsa (Blur/Sandblasting)</option>
                             <option value="admin_gudang">🏭 Admin Gudang & Logistik</option>
                             <option value="admin_toko">🏪 Admin Toko & Sales Kasir</option>
-                            <option value="owner">📈 Owner & Tim Manajemen</option>
+                            {isOwner && (
+                                <>
+                                    <option value="hrd">👔 Staff HRD & Personalia (Pengelolaan Karyawan)</option>
+                                    <option value="finance">💵 Admin Finance & Akuntansi (Manajemen Keuangan & Laporan)</option>
+                                    <option value="owner">📈 Owner & Tim Manajemen</option>
+                                </>
+                            )}
                         </select>
-                        <p className="text-[11px] text-slate-500 mt-1">Peran menentukan hak akses menu dan tugas kerja di sistem.</p>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                            {isOwner 
+                                ? 'Sebagai Owner, Anda dapat mendaftarkan seluruh peran termasuk HRD, Finance, dan Owner.' 
+                                : 'Sebagai HRD, Anda hanya dapat mengelola & mendaftarkan akun staf operasional/divisi/driver.'}
+                        </p>
                         {errors.role && <p className="text-rose-400 text-[11px] mt-1 font-semibold">{errors.role}</p>}
                     </div>
 

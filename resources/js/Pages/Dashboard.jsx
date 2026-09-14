@@ -25,7 +25,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const userRole = auth.user?.role || 'admin_toko';
     const userName = auth.user?.name || 'User Syp';
     const userEmail = auth.user?.email || 'user@sypglass.co.id';
-    const canViewPricing = userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance';
+    const canViewPricing = userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance';
 
     // Finance & Accounting State (Owner, Akuntan, Admin Toko, Driver, Gudang)
     const [financeTransactionsList, setFinanceTransactionsList] = useState(initialFinanceTransactions);
@@ -99,7 +99,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [activeTab, setActiveTab] = useState(
         userRole === 'driver' ? 'deliveries' :
         userRole.startsWith('divisi_') ? 'production' :
-        userRole === 'admin_gudang' ? 'orders' : 'dashboard'
+        (userRole === 'admin_gudang' || userRole === 'admin_toko') ? 'orders' :
+        (userRole === 'hrd' ? 'employees' :
+        (userRole === 'admin_finance' || userRole === 'finance') ? 'finance' : 'dashboard')
     );
 
     const formatIndonesianDate = (dateStr) => {
@@ -211,6 +213,16 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [showExecutionModal, setShowExecutionModal] = useState(false);
     const [selectedExecutionOrder, setSelectedExecutionOrder] = useState(null);
     const [showScrapPopupModal, setShowScrapPopupModal] = useState(false);
+
+    // Sync selectedExecutionOrder dengan data terbaru dari props.orders setelah update/refresh
+    useEffect(() => {
+        if (selectedExecutionOrder && Array.isArray(orders)) {
+            const fresh = orders.find(o => o.id === selectedExecutionOrder.id);
+            if (fresh) {
+                setSelectedExecutionOrder(fresh);
+            }
+        }
+    }, [orders]);
 
     // Live running timer ticker (updates every 1 second)
     useEffect(() => {
@@ -2079,6 +2091,37 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         }
     };
 
+    const isGlassTypeCompatible = (itemGlassType, scrapGlassType) => {
+        if (!itemGlassType || !scrapGlassType) return false;
+
+        // 1. Thickness must match
+        const itemThickness = extractThickness(itemGlassType);
+        const scrapThickness = extractThickness(scrapGlassType);
+        if (itemThickness && scrapThickness && itemThickness !== scrapThickness) {
+            return false;
+        }
+
+        const itemType = itemGlassType.toLowerCase();
+        const sType = scrapGlassType.toLowerCase();
+
+        // 2. Strict category check for special glass types
+        const specialKeywords = ['cermin', 'riben', 'es', 'tempered', 'laminated', 'oneside', 'tinted', 'reflective', 'akrilik'];
+        for (const kw of specialKeywords) {
+            if (itemType.includes(kw) !== sType.includes(kw)) {
+                return false;
+            }
+        }
+
+        // 3. For bening / polos (clear float glass)
+        const isItemBening = itemType.includes('bening') || itemType.includes('polos');
+        const isScrapBening = sType.includes('bening') || sType.includes('polos');
+        if (isItemBening || isScrapBening) {
+            if (isItemBening !== isScrapBening) return false;
+        }
+
+        return true;
+    };
+
     const calculateScrapYield = (scrapLen, scrapWid, itemLen, itemWid) => {
         if (scrapLen <= 0 || scrapWid <= 0 || itemLen <= 0 || itemWid <= 0) return 0;
         const yieldLenNorm = Math.floor(scrapLen / itemLen);
@@ -2108,27 +2151,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const itemLen = rawItemLen + edgeMarginCm;
         const itemWid = rawItemWid + edgeMarginCm;
 
-        const itemType = (item.glass_type || '').toLowerCase();
-        const itemThickness = extractThickness(item.glass_type);
-
         const candidates = [];
         scrapList.forEach(s => {
             if (s.status && s.status !== 'Layak Pakai') return;
+            if (!isGlassTypeCompatible(item.glass_type, s.glass_type)) return;
 
             const sLen = parseFloat(s.length_cm) || 0;
             const sWid = parseFloat(s.width_cm) || 0;
             const y = calculateScrapYield(sLen, sWid, itemLen, itemWid);
             if (y <= 0) return;
-
-            const sType = (s.glass_type || '').toLowerCase();
-            const sThickness = extractThickness(s.glass_type);
-
-            if (itemThickness && sThickness && itemThickness !== sThickness) return;
-
-            const keywords = ['cermin', 'bening', 'riben', 'jumbo', 'es', 'tempered'];
-            for (const kw of keywords) {
-                if (itemType.includes(kw) && !sType.includes(kw)) return;
-            }
 
             candidates.push({
                 scrap: s,
@@ -2356,12 +2387,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const roleTitles = {
         admin_toko: '🏪 Admin Toko',
         admin_gudang: '🏭 Admin Gudang',
-        divisi_ht: '✂️ Divisi HT (Potong)',
+        divisi_ht: '✂️ Divisi Potong (HT)',
         divisi_gm: '✨ Divisi GM (Gosok)',
         divisi_bv: '💎 Divisi BV (Bevel)',
         divisi_etsa: '🌫️ Divisi Etsa (Blur)',
         driver: '🚚 Supir / Driver',
-        owner: '📈 Owner & Akuntan'
+        owner: '📈 Owner & Direksi',
+        hrd: '👔 HRD (Personalia & SDM)',
+        admin_finance: '💳 Admin Finance',
+        finance: '💰 Finance & Akuntan'
     };
 
     const sanitizeField = (val) => {
@@ -2602,8 +2636,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         if (procs.length === 0) procs = ['HT'];
         if (!procs.includes('HT')) procs.unshift('HT');
 
+        // Always sort procs according to physical factory sequence: HT (Potong) -> GM -> BV -> Etsa
+        const fixedOrder = ['HT', 'GM', 'BV', 'Etsa'];
+        procs.sort((a, b) => fixedOrder.indexOf(a) - fixedOrder.indexOf(b));
+
         const divInfo = {
-            'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi HT (Potong & Tempering)', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
+            'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong (HT & Bor)', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
             'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', icon: '✨', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
             'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', icon: '💎', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
             'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', icon: '🌫️', bg: 'bg-purple-500/10 text-purple-300 border-purple-500/30' }
@@ -2755,7 +2793,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     </div>
 
                     <nav className="space-y-1">
-                        {!userRole.startsWith('divisi_') && userRole !== 'driver' && userRole !== 'admin_gudang' && (
+                        {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 📊 <span>Dashboard Utama</span>
                             </button>
@@ -2820,7 +2858,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'owner') && (
+                        {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 <div className="flex items-center gap-3">
                                     🔌 <span>Aksesoris Konsumen</span>
@@ -2834,7 +2872,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </button>
                         )}
 
-                        {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
+                        {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 <div className="flex items-center gap-3">
                                     🧰 <span>Perlengkapan Gudang</span>
@@ -2848,13 +2886,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'tools' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 🛠️ <span>Alat Penunjang</span>
                             </button>
                         )}
 
-                        {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                        {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'employees' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 <div className="flex items-center gap-3">
                                     👥 <span>Pengelolaan Karyawan</span>
@@ -2865,7 +2903,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </button>
                         )}
 
-                        {(userRole === 'owner' || userRole === 'admin_toko') && (
+                        {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'finance' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
                                 💰 <span>Finance & Laba/Rugi</span>
                             </button>
@@ -2876,8 +2914,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {/* CONTENT MAIN */}
                 <main className="flex-1 p-8 overflow-y-auto">
 
-                    {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN (KHUSUS ADMIN TOKO, OWNER, FINANCE) */}
-                    {activeTab === 'dashboard' && !userRole.startsWith('divisi_') && userRole !== 'driver' && userRole !== 'admin_gudang' && (
+                    {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN (KHUSUS OWNER & FINANCE) */}
+                    {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                         <div className="space-y-6">
                             {/* WELCOME BANNER & PERFORMANCE HIGHLIGHT */}
                             <div className="flex flex-wrap justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 p-6 rounded-2xl border border-cyan-500/20 shadow-2xl">
@@ -3399,10 +3437,21 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                         {o.description && (
                                                             <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-xs">
                                                                 <span className="font-bold flex items-center gap-1 text-amber-400 text-[11px] mb-0.5">
-                                                                    📝 Catatan / Revisi:
+                                                                    📝 Catatan Order (Penjelasan Kaca):
                                                                 </span>
                                                                 <div className="text-slate-200 font-medium whitespace-pre-wrap text-[11px] leading-relaxed">
                                                                     {o.description}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {o.revision_notes && (
+                                                            <div className="mt-1.5 p-2 bg-rose-500/10 border border-rose-500/30 rounded-lg text-rose-300 text-xs">
+                                                                <span className="font-bold flex items-center gap-1 text-rose-400 text-[11px] mb-0.5">
+                                                                    🔔 Catatan Revisi Toko:
+                                                                </span>
+                                                                <div className="text-slate-200 font-medium whitespace-pre-wrap text-[11px] leading-relaxed font-mono">
+                                                                    {o.revision_notes}
                                                                 </div>
                                                             </div>
                                                         )}
@@ -3581,7 +3630,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 <div className="flex flex-wrap items-center bg-slate-900 border border-slate-800 p-1.5 rounded-xl gap-1">
                                     {[
                                         { key: 'all', label: '⚡ Semua Active Pengerjaan', count: initialOrders.filter(o => checkOrderDivisi(o, 'all')).length },
-                                        { key: 'divisi_ht', label: '✂️ Divisi HT (Potong)', count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_ht')).length },
+                                        { key: 'divisi_ht', label: '✂️ Divisi Potong (HT)', count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_ht')).length },
                                         { key: 'divisi_gm', label: '✨ Divisi GM (Gosok)', count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_gm')).length },
                                         { key: 'divisi_bv', label: '💎 Divisi BV (Bevel)', count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_bv')).length },
                                         { key: 'divisi_etsa', label: '🎨 Divisi Etsa (Blur)', count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_etsa')).length },
@@ -3800,11 +3849,14 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 return o.current_division === userRole && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
                                             }
                                             if (productionSubTab.startsWith('divisi_')) {
-                                                return o.current_division === productionSubTab && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
+                                                return o.current_division === productionSubTab &&
+                                                    ['Sedang Dikerjakan', 'Menunggu Pengerjaan', 'Belum', 'Menunggu Dispatch'].includes(o.division_progress?.[activeDivKey] || '');
                                             }
                                             return false;
                                         }) || null;
                                     })();
+
+                                    const isJobStarted = activeOngoingOrder && activeOngoingOrder.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
 
                                     return (
                                         <div id="active-workstation-card" className="transition-all duration-300">
@@ -3818,11 +3870,11 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                     <div className="relative z-10 flex flex-wrap justify-between items-center gap-3 border-b border-cyan-500/20 pb-4">
                                                         <div className="flex flex-wrap items-center gap-2.5">
                                                             <span className="relative flex h-3 w-3">
-                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isJobStarted ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                                                                <span className={`relative inline-flex rounded-full h-3 w-3 ${isJobStarted ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                                                             </span>
-                                                            <span className="text-xs font-black uppercase tracking-wider text-emerald-300 font-mono flex items-center gap-1.5">
-                                                                <span>⚡ PROSES SEDANG BERLANGSUNG DI MEJA KERJA</span>
+                                                            <span className={`text-xs font-black uppercase tracking-wider font-mono flex items-center gap-1.5 ${isJobStarted ? 'text-emerald-300' : 'text-amber-300'}`}>
+                                                                <span>{isJobStarted ? '⚡ PROSES SEDANG BERLANGSUNG DI MEJA KERJA' : '📋 ANTREAN MASUK DI MEJA KERJA (Belum Dimulai)'}</span>
                                                             </span>
                                                             <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-mono shadow-sm">
                                                                 Workstation {roleTitles[activeOngoingOrder.current_division] || activeOngoingOrder.current_division}
@@ -3927,32 +3979,56 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             )}
 
                                                             {activeOngoingOrder.used_scrap_rak && activeOngoingOrder.used_scrap_rak !== '-' && activeOngoingOrder.used_scrap_rak.trim() !== '' && (
-                                                                <div className="mt-2 bg-amber-950/90 border border-amber-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
-                                                                    <div className="font-extrabold text-[11px] text-amber-400 flex items-center gap-1">
-                                                                        <span>🧩 Rekomendasi Scrap Toko:</span>
+                                                                activeOngoingOrder.used_scrap_rak.startsWith('❌') ? (
+                                                                    <div className="mt-2 bg-rose-950/80 border border-rose-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
+                                                                        <div className="font-extrabold text-[11px] text-rose-300 flex items-center justify-between">
+                                                                            <span>🚨 Rekomendasi Scrap Ditolak</span>
+                                                                            <span className="text-[9px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded">Ditolak HT</span>
+                                                                        </div>
+                                                                        <div className="text-rose-200 bg-slate-950 px-2 py-1 rounded border border-rose-500/30 font-bold text-[11px]">
+                                                                            {activeOngoingOrder.used_scrap_rak}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="text-amber-200 bg-slate-950 px-2 py-1 rounded border border-amber-500/30 font-bold text-[11px]">
-                                                                        {activeOngoingOrder.used_scrap_rak}
+                                                                ) : activeOngoingOrder.used_scrap_rak.startsWith('✅') ? (
+                                                                    <div className="mt-2 bg-emerald-950/80 border border-emerald-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
+                                                                        <div className="font-extrabold text-[11px] text-emerald-300 flex items-center justify-between">
+                                                                            <span>✅ Rekomendasi Scrap Terpakai</span>
+                                                                            <span className="text-[9px] bg-emerald-500 text-slate-950 font-bold px-1.5 py-0.5 rounded">Terpakai HT</span>
+                                                                        </div>
+                                                                        <div className="text-emerald-200 bg-slate-950 px-2 py-1 rounded border border-emerald-500/30 font-bold text-[11px]">
+                                                                            {activeOngoingOrder.used_scrap_rak}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
+                                                                ) : (
+                                                                    <div className="mt-2 bg-amber-950/90 border border-amber-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
+                                                                        <div className="font-extrabold text-[11px] text-amber-400 flex items-center justify-between">
+                                                                            <span>🧩 Rekomendasi Scrap Toko:</span>
+                                                                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded">Perlu Konfirmasi</span>
+                                                                        </div>
+                                                                        <div className="text-amber-200 bg-slate-950 px-2 py-1 rounded border border-amber-500/30 font-bold text-[11px]">
+                                                                            {activeOngoingOrder.used_scrap_rak}
+                                                                        </div>
+                                                                        <div className="text-[10px] text-amber-300/80 font-sans italic">
+                                                                            💡 Buka "Detail Lengkap" untuk memilih button [ ✅ Dipakai ] atau [ ❌ Ditolak ].
+                                                                        </div>
+                                                                    </div>
+                                                                )
                                                             )}
                                                         </div>
 
-                                                        {/* COL 3: DIGITAL RUNNING TIMER (4 Cols) */}
-                                                        <div className="md:col-span-4 bg-slate-950/90 border-2 border-cyan-500/40 rounded-2xl p-4 text-center shadow-[inset_0_0_20px_rgba(6,182,212,0.1)] space-y-1 relative overflow-hidden">
-                                                            <div className="text-[11px] font-black font-mono text-cyan-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
-                                                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                                                                <span>⏱️ WAKTU BERJALAN</span>
+                                                        {/* COL 3: STATUS PEKERJAAN WORKSTATION */}
+                                                        <div className={`md:col-span-4 p-4 rounded-2xl border text-center space-y-2 shadow-md ${isJobStarted ? 'bg-emerald-950/40 border-emerald-500/40' : 'bg-amber-950/40 border-amber-500/40'}`}>
+                                                            <div className={`text-[11px] font-black font-mono uppercase tracking-widest flex items-center justify-center gap-1.5 ${isJobStarted ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                                <span className={`w-2 h-2 rounded-full animate-ping ${isJobStarted ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                                                                <span>{isJobStarted ? '🟢 STATUS: SEDANG DIKERJAKAN' : '🟡 STATUS: MENUNGGU PENGERJAAN'}</span>
                                                             </div>
-                                                            <div className="text-3xl sm:text-4xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-emerald-300 tracking-widest drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] py-1">
-                                                                {calculateJobElapsedTime(activeOngoingOrder, activeDivKey)}
+                                                            <div className="text-sm font-extrabold text-slate-100 font-sans">
+                                                                {isJobStarted ? 'Proses Kaca Sedang Berlangsung' : 'Orderan Berada Di Antrean Workstation'}
                                                             </div>
-                                                            <div className="text-[10px] text-slate-400 font-mono">
-                                                                {activeOngoingOrder.division_timestamps?.[activeDivKey]?.started_at ? (
-                                                                    <span>Mulai: {formatIndonesianDate(activeOngoingOrder.division_timestamps[activeDivKey].started_at)}</span>
-                                                                ) : (
-                                                                    <span className="text-cyan-400/80 animate-pulse">● Stopwatch Aktif</span>
-                                                                )}
+                                                            <div className="text-[11px] text-slate-300 leading-normal">
+                                                                {isJobStarted 
+                                                                    ? `Pekerjaan aktif di meja ${roleTitles[activeOngoingOrder.current_division] || activeOngoingOrder.current_division}.`
+                                                                    : 'Klik tombol "⚡ Mulai Mengerjakan" di bawah jika Anda siap memproses kaca ini.'}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -3981,30 +4057,44 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             )}
                                                         </div>
 
-                                                        {/* ACTION SELESAI */}
+                                                        {/* ACTION SELESAI / MULAI */}
                                                         <div className="flex flex-wrap items-center gap-2 ml-auto">
-                                                            <span className="text-xs text-slate-400 font-mono font-semibold hidden sm:inline-block">Teruskan ke:</span>
-                                                            <select
-                                                                value={activeCardNextDiv}
-                                                                onChange={(e) => setActiveCardNextDiv(e.target.value)}
-                                                                className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner"
-                                                            >
-                                                                <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
-                                                                <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
-                                                                <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
-                                                                <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
-                                                                <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
-                                                            </select>
+                                                            {isJobStarted ? (
+                                                                <>
+                                                                    <span className="text-xs text-slate-400 font-mono font-semibold hidden sm:inline-block">Teruskan ke:</span>
+                                                                    <select
+                                                                        value={activeCardNextDiv}
+                                                                        onChange={(e) => setActiveCardNextDiv(e.target.value)}
+                                                                        className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner cursor-pointer"
+                                                                    >
+                                                                        <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
+                                                                        <option value="divisi_ht">✂️ Teruskan ke Divisi Potong (HT & Bor)</option>
+                                                                        <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
+                                                                        <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
+                                                                        <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
+                                                                    </select>
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleFinishJobSubmit(activeOngoingOrder.id, activeCardNextDiv)}
-                                                                className="group relative inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 hover:from-emerald-300 hover:via-teal-300 hover:to-cyan-300 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-emerald-300/40 cursor-pointer"
-                                                            >
-                                                                <span className="text-sm">✅</span>
-                                                                <span className="tracking-wider uppercase font-black text-xs">Selesai Pengerjaan</span>
-                                                                <span className="transition-transform group-hover:translate-x-1 duration-200">➔</span>
-                                                            </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleFinishJobSubmit(activeOngoingOrder.id, activeCardNextDiv)}
+                                                                        className="group relative inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 hover:from-emerald-300 hover:via-teal-300 hover:to-cyan-300 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-emerald-300/40 cursor-pointer"
+                                                                    >
+                                                                        <span className="text-sm">✅</span>
+                                                                        <span className="tracking-wider uppercase font-black text-xs">Selesai Pengerjaan</span>
+                                                                        <span className="transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleStartJob(activeOngoingOrder.id)}
+                                                                    className="group relative inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs text-slate-950 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 hover:from-cyan-300 hover:via-teal-300 hover:to-emerald-300 shadow-xl shadow-cyan-500/25 hover:shadow-cyan-400/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 border border-cyan-300/40 cursor-pointer"
+                                                                >
+                                                                    <span className="text-sm">⚡</span>
+                                                                    <span className="tracking-wider uppercase font-black text-xs">Mulai Mengerjakan</span>
+                                                                    <span className="transition-transform group-hover:translate-x-1 duration-200">➔</span>
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -5265,7 +5355,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     )}
 
                     {/* TAB 6: FINANCE & LABA RUGI KOMPREHENSIF (EXECUTIVE COMMAND CENTER) */}
-                    {activeTab === 'finance' && (() => {
+                    {activeTab === 'finance' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (() => {
                         const totalRev = Number(metrics.totalRevenue || 0);
                         const paidRev = Number(metrics.paidRevenue || 0);
                         const pendingCodVal = Number(metrics.pendingCOD || 0);
@@ -7476,8 +7566,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         </div>
                     )}
 
-                    {/* TAB: PENGELOLAAN KARYAWAN & AKUN STAFF */}
-                    {activeTab === 'employees' && (userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                    {/* TAB: PENGELOLAAN KARYAWAN & AKUN STAFF (KHUSUS HRD, FINANCE & OWNER) */}
+                    {activeTab === 'employees' && (userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
                         <div className="space-y-6">
                             <div className="flex flex-wrap justify-between items-center gap-4">
                                 <div>
@@ -7563,6 +7653,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 <option value="divisi_etsa">🌫️ Divisi Etsa ({employeesList.filter(u => u.role === 'divisi_etsa').length})</option>
                                                 <option value="admin_gudang">🏭 Admin Gudang ({employeesList.filter(u => u.role === 'admin_gudang').length})</option>
                                                 <option value="admin_toko">🏪 Admin Toko ({employeesList.filter(u => u.role === 'admin_toko').length})</option>
+                                                <option value="hrd">👔 HRD Personalia ({employeesList.filter(u => u.role === 'hrd').length})</option>
+                                                <option value="admin_finance">💳 Admin Finance ({employeesList.filter(u => u.role === 'admin_finance' || u.role === 'finance').length})</option>
                                                 <option value="owner">📈 Owner ({employeesList.filter(u => u.role === 'owner').length})</option>
                                             </select>
                                         </div>
@@ -7783,6 +7875,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 getDynamicGlassTypes={getDynamicGlassTypes}
                 sheetGlasses={sheetGlasses}
                 findMatchingScrapsForOrder={findMatchingScrapsForOrder}
+                isGlassTypeCompatible={isGlassTypeCompatible}
                 initialScrap={initialScrap}
                 extractThickness={extractThickness}
                 calculateScrapYield={calculateScrapYield}
@@ -7825,6 +7918,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 getDynamicGlassTypes={getDynamicGlassTypes}
                 sheetGlasses={sheetGlasses}
                 findMatchingScrapsForOrder={findMatchingScrapsForOrder}
+                isGlassTypeCompatible={isGlassTypeCompatible}
                 initialScrap={initialScrap}
                 extractThickness={extractThickness}
                 calculateScrapYield={calculateScrapYield}
@@ -7852,6 +7946,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 selectedDispatchOrder={selectedDispatchOrder}
                 targetDivChoice={targetDivChoice}
                 setTargetDivChoice={setTargetDivChoice}
+                relevantDivisions={getOrderRelevantDivisions(selectedDispatchOrder)}
                 handleDispatchOrderSubmit={handleDispatchOrderSubmit}
             />
             {/* MODAL RESTOCK BARANG LEMBARAN */}

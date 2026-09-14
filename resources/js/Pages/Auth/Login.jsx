@@ -37,6 +37,8 @@ export default function Login({ status, canResetPassword }) {
         { label: '🚚 Supir 3 (Pak Asep)', email: 'asep.driver@sypglass.co.id' },
         { label: '🚚 Supir 4 (Pak Hendra)', email: 'hendra.driver@sypglass.co.id' },
         { label: '📈 Owner & Akuntan', email: 'owner@sypglass.co.id' },
+        { label: '👔 HRD Personalia', email: 'hrd@sypglass.co.id' },
+        { label: '💵 Admin Finance', email: 'finance@sypglass.co.id' },
     ];
 
     const quickFill = (email) => {

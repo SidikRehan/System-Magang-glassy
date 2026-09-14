@@ -97,6 +97,18 @@ class DatabaseSeeder extends Seeder
                 'role' => 'owner',
                 'password' => $password,
             ],
+            [
+                'name' => 'Sarah HRD & Personalia',
+                'email' => 'hrd@sypglass.co.id',
+                'role' => 'hrd',
+                'password' => $password,
+            ],
+            [
+                'name' => 'Rini Admin Finance & Akuntansi',
+                'email' => 'finance@sypglass.co.id',
+                'role' => 'finance',
+                'password' => $password,
+            ],
         ];
 
         foreach ($users as $u) {

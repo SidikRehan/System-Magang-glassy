@@ -34,10 +34,14 @@ export default function DivisionExecutionModal({
     const [rawNotes, setRawNotes] = useState('');
     const [isSubmittingRaw, setIsSubmittingRaw] = useState(false);
 
-    // State untuk Penolakan Kaca Sisa oleh Divisi HT
+    // State untuk Konfirmasi & Penolakan Kaca Sisa oleh Divisi HT
+    const [isSubmittingUseScrap, setIsSubmittingUseScrap] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReasonType, setRejectReasonType] = useState('baret_cacat');
     const [rejectNotes, setRejectNotes] = useState('');
+    const [resizeScrap, setResizeScrap] = useState(false);
+    const [newLengthCm, setNewLengthCm] = useState('');
+    const [newWidthCm, setNewWidthCm] = useState('');
     const [isSubmittingReject, setIsSubmittingReject] = useState(false);
 
     // State untuk Edit / Potong Ulang Kaca Sisa di Rak
@@ -63,9 +67,11 @@ export default function DivisionExecutionModal({
         }
     }, [selectedExecutionOrder]);
 
-    const currentStockItem = sheetGlasses.find(g =>
-        g.name.toLowerCase().includes(rawGlassType.toLowerCase()) ||
-        rawGlassType.toLowerCase().includes(g.name.toLowerCase())
+    const currentStockItem = (Array.isArray(sheetGlasses) ? sheetGlasses : []).find(g =>
+        g?.name && (
+            g.name.toLowerCase().includes((rawGlassType || '').toLowerCase()) ||
+            (rawGlassType || '').toLowerCase().includes(g.name.toLowerCase())
+        )
     );
 
     const handleRecordRawMaterial = (e) => {
@@ -88,18 +94,51 @@ export default function DivisionExecutionModal({
         });
     };
 
+    const handleUseScrapSubmit = () => {
+        if (!selectedExecutionOrder) return;
+        setIsSubmittingUseScrap(true);
+        router.post(route('orders.use_scrap', selectedExecutionOrder.id), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSubmittingUseScrap(false);
+                if (selectedExecutionOrder) {
+                    const currentStr = selectedExecutionOrder.used_scrap_rak || '';
+                    if (!currentStr.startsWith('✅')) {
+                        selectedExecutionOrder.used_scrap_rak = '✅ [TERPAKAI DIVISI HT] ' + currentStr;
+                    }
+                }
+            },
+            onError: () => {
+                setIsSubmittingUseScrap(false);
+            }
+        });
+    };
+
     const handleRejectScrapSubmit = (e) => {
         e.preventDefault();
         setIsSubmittingReject(true);
+
+        const matchedScrap = scrapGlasses.find(s => selectedExecutionOrder.used_scrap_rak?.includes(s.scrap_code));
+
         router.post(route('orders.reject_scrap', selectedExecutionOrder.id), {
             reason_type: rejectReasonType,
-            notes: rejectNotes
+            notes: rejectNotes,
+            resize_scrap: resizeScrap,
+            new_length_cm: newLengthCm,
+            new_width_cm: newWidthCm,
+            scrap_id: matchedScrap ? matchedScrap.id : null,
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmittingReject(false);
                 setShowRejectModal(false);
+                if (selectedExecutionOrder) {
+                    selectedExecutionOrder.used_scrap_rak = '❌ [DITOLAK DIVISI HT] ' + rejectReasonType + (rejectNotes ? ` ("${rejectNotes}")` : '');
+                }
                 setRejectNotes('');
+                setResizeScrap(false);
+                setNewLengthCm('');
+                setNewWidthCm('');
             },
             onError: () => {
                 setIsSubmittingReject(false);
@@ -299,6 +338,21 @@ export default function DivisionExecutionModal({
                                         ℹ️ Divisi Potong (HT) wajib memotong dari bahan kaca lembaran baru di bawah karena rekomendasi kaca sisa telah ditolak (baret/cacat/ukuran kurang).
                                     </p>
                                 </div>
+                            ) : selectedExecutionOrder.used_scrap_rak.startsWith('✅') ? (
+                                <div className="bg-emerald-950/80 border-2 border-emerald-500/80 rounded-2xl p-4 space-y-2 shadow-xl shadow-emerald-950/30">
+                                    <div className="flex items-center justify-between gap-2 border-b border-emerald-500/30 pb-2">
+                                        <div className="flex items-center gap-2 font-black text-xs text-emerald-300 uppercase tracking-wider">
+                                            <span className="text-base">✅</span>
+                                            <span>REKOMENDASI KACA SISA: TERPAKAI UNTUK ORDERAN INI</span>
+                                        </div>
+                                        <span className="bg-emerald-500 text-slate-950 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                            Stok Sisa Di-Update
+                                        </span>
+                                    </div>
+                                    <div className="text-xs font-mono font-extrabold text-emerald-200 bg-slate-950 p-3 rounded-xl border border-emerald-500/40 leading-relaxed">
+                                        {selectedExecutionOrder.used_scrap_rak}
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="bg-gradient-to-r from-amber-950/90 via-amber-900/60 to-slate-950 border-2 border-amber-500/60 rounded-2xl p-4 space-y-3 shadow-xl shadow-amber-950/30">
                                     <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2">
@@ -307,49 +361,35 @@ export default function DivisionExecutionModal({
                                             <span>REKOMENDASI / ALOKASI KACA SISA RAK DARI TOKO</span>
                                         </div>
                                         <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                                            Ambil & Potong Dari Scrap Dulu
+                                            Konfirmasi Pemakaian
                                         </span>
                                     </div>
                                     <div className="text-xs sm:text-sm font-mono font-extrabold text-amber-200 bg-slate-950 p-3 rounded-xl border border-amber-500/40 leading-relaxed shadow-inner">
                                         {selectedExecutionOrder.used_scrap_rak}
                                     </div>
 
-                                    {/* ACTION BUTTONS KHUSUS DIVISI POTONG (HT) */}
+                                    {/* DUA BUTTON ACTION UTAMA KHUSUS DIVISI POTONG (HT): [ ✅ DIPAKAI ] & [ ❌ DITOLAK ] */}
                                     {(selectedExecutionOrder.current_division === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-500/20">
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-500/20">
                                             <p className="text-[10px] text-amber-300/90 font-mono flex-1 min-w-[180px]">
-                                                💡 Periksa fisik kaca di rak storage sebelum dipotong.
+                                                💡 Periksa fisik kaca di rak storage. Klik <strong>Dipakai</strong> jika kaca sesuai, atau <strong>Ditolak</strong> jika baret/ukuran tidak sesuai.
                                             </p>
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     type="button"
-                                                    onClick={() => {
-                                                        const foundScrap = scrapGlasses.find(s => selectedExecutionOrder.used_scrap_rak.includes(s.scrap_code));
-                                                        if (foundScrap) {
-                                                            handleOpenEditScrapModal(foundScrap);
-                                                        } else {
-                                                            handleOpenEditScrapModal({
-                                                                id: scrapGlasses[0]?.id || 1,
-                                                                scrap_code: 'SCRAP-X',
-                                                                glass_type: selectedExecutionOrder.glass_type || 'Kaca',
-                                                                length_cm: selectedExecutionOrder.length_cm || 50,
-                                                                width_cm: selectedExecutionOrder.width_cm || 50,
-                                                                rak_location: 'Rak Storage',
-                                                                status: 'Layak Pakai'
-                                                            });
-                                                        }
-                                                    }}
-                                                    className="bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-extrabold px-3 py-1.5 rounded-xl text-xs transition border border-amber-500/40 flex items-center gap-1 cursor-pointer"
+                                                    disabled={isSubmittingUseScrap}
+                                                    onClick={handleUseScrapSubmit}
+                                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-2 rounded-xl text-xs transition border border-emerald-400/50 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-950/50 disabled:opacity-50"
                                                 >
-                                                    <span>✂️ Potong Ulang / Edit Scrap</span>
+                                                    <span>{isSubmittingUseScrap ? '⏳ Processing...' : '✅ Dipakai'}</span>
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowRejectModal(true)}
-                                                    className="bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white font-extrabold px-3 py-1.5 rounded-xl text-xs transition border border-rose-500/40 flex items-center gap-1 cursor-pointer shadow"
+                                                    className="bg-rose-600 hover:bg-rose-500 text-white font-black px-4 py-2 rounded-xl text-xs transition border border-rose-400/50 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-950/50"
                                                 >
-                                                    <span>❌ Tolak Kaca Sisa (Baret / Ukuran Kurang)</span>
+                                                    <span>❌ Ditolak</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -746,17 +786,37 @@ export default function DivisionExecutionModal({
                                                 </button>
                                             )}
 
-                                            <select 
-                                                id={`exec_modal_next_div_${selectedExecutionOrder.id}`}
-                                                defaultValue="QC_Ready"
-                                                className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner"
-                                            >
-                                                <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
-                                                <option value="divisi_ht">✂️ Teruskan ke Divisi HT (Potong)</option>
-                                                <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok)</option>
-                                                <option value="divisi_bv">💎 Teruskan ke Divisi BV (Bevel)</option>
-                                                <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Blur)</option>
-                                            </select>
+                                            {(() => {
+                                                const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
+                                                const reqCodes = ['HT'];
+                                                const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
+                                                if (Array.isArray(selectedExecutionOrder.processes)) selectedExecutionOrder.processes.forEach(addC);
+                                                if (Array.isArray(selectedExecutionOrder.items)) {
+                                                    selectedExecutionOrder.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
+                                                }
+                                                reqCodes.sort((a, b) => fixedSeq.indexOf(a) - fixedSeq.indexOf(b));
+                                                const curKey = (selectedExecutionOrder.current_division || '').replace('divisi_', '').toUpperCase();
+                                                const curIdx = reqCodes.indexOf(curKey);
+                                                let defaultNext = 'QC_Ready';
+                                                if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
+                                                    const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
+                                                    defaultNext = map[reqCodes[curIdx + 1]] || 'QC_Ready';
+                                                }
+
+                                                return (
+                                                    <select 
+                                                        id={`exec_modal_next_div_${selectedExecutionOrder.id}`}
+                                                        defaultValue={defaultNext}
+                                                        className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner cursor-pointer"
+                                                    >
+                                                        <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
+                                                        <option value="divisi_ht">✂️ Teruskan ke Divisi Potong (HT & Bor)</option>
+                                                        <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok Mesin)</option>
+                                                        <option value="divisi_bv">💎 Teruskan ke Divisi BV (Beveling)</option>
+                                                        <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Sandblast Blur)</option>
+                                                    </select>
+                                                );
+                                            })()}
 
                                             <button
                                                 type="button"
@@ -824,14 +884,71 @@ export default function DivisionExecutionModal({
                                         </div>
 
                                         <div className="space-y-1">
-                                            <label className="text-slate-300 font-bold block">Catatan Penolakan (Opsional / Detail Baret):</label>
+                                            <label className="text-slate-300 font-bold block">Catatan Penolakan (Detail Penjelasan Baret / Cacat):</label>
                                             <textarea
                                                 rows={2}
-                                                placeholder="cth: Baret di bagian tengah kaca, retak pada sudut..."
+                                                placeholder="cth: Kaca baret di bagian tepi 40cm, retak pada sudut kanan..."
                                                 value={rejectNotes}
                                                 onChange={e => setRejectNotes(e.target.value)}
                                                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:border-rose-400 text-xs"
                                             ></textarea>
+                                        </div>
+
+                                        {/* SECTION INPUT POTONG ULANG UKURAN SISA UTUH */}
+                                        <div className="bg-amber-950/40 border border-amber-500/40 p-3 rounded-2xl space-y-2">
+                                            <label className="flex items-center gap-2 text-amber-300 font-bold cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={resizeScrap}
+                                                    onChange={e => {
+                                                        const isChecked = e.target.checked;
+                                                        setResizeScrap(isChecked);
+                                                        if (isChecked && !newLengthCm) {
+                                                            const foundScrap = scrapGlasses.find(s => selectedExecutionOrder.used_scrap_rak?.includes(s.scrap_code));
+                                                            if (foundScrap) {
+                                                                setNewLengthCm(foundScrap.length_cm);
+                                                                setNewWidthCm(foundScrap.width_cm);
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="rounded text-amber-500 focus:ring-amber-400"
+                                                />
+                                                <span>✂️ Potong Ulang Sisa Kaca Utuh yang Masih Bisa Dipakai</span>
+                                            </label>
+
+                                            {resizeScrap && (
+                                                <div className="space-y-2 pt-1 border-t border-amber-500/20">
+                                                    <p className="text-[10px] text-amber-200/80 leading-relaxed font-mono">
+                                                        💡 Masukkan ukuran baru setelah bagian baret dipotong (misal dari 150×80 cm menjadi 100×50 cm) agar stok sisa di rak tetap tersimpan akurat.
+                                                    </p>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-[10px] text-slate-300 block font-bold">Panjang Baru (cm):</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.1"
+                                                                min="1"
+                                                                placeholder="Panjang cm"
+                                                                value={newLengthCm}
+                                                                onChange={e => setNewLengthCm(e.target.value)}
+                                                                className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-2.5 py-1.5 text-xs text-amber-300 font-mono font-bold"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] text-slate-300 block font-bold">Lebar Baru (cm):</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.1"
+                                                                min="1"
+                                                                placeholder="Lebar cm"
+                                                                value={newWidthCm}
+                                                                onChange={e => setNewWidthCm(e.target.value)}
+                                                                className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-2.5 py-1.5 text-xs text-amber-300 font-mono font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
@@ -845,7 +962,7 @@ export default function DivisionExecutionModal({
                                                 disabled={isSubmittingReject}
                                                 className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer"
                                             >
-                                                <span>{isSubmittingReject ? '⏳ Menyimpan...' : '❌ Tolak Kaca Sisa & Log Aktivitas'}</span>
+                                                <span>{isSubmittingReject ? '⏳ Menyimpan...' : '❌ Submit Penolakan & Update Scrap'}</span>
                                             </button>
                                         </div>
                                     </form>

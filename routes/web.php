@@ -40,6 +40,7 @@ Route::middleware(['auth'])->group(function () {
     // Scrap Glass & Rejection Operations
     Route::post('/scrap', [ScrapController::class, 'storeScrap'])->name('scrap.store');
     Route::post('/scrap/{id}/update', [ScrapController::class, 'updateScrap'])->name('scrap.update');
+    Route::post('/orders/{id}/use-scrap', [SypOperationalController::class, 'useScrapRecommendation'])->name('orders.use_scrap');
     Route::post('/orders/{id}/reject-scrap', [SypOperationalController::class, 'rejectScrapRecommendation'])->name('orders.reject_scrap');
 
     // Employee & User Account Management Operations

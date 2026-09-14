@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 
 export default function CandlestickChart({ canViewPricing = true }) {
-    // Mode tampilan grafik: 'candlestick', 'bar', 'area'
-    const [chartMode, setChartMode] = useState('candlestick');
+    // Mode tampilan grafik: 'line', 'area', 'bar'
+    const [chartMode, setChartMode] = useState('line');
     // Timeframe: 'monthly', 'weekly'
     const [timeframe, setTimeframe] = useState('monthly');
     const [hoveredCandle, setHoveredCandle] = useState(null);
 
-    // Data Candlestick Bulanan (OHLC dalam Juta Rupiah & SPO Volume)
+    // Data Penjualan Bulanan (Omset dalam Juta Rupiah & SPO Volume)
     const monthlyData = [
         { period: 'Jan', open: 43.0, high: 51.2, low: 40.0, close: 48.5, volume: 22, growth: '+12.8%', note: 'Awal tahun proyek ruko & residential' },
         { period: 'Feb', open: 48.5, high: 62.0, low: 46.5, close: 59.2, volume: 28, growth: '+22.1%', note: 'Permintaan cermin & tempered naik' },
@@ -19,7 +19,7 @@ export default function CandlestickChart({ canViewPricing = true }) {
         { period: 'Agu', open: 112.4, high: 134.0, low: 108.5, close: 128.5, volume: 58, growth: '+14.3%', isPeak: true, note: 'Puncak rekor penjualan 2026 (All-Time High)' },
     ];
 
-    // Data Candlestick Mingguan (Agustus - September 2026)
+    // Data Mingguan (Agustus - September 2026)
     const weeklyData = [
         { period: 'M1 Agu', open: 108.0, high: 116.5, low: 106.0, close: 114.2, volume: 12, growth: '+5.7%' },
         { period: 'M2 Agu', open: 114.2, high: 122.0, low: 112.0, close: 120.5, volume: 14, growth: '+5.5%' },
@@ -39,7 +39,7 @@ export default function CandlestickChart({ canViewPricing = true }) {
     // Dimensi SVG
     const svgWidth = 720;
     const svgHeight = 270;
-    const chartBottom = 200; // batas bawah chart lilin
+    const chartBottom = 200; // batas bawah chart garis
     const volumeHeight = 55; // tinggi sub-chart volume
     const paddingLeft = 55;
     const paddingRight = 25;
@@ -50,15 +50,16 @@ export default function CandlestickChart({ canViewPricing = true }) {
 
     const stepX = usableWidth / currentDataset.length;
 
-    // Koordinat untuk Moving Average Line (MA-3)
-    const maPoints = currentDataset.map((item, idx, arr) => {
-        const start = Math.max(0, idx - 2);
-        const subset = arr.slice(start, idx + 1);
-        const avg = subset.reduce((acc, c) => acc + c.close, 0) / subset.length;
+    // Line Points string untuk Grafik Tren Line
+    const linePoints = currentDataset.map((d, idx) => {
         const x = paddingLeft + (idx + 0.5) * stepX;
-        const y = getY(avg);
+        const y = getY(d.close);
         return `${x},${y}`;
     }).join(' ');
+
+    const areaPathD = `M ${paddingLeft + 0.5 * stepX},${chartBottom} ` +
+        currentDataset.map((d, i) => `L ${paddingLeft + (i + 0.5) * stepX},${getY(d.close)}`).join(' ') +
+        ` L ${paddingLeft + (currentDataset.length - 0.5) * stepX},${chartBottom} Z`;
 
     const activeItem = hoveredCandle || currentDataset[currentDataset.length - 1];
 
@@ -72,16 +73,16 @@ export default function CandlestickChart({ canViewPricing = true }) {
             <div className="flex flex-wrap justify-between items-start gap-4 border-b border-slate-800/80 pb-4 relative z-10">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <span className="text-xl">🕯️</span>
+                        <span className="text-xl">📈</span>
                         <h3 className="font-black text-slate-100 text-lg tracking-wide">
-                            {canViewPricing ? 'Grafik Candlestick Omset & Tren Penjualan' : 'Grafik Tren Produksi & Volume SPO'}
+                            {canViewPricing ? 'Grafik Tren Penjualan & Omset' : 'Grafik Tren Produksi & Volume SPO'}
                         </h3>
                         <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-500/30 font-mono animate-pulse">
-                            ● MARKET BULLISH (+38.5% YoY)
+                            ● TREN BULLISH (+38.5% YoY)
                         </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-1">
-                        Visualisasi instrumen finansial OHLC (Open, High, Low, Close) pergerakan omset pesanan kaca & volume produksi pabrik
+                        Visualisasi kurva tren pergerakan omset pesanan kaca & volume produksi pabrik
                     </p>
                 </div>
 
@@ -106,25 +107,25 @@ export default function CandlestickChart({ canViewPricing = true }) {
                     {/* CHART TYPE SWITCHER */}
                     <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 font-mono">
                         <button
-                            onClick={() => setChartMode('candlestick')}
-                            title="Tampilan Candlestick Saham"
-                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'candlestick' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                            onClick={() => setChartMode('line')}
+                            title="Tampilan Garis Tren"
+                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'line' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
                         >
-                            🕯️ Candle
-                        </button>
-                        <button
-                            onClick={() => setChartMode('bar')}
-                            title="Tampilan Bar Tradisional"
-                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'bar' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
-                        >
-                            📊 Bar
+                            📈 Line
                         </button>
                         <button
                             onClick={() => setChartMode('area')}
                             title="Tampilan Area Wave"
-                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'area' ? 'bg-purple-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'area' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
                         >
-                            📈 Area
+                            🌊 Area
+                        </button>
+                        <button
+                            onClick={() => setChartMode('bar')}
+                            title="Tampilan Volume Bar"
+                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'bar' ? 'bg-purple-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            📊 Volume
                         </button>
                     </div>
                 </div>
@@ -155,7 +156,7 @@ export default function CandlestickChart({ canViewPricing = true }) {
                     </strong>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-[10px] block">CLOSE (PENUTUP)</span>
+                    <span className="text-slate-500 text-[10px] block">NOMINAL OMSET</span>
                     <strong className="text-cyan-300 font-extrabold text-sm">
                         {canViewPricing ? `Rp ${activeItem.close}M` : `${activeItem.close} SPO`}
                     </strong>
@@ -168,19 +169,15 @@ export default function CandlestickChart({ canViewPricing = true }) {
                 </div>
             </div>
 
-            {/* SVG CANDLESTICK & VOLUME VISUALIZATION */}
+            {/* SVG VISUALIZATION */}
             <div className="w-full overflow-x-auto select-none pt-2">
                 <svg
                     viewBox={`0 0 ${svgWidth} ${svgHeight}`}
                     className="w-full h-64 sm:h-72 overflow-visible"
                 >
                     <defs>
-                        {/* Glow Filter untuk Candlestick & MA Line */}
-                        <filter id="bullish-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#10b981" floodOpacity="0.4" />
-                        </filter>
-                        <filter id="bearish-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#f43f5e" floodOpacity="0.4" />
+                        <filter id="line-glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#06b6d4" floodOpacity="0.6" />
                         </filter>
                         <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.35" />
@@ -216,7 +213,7 @@ export default function CandlestickChart({ canViewPricing = true }) {
                         );
                     })}
 
-                    {/* SEPARATOR LINE ANTARA CANDLE & VOLUME */}
+                    {/* SEPARATOR LINE ANTARA TREN & VOLUME */}
                     <line
                         x1={paddingLeft}
                         y1={chartBottom + 2}
@@ -236,41 +233,33 @@ export default function CandlestickChart({ canViewPricing = true }) {
                         VOL
                     </text>
 
-                    {/* MODE 3: AREA WAVE (JIKA DIPILIH) */}
+                    {/* AREA GRADIENT SHADING (JIKA MODE AREA) */}
                     {chartMode === 'area' && (
-                        <g>
-                            <path
-                                d={`M ${paddingLeft + 0.5 * stepX},${chartBottom} ` +
-                                    currentDataset.map((d, i) => `L ${paddingLeft + (i + 0.5) * stepX},${getY(d.close)}`).join(' ') +
-                                    ` L ${paddingLeft + (currentDataset.length - 0.5) * stepX},${chartBottom} Z`}
-                                fill="url(#area-grad)"
-                            />
-                            <path
-                                d={`M ${paddingLeft + 0.5 * stepX},${getY(currentDataset[0].close)} ` +
-                                    currentDataset.map((d, i) => `L ${paddingLeft + (i + 0.5) * stepX},${getY(d.close)}`).join(' ')}
-                                fill="none"
-                                stroke="#06b6d4"
-                                strokeWidth="2.5"
-                            />
-                        </g>
+                        <path
+                            d={areaPathD}
+                            fill="url(#area-grad)"
+                        />
                     )}
 
-                    {/* CANDLES OR BARS */}
+                    {/* MAIN TREND LINE */}
+                    {chartMode !== 'bar' && (
+                        <polyline
+                            points={linePoints}
+                            fill="none"
+                            stroke="#06b6d4"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            filter="url(#line-glow)"
+                        />
+                    )}
+
+                    {/* DATA NODES & VOLUME HISTOGRAM */}
                     {currentDataset.map((d, idx) => {
                         const centerX = paddingLeft + (idx + 0.5) * stepX;
-                        const isBullish = d.close >= d.open;
-                        const candleColor = isBullish ? '#10b981' : '#f43f5e';
-                        const candleStroke = isBullish ? '#34d399' : '#fb7185';
-
-                        const highY = getY(d.high);
-                        const lowY = getY(d.low);
-                        const openY = getY(d.open);
                         const closeY = getY(d.close);
-
-                        const bodyTop = Math.min(openY, closeY);
-                        const bodyHeight = Math.max(4, Math.abs(closeY - openY));
                         const candleWidth = Math.min(26, stepX * 0.55);
-
+                        const isBullish = d.close >= d.open;
                         const isHovered = hoveredCandle?.period === d.period;
 
                         return (
@@ -293,55 +282,58 @@ export default function CandlestickChart({ canViewPricing = true }) {
                                     />
                                 )}
 
-                                {chartMode === 'candlestick' && (
-                                    <g filter={isBullish ? 'url(#bullish-glow)' : 'url(#bearish-glow)'}>
-                                        {/* WICK / UPPER & LOWER SHADOW LINE */}
-                                        <line
-                                            x1={centerX}
-                                            y1={highY}
-                                            x2={centerX}
-                                            y2={lowY}
-                                            stroke={candleStroke}
-                                            strokeWidth={isHovered ? 2.5 : 1.5}
+                                {/* GLOWING NODE DOT ON TREND LINE */}
+                                {chartMode !== 'bar' && (
+                                    <g>
+                                        {/* OUTER GLOW CIRCLE */}
+                                        <circle
+                                            cx={centerX}
+                                            cy={closeY}
+                                            r={isHovered ? 8 : 5}
+                                            fill={isBullish ? '#10b981' : '#f43f5e'}
+                                            stroke="#090d16"
+                                            strokeWidth="2.5"
+                                            className="transition-all duration-200"
                                         />
 
-                                        {/* CANDLE BODY */}
-                                        <rect
-                                            x={centerX - candleWidth / 2}
-                                            y={bodyTop}
-                                            width={candleWidth}
-                                            height={bodyHeight}
-                                            fill={candleColor}
-                                            fillOpacity={isHovered ? 1 : 0.9}
-                                            stroke={candleStroke}
-                                            strokeWidth={isHovered ? 2 : 1}
-                                            rx="3"
-                                        />
-
-                                        {/* ATH PEAK FLAME MARKER */}
+                                        {/* PEAK FLAME MARKER */}
                                         {d.isPeak && (
                                             <text
                                                 x={centerX}
-                                                y={highY - 6}
+                                                y={closeY - 10}
                                                 textAnchor="middle"
-                                                fontSize="11"
+                                                fontSize="12"
                                             >
                                                 🔥
                                             </text>
                                         )}
-                                    </g>
-                                )}
 
-                                {chartMode === 'bar' && (
-                                    <g>
-                                        <rect
-                                            x={centerX - candleWidth / 2}
-                                            y={closeY}
-                                            width={candleWidth}
-                                            height={chartBottom - closeY}
-                                            fill={isBullish ? '#06b6d4' : '#64748b'}
-                                            rx="4"
-                                        />
+                                        {/* VALUE BADGE ON HOVER */}
+                                        {isHovered && (
+                                            <g>
+                                                <rect
+                                                    x={centerX - 35}
+                                                    y={closeY - 32}
+                                                    width="70"
+                                                    height="18"
+                                                    fill="#090d16"
+                                                    stroke="#06b6d4"
+                                                    strokeWidth="1"
+                                                    rx="4"
+                                                />
+                                                <text
+                                                    x={centerX}
+                                                    y={closeY - 20}
+                                                    textAnchor="middle"
+                                                    fill="#38bdf8"
+                                                    fontSize="9"
+                                                    fontWeight="bold"
+                                                    fontFamily="monospace"
+                                                >
+                                                    {canViewPricing ? `Rp ${d.close}M` : `${d.close} SPO`}
+                                                </text>
+                                            </g>
+                                        )}
                                     </g>
                                 )}
 
@@ -373,20 +365,6 @@ export default function CandlestickChart({ canViewPricing = true }) {
                             </g>
                         );
                     })}
-
-                    {/* MOVING AVERAGE CURVE LINE (MA-3 CYAN) */}
-                    {chartMode !== 'area' && (
-                        <polyline
-                            points={maPoints}
-                            fill="none"
-                            stroke="#38bdf8"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeDasharray="4 2"
-                            opacity="0.8"
-                        />
-                    )}
                 </svg>
             </div>
 

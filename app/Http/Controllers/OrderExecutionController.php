@@ -66,14 +66,11 @@ class OrderExecutionController extends Controller
         
         $divNameKey = strtoupper(str_replace('divisi_', '', $targetDiv));
         $progress = (array) ($order->division_progress ?? []);
-        $progress[$divNameKey] = 'Sedang Dikerjakan';
+        $progress[$divNameKey] = 'Menunggu Pengerjaan';
 
         $timestamps = (array) ($order->division_timestamps ?? []);
         if (!isset($timestamps[$divNameKey]) || !is_array($timestamps[$divNameKey])) {
             $timestamps[$divNameKey] = ['started_at' => null, 'completed_at' => null];
-        }
-        if (empty($timestamps[$divNameKey]['started_at'])) {
-            $timestamps[$divNameKey]['started_at'] = now()->toDateTimeString();
         }
 
         $order->division_progress = $progress;

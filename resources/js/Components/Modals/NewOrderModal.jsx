@@ -19,6 +19,7 @@ export default function NewOrderModal({
     getDynamicGlassTypes = () => [],
     sheetGlasses = [],
     findMatchingScrapsForOrder = () => null,
+    isGlassTypeCompatible = () => false,
     initialScrap = [],
     extractThickness = () => 5,
     calculateScrapYield = () => 0,
@@ -207,11 +208,20 @@ export default function NewOrderModal({
                                                 
                                                 // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
                                                 const isEdgeGrinding = (item.processes || []).includes('GM');
-                                                const exactScrapBlockedByGrinding = (!scrapMatch || scrapMatch.totalScrapCovered <= 0) && isEdgeGrinding
+                                                const exactScrapBlockedByGrinding = isEdgeGrinding
                                                     ? initialScrap?.find(s => {
                                                         if (s.status && s.status !== 'Layak Pakai') return false;
-                                                        if (extractThickness(s.glass_type) !== extractThickness(item.glass_type)) return false;
-                                                        return calculateScrapYield(parseFloat(s.length_cm), parseFloat(s.width_cm), parseDim(item.length_cm), parseDim(item.width_cm)) > 0;
+                                                        if (!isGlassTypeCompatible(item.glass_type, s.glass_type)) return false;
+
+                                                        const sLen = parseFloat(s.length_cm) || 0;
+                                                        const sWid = parseFloat(s.width_cm) || 0;
+                                                        const rawLen = parseDim(item.length_cm);
+                                                        const rawWid = parseDim(item.width_cm);
+
+                                                        const yieldWithoutGM = calculateScrapYield(sLen, sWid, rawLen, rawWid);
+                                                        const yieldWithGM = calculateScrapYield(sLen, sWid, rawLen + 1.0, rawWid + 1.0);
+
+                                                        return yieldWithoutGM > 0 && yieldWithGM <= 0;
                                                     })
                                                     : null;
 
@@ -591,9 +601,9 @@ export default function NewOrderModal({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
                                     <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                        📝 ix. Deskripsi (Penjelasan Pesanan)
+                                        📝 ix. Catatan Order / Penjelasan Kaca
                                     </h4>
-                                    <textarea required rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" placeholder="Instruksi khusus coakan, ukuran celah, dll... (Wajib diisi, jika tidak ada ketik '-')" />
+                                    <textarea required rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 text-xs" placeholder="Penjelasan mengenai pengerjaan kaca (cth: iya di coak di proyek, celah 2mm, instruksi khusus)... (Wajib diisi, jika tidak ada ketik '-')" />
                                 </div>
 
                                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">

@@ -21,6 +21,7 @@ export default function EditDraftOrderModal({
     getDynamicGlassTypes = () => [],
     sheetGlasses = [],
     findMatchingScrapsForOrder = () => null,
+    isGlassTypeCompatible = () => false,
     initialScrap = [],
     extractThickness = () => 5,
     calculateScrapYield = () => 0,
@@ -74,23 +75,22 @@ export default function EditDraftOrderModal({
                         </div>
 
                         <form className="space-y-4 text-xs overflow-y-auto pr-2 flex-1">
-                            {editingOrder.status === 'pengerjaan' && (
+                            {editingOrder && (
                                 <div className="bg-amber-950/40 p-4 rounded-xl border border-amber-500/40 space-y-2">
                                     <h4 className="font-bold text-amber-300 text-xs flex items-center gap-1.5 border-b border-amber-500/30 pb-2">
-                                        <span>📝 Catatan Detail Perubahan Revisi Untuk Divisi Produksi</span>
+                                        <span>🔔 Catatan / Alasan Perubahan Revisi (Untuk Divisi Produksi & Gudang)</span>
                                     </h4>
                                     <div>
-                                        <label className="text-slate-300 block mb-1">Keterangan / Catatan Revisi:</label>
+                                        <label className="text-slate-300 block mb-1 font-semibold">Catatan Alasan Perubahan Revisi (misal: konsumen ganti ukuran kaca / ganti jenis kaca):</label>
                                         <textarea 
-                                            required
                                             rows="2" 
-                                            placeholder="Contoh: Ukuran sekat kaca cermin diperkecil dari 150x120 cm menjadi 140x110 cm. (Wajib diisi, jika tidak ada ketik '-')"
+                                            placeholder="Contoh: Konsumen minta ubah ukuran kaca dari 100x50 cm ke 100x60 cm. (Isi jika ada revisian dari konsumen)"
                                             value={orderForm.revision_notes || ''} 
                                             onChange={e => setOrderForm('revision_notes', e.target.value)} 
                                             className="w-full bg-slate-900 border border-amber-500/50 rounded-lg p-2.5 text-slate-100 text-xs focus:border-amber-400 font-medium"
                                         />
                                         <span className="text-[10px] text-amber-400/80 block mt-1">
-                                            *Mengisi catatan revisi ini akan mengirimkan peringatan otomatis ke Admin Gudang & seluruh Divisi Produksi.
+                                            *Catatan revisi ini khusus untuk mencatat alasan perubahan dari konsumen dan akan dikirimkan ke Admin Gudang & Divisi Produksi.
                                         </span>
                                     </div>
                                 </div>
@@ -230,11 +230,20 @@ export default function EditDraftOrderModal({
                                                 
                                                 // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
                                                 const isEdgeGrinding = (item.processes || []).includes('GM');
-                                                const exactScrapBlockedByGrinding = (!scrapMatch || scrapMatch.totalScrapCovered <= 0) && isEdgeGrinding
+                                                const exactScrapBlockedByGrinding = isEdgeGrinding
                                                     ? initialScrap?.find(s => {
                                                         if (s.status && s.status !== 'Layak Pakai') return false;
-                                                        if (extractThickness(s.glass_type) !== extractThickness(item.glass_type)) return false;
-                                                        return calculateScrapYield(parseFloat(s.length_cm), parseFloat(s.width_cm), parseDim(item.length_cm), parseDim(item.width_cm)) > 0;
+                                                        if (!isGlassTypeCompatible(item.glass_type, s.glass_type)) return false;
+
+                                                        const sLen = parseFloat(s.length_cm) || 0;
+                                                        const sWid = parseFloat(s.width_cm) || 0;
+                                                        const rawLen = parseDim(item.length_cm);
+                                                        const rawWid = parseDim(item.width_cm);
+
+                                                        const yieldWithoutGM = calculateScrapYield(sLen, sWid, rawLen, rawWid);
+                                                        const yieldWithGM = calculateScrapYield(sLen, sWid, rawLen + 1.0, rawWid + 1.0);
+
+                                                        return yieldWithoutGM > 0 && yieldWithGM <= 0;
                                                     })
                                                     : null;
 
@@ -614,9 +623,9 @@ export default function EditDraftOrderModal({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
                                     <h4 className="font-bold text-cyan-400 text-xs border-b border-slate-800 pb-2">
-                                        📝 Deskripsi (Penjelasan Pesanan)
+                                        📝 Catatan Order / Penjelasan Kaca
                                     </h4>
-                                    <textarea rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400" />
+                                    <textarea rows="3" value={orderForm.description} onChange={e => setOrderForm('description', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400 text-xs" placeholder="Penjelasan mengenai pengerjaan kaca (cth: iya di coak di proyek, celah 2mm, instruksi khusus)..." />
                                 </div>
 
                                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">

@@ -552,14 +552,11 @@ class SypOperationalController extends Controller
                 }
             }
         }
-        $progress[$currentDivKey] = 'Sedang Dikerjakan';
+        $progress[$currentDivKey] = 'Menunggu Pengerjaan';
 
         $timestamps = (array) ($order->division_timestamps ?? []);
         if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
             $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
-        }
-        if (empty($timestamps[$currentDivKey]['started_at'])) {
-            $timestamps[$currentDivKey]['started_at'] = now()->toDateTimeString();
         }
 
         $order->division_progress = $progress;
@@ -920,7 +917,49 @@ class SypOperationalController extends Controller
     }
 
     /**
-     * Reject Scrap Recommendation by Divisi HT (Kaca Baret / Ukuran Tidak Cukup / Rusak)
+     * Use / Accept Scrap Recommendation by Divisi HT (Potong)
+     */
+    public function useScrapRecommendation(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $userRole = auth()->user()->role ?? '';
+
+        if ($userRole !== 'divisi_ht' && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Hanya Divisi Potong (HT) atau Admin Gudang yang dapat mengonfirmasi pemakaian kaca sisa!');
+        }
+
+        $scrapStr = $order->used_scrap_rak ?: '';
+        
+        preg_match('/SCRAP-\d+/', $scrapStr, $matches);
+        $scrapCode = $matches[0] ?? null;
+
+        if ($scrapCode) {
+            $scrapItem = ScrapGlass::where('scrap_code', $scrapCode)->first();
+            if ($scrapItem) {
+                $scrapItem->update([
+                    'status' => 'Terpakai'
+                ]);
+            }
+        }
+
+        $usedStr = '✅ [TERPAKAI DIVISI HT] ' . ($scrapCode ? ('Kaca Sisa ' . $scrapCode) : $scrapStr) . ' (Diambil dari stok rak & dipotong untuk SPO-' . $order->spo_number . ')';
+        $order->used_scrap_rak = $usedStr;
+        $order->save();
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
+            'action_type' => 'PAKAI_SCRAP',
+            'target_user_name' => $order->spo_number,
+            'description' => 'Divisi HT Menggunakan kaca sisa ' . ($scrapCode ?: $scrapStr) . ' untuk pengerjaan SPO #' . $order->spo_number . '. Stok kaca sisa diperbarui menjadi Terpakai.',
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '✅ Pemakaian kaca sisa untuk SPO ' . $order->spo_number . ' berhasil dikonfirmasi! Stok sisa telah diperbarui menjadi Terpakai.');
+    }
+
+    /**
+     * Reject Scrap Recommendation by Divisi HT (Kaca Baret / Ukuran Tidak Cukup / Rusak + Potong Ulang Sisa Utuh)
      */
     public function rejectScrapRecommendation(Request $request, $id)
     {
@@ -934,6 +973,10 @@ class SypOperationalController extends Controller
         $validated = $request->validate([
             'reason_type' => 'required|string',
             'notes' => 'nullable|string',
+            'resize_scrap' => 'nullable|boolean',
+            'new_length_cm' => 'nullable|numeric|min:0',
+            'new_width_cm' => 'nullable|numeric|min:0',
+            'scrap_id' => 'nullable|exists:scrap_glasses,id',
         ]);
 
         $reasonLabels = [
@@ -947,7 +990,40 @@ class SypOperationalController extends Controller
         $notesStr = !empty(trim($validated['notes'] ?? '')) ? ' ("' . trim($validated['notes']) . '")' : '';
 
         $oldScrapStr = $order->used_scrap_rak ?: '-';
-        $rejectionStr = '❌ [DITOLAK DIVISI HT] ' . $label . $notesStr . ' | (Rekomendasi Toko Semula: ' . $oldScrapStr . ')';
+        preg_match('/SCRAP-\d+/', $oldScrapStr, $matches);
+        $scrapCode = $matches[0] ?? null;
+
+        $scrapItem = null;
+        if (!empty($validated['scrap_id'])) {
+            $scrapItem = ScrapGlass::find($validated['scrap_id']);
+        } elseif ($scrapCode) {
+            $scrapItem = ScrapGlass::where('scrap_code', $scrapCode)->first();
+        }
+
+        $resizeStr = '';
+        if ($scrapItem && !empty($validated['resize_scrap']) && !empty($validated['new_length_cm']) && !empty($validated['new_width_cm'])) {
+            $oldDim = "{$scrapItem->length_cm}x{$scrapItem->width_cm} cm";
+            $scrapItem->update([
+                'length_cm' => $validated['new_length_cm'],
+                'width_cm' => $validated['new_width_cm'],
+                'status' => 'Layak Pakai',
+            ]);
+            $newDim = "{$validated['new_length_cm']}x{$validated['new_width_cm']} cm";
+            $resizeStr = " | ✂️ [DIPOTONG ULANG] Dimensi {$scrapItem->scrap_code} disesuaikan dari {$oldDim} menjadi {$newDim}";
+
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
+                'action_type' => 'POTONG_ULANG_SCRAP',
+                'target_user_name' => $scrapItem->scrap_code,
+                'description' => 'Memotong ulang sisa utuh kaca ' . $scrapItem->scrap_code . ' dari ' . $oldDim . ' menjadi ' . $newDim . ' (karena baret/cacat pada penolakan SPO #' . $order->spo_number . ').',
+                'created_at' => now(),
+            ]);
+        } elseif ($scrapItem && $validated['reason_type'] === 'baret_cacat' && empty($validated['resize_scrap'])) {
+            $scrapItem->update(['status' => 'Afval/Baret']);
+        }
+
+        $rejectionStr = '❌ [DITOLAK DIVISI HT] ' . $label . $notesStr . $resizeStr . ' | (Rekomendasi Toko Semula: ' . $oldScrapStr . ')';
 
         $order->used_scrap_rak = $rejectionStr;
         $order->save();
@@ -957,7 +1033,7 @@ class SypOperationalController extends Controller
             'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
             'action_type' => 'TOLAK_SCRAP',
             'target_user_name' => $order->spo_number,
-            'description' => 'Divisi HT Menolak rekomendasi penggunaan kaca sisa pada SPO #' . $order->spo_number . '. Alasan: ' . $label . $notesStr . '.',
+            'description' => 'Divisi HT Menolak rekomendasi penggunaan kaca sisa pada SPO #' . $order->spo_number . '. Alasan: ' . $label . $notesStr . '.' . $resizeStr,
             'created_at' => now(),
         ]);
 
@@ -1182,16 +1258,27 @@ class SypOperationalController extends Controller
     }
 
     /**
-     * Store New Employee Account (Admin Gudang / Admin Toko / Owner)
+     * Store New Employee Account (HRD / Owner Only)
      */
     public function storeUser(Request $request)
     {
+        $currentUserRole = auth()->user()->role ?? 'staff';
+
+        if ($currentUserRole !== 'owner' && $currentUserRole !== 'hrd') {
+            return redirect()->back()->withErrors(['message' => 'Akses ditolak: Pengelolaan akun karyawan hanya dapat dilakukan oleh Staff HRD & Personalia dan Owner.']);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner',
+            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner,hrd,finance',
             'password' => 'required|string|min:6',
         ]);
+
+        $managementRoles = ['owner', 'finance', 'hrd'];
+        if ($currentUserRole !== 'owner' && in_array($validated['role'], $managementRoles)) {
+            return redirect()->back()->withErrors(['role' => 'Akun level manajemen/keuangan (Owner, Admin Finance, HRD) hanya dapat didaftarkan oleh Owner!']);
+        }
 
         $newUser = User::create([
             'name' => $validated['name'],
@@ -1217,12 +1304,23 @@ class SypOperationalController extends Controller
      */
     public function updateUser(Request $request, $id)
     {
+        $currentUserRole = auth()->user()->role ?? 'staff';
+
+        if ($currentUserRole !== 'owner' && $currentUserRole !== 'hrd') {
+            return redirect()->back()->withErrors(['message' => 'Akses ditolak: Pengelolaan akun karyawan hanya dapat dilakukan oleh Staff HRD & Personalia dan Owner.']);
+        }
+
         $user = User::findOrFail($id);
+
+        $managementRoles = ['owner', 'finance', 'hrd'];
+        if ($currentUserRole !== 'owner' && (in_array($user->role, $managementRoles) || in_array($request->input('role'), $managementRoles))) {
+            return redirect()->back()->withErrors(['message' => 'Akun level manajemen/keuangan (Owner, Admin Finance, HRD) terlindung dan hanya dapat diubah oleh Owner!']);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
-            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner',
+            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner,hrd,finance',
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -1261,11 +1359,23 @@ class SypOperationalController extends Controller
      */
     public function destroyUser(Request $request, $id)
     {
+        $currentUserRole = auth()->user()->role ?? 'staff';
+
+        if ($currentUserRole !== 'owner' && $currentUserRole !== 'hrd') {
+            return redirect()->back()->withErrors(['message' => 'Akses ditolak: Pengelolaan akun karyawan hanya dapat dilakukan oleh Staff HRD & Personalia dan Owner.']);
+        }
+
         if (auth()->id() == $id) {
             return redirect()->back()->withErrors(['message' => 'Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif digunakan!']);
         }
 
         $user = User::findOrFail($id);
+
+        $managementRoles = ['owner', 'finance', 'hrd'];
+        if ($currentUserRole !== 'owner' && in_array($user->role, $managementRoles)) {
+            return redirect()->back()->withErrors(['message' => 'Akun level manajemen/keuangan (Owner, Admin Finance, HRD) terlindung dan hanya dapat dihapus/dinonaktifkan oleh Owner!']);
+        }
+
         $deletedName = $user->name;
         $deletedEmail = $user->email;
         $deletedRole = $user->role;
