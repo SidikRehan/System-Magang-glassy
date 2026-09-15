@@ -105,6 +105,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         (userRole === 'admin_finance' || userRole === 'finance') ? 'finance' : 'dashboard')
     );
 
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
     const formatIndonesianDate = (dateStr) => {
         if (!dateStr) return '-';
         const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`);
@@ -2723,40 +2725,48 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             <Head title={`Dashboard (${roleTitles[userRole] || userRole}) - SYP GLASS`} />
 
             {/* TOP BAR */}
-            <div className="bg-[#0c111d] border-b border-slate-800 px-6 py-2 flex justify-between items-center text-xs shrink-0">
+            <div className="bg-[#0c111d] border-b border-slate-800 px-3 sm:px-6 py-2 flex flex-wrap justify-between items-center text-[11px] sm:text-xs shrink-0 gap-2">
                 <div className="flex items-center gap-2">
-                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
+                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full font-bold flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                         AUTHENTICATED ROLE LOGIN ACTIVE
                     </span>
-                    <span className="text-slate-400">CV Cahya Karunia Jaya - Syp Operational</span>
+                    <span className="text-slate-400 hidden sm:inline">CV Cahya Karunia Jaya - Syp Operational</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Link href="/" className="text-cyan-400 hover:underline flex items-center gap-1">🌐 Landing Page Public</Link>
+                    <Link href="/" className="text-cyan-400 hover:underline flex items-center gap-1 font-semibold">🌐 Landing Page Public</Link>
                 </div>
             </div>
 
             {/* HEADER */}
-            <header className="bg-[#0b0f19]/80 backdrop-blur-md border-b border-slate-800 shrink-0 px-6 py-4 flex justify-between items-center z-40">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-tr from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center text-slate-950 font-extrabold text-xl shadow-lg shadow-cyan-500/20">
+            <header className="bg-[#0b0f19]/80 backdrop-blur-md border-b border-slate-800 shrink-0 px-3 sm:px-6 py-3 flex flex-wrap md:flex-nowrap justify-between items-center z-40 gap-3">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        className="md:hidden bg-slate-900 text-cyan-400 p-2 rounded-xl border border-slate-800 text-base hover:bg-slate-800 transition focus:outline-none flex items-center justify-center shrink-0"
+                        title="Buka Navigasi Menu"
+                    >
+                        {mobileMenuOpen ? '✕' : '☰'}
+                    </button>
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center text-slate-950 font-extrabold text-lg sm:text-xl shadow-lg shadow-cyan-500/20 shrink-0">
                         ⚡
                     </div>
                     <div>
-                        <h1 className="font-extrabold text-lg tracking-wider text-slate-100">SYP GLASS OPERATIONAL</h1>
-                        <p className="text-xs text-slate-400 uppercase tracking-widest">Logged in as: {userName} ({userEmail})</p>
+                        <h1 className="font-extrabold text-sm sm:text-lg tracking-wider text-slate-100">SYP GLASS OPERATIONAL</h1>
+                        <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-widest truncate max-w-[170px] sm:max-w-none">Logged in as: {userName}</p>
                     </div>
                 </div>
 
                 {/* GLOBAL SEARCH INPUT BAR */}
-                <div className="flex-1 max-w-lg mx-6 hidden sm:block">
+                <div className="flex-1 max-w-lg mx-0 md:mx-6 w-full order-3 md:order-none">
                     <div className="relative">
                         <input
                             type="text"
                             placeholder="🔍 Cari global (SPO, Customer, HP, Alamat, Kaca, Ukuran, Driver, Supplier)..."
                             value={searchTerm}
                             onChange={e => handleSearchChange(e.target.value)}
-                            className="w-full bg-slate-950/90 border border-cyan-500/30 rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-slate-400 focus:border-cyan-400 focus:outline-none shadow-inner transition font-medium"
+                            className="w-full bg-slate-950/90 border border-cyan-500/30 rounded-xl px-3.5 py-1.5 sm:py-2 text-xs text-slate-100 placeholder-slate-400 focus:border-cyan-400 focus:outline-none shadow-inner transition font-medium"
                         />
                         {searchTerm && (
                             <button
@@ -2771,20 +2781,211 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-lg text-xs font-bold text-cyan-400">
+                <div className="flex items-center gap-2 sm:gap-4 ml-auto md:ml-0">
+                    <div className="bg-slate-900 border border-slate-800 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-cyan-400 whitespace-nowrap">
                         Role: {roleTitles[userRole] || userRole}
                     </div>
-                    <button onClick={handleLogout} className="bg-rose-500/20 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/30 font-bold px-4 py-1.5 rounded-lg text-xs transition">
+                    <button onClick={handleLogout} className="bg-rose-500/20 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/30 font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs transition whitespace-nowrap">
                         🚪 Log out
                     </button>
                 </div>
             </header>
 
+            {/* MOBILE TOP TAB BAR HORIZONTAL SCROLLER */}
+            <div className="md:hidden bg-[#0c111d] border-b border-slate-800/80 px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 scrollbar-none">
+                <button 
+                    onClick={() => setActiveTab('dashboard')} 
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'dashboard' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                >
+                    📊 Dashboard
+                </button>
+                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                    <button 
+                        onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'orders' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        📝 Orderan
+                    </button>
+                )}
+                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                    <button 
+                        onClick={() => setActiveTab('deliveries')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'deliveries' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        🚚 Pengiriman ({initialOrders.filter(o => o.status === 'pengiriman').length})
+                    </button>
+                )}
+                {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
+                    <button 
+                        onClick={() => setActiveTab('production')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'production' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        ⚙️ Disposisi
+                    </button>
+                )}
+                {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                    <button 
+                        onClick={() => setActiveTab('scrap')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'scrap' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        📦 Stok Kaca
+                    </button>
+                )}
+                {(userRole === 'admin_toko' || userRole === 'owner') && (
+                    <button 
+                        onClick={() => setActiveTab('suppliers')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'suppliers' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        🏢 Supplier
+                    </button>
+                )}
+                {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                    <button 
+                        onClick={() => setActiveTab('accessories')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'accessories' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        🔌 Aksesoris
+                    </button>
+                )}
+                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                    <button 
+                        onClick={() => setActiveTab('supplies')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'supplies' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        🧰 Perlengkapan
+                    </button>
+                )}
+                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                    <button 
+                        onClick={() => setActiveTab('tools')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'tools' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        🛠️ Penunjang
+                    </button>
+                )}
+                {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
+                    <button 
+                        onClick={() => setActiveTab('employees')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'employees' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        👥 Karyawan
+                    </button>
+                )}
+                {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                    <button 
+                        onClick={() => setActiveTab('finance')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'finance' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        💰 Finance
+                    </button>
+                )}
+            </div>
+
+            {/* MOBILE SIDEBAR DRAWER OVERLAY */}
+            {mobileMenuOpen && (
+                <div className="fixed inset-0 z-50 md:hidden flex">
+                    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
+                    <aside className="relative w-72 max-w-[80vw] bg-[#0c111d] border-r border-slate-800 p-4 space-y-2 overflow-y-auto z-10 flex flex-col h-full shadow-2xl">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-800 mb-2">
+                            <span className="font-extrabold text-sm text-cyan-400 flex items-center gap-1.5">⚡ NAVIGASI SYP</span>
+                            <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white p-1 text-sm font-bold">✕</button>
+                        </div>
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 mb-2 space-y-1">
+                            <div className="text-[10px] text-slate-400">User Terautentikasi:</div>
+                            <h4 className="font-bold text-xs text-slate-200">{userName}</h4>
+                            <span className="inline-block text-[9px] text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-full border border-cyan-400/20 font-bold">
+                                {roleTitles[userRole]}
+                            </span>
+                        </div>
+
+                        <nav className="space-y-1 flex-1">
+                            <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                📊 <span>Dashboard Utama</span>
+                            </button>
+
+                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    📝 <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
+                                </button>
+                            )}
+
+                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                                <button onClick={() => { setActiveTab('deliveries'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    <div className="flex items-center gap-3">
+                                        🚚 <span>{userRole === 'driver' ? 'Pengiriman Saya' : 'Pengiriman Multi-Alamat'}</span>
+                                    </div>
+                                    <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-cyan-500/30 font-mono">
+                                        {initialOrders.filter(o => o.status === 'pengiriman').length}
+                                    </span>
+                                </button>
+                            )}
+
+                            {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                <button onClick={() => { setActiveTab('production'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'production' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    <div className="flex items-center gap-3">
+                                        ⚙️ <span>Disposisi & Divisi</span>
+                                    </div>
+                                </button>
+                            )}
+
+                            {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                                <button onClick={() => { setActiveTab('scrap'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    <div className="flex items-center gap-3">
+                                        📦 <span>Stok Kaca</span>
+                                    </div>
+                                </button>
+                            )}
+
+                            {(userRole === 'admin_toko' || userRole === 'owner') && (
+                                <button onClick={() => { setActiveTab('suppliers'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    🏢 <span>Data Supplier</span>
+                                </button>
+                            )}
+
+                            {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                                <button onClick={() => { setActiveTab('accessories'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    <div className="flex items-center gap-3">
+                                        🔌 <span>Aksesoris Konsumen</span>
+                                    </div>
+                                </button>
+                            )}
+
+                            {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                                <button onClick={() => { setActiveTab('supplies'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    <div className="flex items-center gap-3">
+                                        🧰 <span>Perlengkapan</span>
+                                    </div>
+                                </button>
+                            )}
+
+                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                                <button onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    🛠️ <span>Alat Penunjang</span>
+                                </button>
+                            )}
+
+                            {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
+                                <button onClick={() => { setActiveTab('employees'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'employees' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    <div className="flex items-center gap-3">
+                                        👥 <span>Pengelolaan Karyawan</span>
+                                    </div>
+                                </button>
+                            )}
+
+                            {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                                <button onClick={() => { setActiveTab('finance'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    💰 <span>Finance & Laba/Rugi</span>
+                                </button>
+                            )}
+                        </nav>
+                    </aside>
+                </div>
+            )}
+
             {/* MAIN APP CONTAINER */}
             <div className="flex flex-1 overflow-hidden">
-                {/* SIDEBAR */}
-                <aside className="w-64 bg-[#0c111d] border-r border-slate-800/80 p-4 space-y-2 shrink-0 overflow-y-auto">
+                {/* SIDEBAR (DESKTOP) */}
+                <aside className="hidden md:block w-64 bg-[#0c111d] border-r border-slate-800/80 p-4 space-y-2 shrink-0 overflow-y-auto">
                     <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 mb-4 space-y-1">
                         <div className="text-xs text-slate-400">User Terautentikasi:</div>
                         <h4 className="font-bold text-sm text-slate-200">{userName}</h4>
@@ -2911,7 +3112,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 </aside>
 
                 {/* CONTENT MAIN */}
-                <main className="flex-1 p-8 overflow-y-auto">
+                <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto">
 
                     {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
                     {activeTab === 'dashboard' && (
@@ -3753,8 +3954,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${o.priority_status === 'Prioritas' ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-                                                            {o.priority_status === 'Prioritas' ? '🔥 PRIORITAS' : '🔵 Biasa'}
+                                                        <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border shadow-sm ${o.priority_status === 'Prioritas' ? 'bg-red-600 text-white border-red-500 shadow-red-600/30 animate-pulse font-black' : 'bg-white text-slate-950 border-slate-200'}`}>
+                                                            {o.priority_status === 'Prioritas' ? '🔥 PRIORITAS' : '⚪ Biasa'}
                                                         </span>
                                                     </div>
                                                     <div className="text-xs text-slate-300 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800/80 space-y-1">
@@ -3882,12 +4083,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                                                         <div className="flex items-center gap-2">
                                                             {activeOngoingOrder.priority_status === 'Prioritas' ? (
-                                                                <span className="text-[10px] font-black px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/50 animate-pulse flex items-center gap-1 shadow-sm">
+                                                                <span className="text-[10px] font-black px-3 py-1 rounded-full bg-red-600 text-white border border-red-500 animate-pulse flex items-center gap-1 shadow-sm shadow-red-600/30">
                                                                     <span>🔥 PRIORITAS TINGGI</span>
                                                                 </span>
                                                             ) : (
-                                                                <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                                                                    🔵 Standar
+                                                                <span className="text-[10px] font-extrabold px-3 py-1 rounded-full bg-white text-slate-950 border border-slate-200 shadow-sm">
+                                                                    ⚪ Biasa
                                                                 </span>
                                                             )}
                                                             <span className="text-xs font-mono font-extrabold text-cyan-400 bg-slate-950/80 px-3 py-1 rounded-xl border border-cyan-500/30">
@@ -3927,108 +4128,148 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                         </div>
                                                     )}
 
-                                                    {/* CARD MAIN BODY GRID: 3 COLUMNS */}
-                                                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-                                                        {/* COL 1: INFO CUSTOMER & ORDER (4 Cols) */}
-                                                        <div className="md:col-span-4 space-y-2">
-                                                            <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Pemesan / Proyek:</div>
-                                                            <div className="text-xs space-y-1 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-                                                                <div className="font-bold text-base text-white">
-                                                                    <span className="text-slate-400 font-normal text-xs">Nama : </span>
-                                                                    <span>{activeOngoingOrder.customer_name || '-'}</span>
+                                                    {/* CARD MAIN BODY GRID: 2 COLUMNS (Left compact 4 cols, Right rich 8 cols) */}
+                                                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+                                                        {/* COL 1: INFO CUSTOMER & ORDER (4 Cols - Ringkas & Pas) */}
+                                                        <div className="md:col-span-4 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-md">
+                                                            <div className="space-y-2.5">
+                                                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                                                    <span className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                                        <span>👤 Pemesan / Proyek</span>
+                                                                    </span>
+                                                                    <span className="text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-bold">
+                                                                        Order Info
+                                                                    </span>
                                                                 </div>
-                                                                <div className="text-slate-300 font-mono text-xs">
-                                                                    <span className="text-slate-400 font-normal font-sans">No Phone : </span>
-                                                                    <span>{activeOngoingOrder.customer_phone || '-'}</span>
-                                                                </div>
-                                                                <div className="text-cyan-300 font-medium text-xs whitespace-pre-line leading-snug">
-                                                                    <span className="text-slate-400 font-normal">Alamat : </span>
-                                                                    <span>{activeOngoingOrder.customer_address || '-'}</span>
+
+                                                                <div className="space-y-1.5">
+                                                                    <div className="font-extrabold text-base text-white tracking-tight leading-snug">
+                                                                        {activeOngoingOrder.customer_name || '-'}
+                                                                    </div>
+                                                                    <div className="text-slate-300 font-mono text-xs flex items-center gap-1.5">
+                                                                        <span className="text-slate-500">📞</span>
+                                                                        <span className="font-semibold">{activeOngoingOrder.customer_phone || '-'}</span>
+                                                                    </div>
+                                                                    <div className="text-cyan-300 text-xs flex items-start gap-1.5 leading-snug">
+                                                                        <span className="text-slate-500 shrink-0">📍</span>
+                                                                        <span className="font-medium whitespace-pre-line">{activeOngoingOrder.customer_address || '-'}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-xs text-slate-300 space-y-1 pt-1 font-mono">
-                                                                <div className="flex items-center gap-2 text-slate-400">
-                                                                    <span>📅 Order:</span>
-                                                                    <span className="text-slate-200">{formatIndonesianDate(activeOngoingOrder.order_date)}</span>
+
+                                                            <div className="pt-2 border-t border-slate-800/80 space-y-1.5 font-mono text-xs">
+                                                                <div className="flex items-center justify-between text-slate-300">
+                                                                    <span className="text-slate-400 text-[11px]">📅 Order:</span>
+                                                                    <span className="text-slate-100 font-semibold">{formatIndonesianDate(activeOngoingOrder.order_date)}</span>
                                                                 </div>
-                                                                <div className="flex items-center gap-2 text-amber-300 font-bold">
-                                                                    <span>⏰ Deadline:</span>
-                                                                    <span>{activeOngoingOrder.deadline_date || '-'}</span>
+                                                                <div className="flex items-center justify-between text-amber-300 font-bold bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-xl">
+                                                                    <span className="text-[11px] flex items-center gap-1">⏰ Deadline:</span>
+                                                                    <span className="text-xs">{activeOngoingOrder.deadline_date || '-'}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        {/* COL 2: SPESIFIKASI KACA & UKURAN (4 Cols) */}
-                                                        <div className="md:col-span-4 bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 space-y-2">
-                                                            <div className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider font-bold">Spesifikasi Kaca & Dimensi:</div>
-                                                            {Array.isArray(activeOngoingOrder.items) && activeOngoingOrder.items.length > 0 ? (
-                                                                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
-                                                                    {activeOngoingOrder.items.map((it, idx) => (
-                                                                        <div key={idx} className="text-xs bg-slate-900/80 p-2 rounded border border-slate-800">
-                                                                            <div className="font-bold text-cyan-300">#{idx + 1}. {it.glass_type}</div>
-                                                                            <div className="text-slate-300 font-mono text-[11px]">{it.length_cm} x {it.width_cm} cm ({it.thickness_mm}mm) — Qty: <strong className="text-white">{it.qty || 1}</strong></div>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="text-xs space-y-1">
-                                                                    <div className="font-bold text-cyan-300 text-sm">{activeOngoingOrder.glass_type}</div>
-                                                                    <div className="text-slate-300 font-mono text-xs">{activeOngoingOrder.length_cm} x {activeOngoingOrder.width_cm} cm ({activeOngoingOrder.thickness_mm}mm)</div>
-                                                                </div>
-                                                            )}
-
-                                                            {activeOngoingOrder.used_scrap_rak && activeOngoingOrder.used_scrap_rak !== '-' && activeOngoingOrder.used_scrap_rak.trim() !== '' && (
-                                                                activeOngoingOrder.used_scrap_rak.startsWith('❌') ? (
-                                                                    <div className="mt-2 bg-rose-950/80 border border-rose-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
-                                                                        <div className="font-extrabold text-[11px] text-rose-300 flex items-center justify-between">
-                                                                            <span>🚨 Rekomendasi Scrap Ditolak</span>
-                                                                            <span className="text-[9px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded">Ditolak HT</span>
-                                                                        </div>
-                                                                        <div className="text-rose-200 bg-slate-950 px-2 py-1 rounded border border-rose-500/30 font-bold text-[11px]">
-                                                                            {activeOngoingOrder.used_scrap_rak}
-                                                                        </div>
+                                                        {/* COL 2: SPESIFIKASI KACA & UKURAN (8 Cols - Diperbagus & Detail) */}
+                                                        <div className="md:col-span-8 bg-slate-950/80 border border-cyan-500/30 rounded-2xl p-4.5 space-y-3.5 shadow-lg flex flex-col justify-between">
+                                                            <div className="space-y-2.5">
+                                                                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                                                                    <div className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider font-extrabold flex items-center gap-2">
+                                                                        <span className="text-sm">💎</span>
+                                                                        <span>Spesifikasi Kaca & Dimensi</span>
                                                                     </div>
-                                                                ) : activeOngoingOrder.used_scrap_rak.startsWith('✅') ? (
-                                                                    <div className="mt-2 bg-emerald-950/80 border border-emerald-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
-                                                                        <div className="font-extrabold text-[11px] text-emerald-300 flex items-center justify-between">
-                                                                            <span>✅ Rekomendasi Scrap Terpakai</span>
-                                                                            <span className="text-[9px] bg-emerald-500 text-slate-950 font-bold px-1.5 py-0.5 rounded">Terpakai HT</span>
-                                                                        </div>
-                                                                        <div className="text-emerald-200 bg-slate-950 px-2 py-1 rounded border border-emerald-500/30 font-bold text-[11px]">
-                                                                            {activeOngoingOrder.used_scrap_rak}
-                                                                        </div>
+                                                                    {Array.isArray(activeOngoingOrder.items) && (
+                                                                        <span className="text-[10px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2.5 py-0.5 rounded-full">
+                                                                            {activeOngoingOrder.items.length} Item Kaca
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                {Array.isArray(activeOngoingOrder.items) && activeOngoingOrder.items.length > 0 ? (
+                                                                    <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                                                                        {activeOngoingOrder.items.map((it, idx) => (
+                                                                            <div key={idx} className="bg-slate-900/90 hover:bg-slate-900 p-3 rounded-xl border border-slate-800/90 hover:border-cyan-500/40 transition flex flex-wrap items-center justify-between gap-2 shadow-sm">
+                                                                                <div className="space-y-1 flex-1 min-w-[200px]">
+                                                                                    <div className="font-extrabold text-cyan-300 text-xs flex items-center gap-2">
+                                                                                        <span className="bg-cyan-500/20 text-cyan-300 font-mono text-[10px] px-2 py-0.5 rounded-md border border-cyan-500/30">#{idx + 1}</span>
+                                                                                        <span>{it.glass_type}</span>
+                                                                                    </div>
+                                                                                    <div className="text-slate-300 font-mono text-xs flex flex-wrap items-center gap-2 pt-0.5">
+                                                                                        <span className="bg-slate-950 text-white px-2 py-0.5 rounded border border-slate-800 font-bold">
+                                                                                            📐 {it.length_cm} × {it.width_cm} cm
+                                                                                        </span>
+                                                                                        <span className="text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                                                                            Tebal: {it.thickness_mm} mm
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="shrink-0">
+                                                                                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-xl font-mono text-xs font-black shadow-sm flex items-center gap-1">
+                                                                                        <span>Qty:</span>
+                                                                                        <strong className="text-white text-sm">{it.qty || 1}</strong>
+                                                                                        <span>Pcs</span>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="mt-2 bg-amber-950/90 border border-amber-500/70 rounded-xl p-2 text-xs font-mono space-y-1 shadow-md">
-                                                                        <div className="font-extrabold text-[11px] text-amber-400 flex items-center justify-between">
-                                                                            <span>🧩 Rekomendasi Scrap Toko:</span>
-                                                                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded">Perlu Konfirmasi</span>
-                                                                        </div>
-                                                                        <div className="text-amber-200 bg-slate-950 px-2 py-1 rounded border border-amber-500/30 font-bold text-[11px]">
-                                                                            {activeOngoingOrder.used_scrap_rak}
-                                                                        </div>
-                                                                        <div className="text-[10px] text-amber-300/80 font-sans italic">
-                                                                            💡 Buka "Detail Lengkap" untuk memilih button [ ✅ Dipakai ] atau [ ❌ Ditolak ].
+                                                                    <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                                                                        <div className="space-y-1">
+                                                                            <div className="font-extrabold text-cyan-300 text-xs">
+                                                                                {activeOngoingOrder.glass_type}
+                                                                            </div>
+                                                                            <div className="text-slate-300 font-mono text-xs flex items-center gap-2">
+                                                                                <span className="bg-slate-950 text-white px-2 py-0.5 rounded border border-slate-800 font-bold">
+                                                                                    📐 {activeOngoingOrder.length_cm} × {activeOngoingOrder.width_cm} cm
+                                                                                </span>
+                                                                                <span className="text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                                                                    Tebal: {activeOngoingOrder.thickness_mm} mm
+                                                                                </span>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                )
-                                                            )}
-                                                        </div>
+                                                                )}
+                                                            </div>
 
-                                                        {/* COL 3: STATUS PEKERJAAN WORKSTATION */}
-                                                        <div className={`md:col-span-4 p-4 rounded-2xl border text-center space-y-2 shadow-md ${isJobStarted ? 'bg-emerald-950/40 border-emerald-500/40' : 'bg-amber-950/40 border-amber-500/40'}`}>
-                                                            <div className={`text-[11px] font-black font-mono uppercase tracking-widest flex items-center justify-center gap-1.5 ${isJobStarted ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                                                <span className={`w-2 h-2 rounded-full animate-ping ${isJobStarted ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                                                                <span>{isJobStarted ? '🟢 STATUS: SEDANG DIKERJAKAN' : '🟡 STATUS: MENUNGGU PENGERJAAN'}</span>
-                                                            </div>
-                                                            <div className="text-sm font-extrabold text-slate-100 font-sans">
-                                                                {isJobStarted ? 'Proses Kaca Sedang Berlangsung' : 'Orderan Berada Di Antrean Workstation'}
-                                                            </div>
-                                                            <div className="text-[11px] text-slate-300 leading-normal">
-                                                                {isJobStarted 
-                                                                    ? `Pekerjaan aktif di meja ${roleTitles[activeOngoingOrder.current_division] || activeOngoingOrder.current_division}.`
-                                                                    : 'Klik tombol "⚡ Mulai Mengerjakan" di bawah jika Anda siap memproses kaca ini.'}
-                                                            </div>
+                                                            {/* ALOKASI / REKOMENDASI KACA SISA (SCRAP) */}
+                                                            {activeOngoingOrder.used_scrap_rak && activeOngoingOrder.used_scrap_rak !== '-' && activeOngoingOrder.used_scrap_rak.trim() !== '' && (
+                                                                <div className="pt-1">
+                                                                    {activeOngoingOrder.used_scrap_rak.startsWith('❌') ? (
+                                                                        <div className="bg-rose-950/80 border border-rose-500/60 rounded-xl p-2.5 text-xs font-mono space-y-1 shadow-md">
+                                                                            <div className="font-extrabold text-[11px] text-rose-300 flex items-center justify-between">
+                                                                                <span className="flex items-center gap-1.5">🚨 <span>Rekomendasi Scrap Ditolak</span></span>
+                                                                                <span className="text-[9px] bg-rose-500 text-white font-black px-2 py-0.5 rounded-full uppercase">Ditolak HT</span>
+                                                                            </div>
+                                                                            <div className="text-rose-200 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-rose-500/30 font-bold text-[11px] leading-relaxed">
+                                                                                {activeOngoingOrder.used_scrap_rak}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : activeOngoingOrder.used_scrap_rak.startsWith('✅') ? (
+                                                                        <div className="bg-emerald-950/80 border border-emerald-500/60 rounded-xl p-2.5 text-xs font-mono space-y-1 shadow-md">
+                                                                            <div className="font-extrabold text-[11px] text-emerald-300 flex items-center justify-between">
+                                                                                <span className="flex items-center gap-1.5">✅ <span>Rekomendasi Scrap Terpakai</span></span>
+                                                                                <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase">Terpakai HT</span>
+                                                                            </div>
+                                                                            <div className="text-emerald-200 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-emerald-500/30 font-bold text-[11px] leading-relaxed">
+                                                                                {activeOngoingOrder.used_scrap_rak}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="bg-amber-950/90 border border-amber-500/60 rounded-xl p-2.5 text-xs font-mono space-y-1.5 shadow-md">
+                                                                            <div className="font-extrabold text-[11px] text-amber-400 flex items-center justify-between">
+                                                                                <span className="flex items-center gap-1.5">🧩 <span>Rekomendasi Scrap Toko</span></span>
+                                                                                <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black uppercase">Perlu Konfirmasi</span>
+                                                                            </div>
+                                                                            <div className="text-amber-200 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-amber-500/30 font-bold text-[11px] leading-relaxed">
+                                                                                {activeOngoingOrder.used_scrap_rak}
+                                                                            </div>
+                                                                            <div className="text-[10px] text-amber-300/90 font-sans italic flex items-center gap-1">
+                                                                                <span>💡 Buka "Detail Lengkap" untuk memilih [ ✅ Dipakai ] atau [ ❌ Ditolak ].</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
 
@@ -4237,13 +4478,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                                 </span>
                                                                             )}
                                                                             {isPriority && !isRevision && (
-                                                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
+                                                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-600 text-white border border-red-400 animate-pulse shadow-sm shadow-red-600/30">
                                                                                     🔥 PRIORITAS
                                                                                 </span>
                                                                             )}
                                                                             {!isPriority && !isRevision && (
-                                                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                                                                                    🔵 Biasa
+                                                                                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white text-slate-950 border border-slate-200 shadow-sm">
+                                                                                    ⚪ Biasa
                                                                                 </span>
                                                                             )}
                                                                             {isCurrentlyActiveInCard && (
