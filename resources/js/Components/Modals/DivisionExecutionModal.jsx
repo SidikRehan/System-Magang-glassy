@@ -27,7 +27,19 @@ export default function DivisionExecutionModal({
         ? selectedExecutionOrder.items
         : [{ glass_type: selectedExecutionOrder.glass_type || 'Kaca Cermin 5 mm polos', qty: 1 }];
 
-    const initialGlassType = orderedItems[0]?.glass_type || selectedExecutionOrder.glass_type || '';
+    const uniqueGlassTypes = React.useMemo(() => {
+        const map = new Map();
+        orderedItems.forEach(it => {
+            const name = it.glass_type || selectedExecutionOrder.glass_type || 'Kaca Lembaran';
+            const existing = map.get(name) || { glass_type: name, totalQty: 0, itemCount: 0 };
+            existing.totalQty += (parseInt(it.qty) || 1);
+            existing.itemCount += 1;
+            map.set(name, existing);
+        });
+        return Array.from(map.values());
+    }, [orderedItems, selectedExecutionOrder]);
+
+    const initialGlassType = uniqueGlassTypes[0]?.glass_type || orderedItems[0]?.glass_type || selectedExecutionOrder.glass_type || '';
 
     const [rawGlassType, setRawGlassType] = useState(initialGlassType);
     const [rawSheetsUsed, setRawSheetsUsed] = useState(1);
@@ -55,7 +67,91 @@ export default function DivisionExecutionModal({
         status: 'Layak Pakai',
         notes: ''
     });
-    const [isSubmittingScrapEdit, setIsSubmittingScrapEdit] = useState(false);
+    // State penanda lembar terpotong per item (1, 2, 3 ... Qty)
+    const [cutTracker, setCutTracker] = useState({});
+
+    const toggleCutTracker = (itemIdx, pieceNum) => {
+        setCutTracker(prev => {
+            const itemState = prev[itemIdx] || {};
+            const isDone = itemState[pieceNum];
+            return {
+                ...prev,
+                [itemIdx]: {
+                    ...itemState,
+                    [pieceNum]: !isDone
+                }
+            };
+        });
+    };
+
+    const toggleAllCutTracker = (itemIdx, totalQty) => {
+        setCutTracker(prev => {
+            const itemState = prev[itemIdx] || {};
+            const currentCount = Object.keys(itemState).filter(k => itemState[k]).length;
+            const allDone = currentCount === totalQty;
+            
+            const newState = {};
+            if (!allDone) {
+                for (let i = 1; i <= totalQty; i++) {
+                    newState[i] = true;
+                }
+            }
+            return {
+                ...prev,
+                [itemIdx]: newState
+            };
+        });
+    };
+
+    // Sub-tab switcher untuk area pencatatan bahan & sisa potong (scrap): 'raw' | 'scrap'
+    const [rawSectionTab, setRawSectionTab] = useState('raw');
+    const [embeddedScrapForm, setEmbeddedScrapForm] = useState({
+        glass_type: initialGlassType,
+        length_cm: '',
+        width_cm: '',
+        rak_location: 'Rak A02'
+    });
+    const [isSubmittingEmbeddedScrap, setIsSubmittingEmbeddedScrap] = useState(false);
+
+    const handleSaveEmbeddedScrap = (e) => {
+        e.preventDefault();
+        if (!embeddedScrapForm.glass_type || !embeddedScrapForm.length_cm || !embeddedScrapForm.width_cm) {
+            alert('Mohon lengkapi Jenis Kaca Sisa, Ukuran Panjang (cm), dan Lebar (cm)!');
+            return;
+        }
+        setIsSubmittingEmbeddedScrap(true);
+        const payload = {
+            ...embeddedScrapForm,
+            glass_type: (embeddedScrapForm.glass_type || '').trim() || '-',
+            rak_location: (embeddedScrapForm.rak_location || '').trim() || 'Rak A02',
+        };
+        router.post(route('scrap.store'), payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSubmittingEmbeddedScrap(false);
+                alert(`✅ Sukses! Kaca Sisa Potong (${embeddedScrapForm.glass_type} — ${embeddedScrapForm.length_cm} × ${embeddedScrapForm.width_cm} cm) berhasil disimpan ke ${embeddedScrapForm.rak_location}!`);
+                setEmbeddedScrapForm({
+                    glass_type: initialGlassType,
+                    length_cm: '',
+                    width_cm: '',
+                    rak_location: 'Rak A02'
+                });
+            },
+            onError: () => {
+                setIsSubmittingEmbeddedScrap(false);
+            }
+        });
+    };
+
+    const handleSelectScrapForForm = (it) => {
+        setEmbeddedScrapForm(prev => ({
+            ...prev,
+            glass_type: it.glass_type || initialGlassType,
+            length_cm: '',
+            width_cm: ''
+        }));
+        setRawSectionTab('scrap');
+    };
 
     React.useEffect(() => {
         if (selectedExecutionOrder) {
@@ -318,6 +414,68 @@ export default function DivisionExecutionModal({
                             </div>
                         </div>
 
+                        {/* LAMPIRAN SKETSA POLA & GAMBAR SAMBUNGAN KACA */}
+                        {selectedExecutionOrder.sketch_photo_path && (
+                            <div className="bg-gradient-to-r from-slate-950 via-cyan-950/30 to-slate-950 border border-cyan-500/40 p-4 rounded-2xl space-y-3 relative z-10 shadow-lg">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-xs font-black text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+                                        <span>📐 SKETSA POLA & GAMBAR SAMBUNGAN KACA (ACUAN PEKERJA DIVISI)</span>
+                                    </h4>
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        className="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
+                                    >
+                                        🔍 Perbesar Gambar Sketsa
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div 
+                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden border-2 border-cyan-400/50 bg-black shrink-0 shadow-lg"
+                                    >
+                                        <img 
+                                            src={selectedExecutionOrder.sketch_photo_path.startsWith('http') || selectedExecutionOrder.sketch_photo_path.startsWith('/') ? selectedExecutionOrder.sketch_photo_path : `/storage/${selectedExecutionOrder.sketch_photo_path}`}
+                                            alt="Sketsa Pola Kaca"
+                                            className="w-full h-full object-contain transition transform group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-bold gap-1">
+                                            🔍 Klik Perbesar
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-slate-300 space-y-1.5">
+                                        <div className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
+                                            <span>📌 Acuan Pemotongan & Sambungan Pola Kaca</span>
+                                        </div>
+                                        <p className="text-slate-400 text-[11px] leading-relaxed">
+                                            Admin Gudang dan Pekerja Divisi (Potong/HT, Gosok/GM, Bevel/BV, Etsa) wajib melihat sketsa ini sebagai acuan pola fisik, arah sambungan gambar/cermin, dan ukuran pemotongan kaca.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TIMELINE TANGGAL LIFECYCLE ORDER */}
+                        <div className="space-y-2">
+                            <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>📅 Lifecycle Timeline Tanggal Track:</span>
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-cyan-500/20 space-y-1">
+                                    <span className="text-slate-500 text-[10px] block">📅 Pembuatan Order (Toko):</span>
+                                    <strong className="text-cyan-400 font-bold block text-xs">{formatIndonesianDate(selectedExecutionOrder.order_date)}</strong>
+                                </div>
+                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-blue-500/20 space-y-1">
+                                    <span className="text-slate-500 text-[10px] block">📦 Diturunkan Gudang:</span>
+                                    <strong className="text-blue-300 font-bold block text-xs">{selectedExecutionOrder.gudang_released_at ? formatIndonesianDateTime(selectedExecutionOrder.gudang_released_at) : 'Belum Diturunkan'}</strong>
+                                </div>
+                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-emerald-500/20 space-y-1">
+                                    <span className="text-slate-500 text-[10px] block">✅ Selesai Eksekusi:</span>
+                                    <strong className="text-emerald-400 font-bold block text-xs">{selectedExecutionOrder.execution_completed_at ? formatIndonesianDateTime(selectedExecutionOrder.execution_completed_at) : 'Sedang Eksekusi'}</strong>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* REKOMENDASI ALOKASI KACA SISA RAK (DARI ADMIN TOKO) */}
                         {selectedExecutionOrder.used_scrap_rak && selectedExecutionOrder.used_scrap_rak !== '-' && selectedExecutionOrder.used_scrap_rak.trim() !== '' && (
                             selectedExecutionOrder.used_scrap_rak.startsWith('❌') ? (
@@ -398,162 +556,13 @@ export default function DivisionExecutionModal({
                             )
                         )}
 
-                        {/* LAMPIRAN SKETSA POLA & GAMBAR SAMBUNGAN KACA */}
-                        {selectedExecutionOrder.sketch_photo_path && (
-                            <div className="bg-gradient-to-r from-slate-950 via-cyan-950/30 to-slate-950 border border-cyan-500/40 p-4 rounded-2xl space-y-3 relative z-10 shadow-lg">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-xs font-black text-cyan-300 uppercase tracking-wider flex items-center gap-2">
-                                        <span>📐 SKETSA POLA & GAMBAR SAMBUNGAN KACA (ACUAN PEKERJA DIVISI)</span>
-                                    </h4>
-                                    <button
-                                        type="button"
-                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
-                                        className="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
-                                    >
-                                        🔍 Perbesar Gambar Sketsa
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div 
-                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
-                                        className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden border-2 border-cyan-400/50 bg-black shrink-0 shadow-lg"
-                                    >
-                                        <img 
-                                            src={selectedExecutionOrder.sketch_photo_path.startsWith('http') || selectedExecutionOrder.sketch_photo_path.startsWith('/') ? selectedExecutionOrder.sketch_photo_path : `/storage/${selectedExecutionOrder.sketch_photo_path}`}
-                                            alt="Sketsa Pola Kaca"
-                                            className="w-full h-full object-contain transition transform group-hover:scale-105"
-                                        />
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-bold gap-1">
-                                            🔍 Klik Perbesar
-                                        </div>
-                                    </div>
-                                    <div className="text-xs text-slate-300 space-y-1.5">
-                                        <div className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
-                                            <span>📌 Acuan Pemotongan & Sambungan Pola Kaca</span>
-                                        </div>
-                                        <p className="text-slate-400 text-[11px] leading-relaxed">
-                                            Admin Gudang dan Pekerja Divisi (Potong/HT, Gosok/GM, Bevel/BV, Etsa) wajib melihat sketsa ini sebagai acuan pola fisik, arah sambungan gambar/cermin, dan ukuran pemotongan kaca.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TIMELINE TANGGAL LIFECYCLE ORDER */}
-                        <div className="space-y-2">
-                            <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <span>📅 Lifecycle Timeline Tanggal Track:</span>
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-cyan-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">📅 Pembuatan Order (Toko):</span>
-                                    <strong className="text-cyan-400 font-bold block text-xs">{formatIndonesianDate(selectedExecutionOrder.order_date)}</strong>
-                                </div>
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-blue-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">📦 Diturunkan Gudang:</span>
-                                    <strong className="text-blue-300 font-bold block text-xs">{selectedExecutionOrder.gudang_released_at ? formatIndonesianDateTime(selectedExecutionOrder.gudang_released_at) : 'Belum Diturunkan'}</strong>
-                                </div>
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-emerald-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">✅ Selesai Eksekusi:</span>
-                                    <strong className="text-emerald-400 font-bold block text-xs">{selectedExecutionOrder.execution_completed_at ? formatIndonesianDateTime(selectedExecutionOrder.execution_completed_at) : 'Sedang Eksekusi'}</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* TAHAPAN PROGRES WORKFLOW PIPELINE DENGAN TANGGAL MASUK & SELESAI PER DIVISI */}
-                        <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 space-y-3">
-                            <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                                <span>📋 Track Tanggal Pengerjakan Per Divisi:</span>
-                                <span className="text-[10px] text-slate-500 font-mono">Diperbarui Otomatis Per Transisi Divisi</span>
-                            </div>
-                            {(() => {
-                                const allProcs = [
-                                    { code: 'HT', name: 'Potong & Bor (HT)' },
-                                    { code: 'GM', name: 'Gosok Mesin (GM)' },
-                                    { code: 'BV', name: 'Bevel (BV)' },
-                                    { code: 'Etsa', name: 'Etsa Blur (Etsa)' }
-                                ];
-
-                                const reqSet = new Set();
-                                if (Array.isArray(selectedExecutionOrder.processes)) {
-                                    selectedExecutionOrder.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
-                                }
-                                if (Array.isArray(selectedExecutionOrder.items)) {
-                                    selectedExecutionOrder.items.forEach(it => {
-                                        if (Array.isArray(it.processes)) {
-                                            it.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
-                                        }
-                                    });
-                                }
-
-                                const activeProcs = allProcs.filter(proc => {
-                                    // HT (Potong) is ALWAYS mandatory for every glass order
-                                    if (proc.code === 'HT') return true;
-                                    const status = (selectedExecutionOrder.division_progress && selectedExecutionOrder.division_progress[proc.code]) 
-                                        ? selectedExecutionOrder.division_progress[proc.code] 
-                                        : 'Belum';
-                                    if (status !== 'N/A') return true;
-                                    if (reqSet.has(proc.code.toUpperCase())) return true;
-                                    return false;
-                                });
-
-                                const renderList = activeProcs.length > 0 ? activeProcs : allProcs;
-
-                                return (
-                                    <div className={`grid grid-cols-1 ${renderList.length === 1 ? 'sm:grid-cols-1' : renderList.length === 2 ? 'sm:grid-cols-2' : renderList.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 md:grid-cols-4'} gap-3`}>
-                                        {renderList.map(proc => {
-                                            const status = (selectedExecutionOrder.division_progress && selectedExecutionOrder.division_progress[proc.code]) ? selectedExecutionOrder.division_progress[proc.code] : 'Belum';
-                                            const isDone = status === 'Selesai';
-                                            const isWorking = status === 'Sedang Dikerjakan';
-                                            const isNA = status === 'N/A';
-
-                                            const ts = (selectedExecutionOrder.division_timestamps && selectedExecutionOrder.division_timestamps[proc.code]) 
-                                                ? selectedExecutionOrder.division_timestamps[proc.code] 
-                                                : {};
-                                            const startedAt = ts.started_at;
-                                            const completedAt = ts.completed_at;
-
-                                            return (
-                                                <div 
-                                                    key={proc.code} 
-                                                    className={`p-3.5 rounded-2xl border flex flex-col justify-between space-y-2 transition ${isDone ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : isWorking ? 'bg-cyan-500/10 text-cyan-300 border-cyan-400 animate-pulse shadow-md shadow-cyan-500/10' : isNA ? 'bg-slate-900/40 text-slate-600 border-slate-800' : 'bg-slate-900/60 text-slate-400 border-slate-800'}`}
-                                                >
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="text-[11px] font-extrabold font-mono">{proc.code}: {proc.name}</div>
-                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${isDone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : isWorking ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400' : isNA ? 'bg-slate-950 text-slate-600 border-slate-900' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
-                                                            {isDone ? '✅ Selesai' : isWorking ? '⚙️ Dikerjakan' : isNA ? '⚪ N/A' : '⏳ Belum'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="space-y-1 text-[10px] font-mono pt-2 border-t border-slate-800/80">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-slate-500">📥 Tgl Masuk / Mulai:</span>
-                                                            <strong className={startedAt ? 'text-cyan-300' : 'text-slate-600'}>
-                                                                {startedAt ? formatIndonesianDateTime(startedAt) : '-'}
-                                                            </strong>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-slate-500">🏁 Tgl Selesai Eksekusi:</span>
-                                                            <strong className={completedAt ? 'text-emerald-300' : 'text-slate-600'}>
-                                                                {completedAt ? formatIndonesianDateTime(completedAt) : '-'}
-                                                            </strong>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })()}
-                        </div>
-
                         {/* RINCIAN ITEM SPESIFIKASI KACA DETAIL & TOMBOL [+ SISA POTONG] */}
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <h4 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider flex items-center gap-2">
                                     <span>📋 Detail Spesifikasi Item Kaca:</span>
                                 </h4>
-                                <span className="text-[11px] text-slate-400 font-mono">Klik "+ Input Sisa Potong" untuk mencatat scrap ke rak</span>
+                                <span className="text-[11px] text-slate-400 font-mono">Gunakan penanda angka untuk mencatat lembar terpotong</span>
                             </div>
 
                             <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -567,9 +576,10 @@ export default function DivisionExecutionModal({
                                         qty: 1,
                                         processes: selectedExecutionOrder.processes || ['HT']
                                     }]).map((it, idx) => (
-                                    <div key={idx} className="bg-slate-950 p-4 rounded-2xl border border-slate-800/90 hover:border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition shadow-md">
-                                        <div className="space-y-1.5 flex-1">
-                                            <div className="font-extrabold text-cyan-300 text-sm flex items-center gap-2">
+                                    <div key={idx} className="bg-slate-950 p-4 rounded-2xl border border-slate-800/90 hover:border-cyan-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition shadow-md">
+                                        {/* Rincian Spesifikasi Kaca (Sebelah Kiri) */}
+                                        <div className="space-y-1.5 flex-1 min-w-0">
+                                            <div className="font-extrabold text-cyan-300 text-sm flex flex-wrap items-center gap-2">
                                                 <span>Item #{idx + 1}: {it.glass_type}</span>
                                                 <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold">Qty: {it.qty || 1} Pcs</span>
                                             </div>
@@ -584,30 +594,86 @@ export default function DivisionExecutionModal({
                                             )}
                                         </div>
 
-                                        {/* TOMBOL POPUP INPUT SISA (KHUSUS DIVISI POTONG / HT) */}
+                                        {/* PENANDA NUMBER CHECKLIST (1, 2, 3 ... Qty) (Sebelah Kanan) */}
                                         {selectedExecutionOrder.current_division === 'divisi_ht' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => onOpenScrapPopup(it)}
-                                                className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500 hover:to-orange-500 text-amber-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-amber-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-amber-500/10"
-                                            >
-                                                <span>🧩 + Input Sisa Potong</span>
-                                            </button>
+                                            <div className="w-full md:w-auto md:max-w-xs space-y-1.5 md:border-l md:border-slate-800/80 md:pl-4 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800/80 shrink-0">
+                                                <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
+                                                    <span className="text-slate-400 font-bold flex items-center gap-1.5">
+                                                        <span>✂️ Potong (HT):</span>
+                                                        <span className="text-emerald-400 font-extrabold font-sans bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                                            ({Object.keys(cutTracker[idx] || {}).filter(k => cutTracker[idx][k]).length} / {it.qty || 1})
+                                                        </span>
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleAllCutTracker(idx, it.qty || 1)}
+                                                        className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-semibold cursor-pointer shrink-0"
+                                                    >
+                                                        {Object.keys(cutTracker[idx] || {}).filter(k => cutTracker[idx][k]).length === (it.qty || 1) ? '↺ Reset' : '✓ Tandai All'}
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto py-1 pr-1">
+                                                    {Array.from({ length: Math.min(it.qty || 1, 100) }, (_, i) => i + 1).map((num) => {
+                                                        const isDone = cutTracker[idx]?.[num];
+                                                        return (
+                                                            <button
+                                                                key={num}
+                                                                type="button"
+                                                                onClick={() => toggleCutTracker(idx, num)}
+                                                                className={`h-7 px-2.5 text-xs font-mono font-bold rounded-lg border transition-all transform active:scale-95 flex items-center justify-center gap-1 cursor-pointer ${
+                                                                    isDone
+                                                                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black shadow-md shadow-emerald-500/20 scale-105'
+                                                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
+                                                                }`}
+                                                                title={`Lembar ke-${num}: ${isDone ? 'Sudah Dipotong (Klik untuk un-check)' : 'Belum Dipotong (Klik untuk tandai)'}`}
+                                                            >
+                                                                <span>{isDone ? '✓' : ''}</span>
+                                                                <span>{num}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* PENCATATAN PEMAKAIAN KACA LEMBARAN BARU (KHUSUS DIVISI POTONG / HT / GUDANG) */}
+                        {/* PENCATATAN PEMAKAIAN KACA LEMBARAN BARU & INPUT SISA POTONG (KHUSUS DIVISI POTONG / HT / GUDANG) */}
                         {(selectedExecutionOrder.current_division === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/30 space-y-3 relative z-10 shadow-lg">
-                                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                    <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                                        <span>📄 PENCATATAN PEMAKAIAN BAHAN KACA LEMBARAN BARU (DIVISI HT POTONG)</span>
-                                    </h4>
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                        Pekerja Divisi HT mencatat jumlah lembaran baru yang diambil dari stok
+                                {/* SUB-TAB NAVIGASI MODUL BARENG: PEMAKAIAN BAHAN vs SISA POTONG */}
+                                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2.5">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRawSectionTab('raw')}
+                                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                                rawSectionTab === 'raw'
+                                                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-extrabold'
+                                                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                            }`}
+                                        >
+                                            <span>📄 1. Pemakaian Kaca Lembaran Baru</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setRawSectionTab('scrap')}
+                                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                                rawSectionTab === 'scrap'
+                                                    ? 'bg-orange-500 text-slate-950 shadow-md shadow-orange-500/20 font-extrabold'
+                                                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                            }`}
+                                        >
+                                            <span>🧩 2. Simpan Kaca Sisa Potong (Scrap ke Rak)</span>
+                                        </button>
+                                    </div>
+
+                                    <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+                                        {rawSectionTab === 'raw' ? 'Potong stok master lembaran baru' : 'Simpan sisa potong layak pakai ke rak'}
                                     </span>
                                 </div>
 
@@ -618,75 +684,262 @@ export default function DivisionExecutionModal({
                                     </div>
                                 )}
 
-                                <form onSubmit={handleRecordRawMaterial} className="space-y-3">
-                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-                                        <div className="sm:col-span-2 space-y-1">
-                                            <label className="text-[11px] font-bold text-slate-300 block">Pilih Bahan Kaca Lembaran Baru:</label>
-                                            <select
-                                                value={rawGlassType}
-                                                onChange={(e) => setRawGlassType(e.target.value)}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-amber-400 font-mono font-bold cursor-pointer"
-                                            >
-                                                <optgroup label="✨ Spesifikasi Kaca yang Dipesan pada SPO Ini">
-                                                    {orderedItems.map((it, idx) => (
-                                                        <option key={'spo_' + idx} value={it.glass_type}>
-                                                            {it.glass_type} (Order SPO: {it.qty || 1} Pcs)
-                                                        </option>
-                                                    ))}
-                                                </optgroup>
-                                                <optgroup label="📦 Katalog Master Stok Bahan Kaca Gudang">
-                                                    {sheetGlasses.map((g) => (
-                                                        <option key={'cat_' + g.id} value={g.name}>
-                                                            [{g.item_code}] {g.name} — (Stok Tersedia: {g.qty} {g.unit})
-                                                        </option>
-                                                    ))}
-                                                </optgroup>
-                                            </select>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <label className="text-[11px] font-bold text-slate-300 block">Jumlah Lembar Dipakai:</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={rawSheetsUsed}
-                                                onChange={(e) => setRawSheetsUsed(e.target.value)}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-amber-400 font-mono font-black text-center"
-                                            />
-                                        </div>
-
-                                        <button
-                                            type="submit"
-                                            disabled={isSubmittingRaw}
-                                            className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
-                                        >
-                                            <span>📉</span>
-                                            <span>{isSubmittingRaw ? 'Menyimpan...' : '+ Catat & Potong Stok'}</span>
-                                        </button>
-                                    </div>
-
-                                    {/* LIVE INDIKATOR SISA STOK MASTER GUDANG */}
-                                    {currentStockItem ? (
-                                        <div className="text-[11px] bg-slate-900 border border-cyan-500/30 rounded-xl p-2.5 font-mono flex flex-wrap items-center justify-between gap-2 text-slate-200">
-                                            <span className="flex items-center gap-1.5">
-                                                <span>📦 Stok Master Gudang saat Ini:</span>
-                                                <strong className="text-cyan-300 font-extrabold">{currentStockItem.name}</strong>
-                                                <span className="bg-slate-950 px-2 py-0.5 rounded text-cyan-400 border border-slate-800">
-                                                    {currentStockItem.qty} {currentStockItem.unit}
+                                {/* FORM 1: CATAT PEMAKAIAN KACA LEMBARAN BARU */}
+                                {rawSectionTab === 'raw' && (
+                                    <form onSubmit={handleRecordRawMaterial} className="space-y-3.5 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                                        {/* PILIH BAHAN KACA (OTOMATIS TERPILIH SESUAI ORDER SPO) */}
+                                        <div className="space-y-2">
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                                                    <span>📄 Bahan Kaca Lembaran Orderan Ini:</span>
+                                                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold">
+                                                        ✓ Otomatis Terpilih Sesuai Order
+                                                    </span>
+                                                </label>
+                                                <span className="text-[10px] text-slate-400 font-mono">
+                                                    Pilih item order atau dari Katalog Gudang jika berbeda
                                                 </span>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {/* QUICK UNIQUE GLASS TYPE BADGES FROM SPO ORDER */}
+                                                {uniqueGlassTypes.map((gt, idx) => {
+                                                    const isSelected = rawGlassType === gt.glass_type;
+                                                    return (
+                                                        <button
+                                                            key={'u_gt_' + idx}
+                                                            type="button"
+                                                            onClick={() => setRawGlassType(gt.glass_type)}
+                                                            className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border ${
+                                                                isSelected
+                                                                    ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-md shadow-amber-500/20 font-black'
+                                                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                                            }`}
+                                                        >
+                                                            <span>✨ {gt.glass_type}</span>
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-sans font-bold ${
+                                                                isSelected ? 'bg-slate-950/30 text-slate-950' : 'bg-slate-900 text-amber-300 border border-amber-500/30'
+                                                            }`}>
+                                                                Total: {gt.totalQty} Pcs ({gt.itemCount} Ukuran)
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+
+                                                {/* DROPDOWN SELECTOR FOR MASTER CATALOG FALLBACK */}
+                                                <div className="flex-1 min-w-[200px]">
+                                                    <select
+                                                        value={rawGlassType}
+                                                        onChange={(e) => setRawGlassType(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:border-amber-400 font-mono cursor-pointer"
+                                                    >
+                                                        <optgroup label="✨ Jenis Kaca pada Order SPO Ini">
+                                                            {uniqueGlassTypes.map((gt, idx) => (
+                                                                <option key={'spo_gt_' + idx} value={gt.glass_type}>
+                                                                    {gt.glass_type} (Total Order SPO: {gt.totalQty} Pcs — {gt.itemCount} Ukuran)
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
+                                                        <optgroup label="📦 Katalog Master Stok Bahan Kaca Gudang">
+                                                            {sheetGlasses.map((g) => (
+                                                                <option key={'cat_sel_' + g.id} value={g.name}>
+                                                                    [{g.item_code}] {g.name} — (Stok: {g.qty} {g.unit})
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* PILIH JUMLAH LEMBAR DIPAKAI (QUICK CLICK BUTTONS 1..6 + STEPPER) */}
+                                        <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                                                    <span>📊 Berapa Lembar Kaca Bahan Yang Dipakai?</span>
+                                                </label>
+                                                <span className="text-[10px] text-amber-300 font-mono font-bold">
+                                                    💡 Klik angka lembaran di bawah
+                                                </span>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {/* QUICK PILL BUTTONS 1..6 LEMBAR */}
+                                                {[1, 2, 3, 4, 5, 6].map((num) => {
+                                                    const isCurrent = parseInt(rawSheetsUsed) === num;
+                                                    return (
+                                                        <button
+                                                            key={'sheet_num_' + num}
+                                                            type="button"
+                                                            onClick={() => setRawSheetsUsed(num)}
+                                                            className={`h-9 px-3.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer border ${
+                                                                isCurrent
+                                                                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 border-amber-300 font-black shadow-md shadow-amber-500/20 scale-105'
+                                                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800 hover:text-white'
+                                                            }`}
+                                                        >
+                                                            <span>📄</span>
+                                                            <span>{num} Lembar</span>
+                                                        </button>
+                                                    );
+                                                })}
+
+                                                {/* STEP CONTROLS (- / +) & INPUT */}
+                                                <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 p-1 rounded-xl">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRawSheetsUsed(Math.max(1, (parseInt(rawSheetsUsed) || 1) - 1))}
+                                                        className="w-7 h-7 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-lg font-bold flex items-center justify-center cursor-pointer border border-slate-800 text-xs"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={rawSheetsUsed}
+                                                        onChange={(e) => setRawSheetsUsed(e.target.value)}
+                                                        className="w-10 bg-transparent text-center text-xs font-mono font-black text-amber-300 focus:outline-none"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRawSheetsUsed((parseInt(rawSheetsUsed) || 1) + 1)}
+                                                        className="w-7 h-7 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-lg font-bold flex items-center justify-center cursor-pointer border border-slate-800 text-xs"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+
+                                                {/* SUBMIT BUTTON */}
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSubmittingRaw}
+                                                    className="ml-auto bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-5 py-2 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
+                                                >
+                                                    <span>📉</span>
+                                                    <span>{isSubmittingRaw ? 'Menyimpan...' : `+ Catat (${rawSheetsUsed} Lembar)`}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* LIVE INDIKATOR SISA STOK MASTER GUDANG */}
+                                        {currentStockItem ? (
+                                            <div className="text-[11px] bg-slate-900 border border-cyan-500/30 rounded-xl p-2.5 font-mono flex flex-wrap items-center justify-between gap-2 text-slate-200">
+                                                <span className="flex items-center gap-1.5">
+                                                    <span>📦 Stok Master Gudang saat Ini:</span>
+                                                    <strong className="text-cyan-300 font-extrabold">{currentStockItem.name}</strong>
+                                                    <span className="bg-slate-950 px-2 py-0.5 rounded text-cyan-400 border border-slate-800">
+                                                        {currentStockItem.qty} {currentStockItem.unit}
+                                                    </span>
+                                                </span>
+                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1) >= 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse'}`}>
+                                                    {currentStockItem.qty - (parseInt(rawSheetsUsed) || 1) >= 0
+                                                        ? `Sisa Stok Setelah Dipotong: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1)} ${currentStockItem.unit}`
+                                                        : `⚠️ Stok Kurang! (Sisa sisa: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1)} ${currentStockItem.unit})`}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2 rounded-xl font-mono flex items-center gap-2">
+                                                <span>⚠️ Bahan kaca <strong>"{rawGlassType}"</strong> belum terdaftar langsung di Katalog Master. Memotong stok berdasarkan nama item terdaftar.</span>
+                                            </div>
+                                        )}
+                                    </form>
+                                )}
+
+                                {/* FORM 2: SIMPAN KACA SISA POTONG (SCRAP KE RAK) */}
+                                {rawSectionTab === 'scrap' && (
+                                    <form onSubmit={handleSaveEmbeddedScrap} className="space-y-3 bg-slate-900/80 p-3.5 rounded-xl border border-orange-500/30 animate-in fade-in duration-200">
+                                        <div className="text-xs font-bold text-orange-400 flex items-center justify-between border-b border-slate-800 pb-2">
+                                            <span className="flex items-center gap-1.5">
+                                                <span>🧩 Form Simpan Kaca Sisa Potong ke Rak Storage:</span>
                                             </span>
-                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1) >= 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse'}`}>
-                                                {currentStockItem.qty - (parseInt(rawSheetsUsed) || 1) >= 0
-                                                    ? `Sisa Stok Setelah Dipotong: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1)} ${currentStockItem.unit}`
-                                                    : `⚠️ Stok Kurang! (Sisa sisa: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 1)} ${currentStockItem.unit})`}
+                                            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                                Status: Layak Pakai
                                             </span>
                                         </div>
-                                    ) : (
-                                        <div className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2 rounded-xl font-mono flex items-center gap-2">
-                                            <span>⚠️ Bahan kaca <strong>"{rawGlassType}"</strong> belum terdaftar langsung di Katalog Master. Memotong stok berdasarkan nama item terdaftar.</span>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                            <div className="sm:col-span-2 space-y-1">
+                                                <label className="text-[11px] font-bold text-slate-300 block">Pilih / Input Jenis Kaca Sisa:</label>
+                                                <select
+                                                    value={embeddedScrapForm.glass_type}
+                                                    onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, glass_type: e.target.value })}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                >
+                                                    <optgroup label="✨ Spesifikasi Item SPO ini">
+                                                        {orderedItems.map((it, idx) => (
+                                                            <option key={'scr_opt_' + idx} value={it.glass_type}>
+                                                                {it.glass_type}
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                    <optgroup label="📦 Katalog Master Bahan Kaca">
+                                                        {sheetGlasses.map((g) => (
+                                                            <option key={'scr_sheet_' + g.id} value={g.name}>
+                                                                {g.name}
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[11px] font-bold text-slate-300 block">Panjang Sisa (cm):</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="1"
+                                                    required
+                                                    placeholder="cth: 120"
+                                                    value={embeddedScrapForm.length_cm}
+                                                    onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, length_cm: e.target.value })}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[11px] font-bold text-slate-300 block">Lebar Sisa (cm):</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="1"
+                                                    required
+                                                    placeholder="cth: 45"
+                                                    value={embeddedScrapForm.width_cm}
+                                                    onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, width_cm: e.target.value })}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                />
+                                            </div>
                                         </div>
-                                    )}
-                                </form>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                                            <div className="sm:col-span-2 space-y-1">
+                                                <label className="text-[11px] font-bold text-slate-300 block">Pilih Lokasi Rak Storage Sisa:</label>
+                                                <select
+                                                    value={embeddedScrapForm.rak_location}
+                                                    onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, rak_location: e.target.value })}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                >
+                                                    <option value="Rak A01">Rak A01 (Kaca Polos / Float)</option>
+                                                    <option value="Rak A02">Rak A02 (Kaca Cermin / Mirror)</option>
+                                                    <option value="Rak B01">Rak B01 (Kaca Tempered & Bevel)</option>
+                                                    <option value="Rak B02">Rak B02 (Kaca Etsa / Sandblast)</option>
+                                                    <option value="Rak C01">Rak C01 (Kaca Khusus Sisa Besar)</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="sm:col-span-2">
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSubmittingEmbeddedScrap}
+                                                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
+                                                >
+                                                    <span>🧩</span>
+                                                    <span>{isSubmittingEmbeddedScrap ? 'Menyimpan...' : '+ Simpan Kaca Sisa ke Rak Storage'}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                )}
 
                                 {/* RIWAYAT PENCATATAN PEMAKAIAN BAHAN UNTUK SPO INI */}
                                 {Array.isArray(selectedExecutionOrder.raw_materials_used) && selectedExecutionOrder.raw_materials_used.length > 0 && (

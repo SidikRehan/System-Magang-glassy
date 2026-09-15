@@ -26,7 +26,8 @@ import {
     Lock,
     Menu,
     X,
-    ShieldCheck
+    ShieldCheck,
+    LogOut
 } from 'lucide-react';
 
 export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
@@ -221,7 +222,7 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                         {auth.user ? (
                             <Link href="/dashboard" className="bg-[#0F172A] hover:bg-[#1E3A8A] text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm flex items-center gap-2 transition duration-200">
                                 <Activity className="w-4 h-4 text-[#60A5FA]" />
-                                Buka Dashboard
+                                Buka Dashboard ({auth.user.name})
                             </Link>
                         ) : (
                             <Link href={route('login')} className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shadow-md shadow-blue-500/20 transition transform hover:-translate-y-0.5 flex items-center gap-2">
@@ -316,9 +317,9 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                                     <Activity className="w-5 h-5" /> Buka Dashboard Operasional →
                                 </Link>
                             ) : (
-                                <a href="#kalkulator" className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-black px-7 py-3.5 rounded-xl shadow-lg shadow-blue-600/25 text-sm flex items-center gap-2.5 transition transform hover:-translate-y-0.5">
-                                    <Calculator className="w-5 h-5" /> Hitung Estimasi Order →
-                                </a>
+                                <Link href={route('login')} className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-black px-7 py-3.5 rounded-xl shadow-lg shadow-blue-600/25 text-sm flex items-center gap-2.5 transition transform hover:-translate-y-0.5">
+                                    <ArrowRight className="w-5 h-5" /> Login Akses Karyawan →
+                                </Link>
                             )}
                             <a href="#visualizer" className="bg-white border border-slate-300 hover:border-[#2563EB] hover:bg-slate-50 text-[#0F172A] font-bold px-6 py-3.5 rounded-xl text-sm transition flex items-center gap-2 shadow-xs">
                                 <Sparkles className="w-4 h-4 text-[#2563EB]" /> Coba Visualizer Kaca
@@ -1088,11 +1089,13 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                             Masuk menggunakan kredensial role karyawan untuk mengakses dashboard operasional.
                         </p>
                         {auth.user ? (
-                            <Link href="/dashboard" className="inline-block bg-[#2563EB] text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md">
+                            <Link href="/dashboard" className="inline-block bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md">
                                 Buka Dashboard ({auth.user.name})
                             </Link>
                         ) : (
-                            <p className="text-slate-400 text-xs italic">Akses sistem internal khusus karyawan terdaftar.</p>
+                            <Link href={route('login')} className="inline-block bg-[#2563EB] hover:bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md">
+                                Login Akses Karyawan →
+                            </Link>
                         )}
                     </div>
                 </div>

@@ -21,6 +21,7 @@ import GlassStickerModal from '@/Components/Modals/GlassStickerModal';
 
 export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], users: initialUsersList = [], activityLogs: initialActivityLogsList = [], financeTransactions: initialFinanceTransactions = [], metrics = {} }) {
     const scrapGlasses = initialScrap;
+    const orders = initialOrders;
     const { auth = {} } = usePage().props;
     const userRole = auth.user?.role || 'admin_toko';
     const userName = auth.user?.name || 'User Syp';
@@ -2793,11 +2794,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     </div>
 
                     <nav className="space-y-1">
-                        {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                📊 <span>Dashboard Utama</span>
-                            </button>
-                        )}
+                        <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            📊 <span>Dashboard Utama</span>
+                        </button>
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
@@ -2914,8 +2913,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {/* CONTENT MAIN */}
                 <main className="flex-1 p-8 overflow-y-auto">
 
-                    {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN (KHUSUS OWNER & FINANCE) */}
-                    {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                    {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
+                    {activeTab === 'dashboard' && (
                         <div className="space-y-6">
                             {/* WELCOME BANNER & PERFORMANCE HIGHLIGHT */}
                             <div className="flex flex-wrap justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 p-6 rounded-2xl border border-cyan-500/20 shadow-2xl">
