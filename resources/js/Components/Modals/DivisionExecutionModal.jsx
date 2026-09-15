@@ -42,7 +42,84 @@ export default function DivisionExecutionModal({
     const initialGlassType = uniqueGlassTypes[0]?.glass_type || orderedItems[0]?.glass_type || selectedExecutionOrder.glass_type || '';
 
     const [rawGlassType, setRawGlassType] = useState(initialGlassType);
-    const [rawSheetsUsed, setRawSheetsUsed] = useState(1);
+    const [rawSheetsUsedMap, setRawSheetsUsedMap] = useState({});
+
+    const findStockItemForType = React.useCallback((gt) => {
+        if (!gt || !Array.isArray(sheetGlasses) || sheetGlasses.length === 0) return null;
+        const lowerType = gt.toLowerCase().trim();
+        
+        let match = sheetGlasses.find(g =>
+            g?.name && (
+                g.name.toLowerCase().includes(lowerType) ||
+                lowerType.includes(g.name.toLowerCase())
+            )
+        );
+        if (match) return match;
+
+        const thickMatch = lowerType.match(/(\d+)\s*mm/);
+        const thickNum = thickMatch ? thickMatch[1] : null;
+
+        const keywords = ['cermin', 'bening', 'tempered', 'riben', 'etsa', 'laminated', 'tinted', 'bronze', 'grey', 'acryl'];
+        const matchedKw = keywords.find(kw => lowerType.includes(kw));
+
+        return sheetGlasses.find(g => {
+            const gLower = (g.name || '').toLowerCase();
+            const hasThick = thickNum ? (gLower.includes(`${thickNum} mm`) || gLower.includes(`${thickNum}mm`)) : true;
+            const hasKw = matchedKw ? gLower.includes(matchedKw) : true;
+            return hasThick && hasKw;
+        }) || null;
+    }, [sheetGlasses]);
+
+    const currentStockItem = React.useMemo(() => {
+        return findStockItemForType(rawGlassType);
+    }, [rawGlassType, findStockItemForType]);
+
+    const getRawSheetsForType = (gt = rawGlassType) => {
+        if (!gt) return 1;
+        const val = rawSheetsUsedMap[gt];
+        let num = val !== undefined && val !== null ? val : 1;
+        if (num === '') return '';
+        
+        const stockItem = gt === rawGlassType ? currentStockItem : findStockItemForType(gt);
+        if (stockItem && stockItem.qty !== undefined) {
+            const parsed = parseInt(num, 10);
+            if (!isNaN(parsed) && parsed > stockItem.qty) {
+                return stockItem.qty === 0 ? 0 : stockItem.qty;
+            }
+        }
+        return num;
+    };
+
+    const updateRawSheetsForType = (val, gt = rawGlassType) => {
+        if (!gt) return;
+        if (val === '') {
+            setRawSheetsUsedMap(prev => ({
+                ...prev,
+                [gt]: ''
+            }));
+            return;
+        }
+
+        let num = parseInt(val, 10);
+        if (isNaN(num)) num = 1;
+
+        const stockItem = gt === rawGlassType ? currentStockItem : findStockItemForType(gt);
+        const maxStock = stockItem ? stockItem.qty : null;
+
+        if (maxStock !== null && maxStock !== undefined) {
+            const minAllowed = maxStock === 0 ? 0 : 1;
+            num = Math.max(minAllowed, Math.min(num, maxStock));
+        } else {
+            num = Math.max(1, num);
+        }
+
+        setRawSheetsUsedMap(prev => ({
+            ...prev,
+            [gt]: num
+        }));
+    };
+
+    const rawSheetsUsed = getRawSheetsForType();
     const [rawNotes, setRawNotes] = useState('');
     const [isSubmittingRaw, setIsSubmittingRaw] = useState(false);
 
@@ -229,39 +306,16 @@ export default function DivisionExecutionModal({
                 ? selectedExecutionOrder.items[0].glass_type
                 : selectedExecutionOrder.glass_type;
             setRawGlassType(firstItem || '');
-            setRawSheetsUsed(1);
+            setRawSheetsUsedMap({});
         }
     }, [selectedExecutionOrder]);
 
-    const currentStockItem = React.useMemo(() => {
-        if (!rawGlassType || !Array.isArray(sheetGlasses) || sheetGlasses.length === 0) return null;
-        const lowerType = rawGlassType.toLowerCase().trim();
-        
-        let match = sheetGlasses.find(g =>
-            g?.name && (
-                g.name.toLowerCase().includes(lowerType) ||
-                lowerType.includes(g.name.toLowerCase())
-            )
-        );
-        if (match) return match;
-
-        const thickMatch = lowerType.match(/(\d+)\s*mm/);
-        const thickNum = thickMatch ? thickMatch[1] : null;
-
-        const keywords = ['cermin', 'bening', 'tempered', 'riben', 'etsa', 'laminated', 'tinted', 'bronze', 'grey', 'acryl'];
-        const matchedKw = keywords.find(kw => lowerType.includes(kw));
-
-        return sheetGlasses.find(g => {
-            const gLower = (g.name || '').toLowerCase();
-            const hasThick = thickNum ? (gLower.includes(`${thickNum} mm`) || gLower.includes(`${thickNum}mm`)) : true;
-            const hasKw = matchedKw ? gLower.includes(matchedKw) : true;
-            return hasThick && hasKw;
-        }) || null;
-    }, [rawGlassType, sheetGlasses]);
+    // currentStockItem is memoized at top level
 
     const handleRecordRawMaterial = (e) => {
         e.preventDefault();
-        const usedQty = parseInt(rawSheetsUsed) || 0;
+        const currentQtyVal = getRawSheetsForType();
+        const usedQty = parseInt(currentQtyVal) || 0;
         if (!rawGlassType || usedQty < 1) {
             alert('⚠️ Mohon pilih bahan kaca dan tentukan jumlah lembaran (minimal 1 lembar)!');
             return;
@@ -285,7 +339,7 @@ export default function DivisionExecutionModal({
             onSuccess: () => {
                 setIsSubmittingRaw(false);
                 onRecordRawMaterialSuccess(rawGlassType, usedQty);
-                setRawSheetsUsed(1);
+                updateRawSheetsForType(1, rawGlassType);
                 setRawNotes('');
             },
             onError: () => {
@@ -809,6 +863,7 @@ export default function DivisionExecutionModal({
                                                 {/* QUICK UNIQUE GLASS TYPE BADGES FROM SPO ORDER */}
                                                 {uniqueGlassTypes.map((gt, idx) => {
                                                     const isSelected = rawGlassType === gt.glass_type;
+                                                    const typedQty = rawSheetsUsedMap[gt.glass_type];
                                                     return (
                                                         <button
                                                             key={'u_gt_' + idx}
@@ -826,6 +881,13 @@ export default function DivisionExecutionModal({
                                                             }`}>
                                                                 Total: {gt.totalQty} Pcs ({gt.itemCount} Ukuran)
                                                             </span>
+                                                            {typedQty !== undefined && typedQty !== null && typedQty !== '' && (
+                                                                <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md shadow-sm ${
+                                                                    isSelected ? 'bg-slate-950 text-amber-300' : 'bg-cyan-500 text-slate-950'
+                                                                }`}>
+                                                                    {typedQty} Lembar
+                                                                </span>
+                                                            )}
                                                         </button>
                                                     );
                                                 })}
@@ -860,10 +922,10 @@ export default function DivisionExecutionModal({
                                         <div className="pt-2 border-t border-slate-800/80 space-y-2">
                                             <div className="flex flex-wrap items-center justify-between gap-2">
                                                 <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
-                                                    <span>📊 Input Jumlah Lembar Kaca Bahan Yang Dipakai:</span>
+                                                    <span>📊 Input Jumlah Lembar Kaca Bahan Yang Dipakai ({rawGlassType}):</span>
                                                 </label>
                                                 <span className="text-[10px] text-amber-300 font-mono font-bold">
-                                                    💡 Masukkan angka pemakaian (sekian lembar)
+                                                    💡 Masukkan angka pemakaian khusus bahan ini (sekian lembar)
                                                 </span>
                                             </div>
 
@@ -872,8 +934,12 @@ export default function DivisionExecutionModal({
                                                 <div className="flex items-center gap-2 bg-slate-950 border border-amber-500/40 p-1.5 rounded-xl shadow-inner">
                                                     <button
                                                         type="button"
-                                                        onClick={() => setRawSheetsUsed(Math.max(1, (parseInt(rawSheetsUsed) || 1) - 1))}
-                                                        className="w-8 h-8 bg-slate-900 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-sm transition"
+                                                        onClick={() => {
+                                                            const cur = parseInt(getRawSheetsForType()) || 1;
+                                                            updateRawSheetsForType(cur - 1);
+                                                        }}
+                                                        disabled={(parseInt(getRawSheetsForType()) || 0) <= (currentStockItem?.qty === 0 ? 0 : 1)}
+                                                        className="w-8 h-8 bg-slate-900 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                         title="Kurangi 1 Lembar"
                                                     >
                                                         -
@@ -881,9 +947,16 @@ export default function DivisionExecutionModal({
                                                     <div className="flex items-center gap-1 px-2">
                                                         <input
                                                             type="number"
-                                                            min="1"
-                                                            value={rawSheetsUsed}
-                                                            onChange={(e) => setRawSheetsUsed(e.target.value)}
+                                                            min={currentStockItem?.qty === 0 ? 0 : 1}
+                                                            max={currentStockItem ? currentStockItem.qty : undefined}
+                                                            value={getRawSheetsForType()}
+                                                            onChange={(e) => updateRawSheetsForType(e.target.value)}
+                                                            onBlur={() => {
+                                                                const curVal = getRawSheetsForType();
+                                                                if (curVal === '') {
+                                                                    updateRawSheetsForType(1);
+                                                                }
+                                                            }}
                                                             className="w-16 bg-transparent text-center text-sm font-mono font-black text-amber-300 focus:outline-none"
                                                             placeholder="1"
                                                         />
@@ -891,9 +964,13 @@ export default function DivisionExecutionModal({
                                                     </div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setRawSheetsUsed((parseInt(rawSheetsUsed) || 0) + 1)}
-                                                        className="w-8 h-8 bg-slate-900 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-sm transition"
-                                                        title="Tambah 1 Lembar"
+                                                        onClick={() => {
+                                                            const cur = parseInt(getRawSheetsForType()) || 0;
+                                                            updateRawSheetsForType(cur + 1);
+                                                        }}
+                                                        disabled={currentStockItem ? (parseInt(getRawSheetsForType()) || 0) >= currentStockItem.qty : false}
+                                                        className="w-8 h-8 bg-slate-900 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        title={currentStockItem && (parseInt(getRawSheetsForType()) || 0) >= currentStockItem.qty ? `Stok Maksimal Terpenuhi (${currentStockItem.qty} Lembar)` : "Tambah 1 Lembar"}
                                                     >
                                                         +
                                                     </button>
@@ -902,20 +979,20 @@ export default function DivisionExecutionModal({
                                                 {/* SUBMIT BUTTON */}
                                                 <button
                                                     type="submit"
-                                                    disabled={isSubmittingRaw || (currentStockItem && (parseInt(rawSheetsUsed) || 0) > currentStockItem.qty)}
+                                                    disabled={isSubmittingRaw || (currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty)}
                                                     className={`ml-auto font-black px-5 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1.5 h-[42px] ${
-                                                        currentStockItem && (parseInt(rawSheetsUsed) || 0) > currentStockItem.qty
+                                                        currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty
                                                             ? 'bg-rose-950 text-rose-300 border border-rose-500/60 cursor-not-allowed opacity-90'
                                                             : 'bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 shadow-amber-500/20 cursor-pointer disabled:opacity-50'
                                                     }`}
                                                 >
-                                                    <span>{currentStockItem && (parseInt(rawSheetsUsed) || 0) > currentStockItem.qty ? '⛔' : '📉'}</span>
+                                                    <span>{currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty ? '⛔' : '📉'}</span>
                                                     <span>
                                                         {isSubmittingRaw
                                                             ? 'Menyimpan...'
-                                                            : (currentStockItem && (parseInt(rawSheetsUsed) || 0) > currentStockItem.qty)
+                                                            : (currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty)
                                                                 ? `Stok Tidak Cukup (Sisa ${currentStockItem.qty} Lembar)`
-                                                                : `+ Catat (${parseInt(rawSheetsUsed) || 1} Lembar)`
+                                                                : `+ Catat (${parseInt(getRawSheetsForType()) || 1} Lembar ${rawGlassType})`
                                                         }
                                                     </span>
                                                 </button>
