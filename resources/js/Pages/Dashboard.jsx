@@ -101,8 +101,8 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         userRole === 'driver' ? 'deliveries' :
         userRole.startsWith('divisi_') ? 'production' :
         (userRole === 'admin_gudang' || userRole === 'admin_toko') ? 'orders' :
-        (userRole === 'hrd' ? 'employees' :
-        (userRole === 'admin_finance' || userRole === 'finance') ? 'finance' : 'dashboard')
+        userRole === 'hrd' ? 'employees' :
+        (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') ? 'dashboard' : 'orders'
     );
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -425,8 +425,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [supplierName, setSupplierName] = useState('PT Asahimas Flat Glass (Supplier Utama)');
     const [supplierPhone, setSupplierPhone] = useState('6281234567890');
 
-    // Modal Tambah Jenis Barang Stok Baru State
+    // Modal Tambah & Edit Jenis Barang Stok Baru State
     const [showAddStockModal, setShowAddStockModal] = useState(false);
+    const [showEditStockModal, setShowEditStockModal] = useState(false);
     const [newStockForm, setNewStockForm] = useState({
         item_code: '',
         name: '',
@@ -435,11 +436,34 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         thickness_mm: 5,
         buy_price: '',
         sell_price: '',
+        rate_gm: 10000,
+        rate_ht: 1000,
+        rate_bv: 15000,
+        rate_etsa: 50000,
         qty: 0,
         unit: 'Lembar',
         supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
         supplier_phone: '6281234567890',
         supplier_pic: 'Pak Gunawan'
+    });
+    const [editStockForm, setEditStockForm] = useState({
+        id: null,
+        item_code: '',
+        name: '',
+        category: 'Kaca Cermin',
+        size: '122 x 244 cm',
+        thickness_mm: 5,
+        buy_price: '',
+        sell_price: '',
+        rate_gm: 10000,
+        rate_ht: 1000,
+        rate_bv: 15000,
+        rate_etsa: 50000,
+        qty: 0,
+        unit: 'Lembar',
+        supplier_name: '',
+        supplier_phone: '',
+        supplier_pic: ''
     });
 
     // Supplier Management State
@@ -1411,6 +1435,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const buyPrice = parseFloat(newStockForm.buy_price) || 0;
         const sellPrice = parseFloat(newStockForm.sell_price) || 0;
         const thickness = parseInt(newStockForm.thickness_mm) || 5;
+
+        const rateGM = parseFloat(newStockForm.rate_gm) || 10000;
+        const rateHT = parseFloat(newStockForm.rate_ht) || 1000;
+        const rateBV = parseFloat(newStockForm.rate_bv) || 15000;
+        const rateEtsa = parseFloat(newStockForm.rate_etsa) || 50000;
+
         const status = qty > 10 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
 
         const newItem = {
@@ -1422,6 +1452,10 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             thickness_mm: thickness,
             buy_price: buyPrice,
             sell_price: sellPrice,
+            rate_gm: rateGM,
+            rate_ht: rateHT,
+            rate_bv: rateBV,
+            rate_etsa: rateEtsa,
             qty: qty,
             unit: 'Lembar',
             last_restock: new Date().toISOString().split('T')[0],
@@ -1441,12 +1475,83 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             thickness_mm: 5,
             buy_price: '',
             sell_price: '',
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 0,
             unit: 'Lembar',
             supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
             supplier_phone: '6281234567890',
             supplier_pic: 'Pak Gunawan'
         });
+    };
+
+    const handleOpenEditStockModal = (item) => {
+        setEditStockForm({
+            id: item.id,
+            item_code: item.item_code || '',
+            name: item.name || '',
+            category: item.category || 'Kaca Cermin',
+            size: item.size || '122 x 244 cm',
+            thickness_mm: item.thickness_mm || 5,
+            buy_price: item.buy_price ?? '',
+            sell_price: item.sell_price ?? '',
+            rate_gm: item.rate_gm ?? 10000,
+            rate_ht: item.rate_ht ?? 1000,
+            rate_bv: item.rate_bv ?? 15000,
+            rate_etsa: item.rate_etsa ?? 50000,
+            qty: item.qty ?? 0,
+            unit: item.unit || 'Lembar',
+            supplier_name: item.supplier_name || '',
+            supplier_phone: item.supplier_phone || '',
+            supplier_pic: item.supplier_pic || ''
+        });
+        setShowEditStockModal(true);
+    };
+
+    const handleEditStockSubmit = (e) => {
+        e.preventDefault();
+        if (!editStockForm.name) return;
+
+        const qty = parseInt(editStockForm.qty) || 0;
+        const buyPrice = parseFloat(editStockForm.buy_price) || 0;
+        const sellPrice = parseFloat(editStockForm.sell_price) || 0;
+        const thickness = parseInt(editStockForm.thickness_mm) || 5;
+
+        const rateGM = parseFloat(editStockForm.rate_gm) || 10000;
+        const rateHT = parseFloat(editStockForm.rate_ht) || 1000;
+        const rateBV = parseFloat(editStockForm.rate_bv) || 15000;
+        const rateEtsa = parseFloat(editStockForm.rate_etsa) || 50000;
+
+        const status = qty > 10 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
+
+        setSheetGlasses(prev => prev.map(item => {
+            if (item.id === editStockForm.id) {
+                return {
+                    ...item,
+                    item_code: editStockForm.item_code,
+                    name: editStockForm.name,
+                    category: editStockForm.category,
+                    size: editStockForm.size,
+                    thickness_mm: thickness,
+                    buy_price: buyPrice,
+                    sell_price: sellPrice,
+                    rate_gm: rateGM,
+                    rate_ht: rateHT,
+                    rate_bv: rateBV,
+                    rate_etsa: rateEtsa,
+                    qty: qty,
+                    status: status,
+                    supplier_name: editStockForm.supplier_name,
+                    supplier_phone: editStockForm.supplier_phone,
+                    supplier_pic: editStockForm.supplier_pic
+                };
+            }
+            return item;
+        }));
+
+        setShowEditStockModal(false);
     };
 
     // Print Panel & Dispatch State for Pengiriman
@@ -1935,6 +2040,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             items: [
                 {
                     id: Date.now(),
+                    group_id: 'grp_' + Date.now(),
                     glass_type: '',
                     length_cm: '',
                     width_cm: '',
@@ -2220,6 +2326,92 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         setOrderForm('items', [...currentItems, newItem]);
     };
 
+    const handleDuplicateItem = (index) => {
+        const currentItems = orderForm.items || [];
+        if (!currentItems[index]) return;
+        const sourceItem = currentItems[index];
+        const newItem = {
+            ...JSON.parse(JSON.stringify(sourceItem)),
+            id: Date.now() + Math.random()
+        };
+        const newItems = [...currentItems];
+        newItems.splice(index + 1, 0, newItem);
+        setOrderForm('items', newItems);
+    };
+
+    const handleAddItemWithGlassType = (groupId, glassType = '', insertAfterIndex = null) => {
+        const currentItems = orderForm.items || [];
+        
+        let insertIndex = currentItems.length;
+        if (insertAfterIndex !== null && insertAfterIndex !== undefined && insertAfterIndex >= 0) {
+            insertIndex = insertAfterIndex + 1;
+        } else if (groupId) {
+            const lastInGroupIdx = currentItems
+                .map((item, idx) => ({ item, idx }))
+                .filter(({ item }) => item.group_id === groupId || (glassType && item.glass_type === glassType))
+                .pop()?.idx;
+            if (lastInGroupIdx !== undefined) {
+                insertIndex = lastInGroupIdx + 1;
+            }
+        }
+
+        const lastMatching = [...currentItems].reverse().find(i => (i.group_id === groupId || (glassType && i.glass_type === glassType)));
+        const targetType = glassType || (lastMatching?.glass_type || '');
+        const newItem = {
+            id: Date.now() + Math.random(),
+            group_id: groupId || ('grp_' + Date.now() + '_' + Math.random()),
+            glass_type: targetType,
+            length_cm: '',
+            width_cm: '',
+            thickness_mm: targetType ? extractThickness(targetType) : 5,
+            qty: 1,
+            processes: lastMatching?.processes ? [...lastMatching.processes] : ['HT'],
+            bevel_width_cm: 1,
+            hole_length_cm: 2,
+            hole_width_cm: 2,
+            hole_qty: 1
+        };
+
+        const newItems = [...currentItems];
+        newItems.splice(insertIndex, 0, newItem);
+        setOrderForm('items', newItems);
+    };
+
+    const handleAddNewGlassGroup = () => {
+        const currentItems = orderForm.items || [];
+        const newGroupId = 'grp_' + Date.now() + '_' + Math.random();
+        const newItem = {
+            id: Date.now() + Math.random(),
+            group_id: newGroupId,
+            glass_type: '',
+            length_cm: '',
+            width_cm: '',
+            thickness_mm: 5,
+            qty: 1,
+            processes: ['HT'],
+            bevel_width_cm: 1,
+            hole_length_cm: 2,
+            hole_width_cm: 2,
+            hole_qty: 1
+        };
+        setOrderForm('items', [...currentItems, newItem]);
+    };
+
+    const handleGroupGlassTypeChange = (groupId, newGlassType) => {
+        const currentItems = (orderForm.items || []).map((item, i) => {
+            const itemGrp = item.group_id || ('grp_' + (item.glass_type ? item.glass_type.replace(/\s+/g, '_') : i));
+            if (itemGrp === groupId) {
+                return {
+                    ...item,
+                    glass_type: newGlassType,
+                    thickness_mm: extractThickness(newGlassType)
+                };
+            }
+            return item;
+        });
+        setOrderForm('items', currentItems);
+    };
+
     const handleRemoveItem = (index) => {
         const currentItems = orderForm.items || [];
         if (currentItems.length <= 1) return;
@@ -2233,6 +2425,72 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             updatedItem.thickness_mm = extractThickness(value);
         }
         currentItems[index] = updatedItem;
+        setOrderForm('items', currentItems);
+    };
+
+    const handleAddHoleSpec = (itemIndex) => {
+        const currentItems = [...(orderForm.items || [])];
+        const item = currentItems[itemIndex];
+        if (!item) return;
+
+        const currentHoles = Array.isArray(item.holes) && item.holes.length > 0
+            ? item.holes.map(h => ({ ...h }))
+            : [{ hole_length_cm: item.hole_length_cm || 2, hole_width_cm: item.hole_width_cm || 2, hole_qty: item.hole_qty || 1 }];
+
+        currentHoles.push({ hole_length_cm: 2, hole_width_cm: 2, hole_qty: 1 });
+
+        currentItems[itemIndex] = {
+            ...item,
+            holes: currentHoles,
+            hole_length_cm: currentHoles[0].hole_length_cm,
+            hole_width_cm: currentHoles[0].hole_width_cm,
+            hole_qty: currentHoles[0].hole_qty
+        };
+        setOrderForm('items', currentItems);
+    };
+
+    const handleHoleSpecChange = (itemIndex, holeIndex, field, value) => {
+        const currentItems = [...(orderForm.items || [])];
+        const item = currentItems[itemIndex];
+        if (!item) return;
+
+        const currentHoles = Array.isArray(item.holes) && item.holes.length > 0
+            ? item.holes.map(h => ({ ...h }))
+            : [{ hole_length_cm: item.hole_length_cm || 2, hole_width_cm: item.hole_width_cm || 2, hole_qty: item.hole_qty || 1 }];
+
+        if (currentHoles[holeIndex]) {
+            currentHoles[holeIndex][field] = value;
+        }
+
+        currentItems[itemIndex] = {
+            ...item,
+            holes: currentHoles,
+            hole_length_cm: currentHoles[0].hole_length_cm,
+            hole_width_cm: currentHoles[0].hole_width_cm,
+            hole_qty: currentHoles[0].hole_qty
+        };
+        setOrderForm('items', currentItems);
+    };
+
+    const handleRemoveHoleSpec = (itemIndex, holeIndex) => {
+        const currentItems = [...(orderForm.items || [])];
+        const item = currentItems[itemIndex];
+        if (!item) return;
+
+        let currentHoles = Array.isArray(item.holes) && item.holes.length > 0
+            ? item.holes.map(h => ({ ...h }))
+            : [{ hole_length_cm: item.hole_length_cm || 2, hole_width_cm: item.hole_width_cm || 2, hole_qty: item.hole_qty || 1 }];
+
+        if (currentHoles.length <= 1) return;
+        currentHoles = currentHoles.filter((_, i) => i !== holeIndex);
+
+        currentItems[itemIndex] = {
+            ...item,
+            holes: currentHoles,
+            hole_length_cm: currentHoles[0].hole_length_cm,
+            hole_width_cm: currentHoles[0].hole_width_cm,
+            hole_qty: currentHoles[0].hole_qty
+        };
         setOrderForm('items', currentItems);
     };
 
@@ -2323,11 +2581,22 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const bevelWidthCm = parseDim(it.bevel_width_cm) || 1;
         const feeBV = procs.includes('BV') ? Math.round((perimeterM * 15000) + (bevelWidthCm * 10000)) * q : 0;
 
-        const holeL = parseDim(it.hole_length_cm) || 2;
-        const holeW = parseDim(it.hole_width_cm) || 2;
-        const holeQty = parseInt(it.hole_qty) || 1;
-        const holeRuasCm = 2 * (holeL + holeW);
-        const feeBor = procs.includes('Bor') ? Math.round(holeRuasCm * 2500) * holeQty * q : 0;
+        let feeBor = 0;
+        let holeRuasCm = 0;
+        if (procs.includes('Bor')) {
+            const holes = Array.isArray(it.holes) && it.holes.length > 0 
+                ? it.holes 
+                : [{ hole_length_cm: it.hole_length_cm || 2, hole_width_cm: it.hole_width_cm || 2, hole_qty: it.hole_qty || 1 }];
+            
+            holes.forEach(h => {
+                const hL = parseDim(h.hole_length_cm) || 2;
+                const hW = parseDim(h.hole_width_cm) || 2;
+                const hQ = parseInt(h.hole_qty) || 1;
+                const ruas = 2 * (hL + hW);
+                holeRuasCm += ruas * hQ;
+                feeBor += Math.round(ruas * 2500) * hQ * q;
+            });
+        }
 
         let feeEtsa = 0;
         let etsaAreaM2 = 0;
@@ -2793,12 +3062,14 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MOBILE TOP TAB BAR HORIZONTAL SCROLLER */}
             <div className="md:hidden bg-[#0c111d] border-b border-slate-800/80 px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 scrollbar-none">
-                <button 
-                    onClick={() => setActiveTab('dashboard')} 
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'dashboard' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
-                >
-                    📊 Dashboard
-                </button>
+                {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                    <button 
+                        onClick={() => setActiveTab('dashboard')} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'dashboard' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                    >
+                        📊 Dashboard
+                    </button>
+                )}
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                     <button 
                         onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} 
@@ -2899,9 +3170,11 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         </div>
 
                         <nav className="space-y-1 flex-1">
-                            <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                                📊 <span>Dashboard Utama</span>
-                            </button>
+                            {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                                <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                    📊 <span>Dashboard Utama</span>
+                                </button>
+                            )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
@@ -2995,9 +3268,11 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     </div>
 
                     <nav className="space-y-1">
-                        <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
-                            📊 <span>Dashboard Utama</span>
-                        </button>
+                        {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                📊 <span>Dashboard Utama</span>
+                            </button>
+                        )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
@@ -3115,7 +3390,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto">
 
                     {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
-                    {activeTab === 'dashboard' && (
+                    {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                         <div className="space-y-6">
                             {/* WELCOME BANNER & PERFORMANCE HIGHLIGHT */}
                             <div className="flex flex-wrap justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 p-6 rounded-2xl border border-cyan-500/20 shadow-2xl">
@@ -4888,10 +5163,16 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                 <td className="p-3 text-xs">
                                                                     {canViewPricing ? (
                                                                         <div className="space-y-0.5 font-mono">
-                                                                            <div><span className="text-emerald-400 font-extrabold text-sm">Rp {Number(item.sell_price || 0).toLocaleString()}</span></div>
+                                                                            <div><span className="text-emerald-400 font-extrabold text-sm">Rp {Number(item.sell_price || 0).toLocaleString()}</span> <span className="text-[10px] text-slate-400 font-sans">/lembar</span></div>
                                                                             {showTablePricingInfo && (
                                                                                 <div className="text-slate-400 text-[11px] pt-0.5 border-t border-slate-800">Beli: <span className="text-amber-400 font-bold">Rp {Number(item.buy_price || 0).toLocaleString()}</span></div>
                                                                             )}
+                                                                            <div className="text-[10px] text-cyan-300/90 pt-1 flex flex-wrap gap-1 border-t border-slate-800/60 font-sans">
+                                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">HT: Rp {Number(item.rate_ht || 1000).toLocaleString()}</span>
+                                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">GM: Rp {Number(item.rate_gm || 10000).toLocaleString()}</span>
+                                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">BV: Rp {Number(item.rate_bv || 15000).toLocaleString()}</span>
+                                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">Etsa: Rp {Number(item.rate_etsa || 50000).toLocaleString()}</span>
+                                                                            </div>
                                                                         </div>
                                                                     ) : (
                                                                         <span className="text-slate-500 text-xs italic">🔒 Rahasia</span>
@@ -4925,21 +5206,14 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                                                 </button>
 
                                                                                 <button
-                                                                                    onClick={() => {
-                                                                                        handleOpenFinanceModal('pembelian_bahan', {
-                                                                                            type: 'pembelian_bahan',
-                                                                                            category: 'Bahan Kaca Lembaran',
-                                                                                            title: `PO Restock Kaca: ${item.name} (${item.item_code})`,
-                                                                                            amount: (Number(item.buy_price || 0) * (item.qty <= 5 ? 20 : 10)) || 5000000,
-                                                                                            supplier_name: item.supplier_name || 'PT Asahimas Flat Glass Tbk',
-                                                                                            notes: `Pengadaan bahan kaca lembaran baru ${item.name} ukuran ${item.size}`
-                                                                                        });
-                                                                                    }}
-                                                                                    className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1"
-                                                                                    title="Catat PO Pembelian Kaca ke Finance & Akuntansi"
+                                                                                    onClick={() => handleOpenEditStockModal(item)}
+                                                                                    className="bg-[#2563EB] hover:bg-blue-600 text-white font-extrabold px-3 py-1.5 rounded-lg text-xs transition shadow-md shadow-blue-500/20 flex items-center gap-1"
+                                                                                    title="Edit Informasi & Harga Kaca Ini"
                                                                                 >
-                                                                                    💰 PO Finance
+                                                                                    ✏️ Edit
                                                                                 </button>
+
+
                                                                             </>
                                                                         )}
 
@@ -6956,22 +7230,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             )}
                                                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                                 <>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            handleOpenFinanceModal('pembelian_aksesoris', {
-                                                                                type: 'pembelian_aksesoris',
-                                                                                category: 'Aksesoris Kaca',
-                                                                                title: `Pembelian Stok ${acc.name} (${acc.acc_code || acc.code})`,
-                                                                                amount: (Number(acc.buy_price || 0) * (acc.qty <= 5 ? 20 : 10)) || 2500000,
-                                                                                supplier_name: acc.supplier_name || 'Distributor Hardware Dekkson Mandiri',
-                                                                                notes: `Restock fitting aksesoris pintu/partisi kaca ${acc.name}`
-                                                                            });
-                                                                        }}
-                                                                        className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold px-2 py-1.5 rounded-lg text-xs transition flex items-center gap-1"
-                                                                        title="Catat PO Pengadaan Aksesoris ke Finance"
-                                                                    >
-                                                                        💰 PO Finance
-                                                                    </button>
+
                                                                     <button
                                                                         onClick={() => handleOpenEditAccModal(acc)}
                                                                         className="bg-[#2563EB] hover:bg-blue-600 text-white font-extrabold px-2.5 py-1.5 rounded-lg text-xs transition shadow-md shadow-blue-500/20"
@@ -8107,6 +8366,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 handleItemChange={handleItemChange}
                 handleAddItem={handleAddItem}
                 handleRemoveItem={handleRemoveItem}
+                handleDuplicateItem={handleDuplicateItem}
+                handleAddItemWithGlassType={handleAddItemWithGlassType}
+                handleAddNewGlassGroup={handleAddNewGlassGroup}
+                handleGroupGlassTypeChange={handleGroupGlassTypeChange}
+                handleAddHoleSpec={handleAddHoleSpec}
+                handleHoleSpecChange={handleHoleSpecChange}
+                handleRemoveHoleSpec={handleRemoveHoleSpec}
                 toggleItemProcess={toggleItemProcess}
                 handleCreateOrder={handleCreateOrder}
                 handleFileChange={handleFileChange}
@@ -8150,6 +8416,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 handleItemChange={handleItemChange}
                 handleAddItem={handleAddItem}
                 handleRemoveItem={handleRemoveItem}
+                handleDuplicateItem={handleDuplicateItem}
+                handleAddItemWithGlassType={handleAddItemWithGlassType}
+                handleAddNewGlassGroup={handleAddNewGlassGroup}
+                handleGroupGlassTypeChange={handleGroupGlassTypeChange}
+                handleAddHoleSpec={handleAddHoleSpec}
+                handleHoleSpecChange={handleHoleSpecChange}
+                handleRemoveHoleSpec={handleRemoveHoleSpec}
                 toggleItemProcess={toggleItemProcess}
                 handleUpdateOrderSubmit={handleUpdateOrderSubmit}
                 handleFileChange={handleFileChange}
@@ -8344,7 +8617,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </div>
 
                             {/* HARGA BELI, HARGA JUAL & KETEBALAN */}
-                            <div className="grid grid-cols-3 gap-3 border-t border-b border-slate-800 py-3 my-1">
+                            <div className="grid grid-cols-3 gap-3 border-t border-slate-800 pt-3 my-1">
                                 <div>
                                     <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
                                     <input
@@ -8377,6 +8650,62 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         onChange={e => setNewStockForm({ ...newStockForm, thickness_mm: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
                                     />
+                                </div>
+                            </div>
+
+                            {/* TARIF PROSES KHUSUS JENIS KACA INI */}
+                            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2 border-b my-1">
+                                <div className="flex items-center justify-between flex-wrap gap-1">
+                                    <label className="text-cyan-300 font-bold block text-xs flex items-center gap-1.5">
+                                        ⚙️ Tarif Proses Khusus Kaca Ini (Permeter / m²):
+                                    </label>
+                                    <span className="text-[10px] text-slate-400 font-mono">*Bisa disesuaikan per jenis kaca</span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="1.000"
+                                            value={formatNumberDots(newStockForm.rate_ht)}
+                                            onChange={e => setNewStockForm({ ...newStockForm, rate_ht: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="10.000"
+                                            value={formatNumberDots(newStockForm.rate_gm)}
+                                            onChange={e => setNewStockForm({ ...newStockForm, rate_gm: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="15.000"
+                                            value={formatNumberDots(newStockForm.rate_bv)}
+                                            onChange={e => setNewStockForm({ ...newStockForm, rate_bv: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="50.000"
+                                            value={formatNumberDots(newStockForm.rate_etsa)}
+                                            onChange={e => setNewStockForm({ ...newStockForm, rate_etsa: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -8460,6 +8789,226 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     className="bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black px-5 py-2 rounded-xl transition shadow-lg shadow-emerald-500/20"
                                 >
                                     ✓ Simpan Jenis Barang Baru
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL EDIT JENIS BARANG KACA STOK */}
+            {showEditStockModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-full bg-blue-400"></span>
+                                <h3 className="font-extrabold text-slate-100 text-base">
+                                    ✏️ Edit Data & Harga Kaca ({editStockForm.item_code || 'KACA'})
+                                </h3>
+                            </div>
+                            <button onClick={() => setShowEditStockModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                        </div>
+
+                        <form onSubmit={handleEditStockSubmit} className="space-y-4 text-xs">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Kode Barang:</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. KCB-003"
+                                        value={editStockForm.item_code}
+                                        onChange={e => setEditStockForm({ ...editStockForm, item_code: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Kategori Kaca:</label>
+                                    <select
+                                        value={editStockForm.category}
+                                        onChange={e => setEditStockForm({ ...editStockForm, category: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                    >
+                                        <option value="Kaca Cermin">Kaca Cermin</option>
+                                        <option value="Kaca Bening">Kaca Bening</option>
+                                        <option value="Kaca Tempered">Kaca Tempered</option>
+                                        <option value="Kaca Tinted / Grey">Kaca Tinted / Grey</option>
+                                        <option value="Kaca Sandblast">Kaca Sandblast</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-slate-400 block mb-1 font-semibold">Nama Barang Kaca:</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Kaca Cermin Riben 5mm"
+                                    value={editStockForm.name}
+                                    onChange={e => setEditStockForm({ ...editStockForm, name: e.target.value })}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Ukuran Standard (cm):</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. 152 x 213 cm"
+                                        value={editStockForm.size}
+                                        onChange={e => setEditStockForm({ ...editStockForm, size: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono focus:border-cyan-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1 font-semibold">Jumlah Stok (Qty Lembar):</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        required
+                                        value={editStockForm.qty}
+                                        onChange={e => setEditStockForm({ ...editStockForm, qty: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono font-bold focus:border-cyan-400"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* HARGA BELI, HARGA JUAL & KETEBALAN */}
+                            <div className="grid grid-cols-3 gap-3 border-t border-slate-800 pt-3 my-1">
+                                <div>
+                                    <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="e.g. 250.000"
+                                        value={formatNumberDots(editStockForm.buy_price)}
+                                        onChange={e => setEditStockForm({ ...editStockForm, buy_price: parseNumberDots(e.target.value) })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:border-amber-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="e.g. 450.000"
+                                        value={formatNumberDots(editStockForm.sell_price)}
+                                        onChange={e => setEditStockForm({ ...editStockForm, sell_price: parseNumberDots(e.target.value) })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-emerald-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-cyan-400 block mb-1 font-semibold">Ketebalan (mm):</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="e.g. 5"
+                                        value={editStockForm.thickness_mm}
+                                        onChange={e => setEditStockForm({ ...editStockForm, thickness_mm: e.target.value })}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* TARIF PROSES KHUSUS JENIS KACA INI */}
+                            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2 border-b my-1">
+                                <div className="flex items-center justify-between flex-wrap gap-1">
+                                    <label className="text-cyan-300 font-bold block text-xs flex items-center gap-1.5">
+                                        ⚙️ Tarif Proses Khusus Kaca Ini (Permeter / m²):
+                                    </label>
+                                    <span className="text-[10px] text-slate-400 font-mono">*Bisa disesuaikan per jenis kaca</span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="1.000"
+                                            value={formatNumberDots(editStockForm.rate_ht)}
+                                            onChange={e => setEditStockForm({ ...editStockForm, rate_ht: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="10.000"
+                                            value={formatNumberDots(editStockForm.rate_gm)}
+                                            onChange={e => setEditStockForm({ ...editStockForm, rate_gm: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="15.000"
+                                            value={formatNumberDots(editStockForm.rate_bv)}
+                                            onChange={e => setEditStockForm({ ...editStockForm, rate_bv: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="50.000"
+                                            value={formatNumberDots(editStockForm.rate_etsa)}
+                                            onChange={e => setEditStockForm({ ...editStockForm, rate_etsa: parseNumberDots(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="border-t border-slate-800 pt-3 space-y-3">
+                                <h4 className="font-bold text-slate-300 flex items-center justify-between">
+                                    <span>🏢 Informasi Supplier Utama</span>
+                                </h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 font-semibold">Nama Supplier:</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. PT Asahimas Flat Glass Tbk"
+                                            value={editStockForm.supplier_name}
+                                            onChange={e => setEditStockForm({ ...editStockForm, supplier_name: e.target.value })}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 block mb-1 font-semibold">No WA Supplier:</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. 6281234567890"
+                                            value={editStockForm.supplier_phone}
+                                            onChange={e => setEditStockForm({ ...editStockForm, supplier_phone: e.target.value })}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditStockModal(false)}
+                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-black px-5 py-2 rounded-xl transition shadow-lg shadow-blue-500/20"
+                                >
+                                    ✓ Simpan Perubahan
                                 </button>
                             </div>
                         </form>

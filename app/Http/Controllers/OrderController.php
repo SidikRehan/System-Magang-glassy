@@ -423,22 +423,55 @@ class OrderController extends Controller
         // 2. Harga Dasar Kaca (per m2)
         $baseGlassPrice = max(250000, round($areaM2 * 500000)) * $q;
 
-        // 3. Biaya GM (Gosok Mesin): Rp 10.000 / meter keliling
-        $feeGM = in_array('GM', $procs) ? round($perimeterM * 10000) * $q : 0;
+        // 3. Biaya GM, HT, BV, Etsa dengan tarif kustom per jenis kaca (dengan fallback default)
+        $rateGM = (float)($it['rate_gm'] ?? 10000);
+        $rateHT = (float)($it['rate_ht'] ?? 1000);
+        $rateBV = (float)($it['rate_bv'] ?? 15000);
+        $rateEtsa = (float)($it['rate_etsa'] ?? 50000);
 
-        // 4. Biaya HT (Gosok HT): Rp 1.000 / meter keliling
-        $feeHT = in_array('HT', $procs) ? round($perimeterM * 1000) * $q : 0;
+        // 3. Biaya GM (Gosok Mesin)
+        $feeGM = in_array('GM', $procs) ? round($perimeterM * $rateGM) * $q : 0;
 
-        // 5. Biaya BV (Beveling): Rp 15.000/m keliling + Lebar Bevel cm * Rp 10.000
+        // 4. Biaya HT (Gosok HT / Halus Tepi)
+        $feeHT = in_array('HT', $procs) ? round($perimeterM * $rateHT) * $q : 0;
+
+        // 5. Biaya BV (Beveling)
         $bevelWidthCm = (float)str_replace(',', '.', (string)($it['bevel_width_cm'] ?? 1));
-        $feeBV = in_array('BV', $procs) ? round(($perimeterM * 15000) + ($bevelWidthCm * 10000)) * $q : 0;
+        $feeBV = in_array('BV', $procs) ? round(($perimeterM * $rateBV) + ($bevelWidthCm * 10000)) * $q : 0;
 
-        // 6. Biaya Bor (Coakan): Keliling ruas lubang cm * Rp 2.500 * jumlah lubang
-        $holeLCm = (float)str_replace(',', '.', (string)($it['hole_length_cm'] ?? 2));
-        $holeWCm = (float)str_replace(',', '.', (string)($it['hole_width_cm'] ?? 2));
-        $holeQty = max(1, (int)($it['hole_qty'] ?? 1));
-        $holeRuasCm = 2 * ($holeLCm + $holeWCm);
-        $feeBor = in_array('Bor', $procs) ? round($holeRuasCm * 2500) * $holeQty * $q : 0;
+        // 6. Biaya Bor (Coakan): Keliling ruas lubang cm * Rp 2.500 * jumlah lubang (Mendukung multi-lubang)
+        $feeBor = 0;
+        $holesSpecs = [];
+        if (in_array('Bor', $procs)) {
+            if (isset($it['holes']) && is_array($it['holes']) && count($it['holes']) > 0) {
+                foreach ($it['holes'] as $h) {
+                    $hl = (float)str_replace(',', '.', (string)($h['hole_length_cm'] ?? $h['length_cm'] ?? 2));
+                    $hw = (float)str_replace(',', '.', (string)($h['hole_width_cm'] ?? $h['width_cm'] ?? 2));
+                    $hq = max(1, (int)($h['hole_qty'] ?? $h['qty'] ?? 1));
+                    $ruas = 2 * ($hl + $hw);
+                    $feeBor += round($ruas * 2500) * $hq * $q;
+                    $holesSpecs[] = [
+                        'hole_length_cm' => $hl,
+                        'hole_width_cm' => $hw,
+                        'hole_qty' => $hq,
+                    ];
+                }
+            } else {
+                $holeLCm = (float)str_replace(',', '.', (string)($it['hole_length_cm'] ?? 2));
+                $holeWCm = (float)str_replace(',', '.', (string)($it['hole_width_cm'] ?? 2));
+                $holeQty = max(1, (int)($it['hole_qty'] ?? 1));
+                $holeRuasCm = 2 * ($holeLCm + $holeWCm);
+                $feeBor = round($holeRuasCm * 2500) * $holeQty * $q;
+                $holesSpecs[] = [
+                    'hole_length_cm' => $holeLCm,
+                    'hole_width_cm' => $holeWCm,
+                    'hole_qty' => $holeQty,
+                ];
+            }
+        }
+        $primaryHoleL = $holesSpecs[0]['hole_length_cm'] ?? 2;
+        $primaryHoleW = $holesSpecs[0]['hole_width_cm'] ?? 2;
+        $primaryHoleQ = $holesSpecs[0]['hole_qty'] ?? 1;
 
         // 7. Biaya Etsa (Sandblast): Langsung dihitung dari Luas Area Etsa (m2)
         $etsaLCm = (float)str_replace(',', '.', (string)($it['etsa_length_cm'] ?? $l));
@@ -448,9 +481,9 @@ class OrderController extends Controller
 
         $feeEtsa = 0;
         if (in_array('Etsa', $procs)) {
-            $feeEtsa = round($etsaAreaM2 * $etsaQty * 50000) * $q;
-            // Batas minimum biaya etsa Rp 25.000 per unit
-            $feeEtsa = max(25000 * $q, $feeEtsa);
+            $feeEtsa = round($etsaAreaM2 * $etsaQty * $rateEtsa) * $q;
+            // Batas minimum biaya etsa (setengah tarif per m2) per unit
+            $feeEtsa = max(($rateEtsa / 2) * $q, $feeEtsa);
         }
 
         // Total Item Subtotal
@@ -464,9 +497,10 @@ class OrderController extends Controller
             'qty' => $q,
             'processes' => $procs,
             'bevel_width_cm' => $bevelWidthCm,
-            'hole_length_cm' => $holeLCm,
-            'hole_width_cm' => $holeWCm,
-            'hole_qty' => $holeQty,
+            'holes' => $holesSpecs,
+            'hole_length_cm' => $primaryHoleL,
+            'hole_width_cm' => $primaryHoleW,
+            'hole_qty' => $primaryHoleQ,
             'etsa_length_cm' => $etsaLCm,
             'etsa_width_cm' => $etsaWCm,
             'etsa_qty' => $etsaQty,

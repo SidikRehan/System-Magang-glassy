@@ -11,6 +11,13 @@ export default function NewOrderModal({
     handleItemChange,
     handleAddItem,
     handleRemoveItem,
+    handleDuplicateItem = () => {},
+    handleAddItemWithGlassType = () => {},
+    handleAddNewGlassGroup = () => {},
+    handleGroupGlassTypeChange = () => {},
+    handleAddHoleSpec = () => {},
+    handleHoleSpecChange = () => {},
+    handleRemoveHoleSpec = () => {},
     toggleItemProcess = () => {},
     handleCreateOrder,
     handleFileChange = () => {},
@@ -110,405 +117,527 @@ export default function NewOrderModal({
                                 </div>
                             </div>
 
-                            {/* SECTION 2: RINCIAN MULTI-ITEM KACA & UKURAN */}
+                            {/* SECTION 2: RINCIAN MULTI-ITEM KACA & UKURAN BERKELOMPOK */}
                             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
-                                <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-2 gap-2">
-                                    <h4 className="font-bold text-cyan-400 text-xs flex items-center gap-1.5">
-                                        📐 vi & vii. Rincian Item Kaca ({calcItems.length} Item Kaca)
-                                    </h4>
+                                <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-2">
+                                    <div>
+                                        <h4 className="font-bold text-cyan-400 text-xs flex items-center gap-1.5">
+                                            📐 vi & vii. Rincian Item Kaca ({calcItems.length} Item Kaca Ukuran)
+                                        </h4>
+                                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                                            *Item terkelompok berdasarkan Jenis Kaca. Pilih jenis kaca sekali, lalu tambahkan variasi ukuran & opsi proses di bawahnya.
+                                        </span>
+                                    </div>
                                     <button 
                                         type="button" 
-                                        onClick={handleAddItem} 
-                                        className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold px-3 py-1 rounded-lg text-[11px] border border-cyan-500/30 flex items-center gap-1 transition"
+                                        onClick={handleAddNewGlassGroup} 
+                                        className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold px-3 py-1.5 rounded-lg text-xs border border-cyan-500/30 flex items-center gap-1.5 transition shadow-sm"
                                     >
-                                        ➕ Tambah Item Kaca Lain
+                                        ➕ Tambah Jenis Kaca Berbeda Lainnya
                                     </button>
                                 </div>
 
-                                <div className="space-y-4">
-                                    {calcItems.map((item, idx) => (
-                                        <div key={item.id || idx} className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-3 relative">
-                                            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                                <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-2">
-                                                    🔷 Item Kaca #{idx + 1}
-                                                    <span className="font-mono text-[10px] text-slate-400">
-                                                        (Luas: {item.areaM2.toFixed(2)} m² | Subtotal: <strong className="text-emerald-400">Rp {item.subtotal.toLocaleString()}</strong>)
-                                                    </span>
-                                                </span>
-                                                {calcItems.length > 1 && (
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => handleRemoveItem(idx)}
-                                                        className="text-rose-400 hover:text-rose-300 text-xs font-bold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 transition"
-                                                    >
-                                                        🗑️ Hapus Item
-                                                    </button>
-                                                )}
-                                            </div>
+                                {(() => {
+                                    // Group items by group_id
+                                    const groupsMap = new Map();
+                                    const groups = [];
 
-                                            {/* ROW 1: JENIS KACA & QTY */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                                <div className="sm:col-span-3">
-                                                    <label className="text-slate-400 block mb-1">Jenis Kaca Dasar:</label>
-                                                    <select 
-                                                        value={item.glass_type} 
-                                                        onChange={e => handleItemChange(idx, 'glass_type', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
-                                                    >
-                                                        <option value="">-- Pilih Jenis Kaca Dasar --</option>
-                                                        {getDynamicGlassTypes(sheetGlasses).map((gt, gIdx) => (
-                                                            <option key={gIdx} value={gt}>{gt}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Jumlah (Qty):</label>
-                                                    <input 
-                                                        type="number" 
-                                                        min="0" 
-                                                        required 
-                                                        value={item.qty} 
-                                                        onChange={e => handleItemChange(idx, 'qty', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            </div>
+                                    (calcItems || []).forEach((item, originalIndex) => {
+                                        const grpId = item.group_id || ('grp_' + (item.glass_type ? item.glass_type.replace(/\s+/g, '_') : originalIndex));
+                                        if (!groupsMap.has(grpId)) {
+                                            const grp = {
+                                                group_id: grpId,
+                                                glass_type: item.glass_type || '',
+                                                items: [],
+                                                totalArea: 0,
+                                                totalSubtotal: 0
+                                            };
+                                            groupsMap.set(grpId, grp);
+                                            groups.push(grp);
+                                        }
+                                        const grp = groupsMap.get(grpId);
+                                        grp.items.push({ item, idx: originalIndex });
+                                        grp.totalArea += (item.areaM2 || 0);
+                                        grp.totalSubtotal += (item.subtotal || 0);
+                                    });
 
-                                            {/* ROW 2: DIMENSI UKURAN */}
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Panjang (cm):</label>
-                                                    <input 
-                                                        type="text" 
-                                                        inputMode="decimal"
-                                                        required 
-                                                        placeholder="cth: 24,3 atau 150"
-                                                        value={item.length_cm} 
-                                                        onChange={e => handleItemChange(idx, 'length_cm', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-slate-400 block mb-1">Lebar (cm):</label>
-                                                    <input 
-                                                        type="text" 
-                                                        inputMode="decimal"
-                                                        required 
-                                                        placeholder="cth: 160,5 atau 120"
-                                                        value={item.width_cm} 
-                                                        onChange={e => handleItemChange(idx, 'width_cm', e.target.value)} 
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* SMART SCRAP GLASS RECOMMENDATION BANNER (WITH QUANTITY & +1CM GM EDGE MARGIN RULE) */}
-                                            {(() => {
-                                                const scrapMatch = findMatchingScrapsForOrder(item, initialScrap);
-                                                
-                                                // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
-                                                const isEdgeGrinding = (item.processes || []).includes('GM');
-                                                const exactScrapBlockedByGrinding = isEdgeGrinding
-                                                    ? initialScrap?.find(s => {
-                                                        if (s.status && s.status !== 'Layak Pakai') return false;
-                                                        if (!isGlassTypeCompatible(item.glass_type, s.glass_type)) return false;
-
-                                                        const sLen = parseFloat(s.length_cm) || 0;
-                                                        const sWid = parseFloat(s.width_cm) || 0;
-                                                        const rawLen = parseDim(item.length_cm);
-                                                        const rawWid = parseDim(item.width_cm);
-
-                                                        const yieldWithoutGM = calculateScrapYield(sLen, sWid, rawLen, rawWid);
-                                                        const yieldWithGM = calculateScrapYield(sLen, sWid, rawLen + 1.0, rawWid + 1.0);
-
-                                                        return yieldWithoutGM > 0 && yieldWithGM <= 0;
-                                                    })
-                                                    : null;
-
-                                                if (exactScrapBlockedByGrinding) {
-                                                    return (
-                                                        <div className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/40 text-rose-300 text-xs space-y-1">
-                                                            <div className="font-bold flex items-center gap-1.5">
-                                                                <span>⚠️ Kaca Sisa di {exactScrapBlockedByGrinding.rak_location} ({exactScrapBlockedByGrinding.scrap_code}) Tidak Bisa Dipakai</span>
-                                                                <span className="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded text-[10px] border border-rose-500/30 font-mono font-bold">Aturan Gosok Mesin (GM)</span>
+                                    return (
+                                        <div className="space-y-4">
+                                            {groups.map((grp, gIdx) => (
+                                                <div key={grp.group_id || gIdx} className="bg-slate-900/90 border border-slate-700/80 rounded-2xl overflow-hidden shadow-lg relative">
+                                                    {/* UNIFIED GROUP HEADER */}
+                                                    <div className="bg-slate-950/80 p-3.5 sm:p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                                        <div className="w-full sm:w-auto flex-1 space-y-1.5">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="font-extrabold text-cyan-300 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                                                    🔷 Group Kaca #{gIdx + 1}
+                                                                </span>
+                                                                <span className="bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded text-[10px] font-mono border border-cyan-500/20 font-bold">
+                                                                    {grp.items.length} Variasi Ukuran
+                                                                </span>
                                                             </div>
-                                                            <div className="text-[11px] text-slate-300 leading-relaxed">
-                                                                Stok kaca sisa ukuran <strong>{exactScrapBlockedByGrinding.length_cm} x {exactScrapBlockedByGrinding.width_cm} cm</strong> tidak bisa digunakan untuk orderan ini ({parseDim(item.length_cm)} x {parseDim(item.width_cm)} cm) karena memilih proses <strong>Gosok Mesin (GM)</strong>. Mesin penggosok batu memerlukan bahan kaca minimal <strong>+1 cm lebih besar ({parseDim(item.length_cm) + 1} x {parseDim(item.width_cm) + 1} cm)</strong> agar pinggiran kaca tidak tergerus menjadi kekecilan.
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-slate-400 text-xs font-semibold whitespace-nowrap">Jenis Kaca Dasar:</label>
+                                                                <select 
+                                                                    value={grp.glass_type} 
+                                                                    onChange={e => handleGroupGlassTypeChange(grp.group_id, e.target.value)} 
+                                                                    className="w-full bg-slate-900 border border-cyan-500/40 rounded-lg p-2 text-slate-100 font-bold text-xs focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                                                                >
+                                                                    <option value="">-- Pilih Jenis Kaca Dasar --</option>
+                                                                    {getDynamicGlassTypes(sheetGlasses).map((gt, typeIdx) => (
+                                                                        <option key={typeIdx} value={gt}>{gt}</option>
+                                                                    ))}
+                                                                </select>
                                                             </div>
                                                         </div>
-                                                    );
-                                                }
 
-                                                if (!scrapMatch || scrapMatch.totalScrapCovered <= 0) return null;
+                                                        <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 text-xs flex-wrap sm:flex-nowrap pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
+                                                            <div className="text-right">
+                                                                <span className="text-[10px] text-slate-400 block font-mono">Total Luas Group:</span>
+                                                                <span className="font-mono text-cyan-300 font-bold">{grp.totalArea.toFixed(2)} m²</span>
+                                                            </div>
+                                                            <div className="text-right bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/30">
+                                                                <span className="text-[10px] text-emerald-400/80 block font-mono">Subtotal Group:</span>
+                                                                <span className="font-mono text-emerald-400 font-bold text-xs sm:text-sm">Rp {grp.totalSubtotal.toLocaleString()}</span>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleAddItemWithGlassType(grp.group_id, grp.glass_type)}
+                                                                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold px-3 py-1.5 rounded-lg text-xs border border-cyan-500/40 flex items-center gap-1 transition shadow-sm whitespace-nowrap"
+                                                                title="Tambah variasi ukuran baru untuk jenis kaca ini"
+                                                            >
+                                                                ➕ Tambah Ukuran Kaca Ini
+                                                            </button>
+                                                        </div>
+                                                    </div>
 
-                                                const { totalScrapCovered, neededNewGlass, itemQty, matchedScraps, hasEdgeGrinding } = scrapMatch;
-                                                const primaryScrap = matchedScraps[0]?.scrap;
-                                                const isFullCover = neededNewGlass === 0;
-
-                                                const isAnySelected = Boolean(orderForm.used_scrap_rak);
-
-                                                return (
-                                                    <div className={`p-3.5 rounded-xl border flex flex-col items-start justify-between gap-3 transition ${isAnySelected ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' : 'bg-amber-500/10 border-amber-500/40 text-amber-300'}`}>
-                                                        <div className="flex items-start gap-2.5 flex-1 w-full">
-                                                            <span className="text-xl mt-0.5">💡</span>
-                                                            <div className="text-xs space-y-1.5 w-full">
-                                                                <div className="font-bold flex items-center justify-between gap-1.5 flex-wrap">
-                                                                    <span>
-                                                                        {isFullCover 
-                                                                            ? matchedScraps.length === 1 
-                                                                                ? `Rekomendasi Kaca Sisa di ${primaryScrap.rak_location} (${primaryScrap.scrap_code})`
-                                                                                : `Rekomendasi Kaca Sisa (${matchedScraps.length} Rak Terpakai)`
-                                                                            : `Rekomendasi Kombinasi: ${totalScrapCovered} Lembar Scrap + ${neededNewGlass} Lembar Bahan Baru`
-                                                                        }
+                                                    {/* UNIFIED SUB-ITEMS LIST (UKURAN & PROSES) */}
+                                                    <div className="divide-y divide-slate-800/80">
+                                                        {grp.items.map(({ item, idx }, subIdx) => (
+                                                            <div key={item.id || idx} className="p-3.5 sm:p-4 space-y-3 relative hover:bg-slate-800/30 transition">
+                                                                <div className="flex justify-between items-center border-b border-slate-800/80 pb-2 flex-wrap gap-2">
+                                                                    <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-2">
+                                                                        📐 Ukuran #{subIdx + 1}
+                                                                        <span className="font-mono text-[10px] text-slate-400 font-normal">
+                                                                            (Luas: {item.areaM2.toFixed(2)} m² | Subtotal: <strong className="text-emerald-400 font-bold">Rp {item.subtotal.toLocaleString()}</strong>)
+                                                                        </span>
                                                                     </span>
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        {isAnySelected && <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30 font-mono font-bold">✓ Terpasang ke Form</span>}
-                                                                        {hasEdgeGrinding && <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded text-[10px] border border-cyan-500/30 font-mono font-bold">+1 cm Margin GM</span>}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* ITEMIZED SCRAP BREAKDOWN BOX WITH PER-SCRAP QUANTITY SELECTOR & TOGGLE */}
-                                                                <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 space-y-2 text-[11px]">
-                                                                    <div className="font-semibold text-slate-300 border-b border-slate-800/80 pb-1 flex justify-between items-center flex-wrap gap-1">
-                                                                        <span>📦 Pilih Kaca Sisa & Jumlah Lembar yang Ingin Dipakai (Kebutuhan: {itemQty} Lembar):</span>
-                                                                        <span className="font-mono text-cyan-400 font-bold">{totalScrapCovered} / {itemQty} Lembar Maks. Scrap</span>
-                                                                    </div>
-
-                                                                    <ul className="space-y-2 pt-0.5">
-                                                                        {matchedScraps.map((m, mIdx) => {
-                                                                            const scrapCode = m.scrap.scrap_code;
-                                                                            const maxQty = m.usedQty;
-                                                                            const isThisSelected = orderForm.used_scrap_rak && orderForm.used_scrap_rak.includes(scrapCode);
-                                                                            const currentQty = customScrapQtyMap[scrapCode] !== undefined ? customScrapQtyMap[scrapCode] : maxQty;
-
-                                                                            return (
-                                                                                <li key={mIdx} className={`p-2 rounded-md border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition ${isThisSelected ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-slate-900/80 border-slate-800'}`}>
-                                                                                    <div className="space-y-0.5">
-                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                                                            <span className="text-amber-400 font-mono font-bold">▪ {scrapCode}</span>
-                                                                                            <span className="text-slate-400 font-mono">({m.scrap.rak_location})</span>
-                                                                                            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
-                                                                                                Ukuran {m.scrap.length_cm} x {m.scrap.width_cm} cm
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <div className="font-mono text-slate-400 text-[10px]">
-                                                                                            Maksimal Potongan Sisa Tersedia: <strong className="text-cyan-300 font-bold">{maxQty} lembar</strong> <span className="text-slate-500">(potong {m.yieldPerSheet} lbr/sheet)</span>
-                                                                                        </div>
-                                                                                    </div>
-
-                                                                                    {/* ACTION CONTROLS: QTY SELECTOR + TOGGLE BUTTON */}
-                                                                                    <div className="flex items-center gap-2 flex-wrap self-end sm:self-center">
-                                                                                        <div className="flex items-center gap-1">
-                                                                                            <label className="text-[10px] text-slate-400 whitespace-nowrap">Pakai:</label>
-                                                                                            <select
-                                                                                                value={currentQty}
-                                                                                                onChange={(e) => {
-                                                                                                    const val = Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1));
-                                                                                                    handleUpdateIndividualScrapQty(m, val, itemQty);
-                                                                                                }}
-                                                                                                className="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
-                                                                                            >
-                                                                                                {Array.from({ length: maxQty }, (_, i) => i + 1).map(n => (
-                                                                                                    <option key={n} value={n}>{n} lbr</option>
-                                                                                                ))}
-                                                                                            </select>
-                                                                                        </div>
-
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => handleToggleIndividualScrap(m, currentQty, itemQty)}
-                                                                                            className={`px-2.5 py-1 rounded-md font-extrabold text-xs transition shadow-sm whitespace-nowrap ${
-                                                                                                isThisSelected 
-                                                                                                    ? 'bg-emerald-500 text-slate-950 hover:bg-rose-500 hover:text-white' 
-                                                                                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                                                                                            }`}
-                                                                                            title={`Klik untuk memilih / membatalkan penggunaan ${scrapCode}`}
-                                                                                        >
-                                                                                            {isThisSelected 
-                                                                                                ? `✓ ${currentQty} lbr Terpasang (Batal)` 
-                                                                                                : `+ Gunakan ${currentQty} lbr Scrap Ini`
-                                                                                            }
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </li>
-                                                                            );
-                                                                        })}
-
-                                                                        {neededNewGlass > 0 && (
-                                                                            <li className="flex items-center justify-between text-cyan-300 font-sans border-t border-slate-900 pt-1.5 flex-wrap gap-1">
-                                                                                <div className="flex items-center gap-1.5">
-                                                                                    <span className="text-cyan-400 font-mono font-bold">▪ Kaca Bahan Lembaran Baru</span>
-                                                                                </div>
-                                                                                <div className="font-mono text-cyan-300 font-bold">
-                                                                                    ➔ Sisa Diambil dari Bahan Baru: <strong className="text-cyan-400 text-xs">{neededNewGlass} lembar</strong>
-                                                                                </div>
-                                                                            </li>
+                                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                                        <button 
+                                                                            type="button" 
+                                                                            onClick={() => handleDuplicateItem(idx)}
+                                                                            className="text-slate-300 hover:text-white text-[11px] font-bold bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 transition flex items-center gap-1"
+                                                                            title="Duplikat baris ukuran & proses ini"
+                                                                        >
+                                                                            📋 Duplikat
+                                                                        </button>
+                                                                        {calcItems.length > 1 && (
+                                                                            <button 
+                                                                                type="button" 
+                                                                                onClick={() => handleRemoveItem(idx)}
+                                                                                className="text-rose-400 hover:text-rose-300 text-[11px] font-bold bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 rounded border border-rose-500/20 transition"
+                                                                                title="Hapus baris ini"
+                                                                            >
+                                                                                🗑️ Hapus
+                                                                            </button>
                                                                         )}
-                                                                    </ul>
+                                                                    </div>
                                                                 </div>
 
-                                                                {hasEdgeGrinding && <div className="text-[10px] text-cyan-300/80 font-mono mt-0.5">*Ukuran scrap mencukupi batas aman margin +1 cm untuk penggosokan mesin (GM).</div>}
+                                                                {/* ROW DIMENSI & QTY */}
+                                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                                    <div>
+                                                                        <label className="text-slate-400 block mb-1 text-[11px]">Panjang (cm):</label>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            inputMode="decimal"
+                                                                            required 
+                                                                            placeholder="cth: 24,3 atau 150"
+                                                                            value={item.length_cm} 
+                                                                            onChange={e => handleItemChange(idx, 'length_cm', e.target.value)} 
+                                                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono text-xs focus:border-cyan-400" 
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-slate-400 block mb-1 text-[11px]">Lebar (cm):</label>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            inputMode="decimal"
+                                                                            required 
+                                                                            placeholder="cth: 160,5 atau 120"
+                                                                            value={item.width_cm} 
+                                                                            onChange={e => handleItemChange(idx, 'width_cm', e.target.value)} 
+                                                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono text-xs focus:border-cyan-400" 
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-slate-400 block mb-1 text-[11px]">Jumlah (Qty):</label>
+                                                                        <input 
+                                                                            type="number" 
+                                                                            min="0" 
+                                                                            required 
+                                                                            value={item.qty} 
+                                                                            onChange={e => handleItemChange(idx, 'qty', e.target.value)} 
+                                                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold text-xs focus:border-cyan-400" 
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* SMART SCRAP GLASS RECOMMENDATION BANNER (WITH QUANTITY & +1CM GM EDGE MARGIN RULE) */}
+                                                                {(() => {
+                                                                    const scrapMatch = findMatchingScrapsForOrder(item, initialScrap);
+                                                                    
+                                                                    // Check if scrap exists without margin, but failed due to +1 cm GM margin rule
+                                                                    const isEdgeGrinding = (item.processes || []).includes('GM');
+                                                                    const exactScrapBlockedByGrinding = isEdgeGrinding
+                                                                        ? initialScrap?.find(s => {
+                                                                            if (s.status && s.status !== 'Layak Pakai') return false;
+                                                                            if (!isGlassTypeCompatible(item.glass_type, s.glass_type)) return false;
+
+                                                                            const sLen = parseFloat(s.length_cm) || 0;
+                                                                            const sWid = parseFloat(s.width_cm) || 0;
+                                                                            const rawLen = parseDim(item.length_cm);
+                                                                            const rawWid = parseDim(item.width_cm);
+
+                                                                            const yieldWithoutGM = calculateScrapYield(sLen, sWid, rawLen, rawWid);
+                                                                            const yieldWithGM = calculateScrapYield(sLen, sWid, rawLen + 1.0, rawWid + 1.0);
+
+                                                                            return yieldWithoutGM > 0 && yieldWithGM <= 0;
+                                                                        })
+                                                                        : null;
+
+                                                                    if (exactScrapBlockedByGrinding) {
+                                                                        return (
+                                                                            <div className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/40 text-rose-300 text-xs space-y-1">
+                                                                                <div className="font-bold flex items-center gap-1.5">
+                                                                                    <span>⚠️ Kaca Sisa di {exactScrapBlockedByGrinding.rak_location} ({exactScrapBlockedByGrinding.scrap_code}) Tidak Bisa Dipakai</span>
+                                                                                    <span className="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded text-[10px] border border-rose-500/30 font-mono font-bold">Aturan Gosok Mesin (GM)</span>
+                                                                                </div>
+                                                                                <div className="text-[11px] text-slate-300 leading-relaxed">
+                                                                                    Stok kaca sisa ukuran <strong>{exactScrapBlockedByGrinding.length_cm} x {exactScrapBlockedByGrinding.width_cm} cm</strong> tidak bisa digunakan untuk orderan ini ({parseDim(item.length_cm)} x {parseDim(item.width_cm)} cm) karena memilih proses <strong>Gosok Mesin (GM)</strong>. Mesin penggosok batu memerlukan bahan kaca minimal <strong>+1 cm lebih besar ({parseDim(item.length_cm) + 1} x {parseDim(item.width_cm) + 1} cm)</strong> agar pinggiran kaca tidak tergerus menjadi kekecilan.
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    if (!scrapMatch || scrapMatch.totalScrapCovered <= 0) return null;
+
+                                                                    const { totalScrapCovered, neededNewGlass, itemQty, matchedScraps, hasEdgeGrinding } = scrapMatch;
+                                                                    const primaryScrap = matchedScraps[0]?.scrap;
+                                                                    const isFullCover = neededNewGlass === 0;
+
+                                                                    const isAnySelected = Boolean(orderForm.used_scrap_rak);
+
+                                                                    return (
+                                                                        <div className={`p-3.5 rounded-xl border flex flex-col items-start justify-between gap-3 transition ${isAnySelected ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' : 'bg-amber-500/10 border-amber-500/40 text-amber-300'}`}>
+                                                                            <div className="flex items-start gap-2.5 flex-1 w-full">
+                                                                                <span className="text-xl mt-0.5">💡</span>
+                                                                                <div className="text-xs space-y-1.5 w-full">
+                                                                                    <div className="font-bold flex items-center justify-between gap-1.5 flex-wrap">
+                                                                                        <span>
+                                                                                            {isFullCover 
+                                                                                                ? matchedScraps.length === 1 
+                                                                                                    ? `Rekomendasi Kaca Sisa di ${primaryScrap.rak_location} (${primaryScrap.scrap_code})`
+                                                                                                    : `Rekomendasi Kaca Sisa (${matchedScraps.length} Rak Terpakai)`
+                                                                                                : `Rekomendasi Kombinasi: ${totalScrapCovered} Lembar Scrap + ${neededNewGlass} Lembar Bahan Baru`
+                                                                                            }
+                                                                                        </span>
+                                                                                        <div className="flex items-center gap-1.5">
+                                                                                            {isAnySelected && <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30 font-mono font-bold">✓ Terpasang ke Form</span>}
+                                                                                            {hasEdgeGrinding && <span className="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded text-[10px] border border-cyan-500/30 font-mono font-bold">+1 cm Margin GM</span>}
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* ITEMIZED SCRAP BREAKDOWN BOX WITH PER-SCRAP QUANTITY SELECTOR & TOGGLE */}
+                                                                                    <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 space-y-2 text-[11px]">
+                                                                                        <div className="font-semibold text-slate-300 border-b border-slate-800/80 pb-1 flex justify-between items-center flex-wrap gap-1">
+                                                                                            <span>📦 Pilih Kaca Sisa & Jumlah Lembar yang Ingin Dipakai (Kebutuhan: {itemQty} Lembar):</span>
+                                                                                            <span className="font-mono text-cyan-400 font-bold">{totalScrapCovered} / {itemQty} Lembar Maks. Scrap</span>
+                                                                                        </div>
+
+                                                                                        <ul className="space-y-2 pt-0.5">
+                                                                                            {matchedScraps.map((m, mIdx) => {
+                                                                                                const scrapCode = m.scrap.scrap_code;
+                                                                                                const maxQty = m.usedQty;
+                                                                                                const isThisSelected = orderForm.used_scrap_rak && orderForm.used_scrap_rak.includes(scrapCode);
+                                                                                                const currentQty = customScrapQtyMap[scrapCode] !== undefined ? customScrapQtyMap[scrapCode] : maxQty;
+
+                                                                                                return (
+                                                                                                    <li key={mIdx} className={`p-2 rounded-md border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition ${isThisSelected ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-slate-900/80 border-slate-800'}`}>
+                                                                                                        <div className="space-y-0.5">
+                                                                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                                                <span className="text-amber-400 font-mono font-bold">▪ {scrapCode}</span>
+                                                                                                                <span className="text-slate-400 font-mono">({m.scrap.rak_location})</span>
+                                                                                                                <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
+                                                                                                                    Ukuran {m.scrap.length_cm} x {m.scrap.width_cm} cm
+                                                                                                                </span>
+                                                                                                            </div>
+                                                                                                            <div className="font-mono text-slate-400 text-[10px]">
+                                                                                                                Maksimal Potongan Sisa Tersedia: <strong className="text-cyan-300 font-bold">{maxQty} lembar</strong> <span className="text-slate-500">(potong {m.yieldPerSheet} lbr/sheet)</span>
+                                                                                                            </div>
+                                                                                                        </div>
+
+                                                                                                        {/* ACTION CONTROLS: QTY SELECTOR + TOGGLE BUTTON */}
+                                                                                                        <div className="flex items-center gap-2 flex-wrap self-end sm:self-center">
+                                                                                                            <div className="flex items-center gap-1">
+                                                                                                                <label className="text-[10px] text-slate-400 whitespace-nowrap">Pakai:</label>
+                                                                                                                <select
+                                                                                                                    value={currentQty}
+                                                                                                                    onChange={(e) => {
+                                                                                                                        const val = Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1));
+                                                                                                                        handleUpdateIndividualScrapQty(m, val, itemQty);
+                                                                                                                    }}
+                                                                                                                    className="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300 font-mono font-bold focus:border-cyan-400 cursor-pointer"
+                                                                                                                >
+                                                                                                                    {Array.from({ length: maxQty }, (_, i) => i + 1).map(n => (
+                                                                                                                        <option key={n} value={n}>{n} lbr</option>
+                                                                                                                    ))}
+                                                                                                                </select>
+                                                                                                            </div>
+
+                                                                                                            <button
+                                                                                                                type="button"
+                                                                                                                onClick={() => handleToggleIndividualScrap(m, currentQty, itemQty)}
+                                                                                                                className={`px-2.5 py-1 rounded-md font-extrabold text-xs transition shadow-sm whitespace-nowrap ${
+                                                                                                                    isThisSelected 
+                                                                                                                        ? 'bg-emerald-500 text-slate-950 hover:bg-rose-500 hover:text-white' 
+                                                                                                                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                                                                                                }`}
+                                                                                                                title={`Klik untuk memilih / membatalkan penggunaan ${scrapCode}`}
+                                                                                                            >
+                                                                                                                {isThisSelected 
+                                                                                                                    ? `✓ ${currentQty} lbr Terpasang (Batal)` 
+                                                                                                                    : `+ Gunakan ${currentQty} lbr Scrap Ini`
+                                                                                                                }
+                                                                                                            </button>
+                                                                                                        </div>
+                                                                                                    </li>
+                                                                                                );
+                                                                                            })}
+
+                                                                                            {neededNewGlass > 0 && (
+                                                                                                <li className="flex items-center justify-between text-cyan-300 font-sans border-t border-slate-900 pt-1.5 flex-wrap gap-1">
+                                                                                                    <div className="flex items-center gap-1.5">
+                                                                                                        <span className="text-cyan-400 font-mono font-bold">▪ Kaca Bahan Lembaran Baru</span>
+                                                                                                    </div>
+                                                                                                    <div className="font-mono text-cyan-300 font-bold">
+                                                                                                        ➔ Sisa Diambil dari Bahan Baru: <strong className="text-cyan-400 text-xs">{neededNewGlass} lembar</strong>
+                                                                                                    </div>
+                                                                                                </li>
+                                                                                            )}
+                                                                                        </ul>
+                                                                                    </div>
+
+                                                                                    {hasEdgeGrinding && <div className="text-[10px] text-cyan-300/80 font-mono mt-0.5">*Ukuran scrap mencukupi batas aman margin +1 cm untuk penggosokan mesin (GM).</div>}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })()}
+
+                                                                {/* OPTIONS PROSES MANDIRI PER ITEM */}
+                                                                <div>
+                                                                    <label className="text-slate-400 block mb-1 font-semibold text-[11px]">vii. Options Proses Ukuran #{subIdx + 1}:</label>
+                                                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                                                        {[
+                                                                            { id: 'HT', name: 'HT (Halus Tepi)' },
+                                                                            { id: 'BV', name: 'BV (Beveling)' },
+                                                                            { id: 'GM', name: 'GM (Gosok Mesin)' },
+                                                                            { id: 'Etsa', name: 'Etsa (Sandblast)' },
+                                                                            { id: 'Bor', name: 'Bor (Coakan)' },
+                                                                        ].map(proc => (
+                                                                            <label 
+                                                                                key={proc.id} 
+                                                                                onClick={(e) => {
+                                                                                    e.preventDefault();
+                                                                                    toggleItemProcess(idx, proc.id);
+                                                                                }} 
+                                                                                className={`p-1.5 rounded-lg border cursor-pointer transition flex items-center justify-between text-[11px] ${(item.processes || []).includes(proc.id) ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
+                                                                            >
+                                                                                <span>{proc.name}</span>
+                                                                                <input type="checkbox" checked={(item.processes || []).includes(proc.id)} onChange={() => {}} className="rounded bg-slate-900 border-slate-700 text-cyan-500 w-3 h-3 pointer-events-none" />
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* CONDITIONAL PARAMETERS FOR BEVEL & BOR */}
+                                                                {(item.processes || []).includes('BV') && (
+                                                                    <div className="p-2 bg-slate-950 rounded-lg border border-cyan-500/30">
+                                                                        <label className="text-[11px] text-cyan-300 font-semibold block mb-1">
+                                                                            📐 Lebar Bevel (cm): <span className="text-[10px] text-slate-400 font-mono">(Biaya: Keliling × Rp 15.000 + Lebar cm × Rp 10.000)</span>
+                                                                        </label>
+                                                                        <input 
+                                                                            type="number" 
+                                                                            step="0.5" 
+                                                                            value={item.bevel_width_cm || 1} 
+                                                                            onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
+                                                                            className="w-36 bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                {(item.processes || []).includes('Bor') && (
+                                                                    <div className="p-3 bg-slate-950 rounded-xl border border-cyan-500/30 space-y-2.5">
+                                                                        <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-800/80 pb-2">
+                                                                            <div>
+                                                                                <label className="text-xs text-cyan-300 font-bold flex items-center gap-1.5">
+                                                                                    🔘 Dimensi Lubang Bor / Coakan
+                                                                                </label>
+                                                                                <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                                                                                    *Biaya: Keliling Ruas cm × Rp 2.500 × Qty Lubang
+                                                                                </span>
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleAddHoleSpec(idx)}
+                                                                                className="text-cyan-300 hover:text-white text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 px-2.5 py-1 rounded-lg border border-cyan-500/40 transition flex items-center gap-1 shadow-sm"
+                                                                                title="Tambah variasi ukuran lubang/coakan baru"
+                                                                            >
+                                                                                ➕ Tambah Ukuran Lubang / Coakan
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {/* LIST VARIASI LUBANG COAKAN */}
+                                                                        <div className="space-y-2">
+                                                                            {(item.holes && item.holes.length > 0 ? item.holes : [
+                                                                                { hole_length_cm: item.hole_length_cm || 2, hole_width_cm: item.hole_width_cm || 2, hole_qty: item.hole_qty || 1 }
+                                                                            ]).map((hSpec, hIdx) => (
+                                                                                <div key={hIdx} className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-2">
+                                                                                    <div className="flex justify-between items-center text-[11px] font-bold text-slate-300">
+                                                                                        <span className="flex items-center gap-1.5">
+                                                                                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                                                                                            Lubang / Coakan #{hIdx + 1}
+                                                                                        </span>
+                                                                                        {((item.holes ? item.holes.length : 1) > 1) && (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => handleRemoveHoleSpec(idx, hIdx)}
+                                                                                                className="text-rose-400 hover:text-rose-300 text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/20 transition"
+                                                                                            >
+                                                                                                🗑️ Hapus Lubang Ini
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                                                        <div>
+                                                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Panjang Lubang (cm):</span>
+                                                                                            <input 
+                                                                                                type="number" 
+                                                                                                step="any"
+                                                                                                value={hSpec.hole_length_cm !== undefined ? hSpec.hole_length_cm : 2} 
+                                                                                                onChange={e => handleHoleSpecChange(idx, hIdx, 'hole_length_cm', e.target.value)} 
+                                                                                                className="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Lebar Lubang (cm):</span>
+                                                                                            <input 
+                                                                                                type="number" 
+                                                                                                step="any"
+                                                                                                value={hSpec.hole_width_cm !== undefined ? hSpec.hole_width_cm : 2} 
+                                                                                                onChange={e => handleHoleSpecChange(idx, hIdx, 'hole_width_cm', e.target.value)} 
+                                                                                                className="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Jumlah Lubang (Qty):</span>
+                                                                                            <input 
+                                                                                                type="number" 
+                                                                                                min="1"
+                                                                                                value={hSpec.hole_qty !== undefined ? hSpec.hole_qty : 1} 
+                                                                                                onChange={e => handleHoleSpecChange(idx, hIdx, 'hole_qty', e.target.value)} 
+                                                                                                className="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {(item.processes || []).includes('Etsa') && (
+                                                                    <div className="p-2.5 bg-slate-950 rounded-lg border border-cyan-500/30 space-y-2">
+                                                                        <label className="text-[11px] text-cyan-300 font-semibold flex items-center justify-between">
+                                                                            <span>🌫️ Dimensi Area Etsa / Sandblast:</span>
+                                                                            <span className="text-[10px] text-slate-400 font-mono">(Tarif: Rp 50.000 / m²)</span>
+                                                                        </label>
+                                                                        
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            <div>
+                                                                                <span className="text-[10px] text-slate-400 block mb-0.5">Panjang Etsa (cm):</span>
+                                                                                <input 
+                                                                                    type="number" 
+                                                                                    value={item.etsa_length_cm !== undefined ? item.etsa_length_cm : (item.length_cm || '')} 
+                                                                                    onChange={e => handleItemChange(idx, 'etsa_length_cm', e.target.value)} 
+                                                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
+                                                                                    placeholder={item.length_cm}
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-[10px] text-slate-400 block mb-0.5">Lebar Etsa (cm):</span>
+                                                                                <input 
+                                                                                    type="number" 
+                                                                                    value={item.etsa_width_cm !== undefined ? item.etsa_width_cm : (item.width_cm || '')} 
+                                                                                    onChange={e => handleItemChange(idx, 'etsa_width_cm', e.target.value)} 
+                                                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
+                                                                                    placeholder={item.width_cm}
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-[10px] text-slate-400 block mb-0.5">Jumlah Area (Pcs):</span>
+                                                                                <input 
+                                                                                    type="number" 
+                                                                                    value={item.etsa_qty || 1} 
+                                                                                    onChange={e => handleItemChange(idx, 'etsa_qty', e.target.value)} 
+                                                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* TRANSPARENT PRICING BREAKDOWN BADGES */}
+                                                                <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-mono border-t border-slate-800/80">
+                                                                    <span className="text-slate-400 font-semibold">Rincian Harga:</span>
+                                                                    <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-300">
+                                                                        Kaca: Rp {item.baseGlassPrice.toLocaleString()}
+                                                                    </span>
+                                                                    {item.feeGM > 0 && (
+                                                                        <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
+                                                                            GM: +Rp {item.feeGM.toLocaleString()}
+                                                                        </span>
+                                                                    )}
+                                                                    {item.feeHT > 0 && (
+                                                                        <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
+                                                                            HT: +Rp {item.feeHT.toLocaleString()}
+                                                                        </span>
+                                                                    )}
+                                                                    {item.feeBV > 0 && (
+                                                                        <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
+                                                                            Bevel: +Rp {item.feeBV.toLocaleString()}
+                                                                        </span>
+                                                                    )}
+                                                                    {item.feeBor > 0 && (
+                                                                        <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
+                                                                            Bor ({item.holeRuasCm}cm ruas): +Rp {item.feeBor.toLocaleString()}
+                                                                        </span>
+                                                                    )}
+                                                                    {item.feeEtsa > 0 && (
+                                                                        <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
+                                                                            Etsa ({item.etsaAreaM2 ? (item.etsaAreaM2 * (item.etsa_qty || 1)).toFixed(2) : '0'}m²): +Rp {item.feeEtsa.toLocaleString()}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()}
-
-                                            {/* ROW 3: OPTIONS PROSES MANDIRI PER ITEM */}
-                                            <div>
-                                                <label className="text-slate-400 block mb-1 font-semibold">vii. Options Proses Item #{idx + 1}:</label>
-                                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                                    {[
-                                                        { id: 'HT', name: 'HT (Halus Tepi)' },
-                                                        { id: 'BV', name: 'BV (Beveling)' },
-                                                        { id: 'GM', name: 'GM (Gosok Mesin)' },
-                                                        { id: 'Etsa', name: 'Etsa (Sandblast)' },
-                                                        { id: 'Bor', name: 'Bor (Coakan)' },
-                                                    ].map(proc => (
-                                                        <label 
-                                                            key={proc.id} 
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                toggleItemProcess(idx, proc.id);
-                                                            }} 
-                                                            className={`p-1.5 rounded-lg border cursor-pointer transition flex items-center justify-between text-[11px] ${(item.processes || []).includes(proc.id) ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400'}`}
-                                                        >
-                                                            <span>{proc.name}</span>
-                                                            <input type="checkbox" checked={(item.processes || []).includes(proc.id)} onChange={() => {}} className="rounded bg-slate-900 border-slate-700 text-cyan-500 w-3 h-3 pointer-events-none" />
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* CONDITIONAL PARAMETERS FOR BEVEL & BOR */}
-                                            {(item.processes || []).includes('BV') && (
-                                                <div className="p-2 bg-slate-950 rounded-lg border border-cyan-500/30">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold block mb-1">
-                                                        📐 Lebar Bevel (cm): <span className="text-[10px] text-slate-400 font-mono">(Biaya: Keliling × Rp 15.000 + Lebar cm × Rp 10.000)</span>
-                                                    </label>
-                                                    <input 
-                                                        type="number" 
-                                                        step="0.5" 
-                                                        value={item.bevel_width_cm || 1} 
-                                                        onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
-                                                        className="w-36 bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono font-bold focus:border-cyan-400" 
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {(item.processes || []).includes('Bor') && (
-                                                <div className="p-2 bg-slate-950 rounded-lg border border-cyan-500/30 space-y-1">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold block">
-                                                        🔘 Dimensi Lubang Bor / Coakan: <span className="text-[10px] text-slate-400 font-mono">(Biaya: Keliling Ruas cm × Rp 2.500 × Qty Lubang)</span>
-                                                    </label>
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Panjang Lubang (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                value={item.hole_length_cm || 2} 
-                                                                onChange={e => handleItemChange(idx, 'hole_length_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Lebar Lubang (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                value={item.hole_width_cm || 2} 
-                                                                onChange={e => handleItemChange(idx, 'hole_width_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block">Jumlah Lubang:</span>
-                                                            <input 
-                                                                type="number" 
-                                                                value={item.hole_qty || 1} 
-                                                                onChange={e => handleItemChange(idx, 'hole_qty', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            )}
-
-                                            {(item.processes || []).includes('Etsa') && (
-                                                <div className="p-2.5 bg-slate-950 rounded-lg border border-cyan-500/30 space-y-2">
-                                                    <label className="text-[11px] text-cyan-300 font-semibold flex items-center justify-between">
-                                                        <span>🌫️ Dimensi Area Etsa / Sandblast:</span>
-                                                        <span className="text-[10px] text-slate-400 font-mono">(Tarif: Rp 50.000 / m²)</span>
-                                                    </label>
-                                                    
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Panjang Etsa (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                value={item.etsa_length_cm !== undefined ? item.etsa_length_cm : (item.length_cm || '')} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_length_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                                placeholder={item.length_cm}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Lebar Etsa (cm):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                value={item.etsa_width_cm !== undefined ? item.etsa_width_cm : (item.width_cm || '')} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_width_cm', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                                placeholder={item.width_cm}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5">Jumlah Area (Pcs):</span>
-                                                            <input 
-                                                                type="number" 
-                                                                value={item.etsa_qty || 1} 
-                                                                onChange={e => handleItemChange(idx, 'etsa_qty', e.target.value)} 
-                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-slate-100 font-mono font-bold" 
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* TRANSPARENT PRICING BREAKDOWN BADGES */}
-                                            <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-mono border-t border-slate-800/80">
-                                                <span className="text-slate-400 font-semibold">Rincian Harga:</span>
-                                                <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-300">
-                                                    Kaca: Rp {item.baseGlassPrice.toLocaleString()}
-                                                </span>
-                                                {item.feeGM > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        GM: +Rp {item.feeGM.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeHT > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        HT: +Rp {item.feeHT.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeBV > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Bevel: +Rp {item.feeBV.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeBor > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Bor ({item.holeRuasCm}cm ruas): +Rp {item.feeBor.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {item.feeEtsa > 0 && (
-                                                    <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 text-cyan-300 font-bold">
-                                                        Etsa ({item.etsaAreaM2 ? (item.etsaAreaM2 * (item.etsa_qty || 1)).toFixed(2) : '0'}m²): +Rp {item.feeEtsa.toLocaleString()}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* SECTION 4: TAMBAHAN AKSESORIS TERINTEGRASI STOK GUDANG (viii) */}
@@ -706,65 +835,52 @@ export default function NewOrderModal({
                                 </div>
 
                                 <div className="space-y-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-[11px] text-slate-400">Tombol Cepat Bayar:</span>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-[11px] text-slate-400 font-semibold">Tombol Cepat Bayar:</span>
                                         {[
-                                            { label: 'Rp 100rb', val: 100000 },
-                                            { label: 'Rp 200rb', val: 200000 },
-                                            { label: 'Rp 300rb', val: 300000 },
-                                            { label: 'Rp 500rb', val: 500000 },
-                                            { label: '50% (DP Half)', val: Math.round(calcTotalPrice * 0.5) },
-                                            { label: '⚡ Bayar Full / Lunas (100%)', val: calcTotalPrice }
-                                        ].map((preset, pIdx) => (
-                                            <button 
-                                                key={pIdx}
-                                                type="button"
-                                                onClick={() => {
-                                                    const pct = calcTotalPrice > 0 ? Math.round((preset.val / calcTotalPrice) * 100) : 50;
-                                                    setOrderForm(d => ({ ...d, custom_paid_amount: preset.val, dp_percent: pct }));
-                                                }}
-                                                className={`px-2.5 py-1 border rounded text-[11px] font-mono transition ${preset.val === calcTotalPrice && calcTotalPrice > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold' : 'bg-slate-900 hover:bg-cyan-500/20 text-slate-300 border-slate-700'}`}
-                                            >
-                                                {preset.label}
-                                            </button>
-                                        ))}
+                                            { label: '50% (DP 50%)', val: Math.round(calcTotalPrice * 0.5), pct: 50 },
+                                            { label: '⚡ 100% (Bayar Lunas / Full)', val: calcTotalPrice, pct: 100 }
+                                        ].map((preset, pIdx) => {
+                                            const currentPaid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
+                                                ? parseFloat(orderForm.custom_paid_amount) || 0
+                                                : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
+                                            const isActive = preset.pct === 100 
+                                                ? (currentPaid >= calcTotalPrice && calcTotalPrice > 0)
+                                                : (currentPaid === preset.val || (currentPaid > 0 && currentPaid < calcTotalPrice));
+
+                                            return (
+                                                <button 
+                                                    key={pIdx}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const targetVal = preset.pct === 100 ? calcTotalPrice : Math.round(calcTotalPrice * 0.5);
+                                                        setOrderForm(d => ({ ...d, custom_paid_amount: targetVal, dp_percent: preset.pct }));
+                                                    }}
+                                                    className={`px-3 py-1.5 border rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 ${
+                                                        isActive 
+                                                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-sm' 
+                                                            : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                                                    }`}
+                                                >
+                                                    {preset.label}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
-                                {/* OTOMATIS PENENTUAN STATUS (DP VS LUNAS) */}
-                                <div className="bg-slate-900/90 p-3 rounded-lg border border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs">
-                                    <div>
-                                        <span className="text-slate-400 block text-[11px]">Otomatis Penentuan Status Pembayaran:</span>
-                                        <span className="font-mono font-extrabold text-sm">
-                                            {(() => {
-                                                const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                                    ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                                    : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                                const pct = calcTotalPrice > 0 ? Math.round((paid / calcTotalPrice) * 100) : (orderForm.dp_percent || 50);
-                                                const methodText = (orderForm.payment_method || 'cash').toUpperCase();
-                                                
-                                                if (paid >= calcTotalPrice && calcTotalPrice > 0) {
-                                                    return <span className="text-emerald-400">✅ Lunas Langsung (100%) — {methodText}</span>;
-                                                } else if (paid > 0) {
-                                                    return <span className="text-amber-300">💵 Uang Muka / DP Rp {paid.toLocaleString()} ({pct}% dari Total) — {methodText}</span>;
-                                                } else {
-                                                    return <span className="text-slate-400">⚪ Belum Ada Pembayaran (DP 0%)</span>;
-                                                }
-                                            })()}
-                                        </span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-slate-400 block text-[11px]">Sisa Pelunasan (COD):</span>
-                                        <span className="font-mono font-bold text-slate-200">
-                                            {(() => {
-                                                const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                                    ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                                    : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                                const sisa = Math.max(0, calcTotalPrice - paid);
-                                                return sisa === 0 ? <span className="text-emerald-400 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`;
-                                            })()}
-                                        </span>
-                                    </div>
+                                {/* SISA PELUNASAN (COD) */}
+                                <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                                    <span className="text-slate-400 text-[11px] font-semibold">Sisa Pelunasan (COD):</span>
+                                    <span className="font-mono font-bold text-slate-200">
+                                        {(() => {
+                                            const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
+                                                ? (parseFloat(orderForm.custom_paid_amount) || 0)
+                                                : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
+                                            const sisa = Math.max(0, calcTotalPrice - paid);
+                                            return sisa === 0 ? <span className="text-emerald-400 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`;
+                                        })()}
+                                    </span>
                                 </div>
                             </div>
 
