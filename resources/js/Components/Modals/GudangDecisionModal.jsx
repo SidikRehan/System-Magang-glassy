@@ -38,8 +38,30 @@ export default function GudangDecisionModal({
                         <div className="text-slate-400 text-[10px] pt-1">Dilaporkan pada: <span className="text-cyan-300 font-mono">{selectedComplaintOrder.complaint_data?.reported_at || '-'}</span></div>
                     </div>
 
+                    {/* RINCIAN ITEM KACA CACAT / BARET YANG DILAPORKAN */}
+                    {Array.isArray(selectedComplaintOrder.complaint_data?.defective_items) && selectedComplaintOrder.complaint_data.defective_items.length > 0 && (
+                        <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                            <span className="text-[11px] font-extrabold text-rose-300 flex items-center gap-1.5">
+                                <span>🔍 Rincian Item Kaca Cacat / Baret Dilaporkan:</span>
+                            </span>
+                            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                {selectedComplaintOrder.complaint_data.defective_items.map((def, idx) => (
+                                    <div key={idx} className="bg-rose-950/40 border border-rose-500/40 p-2.5 rounded-xl flex justify-between items-center text-xs">
+                                        <div>
+                                            <strong className="text-white block font-bold">#{def.item_index + 1}. {def.glass_type}</strong>
+                                            <span className="text-[10px] text-slate-400 font-mono">{def.width} × {def.height} cm ({def.thickness}mm) — Total Order: {def.quantity} Pcs</span>
+                                        </div>
+                                        <div className="bg-rose-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs font-mono shadow whitespace-nowrap">
+                                            ⚠️ {def.qty_defective} Lembar Rusak
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {selectedComplaintOrder.complaint_data?.photo_path && (
-                        <div className="space-y-1 pt-1">
+                        <div className="space-y-1 pt-1 border-t border-slate-800">
                             <span className="text-[11px] font-bold text-slate-300">Foto Bukti Kaca Cacat:</span>
                             <div className="rounded-xl overflow-hidden border border-slate-700 max-h-48">
                                 <img src={`/storage/${selectedComplaintOrder.complaint_data.photo_path}`} alt="Bukti Cacat Kaca" className="w-full h-full object-contain bg-black" />

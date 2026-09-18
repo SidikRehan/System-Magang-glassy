@@ -147,6 +147,25 @@ export default function DivisionExecutionModal({
     // State penanda lembar terpotong per item (1, 2, 3 ... Qty)
     const [cutTracker, setCutTracker] = useState({});
 
+    const getCutCount = (itemIdx) => {
+        const itemState = cutTracker[itemIdx] || {};
+        return Object.keys(itemState).filter(k => itemState[k]).length;
+    };
+
+    const updateCutCount = (itemIdx, newCount, totalQty) => {
+        const val = Math.max(0, Math.min(totalQty, parseInt(newCount) || 0));
+        setCutTracker(prev => {
+            const newState = {};
+            for (let i = 1; i <= val; i++) {
+                newState[i] = true;
+            }
+            return {
+                ...prev,
+                [itemIdx]: newState
+            };
+        });
+    };
+
     const toggleCutTracker = (itemIdx, pieceNum) => {
         setCutTracker(prev => {
             const itemState = prev[itemIdx] || {};
@@ -182,6 +201,35 @@ export default function DivisionExecutionModal({
 
     // Sub-tab switcher untuk area pencatatan bahan & sisa potong (scrap): 'raw' | 'scrap'
     const [rawSectionTab, setRawSectionTab] = useState('raw');
+    const [scrapFormsMap, setScrapFormsMap] = useState({});
+    const [submittingScrapType, setSubmittingScrapType] = useState(null);
+
+    const getDefaultRakLocation = (gt = '') => {
+        const lower = (gt || '').toLowerCase();
+        if (lower.includes('cermin') || lower.includes('mirror')) return 'Rak A02';
+        if (lower.includes('tempered') || lower.includes('bevel')) return 'Rak B01';
+        if (lower.includes('etsa') || lower.includes('sandblast')) return 'Rak B02';
+        return 'Rak A01';
+    };
+
+    const getScrapFormField = (gt, field) => {
+        const form = scrapFormsMap[gt] || {};
+        if (field === 'rak_location') {
+            return form.rak_location || getDefaultRakLocation(gt);
+        }
+        return form[field] || '';
+    };
+
+    const updateScrapFormField = (gt, field, value) => {
+        setScrapFormsMap(prev => ({
+            ...prev,
+            [gt]: {
+                ...prev[gt],
+                [field]: value
+            }
+        }));
+    };
+
     const [embeddedScrapForm, setEmbeddedScrapForm] = useState({
         glass_type: initialGlassType,
         length_cm: '',
@@ -246,6 +294,52 @@ export default function DivisionExecutionModal({
         }
 
         setEditingScrapId(null);
+    };
+
+    const handleSaveScrapForType = (e, gt) => {
+        e.preventDefault();
+        const length_cm = getScrapFormField(gt, 'length_cm');
+        const width_cm = getScrapFormField(gt, 'width_cm');
+        const rak_location = getScrapFormField(gt, 'rak_location');
+
+        if (!length_cm || !width_cm) {
+            alert(`Mohon lengkapi Ukuran Panjang (cm) dan Lebar (cm) untuk sisa kaca ${gt}!`);
+            return;
+        }
+
+        setSubmittingScrapType(gt);
+        const payload = {
+            glass_type: (gt || '').trim() || '-',
+            length_cm: length_cm,
+            width_cm: width_cm,
+            rak_location: (rak_location || '').trim() || getDefaultRakLocation(gt),
+            status: 'Layak Pakai'
+        };
+
+        router.post(route('scrap.store'), payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSubmittingScrapType(null);
+
+                const newScrapRecord = {
+                    id: Date.now(),
+                    glass_type: payload.glass_type,
+                    length_cm: payload.length_cm,
+                    width_cm: payload.width_cm,
+                    rak_location: payload.rak_location,
+                    created_at: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                };
+                setRecentSavedScraps(prev => [newScrapRecord, ...prev]);
+
+                alert(`✅ Sukses! Sisa Kaca (${payload.glass_type} — ${payload.length_cm} × ${payload.width_cm} cm) berhasil disimpan ke ${payload.rak_location}!`);
+
+                updateScrapFormField(gt, 'length_cm', '');
+                updateScrapFormField(gt, 'width_cm', '');
+            },
+            onError: () => {
+                setSubmittingScrapType(null);
+            }
+        });
     };
 
     const handleSaveEmbeddedScrap = (e) => {
@@ -634,6 +728,45 @@ export default function DivisionExecutionModal({
                             </div>
                         </div>
 
+                        {/* BANNER NOTIFIKASI ORDERAN REPLACEMENT / GANTI KACA CACAT DARI ADMIN GUDANG */}
+                        {selectedExecutionOrder.complaint_status === 're_cut_needed' && (
+                            <div className="bg-rose-950/80 border-2 border-rose-500/80 rounded-2xl p-4 space-y-2.5 shadow-xl shadow-rose-950/40 animate-pulse">
+                                <div className="flex items-center justify-between border-b border-rose-500/40 pb-2">
+                                    <span className="font-extrabold text-xs text-rose-300 flex items-center gap-2">
+                                        <span className="text-base">🚨</span>
+                                        <span>PERINTAH GANTI BARANG KACA CACAT (ORDERAN ULANG DARI GUDANG)</span>
+                                    </span>
+                                    <span className="bg-rose-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase">
+                                        Instruksi Gudang
+                                    </span>
+                                </div>
+                                <div className="text-xs text-slate-300 space-y-1.5 font-mono">
+                                    <p className="text-rose-200 text-xs">
+                                        Divisi <strong>{selectedExecutionOrder.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''}</strong> melaporkan kendala: <strong className="text-rose-400">{selectedExecutionOrder.complaint_data?.reason || 'Kaca Baret / Cacat'}</strong>
+                                    </p>
+                                    {selectedExecutionOrder.complaint_data?.notes && (
+                                        <p className="text-[11px] text-amber-200 italic bg-slate-950 p-2 rounded-xl border border-slate-800">
+                                            Catatan: "{selectedExecutionOrder.complaint_data.notes}"
+                                        </p>
+                                    )}
+
+                                    {Array.isArray(selectedExecutionOrder.complaint_data?.defective_items) && selectedExecutionOrder.complaint_data.defective_items.length > 0 && (
+                                        <div className="bg-slate-950 p-3 rounded-xl border border-rose-500/40 space-y-1.5 text-[11px] mt-1">
+                                            <span className="font-bold text-rose-300 block">🔍 Item Kaca Pengganti Yang Harus Dipotong Ulang:</span>
+                                            <div className="space-y-1">
+                                                {selectedExecutionOrder.complaint_data.defective_items.map((def, i) => (
+                                                    <div key={i} className="text-slate-200 flex justify-between items-center bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                                                        <span>#{def.item_index + 1}. <strong>{def.glass_type}</strong> ({def.width} × {def.height} cm, {def.thickness}mm)</span>
+                                                        <strong className="text-rose-400 font-extrabold bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30">⚠️ {def.qty_defective} Lembar Ganti</strong>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* REKOMENDASI ALOKASI KACA SISA RAK (DARI ADMIN TOKO) */}
                         {selectedExecutionOrder.used_scrap_rak && selectedExecutionOrder.used_scrap_rak !== '-' && selectedExecutionOrder.used_scrap_rak.trim() !== '' && (
                             selectedExecutionOrder.used_scrap_rak.startsWith('❌') ? (
@@ -752,45 +885,76 @@ export default function DivisionExecutionModal({
                                             )}
                                         </div>
 
-                                        {/* PENANDA NUMBER CHECKLIST (1, 2, 3 ... Qty) (Sebelah Kanan) */}
+                                        {/* PENANDA STEPPER LEMBAR TERPOTONG (Sebelah Kanan) */}
                                         {selectedExecutionOrder.current_division === 'divisi_ht' && (
-                                            <div className="w-full md:w-auto md:max-w-xs space-y-1.5 md:border-l md:border-slate-800/80 md:pl-4 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800/80 shrink-0">
+                                            <div className="w-full md:w-auto md:min-w-[180px] space-y-1.5 md:border-l md:border-slate-800/80 md:pl-4 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800/80 shrink-0">
                                                 <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
                                                     <span className="text-slate-400 font-bold flex items-center gap-1.5">
                                                         <span>✂️ Potong (HT):</span>
-                                                        <span className="text-emerald-400 font-extrabold font-sans bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                                                            ({Object.keys(cutTracker[idx] || {}).filter(k => cutTracker[idx][k]).length} / {it.qty || 1})
+                                                        <span className={`font-extrabold font-sans px-2 py-0.5 rounded border text-[10px] ${
+                                                            getCutCount(idx) === (it.qty || 1)
+                                                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                                                : getCutCount(idx) > 0
+                                                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                                                : 'bg-slate-900 text-slate-400 border-slate-800'
+                                                        }`}>
+                                                            {getCutCount(idx) === (it.qty || 1) ? '✓ Selesai' : `${getCutCount(idx)} / ${it.qty || 1}`}
                                                         </span>
                                                     </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => toggleAllCutTracker(idx, it.qty || 1)}
-                                                        className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-semibold cursor-pointer shrink-0"
-                                                    >
-                                                        {Object.keys(cutTracker[idx] || {}).filter(k => cutTracker[idx][k]).length === (it.qty || 1) ? '↺ Reset' : '✓ Tandai All'}
-                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateCutCount(idx, it.qty || 1, it.qty || 1)}
+                                                            className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-semibold cursor-pointer shrink-0"
+                                                            title="Tandai semua terpotong"
+                                                        >
+                                                            ✓ Max
+                                                        </button>
+                                                        {getCutCount(idx) > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateCutCount(idx, 0, it.qty || 1)}
+                                                                className="text-[10px] text-rose-400 hover:text-rose-300 underline font-semibold cursor-pointer shrink-0"
+                                                                title="Reset hitungan ke 0"
+                                                            >
+                                                                ↺ Reset
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
 
-                                                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto py-1 pr-1">
-                                                    {Array.from({ length: Math.min(it.qty || 1, 100) }, (_, i) => i + 1).map((num) => {
-                                                        const isDone = cutTracker[idx]?.[num];
-                                                        return (
-                                                            <button
-                                                                key={num}
-                                                                type="button"
-                                                                onClick={() => toggleCutTracker(idx, num)}
-                                                                className={`h-7 px-2.5 text-xs font-mono font-bold rounded-lg border transition-all transform active:scale-95 flex items-center justify-center gap-1 cursor-pointer ${
-                                                                    isDone
-                                                                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black shadow-md shadow-emerald-500/20 scale-105'
-                                                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
-                                                                }`}
-                                                                title={`Lembar ke-${num}: ${isDone ? 'Sudah Dipotong (Klik untuk un-check)' : 'Belum Dipotong (Klik untuk tandai)'}`}
-                                                            >
-                                                                <span>{isDone ? '✓' : ''}</span>
-                                                                <span>{num}</span>
-                                                            </button>
-                                                        );
-                                                    })}
+                                                {/* STEPPER COUNTER CONTROL (1 KOTAK ANGKA + TOMBOL - / +) */}
+                                                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1.5 rounded-xl shadow-inner">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateCutCount(idx, getCutCount(idx) - 1, it.qty || 1)}
+                                                        disabled={getCutCount(idx) <= 0}
+                                                        className="w-8 h-8 bg-slate-950 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-base transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                                        title="Kurangi 1 lembar"
+                                                    >
+                                                        -
+                                                    </button>
+
+                                                    <div className="relative flex-1 min-w-[60px] max-w-[90px]">
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            max={it.qty || 1}
+                                                            value={getCutCount(idx)}
+                                                            onChange={(e) => updateCutCount(idx, e.target.value, it.qty || 1)}
+                                                            className="w-full bg-slate-950 text-center font-mono font-black text-sm text-amber-300 border border-amber-500/40 rounded-lg px-1.5 py-1 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                                        />
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateCutCount(idx, getCutCount(idx) + 1, it.qty || 1)}
+                                                        disabled={getCutCount(idx) >= (it.qty || 1)}
+                                                        className="w-8 h-8 bg-slate-950 hover:bg-emerald-500/20 hover:text-emerald-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-base transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                                        title="Tambah 1 lembar"
+                                                    >
+                                                        +
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}
@@ -855,7 +1019,7 @@ export default function DivisionExecutionModal({
                                                     </span>
                                                 </label>
                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                    Pilih item order atau dari Katalog Gudang jika berbeda
+                                                    Pilih item order di atas jika ada lebih dari 1 jenis kaca
                                                 </span>
                                             </div>
 
@@ -891,30 +1055,6 @@ export default function DivisionExecutionModal({
                                                         </button>
                                                     );
                                                 })}
-
-                                                {/* DROPDOWN SELECTOR FOR MASTER CATALOG FALLBACK */}
-                                                <div className="flex-1 min-w-[200px]">
-                                                    <select
-                                                        value={rawGlassType}
-                                                        onChange={(e) => setRawGlassType(e.target.value)}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:border-amber-400 font-mono cursor-pointer"
-                                                    >
-                                                        <optgroup label="✨ Jenis Kaca pada Order SPO Ini">
-                                                            {uniqueGlassTypes.map((gt, idx) => (
-                                                                <option key={'spo_gt_' + idx} value={gt.glass_type}>
-                                                                    {gt.glass_type} (Total Order SPO: {gt.totalQty} Pcs — {gt.itemCount} Ukuran)
-                                                                </option>
-                                                            ))}
-                                                        </optgroup>
-                                                        <optgroup label="📦 Katalog Master Stok Bahan Kaca Gudang">
-                                                            {sheetGlasses.map((g) => (
-                                                                <option key={'cat_sel_' + g.id} value={g.name}>
-                                                                    [{g.item_code}] {g.name} — (Stok: {g.qty} {g.unit})
-                                                                </option>
-                                                            ))}
-                                                        </optgroup>
-                                                    </select>
-                                                </div>
                                             </div>
                                         </div>
 
@@ -1033,142 +1173,236 @@ export default function DivisionExecutionModal({
 
                                  {/* FORM 2: SIMPAN KACA SISA POTONG (SCRAP KE RAK) */}
                                 {rawSectionTab === 'scrap' && (
-                                    <div className="space-y-3 animate-in fade-in duration-200">
-                                        <form onSubmit={handleSaveEmbeddedScrap} className="space-y-3 bg-slate-900/80 p-3.5 rounded-xl border border-orange-500/30">
-                                            <div className="text-xs font-bold text-orange-400 flex items-center justify-between border-b border-slate-800 pb-2">
-                                                <span className="flex items-center gap-1.5">
-                                                    <span>🧩 Form Simpan Kaca Sisa Potong ke Rak Storage:</span>
-                                                </span>
-                                                <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                                                    Status: Layak Pakai
-                                                </span>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                                <div className="sm:col-span-2 space-y-1">
-                                                    <label className="text-[11px] font-bold text-slate-300 block">Pilih / Input Jenis Kaca Sisa:</label>
-                                                    <select
-                                                        value={embeddedScrapForm.glass_type}
-                                                        onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, glass_type: e.target.value })}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
-                                                    >
-                                                        <optgroup label="✨ Spesifikasi Item SPO ini">
-                                                            {orderedItems.map((it, idx) => (
-                                                                <option key={'scr_opt_' + idx} value={it.glass_type}>
-                                                                    {it.glass_type}
-                                                                </option>
-                                                            ))}
-                                                        </optgroup>
-                                                        <optgroup label="📦 Katalog Master Bahan Kaca">
-                                                            {sheetGlasses.map((g) => (
-                                                                <option key={'scr_sheet_' + g.id} value={g.name}>
-                                                                    {g.name}
-                                                                </option>
-                                                            ))}
-                                                        </optgroup>
-                                                    </select>
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <label className="text-[11px] font-bold text-slate-300 block">Panjang Sisa (cm):</label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        min="1"
-                                                        required
-                                                        placeholder="cth: 120"
-                                                        value={embeddedScrapForm.length_cm}
-                                                        onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, length_cm: e.target.value })}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <label className="text-[11px] font-bold text-slate-300 block">Lebar Sisa (cm):</label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        min="1"
-                                                        required
-                                                        placeholder="cth: 45"
-                                                        value={embeddedScrapForm.width_cm}
-                                                        onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, width_cm: e.target.value })}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
-                                                    />
+                                    <div className="space-y-3.5 animate-in fade-in duration-200">
+                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-orange-500/30 flex flex-wrap items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-base">🧩</span>
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-orange-300">Form Input Kaca Sisa Potong Per Jenis Kaca (Order SPO Ini)</h4>
+                                                    <p className="text-[10px] text-slate-400 font-mono">Terdapat {uniqueGlassTypes.length} jenis kaca dalam orderan ini. Input ukuran sisa potongan masing-masing di bawah:</p>
                                                 </div>
                                             </div>
+                                            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                                Status: Layak Pakai
+                                            </span>
+                                        </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-                                                <div className="sm:col-span-2 space-y-1">
-                                                    <label className="text-[11px] font-bold text-slate-300 block">Pilih Lokasi Rak Storage Sisa:</label>
-                                                    <select
-                                                        value={embeddedScrapForm.rak_location}
-                                                        onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, rak_location: e.target.value })}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
-                                                    >
-                                                        <option value="Rak A01">Rak A01 (Kaca Polos / Float)</option>
-                                                        <option value="Rak A02">Rak A02 (Kaca Cermin / Mirror)</option>
-                                                        <option value="Rak B01">Rak B01 (Kaca Tempered & Bevel)</option>
-                                                        <option value="Rak B02">Rak B02 (Kaca Etsa / Sandblast)</option>
-                                                        <option value="Rak C01">Rak C01 (Kaca Khusus Sisa Besar)</option>
-                                                    </select>
-                                                </div>
+                                        {/* FORM INPUT TERSENDIRI UNTUK SETIAP JENIS KACA DALAM ORDER SPO */}
+                                        <div className="space-y-3">
+                                            {uniqueGlassTypes.map((gt, idx) => {
+                                                const lenVal = getScrapFormField(gt.glass_type, 'length_cm');
+                                                const widVal = getScrapFormField(gt.glass_type, 'width_cm');
+                                                const rakVal = getScrapFormField(gt.glass_type, 'rak_location');
 
-                                                <div className="sm:col-span-2">
-                                                    <button
-                                                        type="submit"
-                                                        disabled={isSubmittingEmbeddedScrap}
-                                                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
+                                                return (
+                                                    <form
+                                                        key={'scr_form_gt_' + idx}
+                                                        onSubmit={(e) => handleSaveScrapForType(e, gt.glass_type)}
+                                                        className="bg-slate-900/80 p-3.5 rounded-xl border border-orange-500/30 space-y-3 shadow-md"
                                                     >
-                                                        <span>🧩</span>
-                                                        <span>{isSubmittingEmbeddedScrap ? 'Menyimpan...' : '+ Simpan Kaca Sisa ke Rak Storage'}</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </form>
+                                                        <div className="text-xs font-bold text-orange-400 flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 gap-2">
+                                                            <span className="flex items-center gap-2 font-mono">
+                                                                <span className="bg-orange-500 text-slate-950 px-2 py-0.5 rounded text-[10px] font-black">Jenis Kaca #{idx + 1}</span>
+                                                                <strong className="text-slate-100 text-xs">✨ {gt.glass_type}</strong>
+                                                            </span>
+                                                            <span className="text-[10px] text-amber-300 font-mono bg-slate-950 px-2.5 py-0.5 rounded border border-slate-800">
+                                                                Total Order SPO: {gt.totalQty} Pcs ({gt.itemCount} Ukuran)
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                                                            <div className="space-y-1">
+                                                                <label className="text-[11px] font-bold text-slate-300 block">Panjang Sisa (cm):</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.1"
+                                                                    min="1"
+                                                                    required
+                                                                    placeholder="cth: 120"
+                                                                    value={lenVal}
+                                                                    onChange={(e) => updateScrapFormField(gt.glass_type, 'length_cm', e.target.value)}
+                                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                                />
+                                                            </div>
+
+                                                            <div className="space-y-1">
+                                                                <label className="text-[11px] font-bold text-slate-300 block">Lebar Sisa (cm):</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.1"
+                                                                    min="1"
+                                                                    required
+                                                                    placeholder="cth: 45"
+                                                                    value={widVal}
+                                                                    onChange={(e) => updateScrapFormField(gt.glass_type, 'width_cm', e.target.value)}
+                                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                                />
+                                                            </div>
+
+                                                            <div className="space-y-1">
+                                                                <label className="text-[11px] font-bold text-slate-300 block">Pilih Lokasi Rak Storage Sisa:</label>
+                                                                <select
+                                                                    value={rakVal}
+                                                                    onChange={(e) => updateScrapFormField(gt.glass_type, 'rak_location', e.target.value)}
+                                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                                >
+                                                                    <option value="Rak A01">Rak A01 (Kaca Polos / Float)</option>
+                                                                    <option value="Rak A02">Rak A02 (Kaca Cermin / Mirror)</option>
+                                                                    <option value="Rak B01">Rak B01 (Kaca Tempered & Bevel)</option>
+                                                                    <option value="Rak B02">Rak B02 (Kaca Etsa / Sandblast)</option>
+                                                                    <option value="Rak C01">Rak C01 (Kaca Khusus Sisa Besar)</option>
+                                                                </select>
+                                                            </div>
+
+                                                            <div>
+                                                                <button
+                                                                    type="submit"
+                                                                    disabled={submittingScrapType === gt.glass_type}
+                                                                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
+                                                                >
+                                                                    <span>🧩</span>
+                                                                    <span>{submittingScrapType === gt.glass_type ? 'Menyimpan...' : `+ Simpan Sisa ${gt.glass_type}`}</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* OPTIONAL EXPANDABLE FALLBACK UNTUK KACA NON-SPO */}
+                                        <div className="pt-1">
+                                            <details className="bg-slate-900/60 rounded-xl border border-slate-800 p-3 group">
+                                                <summary className="text-xs font-bold text-slate-400 cursor-pointer hover:text-slate-200 flex items-center justify-between font-mono">
+                                                    <span>➕ Input Sisa Potong Jenis Kaca Lain (Di luar Order SPO)</span>
+                                                    <span className="text-[10px] text-slate-500 group-open:rotate-180 transition-transform">▼</span>
+                                                </summary>
+                                                <form onSubmit={handleSaveEmbeddedScrap} className="mt-3 pt-3 border-t border-slate-800 space-y-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                                        <div className="sm:col-span-2 space-y-1">
+                                                            <label className="text-[11px] font-bold text-slate-300 block">Pilih Kaca dari Katalog Gudang:</label>
+                                                            <select
+                                                                value={embeddedScrapForm.glass_type}
+                                                                onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, glass_type: e.target.value })}
+                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                            >
+                                                                {sheetGlasses.map((g) => (
+                                                                    <option key={'scr_sheet_extra_' + g.id} value={g.name}>
+                                                                        [{g.item_code}] {g.name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[11px] font-bold text-slate-300 block">Panjang (cm):</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.1"
+                                                                min="1"
+                                                                required
+                                                                placeholder="cth: 120"
+                                                                value={embeddedScrapForm.length_cm}
+                                                                onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, length_cm: e.target.value })}
+                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[11px] font-bold text-slate-300 block">Lebar (cm):</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.1"
+                                                                min="1"
+                                                                required
+                                                                placeholder="cth: 45"
+                                                                value={embeddedScrapForm.width_cm}
+                                                                onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, width_cm: e.target.value })}
+                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                                                        <div className="sm:col-span-2 space-y-1">
+                                                            <label className="text-[11px] font-bold text-slate-300 block">Pilih Lokasi Rak Storage Sisa:</label>
+                                                            <select
+                                                                value={embeddedScrapForm.rak_location}
+                                                                onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, rak_location: e.target.value })}
+                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                            >
+                                                                <option value="Rak A01">Rak A01 (Kaca Polos / Float)</option>
+                                                                <option value="Rak A02">Rak A02 (Kaca Cermin / Mirror)</option>
+                                                                <option value="Rak B01">Rak B01 (Kaca Tempered & Bevel)</option>
+                                                                <option value="Rak B02">Rak B02 (Kaca Etsa / Sandblast)</option>
+                                                                <option value="Rak C01">Rak C01 (Kaca Khusus Sisa Besar)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="sm:col-span-2">
+                                                            <button
+                                                                type="submit"
+                                                                disabled={isSubmittingEmbeddedScrap}
+                                                                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5 h-[38px]"
+                                                            >
+                                                                <span>+ Simpan Kaca Sisa Ekstra</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </details>
+                                        </div>
 
                                         {/* PENGINGAT UKURAN TERINPUT AGAR TIDAK DOUBLE ENTRY */}
-                                        <div className="bg-slate-900/90 border border-orange-500/40 p-3 rounded-xl space-y-2 shadow-inner">
+                                        <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl space-y-2 shadow-inner">
                                             <div className="flex flex-wrap items-center justify-between text-xs font-extrabold text-orange-300 border-b border-slate-800 pb-1.5 gap-2">
-                                                <span className="flex items-center gap-1.5">
-                                                    <span>📌 Ukuran Kaca Sisa Potong Yang Sudah Diinput / Tersimpan:</span>
+                                                <span className="flex items-center gap-1.5 font-mono">
+                                                    <span>📌 Ukuran Kaca Sisa Potong Tersimpan ({recentSavedScraps.length}):</span>
                                                 </span>
-                                                <span className="text-[10px] text-amber-300 font-mono italic">
+                                                <span className="text-[10px] text-slate-400 font-mono italic">
                                                     💡 Pengingat agar tidak terinput 2 kali
                                                 </span>
                                             </div>
 
                                             {recentSavedScraps.length > 0 ? (
-                                                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                                                     {recentSavedScraps.map((sc, scIdx) => {
                                                         const isEditing = editingScrapId === sc.id;
                                                         return (
-                                                            <div key={'sc_saved_' + (sc.id || scIdx)} className="bg-slate-950 border border-emerald-500/50 p-3 rounded-xl text-xs space-y-2 font-mono shadow-md animate-in fade-in">
+                                                            <div key={'sc_saved_' + (sc.id || scIdx)} className="bg-slate-950 hover:bg-slate-900/90 border border-slate-800 hover:border-slate-700 p-2.5 rounded-xl text-xs font-mono shadow-sm transition-all animate-in fade-in">
                                                                 {!isEditing ? (
-                                                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                                                        <div className="flex flex-wrap items-center gap-2">
-                                                                            <span className="text-orange-400 font-bold">🧩 [{sc.rak_location}]</span>
-                                                                            <strong className="text-slate-100">{sc.glass_type}</strong>
-                                                                            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded font-black text-xs">
-                                                                                📐 Ukuran: {sc.length_cm} × {sc.width_cm} cm
+                                                                    <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5">
+                                                                        {/* LEFT: INFORMATION BADGES */}
+                                                                        <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                                                                            <span className="bg-orange-500/15 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-lg text-[10px] font-bold shrink-0">
+                                                                                🧩 {sc.rak_location}
                                                                             </span>
+
+                                                                            <strong className="text-slate-100 text-xs truncate max-w-[200px]" title={sc.glass_type}>
+                                                                                {sc.glass_type}
+                                                                            </strong>
+
+                                                                            <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-lg font-black text-xs shrink-0 flex items-center gap-1">
+                                                                                <span>📐</span>
+                                                                                <span>{sc.length_cm} × {sc.width_cm} cm</span>
+                                                                            </span>
+
+                                                                            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-sans font-semibold shrink-0">
+                                                                                ✓ Diinput {sc.created_at}
+                                                                            </span>
+
                                                                             {sc.is_edited && (
-                                                                                <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
-                                                                                    (Telah Di-Edit)
+                                                                                <span className="text-[9px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded font-sans shrink-0">
+                                                                                    Edited
                                                                                 </span>
                                                                             )}
                                                                         </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-sans font-extrabold flex items-center gap-1">
-                                                                                <span>✓ Berhasil Diinput ({sc.created_at})</span>
-                                                                            </span>
+
+                                                                        {/* RIGHT: ACTIONS */}
+                                                                        <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => handleStartEditScrap(sc)}
-                                                                                className="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                                                                                title="Koreksi/Edit ukuran jika terjadi salah ketik"
+                                                                                className="bg-slate-900 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/40 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                                title="Koreksi/Edit ukuran"
                                                                             >
-                                                                                <span>✏️ Edit Ukuran</span>
+                                                                                <span>✏️ Edit</span>
                                                                             </button>
                                                                             <button
                                                                                 type="button"
@@ -1177,7 +1411,7 @@ export default function DivisionExecutionModal({
                                                                                         setRecentSavedScraps(prev => prev.filter(i => i.id !== sc.id));
                                                                                     }
                                                                                 }}
-                                                                                className="bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                                className="bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/40 px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                                                                                 title="Hapus dari daftar pengingat"
                                                                             >
                                                                                 <span>🗑️ Hapus</span>

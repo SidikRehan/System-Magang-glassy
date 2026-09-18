@@ -176,12 +176,9 @@ class OrderExecutionController extends Controller
             $msg = 'Pekerjaan Divisi untuk #' . $order->spo_number . ' Selesai & Lolos QC! Siap Dikirim ke Driver.';
         } else {
             $nextDivKey = strtoupper(str_replace('divisi_', '', $nextDiv));
-            $progress[$nextDivKey] = 'Sedang Dikerjakan';
+            $progress[$nextDivKey] = 'Menunggu Pengerjaan';
             if (!isset($timestamps[$nextDivKey]) || !is_array($timestamps[$nextDivKey])) {
                 $timestamps[$nextDivKey] = ['started_at' => null, 'completed_at' => null];
-            }
-            if (empty($timestamps[$nextDivKey]['started_at'])) {
-                $timestamps[$nextDivKey]['started_at'] = now()->toDateTimeString();
             }
 
             $order->status = 'pengerjaan';

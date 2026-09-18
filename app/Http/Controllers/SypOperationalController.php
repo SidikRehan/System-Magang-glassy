@@ -852,12 +852,9 @@ class SypOperationalController extends Controller
             $msg = 'Pekerjaan Divisi untuk #' . $order->spo_number . ' Selesai & Lolos QC! Siap Dikirim ke Driver.';
         } else {
             $nextDivKey = strtoupper(str_replace('divisi_', '', $nextDiv));
-            $progress[$nextDivKey] = 'Sedang Dikerjakan';
+            $progress[$nextDivKey] = 'Menunggu Pengerjaan';
             if (!isset($timestamps[$nextDivKey]) || !is_array($timestamps[$nextDivKey])) {
                 $timestamps[$nextDivKey] = ['started_at' => null, 'completed_at' => null];
-            }
-            if (empty($timestamps[$nextDivKey]['started_at'])) {
-                $timestamps[$nextDivKey]['started_at'] = now()->toDateTimeString();
             }
 
             $order->status = 'pengerjaan';
@@ -1064,10 +1061,19 @@ class SypOperationalController extends Controller
         }
 
         $rawNotes = trim($request->input('notes', ''));
+        $rawDefective = $request->input('defective_items');
+        $defectiveItems = [];
+        if (is_string($rawDefective)) {
+            $defectiveItems = json_decode($rawDefective, true) ?? [];
+        } elseif (is_array($rawDefective)) {
+            $defectiveItems = $rawDefective;
+        }
+
         $complaintData = [
             'reporting_division' => $order->current_division,
             'reason' => $request->input('reason'),
             'notes' => !empty($rawNotes) ? $rawNotes : '-',
+            'defective_items' => $defectiveItems,
             'photo_path' => $photoPath,
             'reported_at' => now()->toDateTimeString(),
             'resolved_at' => null,
@@ -1109,7 +1115,6 @@ class SypOperationalController extends Controller
         } elseif ($action === 'replace_glass') {
             $reportingDiv = $order->current_division;
             $reportingDivKey = strtoupper(str_replace('divisi_', '', $reportingDiv));
-            $reason = $complaintData['reason'] ?? 'Kaca Cacat / Baret';
 
             $complaintData['gudang_decision'] = 'replace_glass';
             $complaintData['resolved_at'] = now()->toDateTimeString();
@@ -1117,10 +1122,10 @@ class SypOperationalController extends Controller
             // Update history of reporting division to reflect replaced glass
             $progress = (array) ($order->division_progress ?? []);
             if ($reportingDivKey) {
-                $progress[$reportingDivKey] = 'Kaca Diganti & Dikembalikan ke Potong (HT)';
+                $progress[$reportingDivKey] = 'Kaca Diganti Gudang & Dikembalikan ke Potong (HT)';
             }
-            // Mark HT as requiring re-cutting
-            $progress['HT'] = 'Potong Ulang (Ganti Kaca dari ' . $reportingDivKey . ')';
+            // Mark HT as requiring re-cutting for replacement
+            $progress['HT'] = 'Potong Ulang (Orderan Ulang Ganti Kaca dari ' . $reportingDivKey . ')';
 
             $order->complaint_status = 're_cut_needed';
             $order->complaint_data = $complaintData;
@@ -1128,7 +1133,7 @@ class SypOperationalController extends Controller
             $order->division_progress = $progress;
             $order->save();
 
-            return redirect()->back()->with('message', '🚨 Permintaan Ganti Kaca Disetujui! SPO #' . $order->spo_number . ' telah dikembalikan ke Divisi Potong (HT) untuk dipotong ulang.');
+            return redirect()->back()->with('message', '🚨 Permintaan Ganti Barang Kaca Disetujui! SPO #' . $order->spo_number . ' telah masuk sebagai Order Ulang Ganti Barang dan dikembalikan ke Divisi Potong (HT).');
         }
 
         return redirect()->back()->with('message', '⚠️ Keputusan tidak valid!');
@@ -1450,7 +1455,28 @@ class SypOperationalController extends Controller
             'vehicle_plate' => 'nullable|string|max:255',
             'source_role' => 'nullable|string|max:50',
             'approval_status' => 'nullable|string|in:approved,pending,rejected',
+            'receipt_photo' => 'nullable|image|max:5120',
+            'receipt_photos' => 'nullable|array',
+            'receipt_photos.*' => 'nullable|image|max:5120',
         ]);
+
+        $storedPhotoPaths = [];
+        if ($request->hasFile('receipt_photos')) {
+            foreach ($request->file('receipt_photos') as $file) {
+                if ($file->isValid()) {
+                    $storedPhotoPaths[] = $file->store('receipts', 'public');
+                }
+            }
+        } elseif ($request->hasFile('receipt_photo')) {
+            $storedPhotoPaths[] = $request->file('receipt_photo')->store('receipts', 'public');
+        }
+
+        $receiptPhotoPath = null;
+        if (count($storedPhotoPaths) === 1) {
+            $receiptPhotoPath = $storedPhotoPaths[0];
+        } elseif (count($storedPhotoPaths) > 1) {
+            $receiptPhotoPath = json_encode($storedPhotoPaths);
+        }
 
         $prefixMap = [
             'pembelian_bahan' => 'PO-BB',
@@ -1484,6 +1510,7 @@ class SypOperationalController extends Controller
             'transaction_date' => $validated['transaction_date'],
             'due_date' => $validated['due_date'] ?? null,
             'notes' => $validated['notes'] ?? null,
+            'receipt_photo_path' => $receiptPhotoPath,
             'user_id' => auth()->id(),
             'approved_by_user_id' => $approvalStatus === 'approved' ? auth()->id() : null,
             'approved_at' => $approvalStatus === 'approved' ? now() : null,

@@ -31,10 +31,19 @@ class ComplaintController extends Controller
         }
 
         $rawNotes = trim($request->input('notes', ''));
+        $rawDefective = $request->input('defective_items');
+        $defectiveItems = [];
+        if (is_string($rawDefective)) {
+            $defectiveItems = json_decode($rawDefective, true) ?? [];
+        } elseif (is_array($rawDefective)) {
+            $defectiveItems = $rawDefective;
+        }
+
         $complaintData = [
             'reporting_division' => $order->current_division,
             'reason' => $request->input('reason'),
             'notes' => !empty($rawNotes) ? $rawNotes : '-',
+            'defective_items' => $defectiveItems,
             'photo_path' => $photoPath,
             'reported_at' => now()->toDateTimeString(),
             'resolved_at' => null,
@@ -76,7 +85,6 @@ class ComplaintController extends Controller
         } elseif ($action === 'replace_glass') {
             $reportingDiv = $order->current_division;
             $reportingDivKey = strtoupper(str_replace('divisi_', '', $reportingDiv));
-            $reason = $complaintData['reason'] ?? 'Kaca Cacat / Baret';
 
             $complaintData['gudang_decision'] = 'replace_glass';
             $complaintData['resolved_at'] = now()->toDateTimeString();
@@ -84,10 +92,10 @@ class ComplaintController extends Controller
             // Update history of reporting division to reflect replaced glass
             $progress = (array) ($order->division_progress ?? []);
             if ($reportingDivKey) {
-                $progress[$reportingDivKey] = 'Kaca Diganti & Dikembalikan ke Potong (HT)';
+                $progress[$reportingDivKey] = 'Kaca Diganti Gudang & Dikembalikan ke Potong (HT)';
             }
-            // Mark HT as requiring re-cutting
-            $progress['HT'] = 'Potong Ulang (Ganti Kaca dari ' . $reportingDivKey . ')';
+            // Mark HT as requiring re-cutting for replacement
+            $progress['HT'] = 'Potong Ulang (Orderan Ulang Ganti Kaca dari ' . $reportingDivKey . ')';
 
             $order->complaint_status = 're_cut_needed';
             $order->complaint_data = $complaintData;
@@ -95,7 +103,7 @@ class ComplaintController extends Controller
             $order->division_progress = $progress;
             $order->save();
 
-            return redirect()->back()->with('message', '🚨 Permintaan Ganti Kaca Disetujui! SPO #' . $order->spo_number . ' telah dikembalikan ke Divisi Potong (HT) untuk dipotong ulang.');
+            return redirect()->back()->with('message', '🚨 Permintaan Ganti Barang Kaca Disetujui! SPO #' . $order->spo_number . ' telah masuk sebagai Order Ulang Ganti Barang dan dikembalikan ke Divisi Potong (HT).');
         }
 
         return redirect()->back()->with('message', '⚠️ Keputusan tidak valid!');

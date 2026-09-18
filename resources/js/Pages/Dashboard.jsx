@@ -207,6 +207,67 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     const [stockSubTab, setStockSubTab] = useState('lembaran');
     const [productionSubTab, setProductionSubTab] = useState(isDivisionWorker ? `${userRole}_active` : 'all');
 
+    // Filter Stat Pemilahan Order (Masuk & Selesai) berdasarkan Rentang Waktu (Hari Ini, 2 Hari, Seminggu, Sebulan, Setahun)
+    const [statTimeRange, setStatTimeRange] = useState('today'); // 'today' | '2days' | 'week' | 'month' | 'year' | 'all'
+    const [statFilterType, setStatFilterType] = useState('all'); // 'all' | 'entered' | 'completed'
+    const [showRekapModal, setShowRekapModal] = useState(false);
+
+    const isDriverMatch = (driverField, targetUserName) => {
+        if (!driverField || !targetUserName) return false;
+        const dStr = String(driverField).toLowerCase();
+        const uStr = String(targetUserName).toLowerCase();
+
+        const normalize = (s) => s.replace(/\b(pak|driver|supir|utama|dc|engkel|l300|subcon|armada|pick|up)\b/gi, '').trim();
+        
+        const dClean = normalize(dStr);
+        const uClean = normalize(uStr);
+
+        if (dClean.length > 0 && uClean.length > 0) {
+            if (dStr.includes(uClean) || uStr.includes(dClean) || dClean.includes(uClean) || uClean.includes(dClean)) {
+                return true;
+            }
+        }
+
+        const uTokens = uStr.split(/\s+/).filter(t => !['pak', 'driver', 'supir', 'utama', 'dc', 'armada'].includes(t.toLowerCase()) && t.length >= 3);
+        return uTokens.some(token => dStr.includes(token));
+    };
+
+    const isDateInTimeRange = (dateStr, rangeKey) => {
+        if (!dateStr) return false;
+        const target = new Date(dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T'));
+        if (isNaN(target.getTime())) return false;
+
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (rangeKey === 'today') {
+            return target >= todayStart;
+        }
+        if (rangeKey === '2days') {
+            const d = new Date(todayStart);
+            d.setDate(d.getDate() - 1);
+            return target >= d;
+        }
+        if (rangeKey === 'week') {
+            const d = new Date(todayStart);
+            d.setDate(d.getDate() - 6);
+            return target >= d;
+        }
+        if (rangeKey === 'month') {
+            const d = new Date(todayStart);
+            d.setDate(d.getDate() - 29);
+            return target >= d;
+        }
+        if (rangeKey === 'year') {
+            const yearStart = new Date(now.getFullYear(), 0, 1);
+            return target >= yearStart;
+        }
+        if (rangeKey === 'all') {
+            return true;
+        }
+        return false;
+    };
+
     // Disposisi & Divisi Working Order & Execution Modal & Scrap Glass Popup State
     const [selectedWorkingOrder, setSelectedWorkingOrder] = useState(null);
     const [activeWorkingOrderId, setActiveWorkingOrderId] = useState(null);
@@ -271,13 +332,47 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         setSketchLightbox({ isOpen: true, url: fullUrl, title: title || 'Sketsa Kaca' });
     };
 
+    const getPhotoList = (pathStr) => {
+        if (!pathStr) return [];
+        if (typeof pathStr === 'string' && pathStr.trim().startsWith('[')) {
+            try {
+                return JSON.parse(pathStr);
+            } catch (e) {
+                return [pathStr];
+            }
+        }
+        return [pathStr];
+    };
+
     const handleOpenComplaintModal = (order) => {
         setSelectedExecutionOrder(order);
+
+        const itemsList = Array.isArray(order.items) && order.items.length > 0
+            ? order.items
+            : [{
+                glass_type: order.glass_type || 'Kaca Standard',
+                width: order.width || 0,
+                height: order.height || 0,
+                thickness: order.thickness || 5,
+                quantity: order.quantity || 1,
+            }];
+
+        const initialDefectives = itemsList.map((item, idx) => ({
+            item_index: idx,
+            glass_type: item.glass_type || 'Kaca Standard',
+            width: item.width || 0,
+            height: item.height || 0,
+            thickness: item.thickness || 5,
+            quantity: item.quantity || 1,
+            qty_defective: 0,
+        }));
+
         setComplaintForm({
             reason: 'Kaca Baret / Gores',
             notes: '',
             photo: null,
-            photoPreview: null
+            photoPreview: null,
+            defectiveItems: initialDefectives,
         });
         setShowComplaintModal(true);
     };
@@ -301,6 +396,10 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const formData = new FormData();
         formData.append('reason', complaintForm.reason);
         formData.append('notes', rawNotes === '' ? '-' : rawNotes);
+
+        const activeDefectives = (complaintForm.defectiveItems || []).filter(item => item.qty_defective > 0);
+        formData.append('defective_items', JSON.stringify(activeDefectives));
+
         if (complaintForm.photo) {
             formData.append('photo', complaintForm.photo);
         }
@@ -4626,16 +4725,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     );
                                 })()}
 
-                                {/* TABEL ANTREAN WORKSTATION DIVISI (PRIORITAS DI PALING ATAS) */}
+                                {/* TABEL ANTREAN / RIWAYAT WORKSTATION DIVISI */}
                                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
                                     <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-3">
                                         <div>
                                             <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
-                                                📋 Tabel Antrean Workstation Divisi
+                                                {productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready'
+                                                    ? '📜 Riwayat Orderan Selesai Divisi'
+                                                    : '📋 Tabel Antrean Workstation Divisi'}
                                             </h3>
                                             {isDivisionWorker ? (
                                                 <p className="text-xs text-slate-400 mt-0.5">
-                                                    Urutan antrean: <strong className="text-rose-400">⚡ INTERUPSI REVISI</strong> berada di posisi teratas, disusul <strong className="text-amber-400">🔥 PRIORITAS</strong>, kemudian antrean reguler.
+                                                    {productionSubTab.endsWith('_history')
+                                                        ? 'Daftar riwayat pekerjaan yang telah diselesaikan oleh divisi ini.'
+                                                        : <>Urutan antrean: <strong className="text-rose-400">⚡ INTERUPSI REVISI</strong> berada di posisi teratas, disusul <strong className="text-amber-400">🔥 PRIORITAS</strong>, kemudian antrean reguler.</>}
                                                 </p>
                                             ) : (
                                                 <p className="text-xs text-slate-400 mt-0.5">
@@ -4644,46 +4747,159 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             )}
                                         </div>
 
-                                        {/* STATISTIK MASUK & SELESAI HARI INI */}
+                                        {/* STATISTIK MASUK & SELESAI */}
                                         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
                                             {(() => {
-                                                const todayStr = new Date().toISOString().split('T')[0];
                                                 const curKey = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'HT';
+                                                const isHistorySubTab = productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready';
 
-                                                const enteredToday = initialOrders.filter(o => {
+                                                const enteredRangeList = initialOrders.filter(o => {
                                                     const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
-                                                    return ts.started_at && ts.started_at.startsWith(todayStr);
-                                                }).length;
+                                                    const dateToCheck = ts.started_at || ts.created_at || o.created_at || o.order_date;
+                                                    const matchDiv = isDivisionWorker ? (o.current_division === userRole || (o.division_progress?.[curKey] && o.division_progress?.[curKey] !== 'N/A' && o.division_progress?.[curKey] !== 'Belum')) : true;
+                                                    return matchDiv && isDateInTimeRange(dateToCheck, isHistorySubTab ? statTimeRange : 'today');
+                                                });
 
-                                                const completedToday = initialOrders.filter(o => {
+                                                const completedRangeList = initialOrders.filter(o => {
                                                     const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
-                                                    return ts.completed_at && ts.completed_at.startsWith(todayStr);
-                                                }).length;
+                                                    const dateToCheck = ts.completed_at || o.execution_completed_at;
+                                                    const matchDiv = (o.division_progress && o.division_progress[curKey] === 'Selesai');
+                                                    return matchDiv && isDateInTimeRange(dateToCheck, isHistorySubTab ? statTimeRange : 'today');
+                                                });
 
+                                                const rangeLabels = {
+                                                    today: 'Hari Ini',
+                                                    '2days': '2 Hari',
+                                                    week: '1 Minggu',
+                                                    month: '1 Bulan',
+                                                    year: '1 Tahun',
+                                                    all: 'Semua Waktu'
+                                                };
+
+                                                // FITUR FILTER & RENTANG WAKTU LENGKAP HANYA TAMPIL DI TAB RIWAYAT
+                                                if (isHistorySubTab) {
+                                                    return (
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            {/* SELECTOR RENTANG WAKTU (KHUSUS TAB RIWAYAT) */}
+                                                            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded-xl shadow-inner">
+                                                                <span className="text-slate-400 text-[11px]">⏳ Rentang Waktu:</span>
+                                                                <select
+                                                                    value={statTimeRange}
+                                                                    onChange={(e) => setStatTimeRange(e.target.value)}
+                                                                    className="bg-transparent text-amber-300 font-bold text-xs focus:outline-none cursor-pointer"
+                                                                >
+                                                                    <option value="today" className="bg-slate-900 text-slate-100">📅 Hari Ini</option>
+                                                                    <option value="2days" className="bg-slate-900 text-slate-100">📆 2 Hari Terakhir</option>
+                                                                    <option value="week" className="bg-slate-900 text-slate-100">🗓️ 1 Minggu (7 Hari)</option>
+                                                                    <option value="month" className="bg-slate-900 text-slate-100">📊 1 Bulan (30 Hari)</option>
+                                                                    <option value="year" className="bg-slate-900 text-slate-100">🗓️ 1 Tahun Ini</option>
+                                                                    <option value="all" className="bg-slate-900 text-slate-100">🌐 Semua Waktu</option>
+                                                                </select>
+                                                            </div>
+
+                                                            {/* BADGE MASUK */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setStatFilterType(prev => prev === 'entered' ? 'all' : 'entered')}
+                                                                className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition cursor-pointer ${
+                                                                    statFilterType === 'entered'
+                                                                        ? 'bg-cyan-500 text-slate-950 border-cyan-300 font-extrabold shadow-md shadow-cyan-500/20'
+                                                                        : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                                                                }`}
+                                                                title={`Klik untuk memilah riwayat orderan masuk (${rangeLabels[statTimeRange]})`}
+                                                            >
+                                                                <span>📥 Masuk ({rangeLabels[statTimeRange]}):</span>
+                                                                <strong className={`font-extrabold ${statFilterType === 'entered' ? 'text-slate-950' : 'text-white'}`}>{enteredRangeList.length} Order</strong>
+                                                            </button>
+
+                                                            {/* BADGE SELESAI */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setStatFilterType(prev => prev === 'completed' ? 'all' : 'completed')}
+                                                                className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition cursor-pointer ${
+                                                                    statFilterType === 'completed'
+                                                                        ? 'bg-emerald-500 text-slate-950 border-emerald-300 font-extrabold shadow-md shadow-emerald-500/20'
+                                                                        : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                                                }`}
+                                                                title={`Klik untuk memilah riwayat orderan selesai (${rangeLabels[statTimeRange]})`}
+                                                            >
+                                                                <span>✅ Selesai ({rangeLabels[statTimeRange]}):</span>
+                                                                <strong className={`font-extrabold ${statFilterType === 'completed' ? 'text-slate-950' : 'text-white'}`}>{completedRangeList.length} Order</strong>
+                                                            </button>
+
+                                                            {/* TOMBOL REKAP LAPORAN MODAL */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowRekapModal(true)}
+                                                                className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                title="Buka Rekap Rincian Harian & Laporan Performance"
+                                                            >
+                                                                <span>📊 Rekap Rincian</span>
+                                                            </button>
+
+                                                            {statFilterType !== 'all' && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setStatFilterType('all')}
+                                                                    className="bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 px-2 py-1.5 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer text-[11px]"
+                                                                    title="Reset Filter Tampilan Antrean"
+                                                                >
+                                                                    <span>✕ Reset Pilah</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                // BADGE SIMPLE HARI INI DI TAB ANTREAN ACTIVE
                                                 return (
-                                                    <>
-                                                        <span className="bg-cyan-500/10 text-cyan-300 px-3 py-1.5 rounded-xl border border-cyan-500/30 flex items-center gap-1.5 shadow-sm">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <div className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
                                                             <span>📥 Masuk Hari Ini:</span>
-                                                            <strong className="text-white font-extrabold">{enteredToday} Order</strong>
-                                                        </span>
-                                                        <span className="bg-emerald-500/10 text-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                                                            <strong className="text-white font-extrabold">{enteredRangeList.length} Order</strong>
+                                                        </div>
+                                                        <div className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
                                                             <span>✅ Selesai Hari Ini:</span>
-                                                            <strong className="text-white font-extrabold">{completedToday} Order</strong>
-                                                        </span>
-                                                    </>
+                                                            <strong className="text-white font-extrabold">{completedRangeList.length} Order</strong>
+                                                        </div>
+                                                    </div>
                                                 );
                                             })()}
                                         </div>
                                     </div>
 
                                     {(() => {
+                                        const curDivKey = isDivisionWorker
+                                            ? userRole.replace('divisi_', '').toUpperCase()
+                                            : (productionSubTab.startsWith('divisi_') ? productionSubTab.replace('divisi_', '').toUpperCase() : 'HT');
+
+                                        const isHistorySubTab = productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready';
+
                                         const rawFiltered = initialOrders.filter(o => {
-                                            if (isDivisionWorker) {
-                                                if (productionSubTab === `${userRole}_history`) {
-                                                    const code = userRole.replace('divisi_', '').toUpperCase();
-                                                    const p = o.division_progress || {};
-                                                    return o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai');
+                                            if (isHistorySubTab) {
+                                                const code = userRole.replace('divisi_', '').toUpperCase();
+                                                const p = o.division_progress || {};
+                                                const isBaseHistoryMatch = isDivisionWorker
+                                                    ? (o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai'))
+                                                    : checkOrderDivisi(o, productionSubTab);
+
+                                                if (!isBaseHistoryMatch) return false;
+
+                                                const ts = (o.division_timestamps && o.division_timestamps[curDivKey]) ? o.division_timestamps[curDivKey] : {};
+                                                const dateEntered = ts.started_at || ts.created_at || o.created_at || o.order_date;
+                                                const dateCompleted = ts.completed_at || o.execution_completed_at;
+
+                                                if (statFilterType === 'entered') {
+                                                    return isDateInTimeRange(dateEntered, statTimeRange);
+                                                } else if (statFilterType === 'completed') {
+                                                    return isDateInTimeRange(dateCompleted, statTimeRange);
+                                                } else {
+                                                    if (statTimeRange === 'all') return true;
+                                                    return isDateInTimeRange(dateCompleted || dateEntered, statTimeRange);
                                                 }
+                                            }
+
+                                            if (isDivisionWorker) {
                                                 return o.current_division === userRole;
                                             }
                                             return checkOrderDivisi(o, productionSubTab);
@@ -4705,10 +4921,6 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 </div>
                                             );
                                         }
-
-                                        const curDivKey = isDivisionWorker
-                                            ? userRole.replace('divisi_', '').toUpperCase()
-                                            : (productionSubTab.startsWith('divisi_') ? productionSubTab.replace('divisi_', '').toUpperCase() : 'HT');
 
                                         const activeOngoingId = (() => {
                                             if (activeWorkingOrderId) return activeWorkingOrderId;
@@ -5338,7 +5550,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs font-bold text-cyan-400 flex items-center gap-2">
                                     <span>🚚 Order Siap / Sedang Kirim:</span>
                                     <span className="bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
-                                        {initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan').length} SPO
+                                        {userRole === 'driver'
+                                            ? initialOrders.filter(o => isDriverMatch(o.assigned_driver || o.driver_name, userName) && (o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan')).length
+                                            : initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan').length} SPO
                                     </span>
                                 </div>
                             </div>
@@ -5347,7 +5561,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {userRole === 'driver' && (() => {
                                 const myCodOrders = initialOrders.filter(o => 
                                     o.payment_status !== 'Lunas' && 
-                                    (o.assigned_driver?.toLowerCase().includes(userName.toLowerCase()) || o.status === 'pengiriman')
+                                    isDriverMatch(o.assigned_driver || o.driver_name, userName)
                                 );
                                 const myClaims = financeTransactionsList.filter(t => 
                                     t.source_role === 'driver' && 
@@ -5434,11 +5648,29 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                             <div key={clm.id} className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex justify-between items-center text-xs">
                                                                 <div>
                                                                     <div className="font-bold text-slate-200">{clm.title}</div>
-                                                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
+                                                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5 flex flex-wrap items-center gap-2">
                                                                         <span className="text-amber-300 font-bold">Rp {Number(clm.amount || 0).toLocaleString('id-ID')}</span>
                                                                         <span>• {clm.vehicle_plate || 'Armada'}</span>
                                                                         <span>• {clm.transaction_date}</span>
                                                                     </div>
+                                                                    {clm.receipt_photo_path && (() => {
+                                                                        const pList = getPhotoList(clm.receipt_photo_path);
+                                                                        if (pList.length === 0) return null;
+                                                                        return (
+                                                                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                                                {pList.map((p, pIdx) => (
+                                                                                    <button
+                                                                                        key={pIdx}
+                                                                                        type="button"
+                                                                                        onClick={() => handleOpenSketchLightbox(p, `Struk Nota #${clm.transaction_code} (${pIdx + 1}/${pList.length})`)}
+                                                                                        className="text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1 cursor-pointer"
+                                                                                    >
+                                                                                        <span>📷 Struk #{pIdx + 1}</span>
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+                                                                        );
+                                                                    })()}
                                                                 </div>
                                                                 <div>
                                                                     {clm.approval_status === 'pending' && (
@@ -5583,7 +5815,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                         waybill_number: 'SJ-' + (o.spo_number || o.id),
                                         trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
                                         order: o,
-                                        driver_name: o.assigned_driver || 'Pak Budi (Supir Utama DC)',
+                                        driver_name: o.assigned_driver || o.driver_name || '',
                                         vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
                                         waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
                                         delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman'
@@ -5592,11 +5824,11 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                     // Group by trip_code
                                     const grouped = {};
                                     deliveryList.forEach(d => {
-                                        const key = d.trip_code || (d.driver_name + '_' + d.vehicle_plate);
+                                        const key = d.trip_code || ((d.driver_name || 'Unassigned') + '_' + (d.vehicle_plate || 'Armada'));
                                         if (!grouped[key]) {
                                             grouped[key] = {
                                                 trip_code: d.trip_code || key,
-                                                driver_name: d.driver_name || 'Pak Budi (Supir Utama DC)',
+                                                driver_name: d.driver_name || 'Belum Ditugaskan',
                                                 vehicle_plate: d.vehicle_plate || 'Engkel Box (D 8472 AB)',
                                                 deliveries: [],
                                                 orders: []
@@ -5611,16 +5843,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                                     let trips = Object.values(grouped);
 
-                                    // Filter for logged-in driver if userRole === 'driver'
+                                    // Filter strictly for logged-in driver if userRole === 'driver'
                                     if (userRole === 'driver') {
-                                        const driverFirstName = userName.split(' ')[0] || userName;
-                                        const myTrips = trips.filter(t => 
-                                            t.driver_name.toLowerCase().includes(driverFirstName.toLowerCase()) || 
-                                            t.driver_name.toLowerCase().includes(userName.toLowerCase())
-                                        );
-                                        if (myTrips.length > 0) {
-                                            trips = myTrips;
-                                        }
+                                        trips = trips.filter(t => isDriverMatch(t.driver_name, userName));
                                     }
 
                                     if (trips.length === 0) {
@@ -5762,105 +5987,123 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800">
-                                            {initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan' || o.status === 'selesai').map(ord => {
-                                                const isSelected = selectedBatchOrderIds.includes(ord.id);
-                                                const itemsList = Array.isArray(ord.items) && ord.items.length > 0
-                                                    ? ord.items
-                                                    : [{
-                                                        glass_type: ord.glass_type || 'Kaca Cermin 5 mm',
-                                                        length_cm: ord.length_cm || 150,
-                                                        width_cm: ord.width_cm || 120,
-                                                        thickness_mm: ord.thickness_mm || 5,
-                                                        qty: ord.qty || 1
-                                                    }];
+                                            {(() => {
+                                                const tableOrders = initialOrders
+                                                    .filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan' || o.status === 'selesai')
+                                                    .filter(o => userRole !== 'driver' || isDriverMatch(o.assigned_driver || o.driver_name, userName));
 
-                                                const isLunas = ord.payment_status === 'Lunas';
+                                                if (tableOrders.length === 0) {
+                                                    return (
+                                                        <tr>
+                                                            <td colSpan="8" className="p-8 text-center text-slate-500 italic">
+                                                                {userRole === 'driver'
+                                                                    ? `Belum ada order pengiriman yang ditugaskan oleh Admin Toko untuk supir ${userName}.`
+                                                                    : 'Belum ada order SPO yang siap kirim.'}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
 
-                                                return (
-                                                    <tr key={ord.id} className={`transition ${isSelected ? 'bg-cyan-950/40 border-l-4 border-l-cyan-400' : 'hover:bg-slate-800/30'}`}>
-                                                        {/* CHECKBOX SELECTION */}
-                                                        <td className="p-3 text-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => toggleSelectOrderForBatch(ord.id)}
-                                                                className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 bg-slate-950 border-slate-700 cursor-pointer"
-                                                            />
-                                                        </td>
+                                                return tableOrders.map(ord => {
+                                                    const isSelected = selectedBatchOrderIds.includes(ord.id);
+                                                    const itemsList = Array.isArray(ord.items) && ord.items.length > 0
+                                                        ? ord.items
+                                                        : [{
+                                                            glass_type: ord.glass_type || 'Kaca Cermin 5 mm',
+                                                            length_cm: ord.length_cm || 150,
+                                                            width_cm: ord.width_cm || 120,
+                                                            thickness_mm: ord.thickness_mm || 5,
+                                                            qty: ord.qty || 1
+                                                        }];
 
-                                                        {/* NOMOR SPO */}
-                                                        <td className="p-3">
-                                                            <div className="font-extrabold text-cyan-400 font-mono text-sm">
-                                                                {ord.spo_number}
-                                                            </div>
-                                                            {ord.trip_code && (
-                                                                <div className="text-[10px] text-cyan-300 font-mono mt-0.5">
-                                                                    Trip: {ord.trip_code}
+                                                    const isLunas = ord.payment_status === 'Lunas';
+
+                                                    return (
+                                                        <tr key={ord.id} className={`transition ${isSelected ? 'bg-cyan-950/40 border-l-4 border-l-cyan-400' : 'hover:bg-slate-800/30'}`}>
+                                                            {/* CHECKBOX SELECTION */}
+                                                            <td className="p-3 text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => toggleSelectOrderForBatch(ord.id)}
+                                                                    className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 bg-slate-950 border-slate-700 cursor-pointer"
+                                                                />
+                                                            </td>
+
+                                                            {/* NOMOR SPO */}
+                                                            <td className="p-3">
+                                                                <div className="font-extrabold text-cyan-400 font-mono text-sm">
+                                                                    {ord.spo_number}
                                                                 </div>
-                                                            )}
-                                                        </td>
+                                                                {ord.trip_code && (
+                                                                    <div className="text-[10px] text-cyan-300 font-mono mt-0.5">
+                                                                        Trip: {ord.trip_code}
+                                                                    </div>
+                                                                )}
+                                                            </td>
 
-                                                        {/* NAMA CUST */}
-                                                        <td className="p-3">
-                                                            <div className="font-bold text-slate-100">{ord.customer_name}</div>
-                                                            <div className="text-xs text-cyan-300 font-mono mt-0.5">{ord.customer_phone}</div>
-                                                        </td>
+                                                            {/* NAMA CUST */}
+                                                            <td className="p-3">
+                                                                <div className="font-bold text-slate-100">{ord.customer_name}</div>
+                                                                <div className="text-xs text-cyan-300 font-mono mt-0.5">{ord.customer_phone}</div>
+                                                            </td>
 
-                                                        {/* ALAMAT */}
-                                                        <td className="p-3 max-w-xs">
-                                                            <div className="text-xs text-slate-200 font-medium leading-snug line-clamp-2" title={ord.customer_address}>
-                                                                📍 {ord.customer_address || 'Alamat lokasi pengiriman'}
-                                                            </div>
-                                                        </td>
-
-                                                        {/* SPESIFIKASI BARANG */}
-                                                        <td className="p-3 space-y-1 max-w-xs">
-                                                            {itemsList.map((it, idx) => (
-                                                                <div key={idx} className="bg-slate-950/60 p-1.5 rounded border border-slate-800 text-xs flex justify-between gap-2">
-                                                                    <span className="font-bold text-cyan-300 truncate">#{idx + 1}. {it.glass_type}</span>
-                                                                    <span className="font-mono text-slate-300 text-[11px] shrink-0">{it.qty || 1} Pcs</span>
+                                                            {/* ALAMAT */}
+                                                            <td className="p-3 max-w-xs">
+                                                                <div className="text-xs text-slate-200 font-medium leading-snug line-clamp-2" title={ord.customer_address}>
+                                                                    📍 {ord.customer_address || 'Alamat lokasi pengiriman'}
                                                                 </div>
-                                                            ))}
-                                                        </td>
+                                                            </td>
 
-                                                        {/* SUPIR & MOBIL ASSIGNED */}
-                                                        <td className="p-3">
-                                                            {ord.assigned_driver ? (
-                                                                <>
-                                                                    <div className="font-bold text-slate-100 text-xs">
-                                                                        👨‍✈️ {ord.assigned_driver}
+                                                            {/* SPESIFIKASI BARANG */}
+                                                            <td className="p-3 space-y-1 max-w-xs">
+                                                                {itemsList.map((it, idx) => (
+                                                                    <div key={idx} className="bg-slate-950/60 p-1.5 rounded border border-slate-800 text-xs flex justify-between gap-2">
+                                                                        <span className="font-bold text-cyan-300 truncate">#{idx + 1}. {it.glass_type}</span>
+                                                                        <span className="font-mono text-slate-300 text-[11px] shrink-0">{it.qty || 1} Pcs</span>
                                                                     </div>
-                                                                    <div className="text-[11px] text-cyan-300 font-semibold mt-0.5">
-                                                                        🚚 {ord.assigned_vehicle}
-                                                                    </div>
-                                                                </>
-                                                            ) : (
-                                                                <span className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold inline-block">
-                                                                    ⏳ Belum Ditugaskan
+                                                                ))}
+                                                            </td>
+
+                                                            {/* SUPIR & MOBIL ASSIGNED */}
+                                                            <td className="p-3">
+                                                                {ord.assigned_driver ? (
+                                                                    <>
+                                                                        <div className="font-bold text-slate-100 text-xs">
+                                                                            👨‍✈️ {ord.assigned_driver}
+                                                                        </div>
+                                                                        <div className="text-[11px] text-cyan-300 font-semibold mt-0.5">
+                                                                            🚚 {ord.assigned_vehicle}
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold inline-block">
+                                                                        ⏳ Belum Ditugaskan
+                                                                    </span>
+                                                                )}
+                                                            </td>
+
+                                                            {/* STATUS PAYMENT */}
+                                                            <td className="p-3">
+                                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold inline-block ${isLunas ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`}>
+                                                                    {isLunas ? 'LUNAS (Surat Jalan Putih)' : 'COD (Surat Jalan Merah)'}
                                                                 </span>
-                                                            )}
-                                                        </td>
+                                                            </td>
 
-                                                        {/* STATUS PAYMENT */}
-                                                        <td className="p-3">
-                                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold inline-block ${isLunas ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`}>
-                                                                {isLunas ? 'LUNAS (Surat Jalan Putih)' : 'COD (Surat Jalan Merah)'}
-                                                            </span>
-                                                        </td>
-
-                                                        {/* AKSI DOKUMEN */}
-                                                        <td className="p-3 text-center">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
-                                                                className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-extrabold transition inline-flex items-center gap-1 shadow cursor-pointer"
-                                                            >
-                                                                🖨️ Cetak SJ 4 Warna
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                                            {/* AKSI DOKUMEN */}
+                                                            <td className="p-3 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
+                                                                    className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-extrabold transition inline-flex items-center gap-1 shadow cursor-pointer"
+                                                                >
+                                                                    🖨️ Cetak SJ 4 Warna
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                });
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
@@ -10757,6 +11000,195 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                 selectedExecutionOrder={selectedExecutionOrder}
                 userRole={userRole}
             />
+
+            {/* MODAL REKAP RINCIAN PEMILAHAN ORDERAN (MASUK & SELESAI) */}
+            {showRekapModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in">
+                    <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-2xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                        {/* MODAL HEADER */}
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">📊</span>
+                                <div>
+                                    <h3 className="text-sm font-black text-slate-100 uppercase tracking-wide">
+                                        Rekapitulasi Pemilihan Orderan Masuk & Selesai
+                                    </h3>
+                                    <p className="text-[11px] text-slate-400 font-mono">
+                                        Divisi: <strong className="text-cyan-300">{isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'SEMUA DIVISI'}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowRekapModal(false)}
+                                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm cursor-pointer transition"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* RENTANG WAKTU SELECTOR BUTTONS */}
+                        <div className="flex flex-wrap items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                            <span className="text-xs font-mono font-bold text-slate-400 pl-1">Filter Rentang Waktu:</span>
+                            {[
+                                { key: 'today', label: '📅 Hari Ini' },
+                                { key: '2days', label: '📆 2 Hari' },
+                                { key: 'week', label: '🗓️ 1 Minggu' },
+                                { key: 'month', label: '📊 1 Bulan' },
+                                { key: 'year', label: '🗓️ 1 Tahun' },
+                                { key: 'all', label: '🌐 Semua Waktu' }
+                            ].map(item => (
+                                <button
+                                    key={item.key}
+                                    type="button"
+                                    onClick={() => setStatTimeRange(item.key)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                                        statTimeRange === item.key
+                                            ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                                            : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                                    }`}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* STAT SUMMARY CARDS */}
+                        {(() => {
+                            const curKey = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'HT';
+
+                            const enteredList = initialOrders.filter(o => {
+                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                const dateToCheck = ts.started_at || ts.created_at || o.created_at || o.order_date;
+                                const matchDiv = isDivisionWorker ? (o.current_division === userRole || (o.division_progress?.[curKey] && o.division_progress?.[curKey] !== 'N/A' && o.division_progress?.[curKey] !== 'Belum')) : true;
+                                return matchDiv && isDateInTimeRange(dateToCheck, statTimeRange);
+                            });
+
+                            const completedList = initialOrders.filter(o => {
+                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                const dateToCheck = ts.completed_at || o.execution_completed_at;
+                                const matchDiv = (o.division_progress && o.division_progress[curKey] === 'Selesai');
+                                return matchDiv && isDateInTimeRange(dateToCheck, statTimeRange);
+                            });
+
+                            const completionRate = enteredList.length > 0 ? Math.round((completedList.length / enteredList.length) * 100) : (completedList.length > 0 ? 100 : 0);
+
+                            // Group by date YYYY-MM-DD
+                            const dateGroupMap = {};
+                            enteredList.forEach(o => {
+                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                const dStr = (ts.started_at || ts.created_at || o.created_at || o.order_date || '').split('T')[0].split(' ')[0];
+                                if (dStr) {
+                                    if (!dateGroupMap[dStr]) dateGroupMap[dStr] = { date: dStr, entered: [], completed: [] };
+                                    dateGroupMap[dStr].entered.push(o);
+                                }
+                            });
+                            completedList.forEach(o => {
+                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                const dStr = (ts.completed_at || o.execution_completed_at || '').split('T')[0].split(' ')[0];
+                                if (dStr) {
+                                    if (!dateGroupMap[dStr]) dateGroupMap[dStr] = { date: dStr, entered: [], completed: [] };
+                                    if (!dateGroupMap[dStr].completed.some(item => item.id === o.id)) {
+                                        dateGroupMap[dStr].completed.push(o);
+                                    }
+                                }
+                            });
+
+                            const sortedDates = Object.keys(dateGroupMap).sort().reverse();
+
+                            return (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="bg-slate-950 p-3.5 rounded-xl border border-cyan-500/30 text-center space-y-1">
+                                            <span className="text-[11px] font-mono text-cyan-400 font-bold block">📥 Total Order Masuk</span>
+                                            <span className="text-2xl font-mono font-black text-cyan-300">{enteredList.length} Order</span>
+                                        </div>
+                                        <div className="bg-slate-950 p-3.5 rounded-xl border border-emerald-500/30 text-center space-y-1">
+                                            <span className="text-[11px] font-mono text-emerald-400 font-bold block">✅ Total Order Selesai</span>
+                                            <span className="text-2xl font-mono font-black text-emerald-300">{completedList.length} Order</span>
+                                        </div>
+                                        <div className="bg-slate-950 p-3.5 rounded-xl border border-amber-500/30 text-center space-y-1">
+                                            <span className="text-[11px] font-mono text-amber-400 font-bold block">📈 Persentase Selesai</span>
+                                            <span className="text-2xl font-mono font-black text-amber-300">{completionRate}%</span>
+                                        </div>
+                                    </div>
+
+                                    {/* TABLE RINCIAN PER HARI */}
+                                    <div className="space-y-2">
+                                        <h4 className="text-xs font-bold text-slate-300 font-mono flex items-center justify-between">
+                                            <span>📅 Rincian Pemilihan Per-Hari ({sortedDates.length} Hari Terdeteksi):</span>
+                                            <span className="text-[10px] text-slate-500">Menampilkan tanggal dengan transaksi order</span>
+                                        </h4>
+
+                                        {sortedDates.length > 0 ? (
+                                            <div className="border border-slate-800 rounded-xl overflow-hidden">
+                                                <table className="w-full text-left text-xs font-mono">
+                                                    <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                                                        <tr>
+                                                            <th className="p-2.5">Tanggal</th>
+                                                            <th className="p-2.5">📥 Order Masuk</th>
+                                                            <th className="p-2.5">✅ Order Selesai</th>
+                                                            <th className="p-2.5 text-right">Daftar SPO</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-800 bg-slate-900/60">
+                                                        {sortedDates.map(dStr => {
+                                                            const group = dateGroupMap[dStr];
+                                                            return (
+                                                                <tr key={dStr} className="hover:bg-slate-800/50">
+                                                                    <td className="p-2.5 font-bold text-amber-300">{formatIndonesianDate(dStr)}</td>
+                                                                    <td className="p-2.5">
+                                                                        <span className="bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/30 font-extrabold">
+                                                                            {group.entered.length} Order
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="p-2.5">
+                                                                        <span className="bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-extrabold">
+                                                                            {group.completed.length} Order
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="p-2.5 text-right">
+                                                                        <div className="flex flex-wrap items-center justify-end gap-1">
+                                                                            {group.entered.map(o => (
+                                                                                <span key={'e_' + o.id} className="text-[9px] bg-slate-950 text-cyan-400 border border-slate-800 px-1.5 py-0.5 rounded">
+                                                                                    #{o.spo_number}
+                                                                                </span>
+                                                                            ))}
+                                                                            {group.completed.map(o => (
+                                                                                <span key={'c_' + o.id} className="text-[9px] bg-slate-950 text-emerald-400 border border-slate-800 px-1.5 py-0.5 rounded">
+                                                                                    ✓ #{o.spo_number}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-500 font-mono">
+                                                Tidak ada data orderan masuk atau selesai pada rentang waktu ini.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        <div className="flex justify-end pt-2 border-t border-slate-800">
+                            <button
+                                type="button"
+                                onClick={() => setShowRekapModal(false)}
+                                className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs cursor-pointer transition"
+                            >
+                                Tutup Rekap
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MODAL DECISION ADMIN GUDANG UNTUK KOMPLAIN KACA */}
             <GudangDecisionModal
