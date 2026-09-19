@@ -367,7 +367,7 @@ export default function ScrapTab({
                             <Scissors className="w-4 h-4 text-[#1b68b0]" />
                             <span>Stok Kaca Sisa Potongan di Rak Storage</span>
                         </h3>
-                        {(userRole === 'divisi_ht' || userRole === 'admin_gudang') && (
+                        {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                             <button 
                                 onClick={() => setShowScrapModal(true)} 
                                 className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"

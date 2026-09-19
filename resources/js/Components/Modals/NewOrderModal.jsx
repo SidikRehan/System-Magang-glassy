@@ -71,6 +71,14 @@ export default function NewOrderModal({
 }) {
     if (!show) return null;
 
+    const formatAreaDisplay = (val) => {
+        const num = parseFloat(val) || 0;
+        if (num <= 0) return '0.00';
+        if (num < 0.01) return num.toFixed(4);
+        if (num < 0.1) return num.toFixed(3);
+        return num.toFixed(2);
+    };
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
             <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col my-auto text-slate-800">
@@ -197,7 +205,7 @@ export default function NewOrderModal({
                                 }
                                 const grp = groupsMap.get(grpId);
                                 grp.items.push({ item, idx: originalIndex });
-                                grp.totalArea += (item.areaM2 || 0);
+                                grp.totalArea += (item.areaM2 || 0) * (parseInt(item.qty) || 1);
                                 grp.totalSubtotal += (item.subtotal || 0);
                             });
 
@@ -234,7 +242,7 @@ export default function NewOrderModal({
                                                 <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 text-xs flex-wrap sm:flex-nowrap pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200">
                                                     <div className="text-right">
                                                         <span className="text-[10px] text-slate-400 block font-mono">Total Luas Group:</span>
-                                                        <span className="font-mono text-[#1b68b0] font-bold">{grp.totalArea.toFixed(2)} m²</span>
+                                                        <span className="font-mono text-[#1b68b0] font-bold">{formatAreaDisplay(grp.totalArea)} m²</span>
                                                     </div>
                                                     <div className="text-right bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
                                                         <span className="text-[10px] text-emerald-700/80 block font-mono">Subtotal Group:</span>
@@ -260,7 +268,7 @@ export default function NewOrderModal({
                                                             <span className="font-bold text-[#242222] text-xs flex items-center gap-2">
                                                                 <span>Ukuran #{subIdx + 1}</span>
                                                                 <span className="font-mono text-[10px] text-slate-500 font-normal">
-                                                                    (Luas: {item.areaM2.toFixed(2)} m² | Subtotal: <strong className="text-emerald-700 font-bold">Rp {item.subtotal.toLocaleString()}</strong>)
+                                                                    (Luas: {formatAreaDisplay(item.areaM2)} m²{parseInt(item.qty) > 1 ? ` × ${item.qty} = ${formatAreaDisplay((item.areaM2 || 0) * item.qty)} m²` : ''} | Subtotal: <strong className="text-emerald-700 font-bold">Rp {item.subtotal.toLocaleString()}</strong>)
                                                                 </span>
                                                             </span>
                                                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -964,7 +972,7 @@ export default function NewOrderModal({
                                 <span>Rincian Struk Orderan & Kalkulasi Harga</span>
                             </h4>
                             <span className="text-[10px] text-slate-500">
-                                Luas Total: <strong className="text-[#1b68b0]">{calcItems.reduce((sum, i) => sum + i.areaM2, 0).toFixed(2)} m²</strong>
+                                Luas Total: <strong className="text-[#1b68b0]">{formatAreaDisplay(calcItems.reduce((sum, i) => sum + ((i.areaM2 || 0) * (parseInt(i.qty) || 1)), 0))} m²</strong>
                             </span>
                         </div>
 
@@ -979,7 +987,7 @@ export default function NewOrderModal({
                                                 #{iIdx + 1}. {it.glass_type || 'Kaca Dasar'} ({it.length_cm || 0} x {it.width_cm || 0} cm)
                                             </span>
                                             <span className="text-[#1b68b0] font-mono">
-                                                {it.qty} Unit (Total {it.areaM2.toFixed(2)} m²)
+                                                {it.qty} Unit (Total {formatAreaDisplay((it.areaM2 || 0) * (parseInt(it.qty) || 1))} m²)
                                             </span>
                                         </div>
 

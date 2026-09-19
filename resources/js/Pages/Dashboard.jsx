@@ -35,6 +35,9 @@ import AccessoriesTab from '@/Components/DashboardTabs/AccessoriesTab';
 import WarehouseSuppliesTab from '@/Components/DashboardTabs/WarehouseSuppliesTab';
 import ToolsTab from '@/Components/DashboardTabs/ToolsTab';
 import EmployeesTab from '@/Components/DashboardTabs/EmployeesTab';
+import AddScrapModal from '@/Components/Modals/AddScrapModal';
+import AddStockModal from '@/Components/Modals/AddStockModal';
+import EditStockModal from '@/Components/Modals/EditStockModal';
 
 
 export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], users: initialUsersList = [], activityLogs: initialActivityLogsList = [], financeTransactions: initialFinanceTransactions = [], metrics = {} }) {
@@ -549,7 +552,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         item_code: '',
         name: '',
         category: 'Kaca Cermin',
-        size: '122 x 244 cm',
+        length_cm: 183,
+        width_cm: 244,
+        size: '183 x 244 cm',
         thickness_mm: 5,
         buy_price: '',
         sell_price: '',
@@ -568,7 +573,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         item_code: '',
         name: '',
         category: 'Kaca Cermin',
-        size: '122 x 244 cm',
+        length_cm: 183,
+        width_cm: 244,
+        size: '183 x 244 cm',
         thickness_mm: 5,
         buy_price: '',
         sell_price: '',
@@ -1553,6 +1560,10 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const sellPrice = parseFloat(newStockForm.sell_price) || 0;
         const thickness = parseInt(newStockForm.thickness_mm) || 5;
 
+        const len = parseFloat(newStockForm.length_cm) || 183;
+        const wid = parseFloat(newStockForm.width_cm) || 244;
+        const sizeStr = `${len} x ${wid} cm`;
+
         const rateGM = parseFloat(newStockForm.rate_gm) || 10000;
         const rateHT = parseFloat(newStockForm.rate_ht) || 1000;
         const rateBV = parseFloat(newStockForm.rate_bv) || 15000;
@@ -1565,7 +1576,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             item_code: autoCode,
             name: newStockForm.name,
             category: newStockForm.category,
-            size: newStockForm.size,
+            length_cm: len,
+            width_cm: wid,
+            size: sizeStr,
             thickness_mm: thickness,
             buy_price: buyPrice,
             sell_price: sellPrice,
@@ -1588,7 +1601,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             item_code: '',
             name: '',
             category: 'Kaca Cermin',
-            size: '122 x 244 cm',
+            length_cm: 183,
+            width_cm: 244,
+            size: '183 x 244 cm',
             thickness_mm: 5,
             buy_price: '',
             sell_price: '',
@@ -1605,12 +1620,27 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     };
 
     const handleOpenEditStockModal = (item) => {
+        let len = item.length_cm;
+        let wid = item.width_cm;
+        if (!len || !wid) {
+            const parts = (item.size || '').split('x');
+            if (parts.length === 2) {
+                len = parseFloat(parts[0]) || 183;
+                wid = parseFloat(parts[1]) || 244;
+            } else {
+                len = 183;
+                wid = 244;
+            }
+        }
+
         setEditStockForm({
             id: item.id,
             item_code: item.item_code || '',
             name: item.name || '',
             category: item.category || 'Kaca Cermin',
-            size: item.size || '122 x 244 cm',
+            length_cm: len,
+            width_cm: wid,
+            size: item.size || `${len} x ${wid} cm`,
             thickness_mm: item.thickness_mm || 5,
             buy_price: item.buy_price ?? '',
             sell_price: item.sell_price ?? '',
@@ -1636,6 +1666,10 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const sellPrice = parseFloat(editStockForm.sell_price) || 0;
         const thickness = parseInt(editStockForm.thickness_mm) || 5;
 
+        const len = parseFloat(editStockForm.length_cm) || 183;
+        const wid = parseFloat(editStockForm.width_cm) || 244;
+        const sizeStr = `${len} x ${wid} cm`;
+
         const rateGM = parseFloat(editStockForm.rate_gm) || 10000;
         const rateHT = parseFloat(editStockForm.rate_ht) || 1000;
         const rateBV = parseFloat(editStockForm.rate_bv) || 15000;
@@ -1650,7 +1684,9 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     item_code: editStockForm.item_code,
                     name: editStockForm.name,
                     category: editStockForm.category,
-                    size: editStockForm.size,
+                    length_cm: len,
+                    width_cm: wid,
+                    size: sizeStr,
                     thickness_mm: thickness,
                     buy_price: buyPrice,
                     sell_price: sellPrice,
@@ -1667,7 +1703,6 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             }
             return item;
         }));
-
         setShowEditStockModal(false);
     };
 
@@ -1769,8 +1804,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Cermin Polos 5 mm Standard',
             category: 'Kaca Cermin',
             size: '183 x 244 cm',
+            length_cm: 183,
+            width_cm: 244,
+            thickness_mm: 5,
             buy_price: 280000,
             sell_price: 380000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 25,
             unit: 'Lembar',
             supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
@@ -1784,8 +1826,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Bening Polos 8 mm Float Glass',
             category: 'Kaca Bening / Clear',
             size: '214 x 305 cm',
+            length_cm: 214,
+            width_cm: 305,
+            thickness_mm: 8,
             buy_price: 320000,
             sell_price: 450000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 18,
             unit: 'Lembar',
             supplier_name: 'PT Mulia Glass Float & Mirror',
@@ -1799,8 +1848,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Bening Polos 10 mm Tempered Raw',
             category: 'Kaca Tempered',
             size: '244 x 366 cm',
+            length_cm: 244,
+            width_cm: 366,
+            thickness_mm: 10,
             buy_price: 520000,
             sell_price: 720000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 8,
             unit: 'Lembar',
             supplier_name: 'PT Kaca Tempered Nusantara',
@@ -1814,8 +1870,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Bening Polos 12 mm Architectural',
             category: 'Kaca Tempered',
             size: '244 x 366 cm',
+            length_cm: 244,
+            width_cm: 366,
+            thickness_mm: 12,
             buy_price: 680000,
             sell_price: 950000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 4,
             unit: 'Lembar',
             supplier_name: 'PT Kaca Tempered Nusantara',
@@ -1829,8 +1892,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Cermin Bronze 5 mm Luxury',
             category: 'Kaca Cermin',
             size: '183 x 244 cm',
+            length_cm: 183,
+            width_cm: 244,
+            thickness_mm: 5,
             buy_price: 390000,
             sell_price: 540000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 15,
             unit: 'Lembar',
             supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
@@ -1844,8 +1914,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Cermin Grey 5 mm Modern',
             category: 'Kaca Cermin',
             size: '183 x 244 cm',
+            length_cm: 183,
+            width_cm: 244,
+            thickness_mm: 5,
             buy_price: 385000,
             sell_price: 530000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 12,
             unit: 'Lembar',
             supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
@@ -1859,8 +1936,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Riben / Tinted Dark Grey 6 mm',
             category: 'Kaca Tinted / Riben',
             size: '183 x 244 cm',
+            length_cm: 183,
+            width_cm: 244,
+            thickness_mm: 6,
             buy_price: 310000,
             sell_price: 430000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 6,
             unit: 'Lembar',
             supplier_name: 'PT Global Tinted Glass Import',
@@ -1874,8 +1958,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Acid Etsa Frosted 5 mm',
             category: 'Kaca Etsa / Sandblast',
             size: '183 x 244 cm',
+            length_cm: 183,
+            width_cm: 244,
+            thickness_mm: 5,
             buy_price: 350000,
             sell_price: 480000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 20,
             unit: 'Lembar',
             supplier_name: 'CV ArtGlass Dekoratif Etsa',
@@ -1889,8 +1980,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             name: 'Kaca Laminated 5+5 mm Bening Safety',
             category: 'Kaca Laminated',
             size: '214 x 305 cm',
+            length_cm: 214,
+            width_cm: 305,
+            thickness_mm: 10,
             buy_price: 620000,
             sell_price: 850000,
+            rate_gm: 10000,
+            rate_ht: 1000,
+            rate_bv: 15000,
+            rate_etsa: 50000,
             qty: 12,
             unit: 'Lembar',
             supplier_name: 'PT Kaca Tempered Nusantara',
@@ -2680,7 +2778,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         }
     };
 
-    // Real-Time Multi Item Price Calculation (With GM, HT, Bevel, Bor, Etsa Formulas)
+    // Real-Time Multi Item Price Calculation (Connected to Master Sheet Glasses & Dynamic Process Rates)
     const calcItems = (orderForm.items || []).map(it => {
         const l = parseDim(it.length_cm);
         const w = parseDim(it.width_cm);
@@ -2690,13 +2788,39 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const areaM2 = (l * w) / 10000;
         const perimeterM = (2 * (l + w)) / 100;
 
-        const baseGlassPrice = (l > 0 && w > 0) ? Math.max(250000, Math.round(areaM2 * 500000)) * q : 0;
+        // 1. Cari jenis kaca yang cocok di katalog master sheetGlasses
+        const matchedGlass = (sheetGlasses || []).find(g => 
+            (g.name && it.glass_type && (g.name.toLowerCase() === it.glass_type.toLowerCase() || it.glass_type.toLowerCase().includes(g.name.toLowerCase()) || g.name.toLowerCase().includes(it.glass_type.toLowerCase()))) ||
+            (g.id && it.glass_id && g.id === it.glass_id)
+        );
 
-        const feeGM = procs.includes('GM') ? Math.round(perimeterM * 10000) * q : 0;
-        const feeHT = procs.includes('HT') ? Math.round(perimeterM * 1000) * q : 0;
+        // 2. Tentukan harga per m2 berdasarkan master katalog
+        let pricePerM2 = 380000;
+        if (matchedGlass && matchedGlass.sell_price > 0) {
+            pricePerM2 = parseFloat(matchedGlass.sell_price);
+        } else {
+            const t = parseInt(it.thickness_mm) || 5;
+            if (t >= 12) pricePerM2 = 950000;
+            else if (t >= 10) pricePerM2 = 720000;
+            else if (t >= 8) pricePerM2 = 450000;
+            else pricePerM2 = 380000;
+        }
+
+        // 3. Tarif proses kustom dari jenis kaca
+        const rateGM = matchedGlass?.rate_gm ? parseFloat(matchedGlass.rate_gm) : 10000;
+        const rateHT = matchedGlass?.rate_ht ? parseFloat(matchedGlass.rate_ht) : 1000;
+        const rateBV = matchedGlass?.rate_bv ? parseFloat(matchedGlass.rate_bv) : 15000;
+        const rateEtsa = matchedGlass?.rate_etsa ? parseFloat(matchedGlass.rate_etsa) : 50000;
+
+        // 4. Hitung harga bahan kaca proporsional (minimum handling charge Rp 10.000 untuk potongan kecil)
+        const rawBasePrice = Math.round(areaM2 * pricePerM2);
+        const baseGlassPrice = (l > 0 && w > 0) ? Math.max(10000, rawBasePrice) * q : 0;
+
+        const feeGM = procs.includes('GM') ? Math.round(perimeterM * rateGM) * q : 0;
+        const feeHT = procs.includes('HT') ? Math.round(perimeterM * rateHT) * q : 0;
 
         const bevelWidthCm = parseDim(it.bevel_width_cm) || 1;
-        const feeBV = procs.includes('BV') ? Math.round((perimeterM * 15000) + (bevelWidthCm * 10000)) * q : 0;
+        const feeBV = procs.includes('BV') ? Math.round((perimeterM * rateBV) + (bevelWidthCm * 10000)) * q : 0;
 
         let feeBor = 0;
         let holeRuasCm = 0;
@@ -2722,14 +2846,19 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             const etsaW = parseDim(it.etsa_width_cm) || w;
             const etsaQ = parseInt(it.etsa_qty) || 1;
             etsaAreaM2 = (etsaL * etsaW) / 10000;
-            feeEtsa = Math.round(etsaAreaM2 * etsaQ * 50000) * q;
-            feeEtsa = Math.max(25000 * q, feeEtsa);
+            feeEtsa = Math.round(etsaAreaM2 * etsaQ * rateEtsa) * q;
+            feeEtsa = Math.max((rateEtsa / 2) * q, feeEtsa);
         }
 
         const subtotal = baseGlassPrice + feeGM + feeHT + feeBV + feeBor + feeEtsa;
 
         return {
             ...it,
+            price_per_m2: pricePerM2,
+            rate_gm: rateGM,
+            rate_ht: rateHT,
+            rate_bv: rateBV,
+            rate_etsa: rateEtsa,
             areaM2,
             perimeterM,
             baseGlassPrice,
@@ -2797,6 +2926,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         e.preventDefault();
         router.post(route('orders.store'), {
             ...orderForm,
+            items: calcItems,
             customer_name: sanitizeField(orderForm.customer_name),
             customer_phone: sanitizeField(orderForm.customer_phone),
             customer_address: sanitizeField(orderForm.customer_address),
@@ -2890,6 +3020,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
         router.post(route('orders.update', editingOrder.id), {
             ...orderForm,
+            items: calcItems,
             customer_name: sanitizeField(orderForm.customer_name),
             customer_phone: sanitizeField(orderForm.customer_phone),
             customer_address: sanitizeField(orderForm.customer_address),
@@ -3971,513 +4102,38 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             )}
 
             {/* MODAL TAMBAH JENIS BARANG STOK BARU */}
-            {showAddStockModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Plus className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Tambah Jenis Barang / Kaca Lembaran Baru
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">Master Katalog Kaca</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowAddStockModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
+            <AddStockModal
+                show={showAddStockModal}
+                onClose={() => setShowAddStockModal(false)}
+                newStockForm={newStockForm}
+                setNewStockForm={setNewStockForm}
+                handleAddStockItemSubmit={handleAddStockItemSubmit}
+                suppliersList={suppliersList}
+                formatNumberDots={formatNumberDots}
+                parseNumberDots={parseNumberDots}
+            />
 
-                        <form onSubmit={handleAddStockItemSubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Barang (Opsional):</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. KCB-003"
-                                        value={newStockForm.item_code}
-                                        onChange={e => setNewStockForm({ ...newStockForm, item_code: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Kaca:</label>
-                                    <select
-                                        value={newStockForm.category}
-                                        onChange={e => setNewStockForm({ ...newStockForm, category: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Kaca Cermin">Kaca Cermin</option>
-                                        <option value="Kaca Bening">Kaca Bening</option>
-                                        <option value="Kaca Tempered">Kaca Tempered</option>
-                                        <option value="Kaca Tinted / Grey">Kaca Tinted / Grey</option>
-                                        <option value="Kaca Sandblast">Kaca Sandblast</option>
-                                    </select>
-                                </div>
-                            </div>
+            {/* MODAL EDIT DATA & HARGA KACA */}
+            <EditStockModal
+                show={showEditStockModal}
+                onClose={() => setShowEditStockModal(false)}
+                editStockForm={editStockForm}
+                setEditStockForm={setEditStockForm}
+                handleEditStockSubmit={handleEditStockSubmit}
+                suppliersList={suppliersList}
+                formatNumberDots={formatNumberDots}
+                parseNumberDots={parseNumberDots}
+            />
 
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Barang Kaca Baru:</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. Kaca Cermin Riben 5mm"
-                                    value={newStockForm.name}
-                                    onChange={e => setNewStockForm({ ...newStockForm, name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Ukuran Standard (cm):</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. 152 x 213 cm"
-                                        value={newStockForm.size}
-                                        onChange={e => setNewStockForm({ ...newStockForm, size: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Awal (Qty Lembar):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        required
-                                        value={newStockForm.qty}
-                                        onChange={e => setNewStockForm({ ...newStockForm, qty: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* HARGA BELI, HARGA JUAL & KETEBALAN */}
-                            <div className="grid grid-cols-3 gap-3 border-t border-slate-200 pt-3 my-1">
-                                <div>
-                                    <label className="text-amber-800 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        placeholder="e.g. 250.000"
-                                        value={formatNumberDots(newStockForm.buy_price)}
-                                        onChange={e => setNewStockForm({ ...newStockForm, buy_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-900 font-mono font-bold focus:border-amber-500 focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[#70b03c] block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        placeholder="e.g. 450.000"
-                                        value={formatNumberDots(newStockForm.sell_price)}
-                                        onChange={e => setNewStockForm({ ...newStockForm, sell_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[#1b68b0] block mb-1 font-semibold">Ketebalan (mm):</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        placeholder="e.g. 5"
-                                        value={newStockForm.thickness_mm}
-                                        onChange={e => setNewStockForm({ ...newStockForm, thickness_mm: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* TARIF PROSES KHUSUS JENIS KACA INI */}
-                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 my-1">
-                                <div className="flex items-center justify-between flex-wrap gap-1">
-                                    <label className="text-slate-800 font-bold block text-xs flex items-center gap-1.5">
-                                        <Sliders className="w-3.5 h-3.5 text-[#1b68b0]" />
-                                        <span>Tarif Proses Khusus Kaca Ini (Permeter / m²):</span>
-                                    </label>
-                                    <span className="text-[10px] text-slate-500 font-mono">*Bisa disesuaikan per jenis kaca</span>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="1.000"
-                                            value={formatNumberDots(newStockForm.rate_ht)}
-                                            onChange={e => setNewStockForm({ ...newStockForm, rate_ht: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="10.000"
-                                            value={formatNumberDots(newStockForm.rate_gm)}
-                                            onChange={e => setNewStockForm({ ...newStockForm, rate_gm: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="15.000"
-                                            value={formatNumberDots(newStockForm.rate_bv)}
-                                            onChange={e => setNewStockForm({ ...newStockForm, rate_bv: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="50.000"
-                                            value={formatNumberDots(newStockForm.rate_etsa)}
-                                            onChange={e => setNewStockForm({ ...newStockForm, rate_etsa: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="border-t border-slate-200 pt-3 space-y-3">
-                                <h4 className="font-bold text-slate-800 flex items-center justify-between text-xs">
-                                    <span className="flex items-center gap-1.5">
-                                        <Building2 className="w-4 h-4 text-[#1b68b0]" />
-                                        <span>Informasi Supplier Utama (Opsional)</span>
-                                    </span>
-                                    <span className="text-[10px] text-[#1b68b0] font-normal">Auto-fill dari mitra</span>
-                                </h4>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Pilih Supplier Terdaftar (Otomatis Terisi):</label>
-                                    <select
-                                        value={suppliersList.some(s => s.name === newStockForm.supplier_name) ? newStockForm.supplier_name : (newStockForm.supplier_name ? 'CUSTOM' : '')}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            if (val === 'CUSTOM') {
-                                                // keep custom input
-                                            } else if (val) {
-                                                const found = suppliersList.find(s => s.name === val);
-                                                if (found) {
-                                                    setNewStockForm(prev => ({
-                                                        ...prev,
-                                                        supplier_name: found.name,
-                                                        supplier_phone: found.phone || '',
-                                                        supplier_pic: found.pic || ''
-                                                    }));
-                                                }
-                                            } else {
-                                                setNewStockForm(prev => ({
-                                                    ...prev,
-                                                    supplier_name: '',
-                                                    supplier_phone: '',
-                                                    supplier_pic: ''
-                                                }));
-                                            }
-                                        }}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white text-xs mb-2 cursor-pointer"
-                                    >
-                                        <option value="">-- Klik Untuk Pilih Supplier Terdaftar (Auto Fill) --</option>
-                                        {suppliersList.map(sup => (
-                                            <option key={sup.id} value={sup.name}>
-                                                {sup.name} (PIC: {sup.pic} - {sup.phone})
-                                            </option>
-                                        ))}
-                                        <option value="CUSTOM">+ Input Manual Supplier Baru...</option>
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-slate-700 block mb-1 font-semibold">No WhatsApp Supplier:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. 6281234567890"
-                                            value={newStockForm.supplier_phone}
-                                            onChange={e => setNewStockForm({ ...newStockForm, supplier_phone: e.target.value })}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-700 block mb-1 font-semibold">Nama PIC Supplier:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Pak Gunawan"
-                                            value={newStockForm.supplier_pic}
-                                            onChange={e => setNewStockForm({ ...newStockForm, supplier_pic: e.target.value })}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddStockModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Jenis Barang Baru</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL EDIT JENIS BARANG KACA STOK */}
-            {showEditStockModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Edit3 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Edit Data & Harga Kaca ({editStockForm.item_code || 'KACA'})
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">Ubah spesifikasi, harga & proses</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowEditStockModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleEditStockSubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Barang:</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. KCB-003"
-                                        value={editStockForm.item_code}
-                                        onChange={e => setEditStockForm({ ...editStockForm, item_code: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Kaca:</label>
-                                    <select
-                                        value={editStockForm.category}
-                                        onChange={e => setEditStockForm({ ...editStockForm, category: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Kaca Cermin">Kaca Cermin</option>
-                                        <option value="Kaca Bening">Kaca Bening</option>
-                                        <option value="Kaca Tempered">Kaca Tempered</option>
-                                        <option value="Kaca Tinted / Grey">Kaca Tinted / Grey</option>
-                                        <option value="Kaca Sandblast">Kaca Sandblast</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Barang Kaca:</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. Kaca Cermin Riben 5mm"
-                                    value={editStockForm.name}
-                                    onChange={e => setEditStockForm({ ...editStockForm, name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Ukuran Standard (cm):</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. 152 x 213 cm"
-                                        value={editStockForm.size}
-                                        onChange={e => setEditStockForm({ ...editStockForm, size: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Jumlah Stok (Qty Lembar):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        required
-                                        value={editStockForm.qty}
-                                        onChange={e => setEditStockForm({ ...editStockForm, qty: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* HARGA BELI, HARGA JUAL & KETEBALAN */}
-                            <div className="grid grid-cols-3 gap-3 border-t border-slate-200 pt-3 my-1">
-                                <div>
-                                    <label className="text-amber-800 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        placeholder="e.g. 250.000"
-                                        value={formatNumberDots(editStockForm.buy_price)}
-                                        onChange={e => setEditStockForm({ ...editStockForm, buy_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-900 font-mono font-bold focus:border-amber-500 focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[#70b03c] block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        placeholder="e.g. 450.000"
-                                        value={formatNumberDots(editStockForm.sell_price)}
-                                        onChange={e => setEditStockForm({ ...editStockForm, sell_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[#1b68b0] block mb-1 font-semibold">Ketebalan (mm):</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        placeholder="e.g. 5"
-                                        value={editStockForm.thickness_mm}
-                                        onChange={e => setEditStockForm({ ...editStockForm, thickness_mm: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* TARIF PROSES KHUSUS JENIS KACA INI */}
-                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 my-1">
-                                <div className="flex items-center justify-between flex-wrap gap-1">
-                                    <label className="text-slate-800 font-bold block text-xs flex items-center gap-1.5">
-                                        <Sliders className="w-3.5 h-3.5 text-[#1b68b0]" />
-                                        <span>Tarif Proses Khusus Kaca Ini (Permeter / m²):</span>
-                                    </label>
-                                    <span className="text-[10px] text-slate-500 font-mono">*Bisa disesuaikan per jenis kaca</span>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="1.000"
-                                            value={formatNumberDots(editStockForm.rate_ht)}
-                                            onChange={e => setEditStockForm({ ...editStockForm, rate_ht: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="10.000"
-                                            value={formatNumberDots(editStockForm.rate_gm)}
-                                            onChange={e => setEditStockForm({ ...editStockForm, rate_gm: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="15.000"
-                                            value={formatNumberDots(editStockForm.rate_bv)}
-                                            onChange={e => setEditStockForm({ ...editStockForm, rate_bv: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="50.000"
-                                            value={formatNumberDots(editStockForm.rate_etsa)}
-                                            onChange={e => setEditStockForm({ ...editStockForm, rate_etsa: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="border-t border-slate-200 pt-3 space-y-3">
-                                <h4 className="font-bold text-slate-800 flex items-center justify-between text-xs">
-                                    <span className="flex items-center gap-1.5">
-                                        <Building2 className="w-4 h-4 text-[#1b68b0]" />
-                                        <span>Informasi Supplier Utama</span>
-                                    </span>
-                                </h4>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-slate-700 block mb-1 font-semibold">Nama Supplier:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. PT Asahimas Flat Glass Tbk"
-                                            value={editStockForm.supplier_name}
-                                            onChange={e => setEditStockForm({ ...editStockForm, supplier_name: e.target.value })}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-700 block mb-1 font-semibold">No WA Supplier:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. 6281234567890"
-                                            value={editStockForm.supplier_phone}
-                                            onChange={e => setEditStockForm({ ...editStockForm, supplier_phone: e.target.value })}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowEditStockModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Perubahan</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* MODAL TAMBAH KACA SISA POTONG (SCRAP WMS) */}
+            <AddScrapModal
+                show={showScrapModal}
+                onClose={() => setShowScrapModal(false)}
+                scrapForm={scrapForm}
+                setScrapForm={setScrapForm}
+                handleCreateScrap={handleCreateScrap}
+                sheetGlasses={sheetGlasses}
+            />
 
             {/* MODAL TAMBAH SUPPLIER BARU */}
             {showAddSupplierModal && (

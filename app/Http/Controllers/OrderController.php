@@ -420,8 +420,17 @@ class OrderController extends Controller
         $areaM2 = ($l * $w) / 10000;
         $perimeterM = (2 * ($l + $w)) / 100;
 
-        // 2. Harga Dasar Kaca (per m2)
-        $baseGlassPrice = max(250000, round($areaM2 * 500000)) * $q;
+        // 2. Harga Dasar Kaca (per m2 proporsional sesuai katalog jenis kaca)
+        $pricePerM2 = (float)($it['price_per_m2'] ?? 0);
+        if ($pricePerM2 <= 0) {
+            if ($t >= 12) $pricePerM2 = 950000;
+            elseif ($t >= 10) $pricePerM2 = 720000;
+            elseif ($t >= 8) $pricePerM2 = 450000;
+            else $pricePerM2 = 380000;
+        }
+        $rawBasePrice = round($areaM2 * $pricePerM2);
+        // Minimum handling charge Rp 10.000 untuk potongan kaca kecil
+        $baseGlassPrice = max(10000, $rawBasePrice) * $q;
 
         // 3. Biaya GM, HT, BV, Etsa dengan tarif kustom per jenis kaca (dengan fallback default)
         $rateGM = (float)($it['rate_gm'] ?? 10000);
@@ -506,6 +515,11 @@ class OrderController extends Controller
             'etsa_qty' => $etsaQty,
             'etsa_area_m2' => $etsaAreaM2,
             'base_glass_price' => $baseGlassPrice,
+            'price_per_m2' => $pricePerM2,
+            'rate_gm' => $rateGM,
+            'rate_ht' => $rateHT,
+            'rate_bv' => $rateBV,
+            'rate_etsa' => $rateEtsa,
             'fee_gm' => $feeGM,
             'fee_ht' => $feeHT,
             'fee_bv' => $feeBV,
