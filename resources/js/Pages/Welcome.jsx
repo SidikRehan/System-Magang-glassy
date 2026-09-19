@@ -27,12 +27,25 @@ import {
     Menu,
     X,
     ShieldCheck,
-    LogOut
+    LogOut,
+    Cpu,
+    TrendingUp,
+    Sliders,
+    Eye,
+    Clock,
+    CreditCard,
+    Building2,
+    Users,
+    QrCode,
+    ChevronRight,
+    Award,
+    CheckCircle
 } from 'lucide-react';
 
 export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
     const { auth } = usePage().props;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [interactiveTab, setInteractiveTab] = useState('visualizer'); // 'visualizer' | 'calculator'
 
     // Visualizer State
     const [glassType, setGlassType] = useState('clear');
@@ -127,77 +140,84 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
     const faqs = [
         {
             q: 'Bagaimana alur kerja pembuatan SPO (Surat Pesanan Order) hingga pengiriman?',
-            a: 'Order diawali oleh Admin Toko yang menginput spesifikasi kaca dan menerbitkan DP 50%. Selanjutnya order dikirim ke Divisi HT (Pemotongan & Oven Tempering), lalu dilanjutkan ke Divisi GM/BV/Etsa untuk finishing. Setelah lulus Quality Control (QC), barang disiapkan untuk pengiriman dengan 4 rangkap Surat Jalan (Putih, Merah, Kuning, Hijau) serta pelunasan sisa COD.'
+            a: 'Order diawali oleh Admin Toko yang menginput spesifikasi kaca dan menerbitkan DP 50%. Selanjutnya order diteruskan ke Divisi HT (Pemotongan & Oven Tempering), lalu dilanjutkan ke Divisi GM/BV/Etsa untuk finishing tepi atau sandblast. Setelah lulus Quality Control (QC), barang disiapkan untuk pengiriman dengan 4 rangkap Surat Jalan (Putih, Merah, Kuning, Hijau) serta pelunasan sisa COD kasir.'
         },
         {
-            q: 'Apa itu fitur Manajemen Rak Scrap WMS (Kaca Sisa Potongan)?',
-            a: 'Fitur WMS Rak Scrap memungkinkan Divisi HT mencatat potongan kaca sisa potongan yang masih layak pakai lengkap dengan lokasi rak (misal: Rak A1, Rak B2). Ketika ada order berukuran kecil, sistem secara otomatis merekomendasikan penggunaan kaca scrap ini, menghemat konsumsi lembaran kaca baru dan menekan biaya produksi.'
+            q: 'Apa fungsi dari fitur Manajemen Rak Scrap WMS (Kaca Sisa Potongan)?',
+            a: 'Fitur WMS Rak Scrap memungkinkan Divisi HT mencatat potongan kaca sisa yang masih berkualitas layak pakai lengkap dengan lokasi rak (misal: Rak A1, Rak B2). Ketika ada pesanan berukuran kecil, sistem secara cerdas merekomendasikan penggunaan kaca scrap ini sehingga menghemat konsumsi lembaran kaca baru dan menekan biaya bahan.'
         },
         {
-            q: 'Apakah kalkulasi harga di simulator landing page ini sudah presisi?',
-            a: 'Simulator ini menggunakan rumus yang sama persis dengan modul Admin Toko SYP Glass (menghitung Luas m², Keliling Finishing Tepi, Faktor Ketebalan, Jenis Kaca, & Aksesoris). Nilai estimasi dapat langsung dijadikan patokan awal pesanan.'
+            q: 'Apakah perhitungan di kalkulator estimasi ini akurat?',
+            a: 'Kalkulator ini menggunakan formula matematika dan matriks tarif yang sinkron dengan sistem Admin Toko SYP Glass (menghitung Luas m², Keliling Finishing Tepi, Indeks Ketebalan, Jenis Kaca Dasar, dan Aksesoris). Estimasi biaya dapat langsung dijadikan acuan draf pesanan nyata.'
         },
         {
-            q: 'Mengapa Surat Jalan menggunakan sistem 4 warna (Putih, Merah, Kuning, Hijau)?',
-            a: 'Sistem 4 rangkap menjamin akuntabilitas operasional: Lembar Putih untuk Arsip Admin/Keuangan, Merah untuk Tagihan & Pelunasan Customer, Kuning untuk Divisi Produksi & Gudang, serta Hijau sebagai bukti tanda terima pihak Kurir / Logistik.'
+            q: 'Mengapa Surat Jalan menggunakan sistem 4 rangkap (Warna)?',
+            a: 'Sistem 4 rangkap menjamin akuntabilitas operasional dan meminimalisir perselisihan barang: Lembar Putih untuk Arsip Admin/Keuangan, Lembar Merah untuk Tagihan & Pelunasan Pelanggan, Lembar Kuning untuk Divisi Gudang/Pabrik, serta Lembar Hijau sebagai bukti tanda terima pihak Driver / Ekspedisi.'
         }
     ];
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans selection:bg-[#2563EB] selection:text-white overflow-x-hidden">
-            <Head title="UTB - Universitas Teknologi Bandung" />
+        <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-[#1b68b0] selection:text-white overflow-x-hidden">
+            <Head title="UTB - Sistem Operasional Pabrik & Toko Kaca" />
 
-            {/* ENTERPRISE NAVBAR */}
-            <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/90 px-4 md:px-8 py-3.5 shadow-xs transition-all">
+            {/* 1. TOP NAVBAR */}
+            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 md:px-8 py-3 shadow-xs">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     {/* BRAND LOGO */}
                     <Link href="/" className="flex items-center gap-3 group">
                         <img 
                             src="/assets/Logo_UTB.png" 
                             alt="Logo UTB" 
-                            className="h-11 w-auto object-contain transform group-hover:scale-105 transition-transform duration-200" 
+                            className="h-10 w-auto object-contain transform group-hover:scale-105 transition-transform duration-200" 
                         />
                         <div>
                             <div className="flex items-center gap-1.5">
-                                <span className="font-black text-2xl tracking-tight text-[#242222] group-hover:text-[#1b68b0] transition-colors">
+                                <span className="font-black text-xl tracking-tight text-[#242222] group-hover:text-[#1b68b0] transition-colors">
                                     UTB
                                 </span>
                             </div>
-                            <span className="text-[11px] text-[#70b03c] font-extrabold tracking-wider block uppercase">
-                                Kerja Praktek
+                            <span className="text-[10px] text-[#70b03c] font-extrabold tracking-wider block uppercase">
+                                Kerja Praktek Mahasiswa
                             </span>
                         </div>
                     </Link>
 
-                    {/* DESKTOP NAVIGATION */}
-                    <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-700">
-                        <a href="#visualizer" className="hover:text-[#2563EB] transition-colors py-1 flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-[#2563EB]" /> Simulator Kaca
+                    {/* DESKTOP NAVIGATION LINKS */}
+                    <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-600">
+                        <a href="#features" className="hover:text-[#1b68b0] transition-colors py-1">
+                            Modul Terintegrasi
                         </a>
-                        <a href="#kalkulator" className="hover:text-[#2563EB] transition-colors py-1 flex items-center gap-1.5">
-                            <Calculator className="w-4 h-4 text-[#2563EB]" /> Kalkulator Biaya
+                        <a href="#interactive-lab" className="hover:text-[#1b68b0] transition-colors py-1 flex items-center gap-1">
+                             Interactive Lab
                         </a>
-                        <a href="#workflow" className="hover:text-[#2563EB] transition-colors py-1 flex items-center gap-1.5">
-                            <Layers className="w-4 h-4 text-[#2563EB]" /> Alur Operasional
+                        <a href="#workflow" className="hover:text-[#1b68b0] transition-colors py-1">
+                            Alur 4 Divisi
                         </a>
-                        <a href="#wms-scrap" className="hover:text-[#2563EB] transition-colors py-1 flex items-center gap-1.5">
-                            <Boxes className="w-4 h-4 text-[#2563EB]" /> WMS Scrap Rak
+                        <a href="#wms-scrap" className="hover:text-[#1b68b0] transition-colors py-1">
+                            WMS Scrap Rak
                         </a>
-                        <a href="#faq" className="hover:text-[#2563EB] transition-colors py-1 flex items-center gap-1.5">
-                            <HelpCircle className="w-4 h-4 text-[#2563EB]" /> FAQ
+                        <a href="#faq" className="hover:text-[#1b68b0] transition-colors py-1">
+                            FAQ
                         </a>
                     </nav>
 
                     {/* CTA ACTION & MOBILE TOGGLE */}
                     <div className="flex items-center gap-3">
                         {auth.user ? (
-                            <Link href="/dashboard" className="bg-[#70b03c] hover:bg-[#5e9632] text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm flex items-center gap-2 transition duration-200">
+                            <Link 
+                                href="/dashboard" 
+                                className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-xs flex items-center gap-2 transition duration-200"
+                            >
                                 <Activity className="w-4 h-4 text-white" />
-                                Buka Dashboard ({auth.user.name})
+                                <span>Buka Dashboard ({auth.user.name})</span>
                             </Link>
                         ) : (
-                            <Link href={route('login')} className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shadow-md shadow-[#1b68b0]/25 transition transform hover:-translate-y-0.5 flex items-center gap-2">
-                                Masuk
+                            <Link 
+                                href={route('login')} 
+                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md shadow-[#1b68b0]/20 transition flex items-center gap-1.5"
+                            >
+                                <span>Masuk ke Sistem</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
                             </Link>
                         )}
 
@@ -214,753 +234,779 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
 
                 {/* MOBILE NAVIGATION DRAWER */}
                 {mobileMenuOpen && (
-                    <div className="lg:hidden mt-3 pt-3 border-t border-slate-200 space-y-2 pb-2 px-2 animate-in slide-in-from-top-2 duration-200">
+                    <div className="lg:hidden mt-3 pt-3 border-t border-slate-200 space-y-1.5 pb-2 px-2 animate-in slide-in-from-top-2 duration-150">
                         <a 
-                            href="#visualizer" 
+                            href="#features" 
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center gap-2 p-2.5 rounded-lg text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#2563EB] transition"
+                            className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-[#1b68b0] transition"
                         >
-                            <Sparkles className="w-4 h-4 text-[#2563EB]" /> Simulator Kaca
+                            <Layers className="w-4 h-4 text-[#1b68b0]" /> Modul Terintegrasi
                         </a>
                         <a 
-                            href="#kalkulator" 
+                            href="#interactive-lab" 
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center gap-2 p-2.5 rounded-lg text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#2563EB] transition"
+                            className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-[#1b68b0] transition"
                         >
-                            <Calculator className="w-4 h-4 text-[#2563EB]" /> Kalkulator Biaya
+                            <Sparkles className="w-4 h-4 text-[#70b03c]" /> Interactive Lab (Simulator & Kalkulator)
                         </a>
                         <a 
                             href="#workflow" 
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center gap-2 p-2.5 rounded-lg text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#2563EB] transition"
+                            className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-[#1b68b0] transition"
                         >
-                            <Layers className="w-4 h-4 text-[#2563EB]" /> Alur Operasional
+                            <Factory className="w-4 h-4 text-[#1b68b0]" /> Alur 4 Divisi Produksi
                         </a>
                         <a 
                             href="#wms-scrap" 
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center gap-2 p-2.5 rounded-lg text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#2563EB] transition"
+                            className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-[#1b68b0] transition"
                         >
-                            <Boxes className="w-4 h-4 text-[#2563EB]" /> WMS Scrap Rak
+                            <Boxes className="w-4 h-4 text-[#1b68b0]" /> WMS Scrap Rak
                         </a>
                         <a 
                             href="#faq" 
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center gap-2 p-2.5 rounded-lg text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#2563EB] transition"
+                            className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-[#1b68b0] transition"
                         >
-                            <HelpCircle className="w-4 h-4 text-[#2563EB]" /> FAQ
+                            <HelpCircle className="w-4 h-4 text-[#1b68b0]" /> FAQ
                         </a>
                     </div>
                 )}
             </header>
 
-            {/* HERO SECTION */}
+            {/* 2. HERO SECTION (CLEAN WHITE B2B SAAS SHOWCASE) */}
             <section className="relative px-4 md:px-8 pt-12 pb-16 md:pt-20 md:pb-24 max-w-7xl mx-auto">
-                {/* AMBIENT BACKGROUND LIGHT GLOWS */}
-                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[450px] bg-gradient-to-tr from-blue-400/10 via-cyan-400/15 to-indigo-400/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+                {/* AMBIENT GLOW */}
+                <div className="absolute top-12 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[320px] bg-gradient-to-tr from-[#1b68b0]/10 via-[#70b03c]/10 to-transparent rounded-full blur-3xl pointer-events-none -z-10"></div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                    {/* LEFT COLUMN: HERO TEXT & ACTIONS */}
-                    <div className="lg:col-span-7 space-y-7">
-                        {/* HEADLINE */}
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-[#242222]">
-                            Sistem Oprasional Kaca
-                        </h1>
+                <div className="text-center max-w-3xl mx-auto space-y-6">
 
-                        {/* DESCRIPTION */}
-                        <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl font-normal">
-                            Solusi digitalisasi terpadu industri kaca: Otomasi Surat Pesanan Order (SPO), disosiasi pemrosesan multi-divisi (<strong className="text-[#1b68b0]">HT / GM / BV / Etsa</strong>), manajemen sisa kaca di rak (<strong className="text-[#1b68b0]">WMS Scrap Storage</strong>), cetak <strong className="text-[#1b68b0]">Surat Jalan 4 Rangkap</strong>, serta akuntansi pelunasan DP & COD.
-                        </p>
+                    {/* HERO HEADLINE */}
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-[#242222]">
+                        Digitalisasi Terpadu Operasional <span className="text-[#1b68b0]">Pabrik & Toko Kaca</span>
+                    </h1>
 
-                        {/* ACTION BUTTONS */}
-                        <div className="flex flex-wrap items-center gap-4 pt-2">
-                            {auth.user ? (
-                                <Link href="/dashboard" className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-black px-7 py-3.5 rounded-xl shadow-lg shadow-[#1b68b0]/25 text-sm flex items-center gap-2.5 transition transform hover:-translate-y-0.5">
-                                    <Activity className="w-5 h-5 text-white" /> Buka Dashboard Operasional →
-                                </Link>
-                            ) : (
-                                <Link href={route('login')} className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-black px-7 py-3.5 rounded-xl shadow-lg shadow-[#1b68b0]/25 text-sm flex items-center gap-2.5 transition transform hover:-translate-y-0.5">
-                                    Masuk
-                                </Link>
-                            )}
-                            <a href="#visualizer" className="bg-white border border-slate-300 hover:border-[#1b68b0] hover:bg-slate-50 text-[#242222] font-bold px-6 py-3.5 rounded-xl text-sm transition flex items-center gap-2 shadow-xs">
-                                <Sparkles className="w-4 h-4 text-[#70b03c]" /> Coba Visualizer Kaca
-                            </a>
-                        </div>
-
-                        {/* LIVE METRICS GRID */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-6 border-t border-slate-200/80">
-                            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-xs hover:shadow-md hover:border-blue-300 transition group">
-                                <div className="flex items-center justify-between text-slate-400 mb-1">
-                                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total SPO</span>
-                                    <FileText className="w-4 h-4 text-[#2563EB] group-hover:scale-110 transition-transform" />
-                                </div>
-                                <div className="text-2xl font-black text-[#0F172A] flex items-baseline gap-1">
-                                    {totalOrders} <span className="text-xs text-[#2563EB] font-bold">Order</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-xs hover:shadow-md hover:border-blue-300 transition group">
-                                <div className="flex items-center justify-between text-slate-400 mb-1">
-                                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Scrap WMS</span>
-                                    <Boxes className="w-4 h-4 text-[#1E3A8A] group-hover:scale-110 transition-transform" />
-                                </div>
-                                <div className="text-2xl font-black text-[#1E3A8A] flex items-baseline gap-1">
-                                    {scrapCount} <span className="text-xs text-[#2563EB] font-bold">Rak Ready</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-xs hover:shadow-md hover:border-blue-300 transition group">
-                                <div className="flex items-center justify-between text-slate-400 mb-1">
-                                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Akurasi</span>
-                                    <ShieldCheck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-                                </div>
-                                <div className="text-2xl font-black text-[#2563EB]">99.8%</div>
-                            </div>
-
-                            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-xs hover:shadow-md hover:border-blue-300 transition group">
-                                <div className="flex items-center justify-between text-slate-400 mb-1">
-                                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Surat Jalan</span>
-                                    <Truck className="w-4 h-4 text-[#1E3A8A] group-hover:scale-110 transition-transform" />
-                                </div>
-                                <div className="text-2xl font-black text-[#1E3A8A]">4 Rangkap</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* RIGHT COLUMN: HERO CONTROL CENTER DEMO CARD */}
-                    <div className="lg:col-span-5">
-                        <div className="relative bg-white border border-slate-200/90 rounded-3xl p-6 shadow-xl space-y-5">
-                            {/* DEMO BADGE */}
-                            <div className="absolute -top-3 right-6 bg-[#2563EB] text-white font-black text-[10px] uppercase px-3 py-1 rounded-full tracking-widest shadow-md flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
-                                Live Engine Control
-                            </div>
-
-                            {/* CARD HEADER */}
-                            <div className="flex justify-between items-center border-b border-slate-100 pb-3.5">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-[#2563EB] animate-ping"></div>
-                                    <h3 className="font-extrabold text-[#0F172A] text-base">SYP Operational Pipeline</h3>
-                                </div>
-                                <span className="text-[11px] font-mono bg-blue-50 text-[#1E3A8A] px-2.5 py-1 rounded-md border border-blue-200/60 font-semibold">
-                                    4 Divisi Active
-                                </span>
-                            </div>
-
-                            {/* WORKFLOW PROGRESS BADGES */}
-                            <div className="space-y-2">
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Status Alur Produksi SPO:</span>
-                                <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-                                    <div className="bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl flex items-center gap-2 text-slate-700">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                                        <span className="truncate">1. Admin Toko (DP 50%)</span>
-                                    </div>
-                                    <div className="bg-[#1E3A8A] border border-[#1E3A8A] p-2.5 rounded-xl flex items-center gap-2 text-white shadow-xs">
-                                        <Flame className="w-4 h-4 text-[#60A5FA] animate-pulse shrink-0" />
-                                        <span className="truncate">2. Divisi HT (Cutting)</span>
-                                    </div>
-                                    <div className="bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl flex items-center gap-2 text-slate-700">
-                                        <Wrench className="w-4 h-4 text-[#2563EB] shrink-0" />
-                                        <span className="truncate">3. Divisi GM/BV/Etsa</span>
-                                    </div>
-                                    <div className="bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl flex items-center gap-2 text-slate-700">
-                                        <Truck className="w-4 h-4 text-[#1E3A8A] shrink-0" />
-                                        <span className="truncate">4. QC & Kirim 4 Color</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* SCRAP GLASS RACK DEMO WIDGET - CERAH */}
-                            <div className="bg-slate-50 text-[#242222] rounded-2xl p-4 space-y-3 shadow-xs border border-slate-200">
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-600 flex items-center gap-1.5 font-bold">
-                                        <Boxes className="w-3.5 h-3.5 text-[#1b68b0]" /> WMS Scrap Glass Storage:
-                                    </span>
-                                    <span className="text-[#1b68b0] font-bold bg-[#1b68b0]/10 px-2 py-0.5 rounded text-[10px] border border-[#1b68b0]/30">
-                                        Smart Recommendation
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 text-xs shadow-xs">
-                                    <div>
-                                        <span className="font-bold text-[#242222] block">SCRAP-004 (Rak A1)</span>
-                                        <span className="text-slate-500 text-[11px]">Clear Float 8mm • 140 x 110 cm</span>
-                                    </div>
-                                    <span className="bg-[#70b03c] text-white font-extrabold px-2.5 py-1 rounded text-[11px] shadow-xs">
-                                        Siap Pakai
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* SECTION 2: INTERACTIVE GLASS VISUALIZER & SIMULATOR */}
-            <section id="visualizer" className="py-20 px-4 md:px-8 bg-slate-100/70 border-y border-slate-200 relative">
-                <div className="max-w-7xl mx-auto space-y-12">
-                    <div className="text-center space-y-3 max-w-3xl mx-auto">
-                        <span className="bg-[#2563EB]/10 border border-[#2563EB]/30 text-[#1E3A8A] text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
-                            ✨ Dynamic Physics Engine
-                        </span>
-                        <h2 className="text-3xl sm:text-4xl font-black text-[#0F172A]">
-                            Simulator & <span className="text-[#2563EB]">Visualizer Kaca Real-Time</span>
-                        </h2>
-                        <p className="text-slate-600 text-sm sm:text-base">
-                            Simulasikan karakteristik fisik material kaca, indeks ketebalan, serta finishing permukaan secara langsung.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-                        {/* CONTROLS SIDE PANEL */}
-                        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-md">
-                            <h3 className="font-bold text-lg text-[#0F172A] flex items-center gap-2 border-b border-slate-200 pb-3">
-                                <Settings className="w-5 h-5 text-[#2563EB]" /> Parameter Spesifikasi Kaca
-                            </h3>
-
-                            {/* GLASS TYPE SELECTOR */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-700 block">1. Pilih Material & Warna Kaca:</label>
-                                <div className="grid grid-cols-1 gap-2">
-                                    {Object.entries(glassOptions).map(([key, item]) => (
-                                        <button
-                                            key={key}
-                                            onClick={() => setGlassType(key)}
-                                            className={`p-3 rounded-xl border text-left text-xs font-semibold transition flex justify-between items-center ${
-                                                glassType === key 
-                                                    ? 'border-[#2563EB] bg-[#2563EB]/10 text-[#1E3A8A] shadow-sm' 
-                                                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            <span>{item.name}</span>
-                                            {glassType === key && <Check className="w-4 h-4 text-[#2563EB]" />}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* THICKNESS SLIDER */}
-                            <div className="space-y-3 pt-2">
-                                <div className="flex justify-between items-center text-xs">
-                                    <label className="font-semibold text-slate-700">2. Ketebalan Kaca:</label>
-                                    <span className="font-mono font-bold text-[#1E3A8A] bg-blue-50 px-2.5 py-1 rounded border border-[#2563EB]/30">
-                                        {thickness} mm
-                                    </span>
-                                </div>
-                                <input 
-                                    type="range" 
-                                    min="3" 
-                                    max="19" 
-                                    value={thickness}
-                                    onChange={(e) => setThickness(parseInt(e.target.value))}
-                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2563EB]"
-                                />
-                                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                                    <span>3mm (Biasa)</span>
-                                    <span>8mm (Standard)</span>
-                                    <span>12mm (Sekat)</span>
-                                    <span>19mm (Heavy)</span>
-                                </div>
-                            </div>
-
-                            {/* PROCESS TOGGLES */}
-                            <div className="space-y-2 pt-2">
-                                <label className="text-xs font-semibold text-slate-700 block">3. Opsi Finishing & Proses:</label>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                    <button 
-                                        onClick={() => setActiveProcesses(p => ({ ...p, ht: !p.ht }))}
-                                        className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between ${
-                                            activeProcesses.ht ? 'bg-[#2563EB]/15 border-[#2563EB] text-[#1E3A8A]' : 'bg-slate-50 border-slate-200 text-slate-600'
-                                        }`}
-                                    >
-                                        <span>Halus Tepi (HT)</span>
-                                        {activeProcesses.ht && <Flame className="w-3.5 h-3.5 text-[#2563EB]" />}
-                                    </button>
-
-                                    <button 
-                                        onClick={() => setActiveProcesses(p => ({ ...p, gm: !p.gm }))}
-                                        className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between ${
-                                            activeProcesses.gm ? 'bg-[#2563EB]/15 border-[#2563EB] text-[#1E3A8A]' : 'bg-slate-50 border-slate-200 text-slate-600'
-                                        }`}
-                                    >
-                                        <span>Gosok Mesin (GM)</span>
-                                        {activeProcesses.gm && <Wrench className="w-3.5 h-3.5 text-[#2563EB]" />}
-                                    </button>
-
-                                    <button 
-                                        onClick={() => setActiveProcesses(p => ({ ...p, bv: !p.bv }))}
-                                        className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between ${
-                                            activeProcesses.bv ? 'bg-[#2563EB]/15 border-[#2563EB] text-[#1E3A8A]' : 'bg-slate-50 border-slate-200 text-slate-600'
-                                        }`}
-                                    >
-                                        <span>Beveling (BV)</span>
-                                        {activeProcesses.bv && <Maximize2 className="w-3.5 h-3.5 text-[#2563EB]" />}
-                                    </button>
-
-                                    <button 
-                                        onClick={() => setActiveProcesses(p => ({ ...p, etsa: !p.etsa }))}
-                                        className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between ${
-                                            activeProcesses.etsa ? 'bg-[#2563EB]/15 border-[#2563EB] text-[#1E3A8A]' : 'bg-slate-50 border-slate-200 text-slate-600'
-                                        }`}
-                                    >
-                                        <span>Sandblast / Etsa</span>
-                                        {activeProcesses.etsa && <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* VISUALIZER DISPLAY PANEL */}
-                        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 flex flex-col justify-between space-y-6 relative overflow-hidden shadow-md">
-                            <div className="flex justify-between items-center text-xs border-b border-slate-200 pb-3">
-                                <span className="text-slate-500 font-mono">Render Simulation Output</span>
-                                <div className="flex items-center gap-2">
-                                    {activeProcesses.ht && <span className="bg-[#2563EB]/10 text-[#1E3A8A] border border-[#2563EB]/30 px-2 py-0.5 rounded text-[10px] font-bold">HALUS TEPI HT</span>}
-                                    {activeProcesses.bv && <span className="bg-amber-500/10 text-amber-800 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">BEVEL 2CM</span>}
-                                    {activeProcesses.etsa && <span className="bg-blue-500/10 text-blue-800 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-bold">ETSA SANDBLAST</span>}
-                                </div>
-                            </div>
-
-                            {/* MAIN SIMULATED GLASS SLAB */}
-                            <div className="relative min-h-[300px] sm:min-h-[360px] rounded-2xl flex items-center justify-center p-8 transition-all duration-500 overflow-hidden shadow-xl border border-slate-300 group bg-slate-100">
-                                
-                                {/* DYNAMIC GLASS TEXTURE EFFECT */}
-                                <div 
-                                    className={`absolute inset-0 transition-all duration-500 rounded-2xl ${glassOptions[glassType].style}`}
-                                    style={{
-                                        borderWidth: `${Math.min(10, Math.max(2, thickness / 2))}px`,
-                                        backdropFilter: glassType === 'frosted' || activeProcesses.etsa ? 'blur(16px)' : 'blur(4px)'
-                                    }}
-                                ></div>
-
-                                {/* LIGHT SHEEN SHINE EFFECT */}
-                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-70 rounded-2xl pointer-events-none group-hover:translate-x-10 transition duration-700"></div>
-
-                                {/* CONTENT OVERLAY */}
-                                <div className="relative z-10 text-center space-y-4 max-w-md">
-                                    <div className="w-16 h-16 mx-auto rounded-2xl bg-white border border-[#2563EB]/40 flex items-center justify-center text-[#2563EB] shadow-md">
-                                        <Sparkles className="w-8 h-8 animate-pulse" />
-                                    </div>
-
-                                    <div>
-                                        <h4 className="text-xl font-black text-[#0F172A] tracking-wide">
-                                            {glassOptions[glassType].name}
-                                        </h4>
-                                        <p className="text-xs text-slate-600 font-mono mt-1 font-medium">
-                                            Ketebalan: {thickness} mm • Spec Presisi Manufaktur SYP
-                                        </p>
-                                    </div>
-
-                                    <div className="flex flex-wrap justify-center gap-2 text-[11px] pt-2">
-                                        <span className="bg-white/90 px-3 py-1 rounded-full border border-slate-300 text-slate-700 font-mono shadow-sm">
-                                            Refraksi: 1.52 n
-                                        </span>
-                                        <span className="bg-white/90 px-3 py-1 rounded-full border border-slate-300 text-[#1E3A8A] font-mono font-bold shadow-sm">
-                                            Kepadatan: {(thickness * 2.5).toFixed(1)} kg/m²
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-600 flex flex-wrap justify-between items-center gap-2">
-                                <span>Estimasi Mutu Fisik: Standard Industri SNI / ISO Glass 2026</span>
-                                <a href="#kalkulator" className="text-[#2563EB] hover:underline font-bold flex items-center gap-1">
-                                    Hitung Biaya Kaca Ini <ArrowUpRight className="w-3.5 h-3.5" />
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* SECTION 3: SMART COST ESTIMATOR & CALCULATOR */}
-            <section id="kalkulator" className="py-20 px-4 md:px-8 max-w-7xl mx-auto space-y-12">
-                <div className="text-center space-y-3 max-w-3xl mx-auto">
-                    <span className="bg-[#2563EB]/10 border border-[#2563EB]/30 text-[#1E3A8A] text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
-                        🧮 Smart Pricing Matrix
-                    </span>
-                    <h2 className="text-3xl sm:text-4xl font-black text-[#0F172A]">
-                        Kalkulator <span className="text-[#2563EB]">Estimasi Biaya Order Kaca</span>
-                    </h2>
-                    <p className="text-slate-600 text-sm sm:text-base">
-                        Simulasikan biaya pembuatan kaca berdasarkan dimensi, ketebalan, variasi proses finishing, dan aksesoris.
+                    {/* SUBHEADLINE */}
+                    <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal max-w-2xl mx-auto">
+                        Satu platform terintegrasi untuk mengotomasi alur Surat Pesanan Order (SPO), pengerjaan 4 divisi presisi (HT, GM, BV, Etsa), inventaris rak sisa kaca (Smart WMS), hingga distribusi Surat Jalan 4 rangkap dan pelunasan COD.
                     </p>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    {/* CALCULATOR INPUT FORM */}
-                    <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-md">
-                        <h3 className="font-bold text-lg text-[#0F172A] flex items-center gap-2 border-b border-slate-200 pb-3">
-                            <Calculator className="w-5 h-5 text-[#2563EB]" /> Form Spesifikasi Dimension & Fitur
-                        </h3>
-
-                        {/* DIMENSIONS */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-700 block">Panjang Kaca (cm):</label>
-                                <input 
-                                    type="number" 
-                                    min="10"
-                                    max="500"
-                                    value={calcLength} 
-                                    onChange={(e) => setCalcLength(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-[#0F172A] text-sm font-mono focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 focus:outline-none" 
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-700 block">Lebar Kaca (cm):</label>
-                                <input 
-                                    type="number" 
-                                    min="10"
-                                    max="500"
-                                    value={calcWidth} 
-                                    onChange={(e) => setCalcWidth(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-[#0F172A] text-sm font-mono focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 focus:outline-none" 
-                                />
-                            </div>
-                        </div>
-
-                        {/* MATERIAL & THICKNESS */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-700 block">Jenis Kaca Dasar:</label>
-                                <select 
-                                    value={calcGlassType} 
-                                    onChange={(e) => setCalcGlassType(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-[#0F172A] text-xs font-semibold focus:border-[#2563EB] focus:outline-none"
-                                >
-                                    {Object.entries(glassOptions).map(([key, item]) => (
-                                        <option key={key} value={key}>{item.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-700 block">Ketebalan Kaca:</label>
-                                <select 
-                                    value={calcThickness} 
-                                    onChange={(e) => setCalcThickness(parseInt(e.target.value))}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-[#0F172A] text-xs font-semibold focus:border-[#2563EB] focus:outline-none"
-                                >
-                                    <option value={5}>5 mm (Standard Bening)</option>
-                                    <option value={8}>8 mm (Pintu/Sekat Kaca)</option>
-                                    <option value={10}>10 mm (Kanopi & Balustrade)</option>
-                                    <option value={12}>12 mm (Tempered Heavy)</option>
-                                    <option value={15}>15 mm (Kaca Khusus Industri)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* PROCESS SELECTION */}
-                        <div className="space-y-2 pt-2">
-                            <label className="text-xs font-semibold text-slate-700 block">Pilih Proses Finishing Kaca:</label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                {processCatalog.map(proc => (
-                                    <button 
-                                        key={proc.id}
-                                        onClick={() => toggleProcessSelection(proc.id)}
-                                        className={`p-3 rounded-xl border text-left transition flex justify-between items-center ${
-                                            selectedProcesses.includes(proc.id)
-                                                ? 'bg-[#2563EB]/10 border-[#2563EB] text-[#1E3A8A] font-semibold'
-                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                                        }`}
-                                    >
-                                        <div>
-                                            <span className="block">{proc.name}</span>
-                                            <span className="text-[10px] text-slate-500 block">{proc.desc}</span>
-                                        </div>
-                                        {selectedProcesses.includes(proc.id) && <Check className="w-4 h-4 text-[#2563EB] shrink-0 ml-2" />}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* DYNAMIC ETSA MODE CONFIGURATION BOX */}
-                            {selectedProcesses.includes('etsa') && (
-                                <div className="mt-3 bg-[#2563EB]/5 border border-[#2563EB]/30 rounded-2xl p-4 space-y-3 animate-in fade-in duration-200">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-[#1E3A8A] flex items-center gap-1.5">
-                                            <Sparkles className="w-4 h-4 text-[#2563EB]" /> Konfigurasi Tipe Pengerjaan Etsa:
-                                        </span>
-                                        <span className="text-[10px] font-semibold bg-blue-100 text-[#1E3A8A] px-2 py-0.5 rounded">
-                                            Akurat Presisi Area
-                                        </span>
-                                    </div>
-
-                                    <div className="grid grid-cols-3 gap-2 pt-1">
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-600 block mb-1">Panjang Etsa (cm):</label>
-                                            <input 
-                                                type="number" 
-                                                value={calcEtsaLength} 
-                                                onChange={(e) => setCalcEtsaLength(Math.max(1, parseFloat(e.target.value) || 0))}
-                                                className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono font-bold"
-                                                placeholder={calcLength}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-600 block mb-1">Lebar Etsa (cm):</label>
-                                            <input 
-                                                type="number" 
-                                                value={calcEtsaWidth} 
-                                                onChange={(e) => setCalcEtsaWidth(Math.max(1, parseFloat(e.target.value) || 0))}
-                                                className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono font-bold"
-                                                placeholder={calcWidth}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-600 block mb-1">Jumlah Area (Pcs):</label>
-                                            <input 
-                                                type="number" 
-                                                value={calcEtsaQty} 
-                                                onChange={(e) => setCalcEtsaQty(Math.max(1, parseInt(e.target.value) || 1))}
-                                                className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono font-bold"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* ACCESSORIES SELECTION */}
-                        <div className="space-y-2 pt-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-semibold text-slate-700 block">Katalog Hardware & Aksesoris Stok SYP Glass:</label>
-                                <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold">✓ Stok Terintegrasi Gudang</span>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                {accessoryCatalog.map(acc => (
-                                    <button 
-                                        key={acc.id}
-                                        onClick={() => toggleAccessorySelection(acc.id)}
-                                        className={`p-3 rounded-xl border text-left transition flex justify-between items-center ${
-                                            selectedAccessories.includes(acc.id)
-                                                ? 'bg-[#2563EB]/10 border-[#2563EB] text-[#1E3A8A] font-semibold shadow-xs'
-                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                                        }`}
-                                    >
-                                        <div>
-                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                <span className="block">{acc.name}</span>
-                                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${acc.status === 'Menipis' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                                    {acc.stock} {acc.unit}
-                                                </span>
-                                            </div>
-                                            <span className="text-[10px] text-[#2563EB] font-semibold block">Rp {acc.price.toLocaleString()} / {acc.unit}</span>
-                                        </div>
-                                        {selectedAccessories.includes(acc.id) && <Check className="w-4 h-4 text-[#2563EB] shrink-0 ml-2" />}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ESTIMATION SUMMARY SIDEBAR (NAVY #0F172A & DEEP BLUE #1E3A8A) */}
-                    <div className="lg:col-span-5 bg-gradient-to-b from-[#0F172A] to-[#1E3A8A] text-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative border border-[#1E3A8A]">
-                        <div className="flex justify-between items-center border-b border-slate-700 pb-3">
-                            <span className="text-xs text-slate-300 font-mono">Invoice Line Item Breakdown</span>
-                            <span className="bg-[#2563EB] text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
-                                Live Calculation
-                            </span>
-                        </div>
-
-                        <div className="space-y-3 text-xs">
-                            <div className="flex justify-between text-slate-200">
-                                <span>Luas Area Kaca:</span>
-                                <span className="font-mono font-bold text-white">{areaM2.toFixed(2)} m²</span>
-                            </div>
-                            <div className="flex justify-between text-slate-200">
-                                <span>Keliling Finishing:</span>
-                                <span className="font-mono font-bold text-white">{perimeterM.toFixed(2)} meter</span>
-                            </div>
-                            <div className="flex justify-between text-slate-200">
-                                <span>Harga Bahan Kaca Dasar:</span>
-                                <span className="font-mono text-[#60A5FA]">Rp {baseGlassCost.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-slate-200">
-                                <span>Biaya Finishing & Proses:</span>
-                                <span className="font-mono text-[#60A5FA]">Rp {processCost.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-slate-200">
-                                <span>Biaya Aksesoris Tambahan:</span>
-                                <span className="font-mono text-[#60A5FA]">Rp {accessoryCost.toLocaleString()}</span>
-                            </div>
-
-                            <div className="border-t border-slate-700 pt-3 space-y-2">
-                                <div className="flex justify-between text-slate-300">
-                                    <span>DP Awal (50% Syarat Order):</span>
-                                    <span className="font-mono font-bold text-amber-300">Rp {dpAmount.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-slate-300">
-                                    <span>Pelunasan Sisa COD (50%):</span>
-                                    <span className="font-mono font-bold text-[#60A5FA]">Rp {(estimatedTotal - dpAmount).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* TOTAL HIGHLIGHT - CERAH */}
-                        <div className="bg-[#1b68b0]/10 p-5 rounded-2xl border border-[#1b68b0]/20 text-center space-y-1 shadow-xs">
-                            <span className="text-xs text-slate-600 uppercase tracking-widest font-bold block">Total Estimasi Keseluruhan</span>
-                            <div className="text-3xl sm:text-4xl font-black text-[#1b68b0]">
-                                Rp {estimatedTotal.toLocaleString()}
-                            </div>
-                            <span className="text-[10px] text-slate-500 block pt-1">
-                                *Sudah termasuk PPN 11% & Jaminan Garansi Manufaktur
-                            </span>
-                        </div>
-
+                    {/* DUAL ACTION BUTTONS */}
+                    <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
                         {auth.user ? (
                             <Link 
                                 href="/dashboard" 
-                                className="w-full bg-[#2563EB] hover:bg-blue-600 text-white font-black py-4 rounded-xl text-center text-sm shadow-xl transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-8 py-3.5 rounded-2xl shadow-xl shadow-[#1b68b0]/25 text-sm flex items-center gap-2.5 transition transform hover:-translate-y-0.5"
                             >
-                                <FileText className="w-4 h-4" /> Input Pesanan Ke System SYP →
+                                <Activity className="w-4 h-4" /> Buka Dashboard Operasional
                             </Link>
                         ) : (
-                            <a 
-                                href="#visualizer" 
-                                className="w-full bg-[#1E3A8A] hover:bg-[#0F172A] text-white font-bold py-4 rounded-xl text-center text-sm shadow-md transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                            <Link 
+                                href={route('login')} 
+                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-8 py-3.5 rounded-2xl shadow-xl shadow-[#1b68b0]/25 text-sm flex items-center gap-2.5 transition transform hover:-translate-y-0.5"
                             >
-                                <Sparkles className="w-4 h-4 text-[#60A5FA]" /> Coba Simulator Visualizer →
-                            </a>
+                                <span>Mulai Sekarang</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </Link>
                         )}
+                        <a 
+                            href="#interactive-lab" 
+                            className="bg-white hover:bg-slate-50 text-slate-800 font-bold px-6 py-3.5 rounded-2xl border border-slate-200 text-sm transition flex items-center gap-2 shadow-xs hover:border-[#1b68b0]"
+                        >
+                            <Sliders className="w-4 h-4 text-[#70b03c]" /> Coba Interactive Lab
+                        </a>
+                    </div>
+                </div>
+
+                {/* 3. HERO SHOWCASE: MODERN APP PREVIEW CARD */}
+                <div className="mt-14 max-w-5xl mx-auto">
+                    <div className="relative rounded-3xl border border-slate-200/90 bg-white shadow-2xl overflow-hidden">
+                        {/* WINDOW BAR */}
+                        <div className="bg-slate-50/90 border-b border-slate-200/80 px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-rose-400"></div>
+                                <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                                <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
+                                <span className="ml-2 text-[11px] font-mono font-medium text-slate-500">
+                                    https://kerjapraktek.utb.ac.id/dashboard/orders
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    Production Active
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* PREVIEW CONTENT */}
+                        <div className="p-5 sm:p-7 space-y-6 bg-slate-50/50">
+                            {/* MINI TOP BAR */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                                <div>
+                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                                        Overview Operasional Pabrik & Toko
+                                    </span>
+                                    <h3 className="text-xl font-black text-[#242222]">
+                                        Monitoring Alur Kerja & Pipeline Produksi
+                                    </h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-bold text-[#1b68b0] shadow-xs">
+                                        Total {totalOrders} SPO Masuk
+                                    </span>
+                                    <span className="bg-[#70b03c]/10 border border-[#70b03c]/30 px-3 py-1 rounded-xl text-xs font-bold text-[#5f9733]">
+                                        {scrapCount} Rak WMS Siap
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 4 STAGE PRODUCTION PIPELINE SHOWCASE */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Tahap 1</span>
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                    </div>
+                                    <h4 className="font-bold text-sm text-[#242222]">Admin Toko & DP</h4>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">Input order SPO, validasi DP 50%, & draf negosiasi.</p>
+                                </div>
+
+                                <div className="bg-white p-3.5 rounded-2xl border-2 border-[#1b68b0] shadow-sm">
+                                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                                        <span className="text-[10px] font-bold text-[#1b68b0] uppercase">Tahap 2</span>
+                                        <Flame className="w-4 h-4 text-[#1b68b0]" />
+                                    </div>
+                                    <h4 className="font-bold text-sm text-[#242222]">Divisi HT (Cutting)</h4>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">Potong presisi lembaran kaca & alokasi sisa ke Rak Scrap.</p>
+                                </div>
+
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Tahap 3</span>
+                                        <Wrench className="w-4 h-4 text-blue-500" />
+                                    </div>
+                                    <h4 className="font-bold text-sm text-[#242222]">Divisi GM / BV / Etsa</h4>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">Gosok mesin halus, bevel artistik, & sandblast custom.</p>
+                                </div>
+
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Tahap 4</span>
+                                        <Truck className="w-4 h-4 text-[#70b03c]" />
+                                    </div>
+                                    <h4 className="font-bold text-sm text-[#242222]">QC & Surat Jalan 4W</h4>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">Inspeksi akhir, surat jalan 4 warna, & setoran COD sopir.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* SECTION 4: MULTI-DIVISION OPERATIONAL WORKFLOW */}
-            <section id="workflow" className="py-20 px-4 md:px-8 bg-slate-100/70 border-t border-slate-200">
-                <div className="max-w-7xl mx-auto space-y-12">
-                    <div className="text-center space-y-3 max-w-3xl mx-auto">
-                        <span className="bg-[#2563EB]/10 border border-[#2563EB]/30 text-[#1E3A8A] text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
-                            ⚙️ End-to-End Enterprise Standard
-                        </span>
-                        <h2 className="text-3xl sm:text-4xl font-black text-[#0F172A]">
-                            Alur Operasional <span className="text-[#2563EB]">4 Divisi SYP Glass</span>
+            {/* 4. KEY METRICS & TRUST STRIP */}
+            <section className="bg-white border-y border-slate-200 py-10 px-4 md:px-8">
+                <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                    <div className="space-y-1">
+                        <div className="text-3xl sm:text-4xl font-black text-[#1b68b0]">100%</div>
+                        <div className="text-xs font-bold text-slate-700">Digitalisasi SPO & Draf</div>
+                        <p className="text-[11px] text-slate-500">Tanpa formulir kertas manual</p>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-3xl sm:text-4xl font-black text-[#70b03c]">4 Divisi</div>
+                        <div className="text-xs font-bold text-slate-700">Siklus Produksi Presisi</div>
+                        <p className="text-[11px] text-slate-500">HT, GM, BV, dan Etsa Pattern</p>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-3xl sm:text-4xl font-black text-[#1b68b0]">34%</div>
+                        <div className="text-xs font-bold text-slate-700">Efisiensi Bahan Kaca</div>
+                        <p className="text-[11px] text-slate-500">Melalui optimasi WMS Rak Scrap</p>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-3xl sm:text-4xl font-black text-[#70b03c]">4 Rangkap</div>
+                        <div className="text-xs font-bold text-slate-700">Surat Jalan Berwarna</div>
+                        <p className="text-[11px] text-slate-500">Akuntabilitas ekspedisi & kasir</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* 5. CORE CAPABILITIES (BENTO GRID - 4 PILAR MODUL) */}
+            <section id="features" className="py-20 px-4 md:px-8 max-w-7xl mx-auto space-y-12">
+                <div className="text-center space-y-3 max-w-2xl mx-auto">
+                    <h2 className="text-3xl sm:text-4xl font-black text-[#242222]">
+                        Dirancang untuk Menjawab Kebutuhan Operasional Nyata
+                    </h2>
+                    <p className="text-slate-600 text-sm sm:text-base">
+                        Setiap modul saling terhubung secara otomatis, menghilangkan miskomunikasi antar toko, pabrik, gudang, dan armada pengiriman.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* MODUL 1: ADMIN TOKO */}
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm hover:shadow-md transition">
+                        <div className="w-12 h-12 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                            <FileText className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-[#242222]">1. Admin Toko & Manajemen SPO</h3>
+                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                            Menerbitkan Surat Pesanan Order (SPO) secara otomatis dengan perhitungan luas m², keliling gosok, aksesoris, dan verifikasi syarat DP minimal 50% sebelum diteruskan ke lantai produksi.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Kalkulasi Otomatis</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Draf Negosiasi</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Validasi DP 50%</span>
+                        </div>
+                    </div>
+
+                    {/* MODUL 2: MULTI-DIVISI PABRIK */}
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm hover:shadow-md transition">
+                        <div className="w-12 h-12 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#70b03c]">
+                            <Factory className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-[#242222]">2. Disposisi Produksi 4 Divisi</h3>
+                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                            Pelacakan pengerjaan bertahap dari Divisi HT (Pemotongan & Tempering), Divisi GM (Gosok Mesin), Divisi BV (Beveling 2cm), dan Divisi Etsa Sandblast dengan pencatatan waktu pengerjaan presisi.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Potong Lembaran</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Finishing Bevel/GM</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">QC Pemeriksaan</span>
+                        </div>
+                    </div>
+
+                    {/* MODUL 3: SMART WMS SCRAP */}
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm hover:shadow-md transition">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                            <Boxes className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-[#242222]">3. Zero-Waste WMS Scrap Storage</h3>
+                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                            Inovasi pengelolaan sisa potongan kaca yang masih layak pakai. Divisi HT mencatat lokasi rak (Rak A1, B2) dan sistem merekomendasikan penggunaan sisa kaca untuk pesanan ukuran kecil.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Katalog Rak A1-B2</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Smart Recommendation</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Hemat Bahan Baku</span>
+                        </div>
+                    </div>
+
+                    {/* MODUL 4: LOGISTIK & COD */}
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm hover:shadow-md transition">
+                        <div className="w-12 h-12 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                            <Truck className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-[#242222]">4. Ekspedisi Surat Jalan & Rekonsiliasi COD</h3>
+                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                            Pencetakan Surat Jalan 4 Rangkap resmi, penugasan driver armada, pencatatan klaim operasional (bensin/tol), dan validasi pelunasan uang tunai COD kasir saat barang tiba.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Surat Jalan 4 Rangkap</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Klaim Operasional Driver</span>
+                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">Kasir Pelunasan COD</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* 6. UNIFIED INTERACTIVE LAB (SIMULATOR + KALKULATOR DALAM SATU WADAH ELEGAN) */}
+            <section id="interactive-lab" className="py-20 px-4 md:px-8 bg-slate-100/70 border-y border-slate-200">
+                <div className="max-w-7xl mx-auto space-y-8">
+                    {/* SECTION TITLE */}
+                    <div className="text-center space-y-3 max-w-2xl mx-auto">
+                        <h2 className="text-3xl sm:text-4xl font-black text-[#242222]">
+                            Uji Karakteristik Material & Estimasi Biaya
                         </h2>
-                        <p className="text-slate-600 text-sm sm:text-base">
-                            Setiap pesanan diproses secara transparan melalui 4 divisi terspesialisasi dengan pelacakan hak akses tersinkronisasi.
+                        <p className="text-slate-600 text-xs sm:text-sm">
+                            Pilih modul simulasi di bawah ini untuk melihat rendering visual kaca atau menghitung estimasi biaya riil orderan.
+                        </p>
+
+                        {/* TAB SWITCHER */}
+                        <div className="inline-flex p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs mt-4">
+                            <button
+                                onClick={() => setInteractiveTab('visualizer')}
+                                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                    interactiveTab === 'visualizer'
+                                        ? 'bg-[#1b68b0] text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                <Sparkles className="w-3.5 h-3.5" /> Simulator & Visualizer Kaca
+                            </button>
+                            <button
+                                onClick={() => setInteractiveTab('calculator')}
+                                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                    interactiveTab === 'calculator'
+                                        ? 'bg-[#1b68b0] text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                <Calculator className="w-3.5 h-3.5" /> Kalkulator Estimasi Biaya
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* TAB CONTENT 1: VISUALIZER */}
+                    {interactiveTab === 'visualizer' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch animate-in fade-in duration-200">
+                            {/* CONTROLS SIDE PANEL */}
+                            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+                                <h3 className="font-bold text-base text-[#242222] flex items-center gap-2 border-b border-slate-200 pb-3">
+                                    <Settings className="w-4 h-4 text-[#1b68b0]" /> Parameter Karakteristik Material
+                                </h3>
+
+                                {/* MATERIAL SELECTOR */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-700 block">1. Pilih Jenis Kaca:</label>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {Object.entries(glassOptions).map(([key, item]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => setGlassType(key)}
+                                                className={`p-3 rounded-xl border text-left text-xs font-semibold transition flex justify-between items-center cursor-pointer ${
+                                                    glassType === key 
+                                                        ? 'border-[#1b68b0] bg-[#1b68b0]/10 text-[#1b68b0] shadow-xs' 
+                                                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <span>{item.name}</span>
+                                                {glassType === key && <Check className="w-4 h-4 text-[#1b68b0]" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* THICKNESS SLIDER */}
+                                <div className="space-y-2.5 pt-1">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <label className="font-bold text-slate-700">2. Ketebalan Lembaran:</label>
+                                        <span className="font-mono font-bold text-[#1b68b0] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                                            {thickness} mm
+                                        </span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="3" 
+                                        max="19" 
+                                        value={thickness}
+                                        onChange={(e) => setThickness(parseInt(e.target.value))}
+                                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#1b68b0]"
+                                    />
+                                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                                        <span>3mm (Tipis)</span>
+                                        <span>8mm (Standard)</span>
+                                        <span>12mm (Partisi)</span>
+                                        <span>19mm (Heavy)</span>
+                                    </div>
+                                </div>
+
+                                {/* PROCESS TOGGLES */}
+                                <div className="space-y-2 pt-1">
+                                    <label className="text-xs font-bold text-slate-700 block">3. Opsi Proses Finishing:</label>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <button 
+                                            onClick={() => setActiveProcesses(p => ({ ...p, ht: !p.ht }))}
+                                            className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between cursor-pointer ${
+                                                activeProcesses.ht ? 'bg-[#1b68b0]/15 border-[#1b68b0] text-[#1b68b0]' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            <span>Halus Tepi (HT)</span>
+                                            {activeProcesses.ht && <Flame className="w-3.5 h-3.5 text-[#1b68b0]" />}
+                                        </button>
+
+                                        <button 
+                                            onClick={() => setActiveProcesses(p => ({ ...p, gm: !p.gm }))}
+                                            className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between cursor-pointer ${
+                                                activeProcesses.gm ? 'bg-[#1b68b0]/15 border-[#1b68b0] text-[#1b68b0]' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            <span>Gosok Mesin (GM)</span>
+                                            {activeProcesses.gm && <Wrench className="w-3.5 h-3.5 text-[#1b68b0]" />}
+                                        </button>
+
+                                        <button 
+                                            onClick={() => setActiveProcesses(p => ({ ...p, bv: !p.bv }))}
+                                            className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between cursor-pointer ${
+                                                activeProcesses.bv ? 'bg-[#1b68b0]/15 border-[#1b68b0] text-[#1b68b0]' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            <span>Beveling (BV)</span>
+                                            {activeProcesses.bv && <Maximize2 className="w-3.5 h-3.5 text-[#1b68b0]" />}
+                                        </button>
+
+                                        <button 
+                                            onClick={() => setActiveProcesses(p => ({ ...p, etsa: !p.etsa }))}
+                                            className={`p-2.5 rounded-xl border font-semibold flex items-center justify-between cursor-pointer ${
+                                                activeProcesses.etsa ? 'bg-[#1b68b0]/15 border-[#1b68b0] text-[#1b68b0]' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            <span>Sandblast / Etsa</span>
+                                            {activeProcesses.etsa && <Sparkles className="w-3.5 h-3.5 text-[#1b68b0]" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* VISUALIZER DISPLAY PANEL */}
+                            <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 flex flex-col justify-between space-y-6 shadow-sm">
+                                <div className="flex justify-between items-center text-xs border-b border-slate-200 pb-3">
+                                    <span className="text-slate-500 font-mono">Render Simulasi Fisik Kaca</span>
+                                    <div className="flex items-center gap-1.5">
+                                        {activeProcesses.ht && <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold">HALUS TEPI HT</span>}
+                                        {activeProcesses.bv && <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold">BEVEL 2CM</span>}
+                                        {activeProcesses.etsa && <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded text-[10px] font-bold">ETSA SANDBLAST</span>}
+                                    </div>
+                                </div>
+
+                                {/* GLASS SLAB RENDER */}
+                                <div className="relative min-h-[300px] sm:min-h-[340px] rounded-2xl flex items-center justify-center p-8 transition-all duration-300 overflow-hidden shadow-inner border border-slate-200 bg-slate-100">
+                                    <div 
+                                        className={`absolute inset-4 transition-all duration-300 rounded-2xl ${glassOptions[glassType].style}`}
+                                        style={{
+                                            borderWidth: `${Math.min(10, Math.max(2, thickness / 2))}px`,
+                                            backdropFilter: glassType === 'frosted' || activeProcesses.etsa ? 'blur(16px)' : 'blur(4px)'
+                                        }}
+                                    ></div>
+
+                                    {/* LIGHT SHEEN */}
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent opacity-60 rounded-2xl pointer-events-none"></div>
+
+                                    {/* SPEC INFO OVERLAY */}
+                                    <div className="relative z-10 text-center space-y-3 max-w-sm">
+                                        <div className="w-14 h-14 mx-auto rounded-2xl bg-white border border-[#1b68b0]/30 flex items-center justify-center text-[#1b68b0] shadow-sm">
+                                            <Sparkles className="w-7 h-7" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-black text-[#242222]">
+                                                {glassOptions[glassType].name}
+                                            </h4>
+                                            <p className="text-xs text-slate-600 font-mono mt-0.5">
+                                                Ketebalan: {thickness} mm • Standar Manufaktur Presisi
+                                            </p>
+                                        </div>
+                                        <div className="flex justify-center gap-2 text-[11px] pt-1">
+                                            <span className="bg-white px-3 py-1 rounded-full border border-slate-200 text-slate-700 font-mono shadow-xs">
+                                                Refraksi: 1.52 n
+                                            </span>
+                                            <span className="bg-white px-3 py-1 rounded-full border border-slate-200 text-[#1b68b0] font-mono font-bold shadow-xs">
+                                                Massa: {(thickness * 2.5).toFixed(1)} kg/m²
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 flex flex-wrap justify-between items-center gap-2">
+                                    <span>Standar Mutu Manufaktur: SNI / ISO Glass 2026</span>
+                                    <button 
+                                        onClick={() => setInteractiveTab('calculator')}
+                                        className="text-[#1b68b0] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                                    >
+                                        Buka Kalkulator Biaya Kaca Ini →
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB CONTENT 2: CALCULATOR */}
+                    {interactiveTab === 'calculator' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-200">
+                            {/* FORM SPECIFICATION */}
+                            <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-5 shadow-sm">
+                                <h3 className="font-bold text-base text-[#242222] flex items-center gap-2 border-b border-slate-200 pb-3">
+                                    <Calculator className="w-4 h-4 text-[#1b68b0]" /> Spesifikasi Dimensi & Kebutuhan
+                                </h3>
+
+                                {/* DIMENSIONS */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-700 block">Panjang Kaca (cm):</label>
+                                        <input 
+                                            type="number" 
+                                            min="10"
+                                            max="500"
+                                            value={calcLength} 
+                                            onChange={(e) => setCalcLength(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 text-xs font-mono focus:bg-white focus:border-[#1b68b0]" 
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-700 block">Lebar Kaca (cm):</label>
+                                        <input 
+                                            type="number" 
+                                            min="10"
+                                            max="500"
+                                            value={calcWidth} 
+                                            onChange={(e) => setCalcWidth(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 text-xs font-mono focus:bg-white focus:border-[#1b68b0]" 
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* MATERIAL & THICKNESS */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-700 block">Jenis Kaca Dasar:</label>
+                                        <select 
+                                            value={calcGlassType} 
+                                            onChange={(e) => setCalcGlassType(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 text-xs font-semibold focus:bg-white focus:border-[#1b68b0]"
+                                        >
+                                            {Object.entries(glassOptions).map(([key, item]) => (
+                                                <option key={key} value={key}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-700 block">Ketebalan Kaca:</label>
+                                        <select 
+                                            value={calcThickness} 
+                                            onChange={(e) => setCalcThickness(parseInt(e.target.value))}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 text-xs font-semibold focus:bg-white focus:border-[#1b68b0]"
+                                        >
+                                            <option value={5}>5 mm (Standard Bening)</option>
+                                            <option value={8}>8 mm (Pintu/Partisi Kaca)</option>
+                                            <option value={10}>10 mm (Kanopi & Balustrade)</option>
+                                            <option value={12}>12 mm (Tempered Heavy)</option>
+                                            <option value={15}>15 mm (Kaca Khusus Industri)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* PROCESS SELECTION */}
+                                <div className="space-y-2 pt-1">
+                                    <label className="text-xs font-bold text-slate-700 block">Proses Finishing Kaca:</label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                        {processCatalog.map(proc => (
+                                            <button 
+                                                key={proc.id}
+                                                onClick={() => toggleProcessSelection(proc.id)}
+                                                className={`p-3 rounded-xl border text-left transition flex justify-between items-center cursor-pointer ${
+                                                    selectedProcesses.includes(proc.id)
+                                                        ? 'bg-[#1b68b0]/10 border-[#1b68b0] text-[#1b68b0] font-semibold'
+                                                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <div>
+                                                    <span className="block">{proc.name}</span>
+                                                    <span className="text-[10px] text-slate-500 block">{proc.desc}</span>
+                                                </div>
+                                                {selectedProcesses.includes(proc.id) && <Check className="w-4 h-4 text-[#1b68b0] shrink-0 ml-2" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* ACCESSORY SELECTION */}
+                                <div className="space-y-2 pt-1">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-slate-700 block">Aksesoris & Hardware Stok:</label>
+                                        <span className="text-[10px] text-[#70b03c] font-bold">✓ Stok Terintegrasi</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                        {accessoryCatalog.slice(0, 6).map(acc => (
+                                            <button 
+                                                key={acc.id}
+                                                onClick={() => toggleAccessorySelection(acc.id)}
+                                                className={`p-2.5 rounded-xl border text-left transition flex justify-between items-center cursor-pointer ${
+                                                    selectedAccessories.includes(acc.id)
+                                                        ? 'bg-[#1b68b0]/10 border-[#1b68b0] text-[#1b68b0] font-semibold'
+                                                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <div className="truncate pr-2">
+                                                    <span className="block truncate">{acc.name}</span>
+                                                    <span className="text-[10px] text-[#1b68b0] font-semibold">Rp {acc.price.toLocaleString()}</span>
+                                                </div>
+                                                {selectedAccessories.includes(acc.id) && <Check className="w-4 h-4 text-[#1b68b0] shrink-0" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* COST BREAKDOWN CARD */}
+                            <div className="lg:col-span-5 bg-white border border-slate-200 text-slate-800 rounded-3xl p-6 sm:p-8 space-y-5 shadow-xl">
+                                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Rincian Estimasi Biaya</span>
+                                    <span className="bg-[#1b68b0]/10 text-[#1b68b0] text-[10px] font-bold px-2.5 py-0.5 rounded-md">
+                                        Kalkulasi Real-Time
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2.5 text-xs">
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Luas Area:</span>
+                                        <span className="font-mono font-bold text-slate-800">{areaM2.toFixed(2)} m²</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Keliling Finishing:</span>
+                                        <span className="font-mono font-bold text-slate-800">{perimeterM.toFixed(2)} meter</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Bahan Kaca Dasar:</span>
+                                        <span className="font-mono font-semibold text-slate-800">Rp {baseGlassCost.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Finishing & Proses:</span>
+                                        <span className="font-mono font-semibold text-slate-800">Rp {processCost.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Aksesoris Tambahan:</span>
+                                        <span className="font-mono font-semibold text-slate-800">Rp {accessoryCost.toLocaleString()}</span>
+                                    </div>
+
+                                    <div className="border-t border-slate-200 pt-2.5 space-y-1.5">
+                                        <div className="flex justify-between text-slate-700 font-semibold">
+                                            <span>Syarat DP 50% (Awal):</span>
+                                            <span className="font-mono text-amber-600 font-bold">Rp {dpAmount.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between text-slate-700 font-semibold">
+                                            <span>Pelunasan Sisa COD (50%):</span>
+                                            <span className="font-mono text-[#1b68b0] font-bold">Rp {(estimatedTotal - dpAmount).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* TOTAL HIGHLIGHT */}
+                                <div className="bg-[#1b68b0]/10 p-4 rounded-2xl border border-[#1b68b0]/20 text-center space-y-1">
+                                    <span className="text-[10px] text-slate-600 uppercase tracking-wider font-extrabold block">Total Estimasi Keseluruhan</span>
+                                    <div className="text-3xl font-black text-[#1b68b0]">
+                                        Rp {estimatedTotal.toLocaleString()}
+                                    </div>
+                                    <span className="text-[10px] text-slate-500 block">
+                                        *Termasuk estimasi PPN 11% & Jaminan Garansi Manufaktur
+                                    </span>
+                                </div>
+
+                                {auth.user ? (
+                                    <Link 
+                                        href="/dashboard" 
+                                        className="w-full bg-[#70b03c] hover:bg-[#5f9733] text-white font-extrabold py-3 rounded-xl text-center text-xs shadow-md transition flex items-center justify-center gap-2"
+                                    >
+                                        <FileText className="w-4 h-4" /> Buka Dashboard & Buat SPO Resmi
+                                    </Link>
+                                ) : (
+                                    <Link 
+                                        href={route('login')} 
+                                        className="w-full bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold py-3 rounded-xl text-center text-xs shadow-md transition flex items-center justify-center gap-2"
+                                    >
+                                        <span>Masuk untuk Buat Pesanan SPO</span>
+                                        <ArrowRight className="w-4 h-4" />
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* 7. WORKFLOW ALUR 4 DIVISI PRODUKSI */}
+            <section id="workflow" className="py-20 px-4 md:px-8 max-w-7xl mx-auto space-y-12">
+                <div className="text-center space-y-3 max-w-2xl mx-auto">
+                    <h2 className="text-3xl sm:text-4xl font-black text-[#242222]">
+                        4 Tahapan Transparan dari Draf Sampai Pengiriman
+                    </h2>
+                    <p className="text-slate-600 text-sm">
+                        Setiap pesanan terpantau secara real-time melalui 4 divisi dengan batasan role dan akuntabilitas jelas.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-3 shadow-sm hover:shadow-md transition">
+                        <div className="w-10 h-10 rounded-xl bg-[#1b68b0]/10 text-[#1b68b0] flex items-center justify-center font-black text-sm">
+                            01
+                        </div>
+                        <h3 className="font-bold text-base text-[#242222]">Admin Toko & Sales</h3>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                            Menerima kebutuhan customer, menerbitkan nomor SPO, dan mengonfirmasi pelunasan DP 50% sebelum mengirimkan instruksi potong.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* STEP 1 */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 hover:border-[#2563EB] transition duration-300 shadow-md relative group">
-                            <div className="w-12 h-12 bg-[#1E3A8A] text-[#60A5FA] rounded-2xl flex items-center justify-center font-black text-xl shadow-md">
-                                01
-                            </div>
-                            <h3 className="font-bold text-lg text-[#0F172A]">Admin Toko & Sales</h3>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                                Membuat SPO (Surat Pesanan Order), menentukan dimensi & proses, serta mengonfirmasi pembayaran DP 50% sebelum rilis ke pabrik.
-                            </p>
-                            <ul className="text-xs text-slate-700 space-y-1.5 pt-2">
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Penerbitan SPO-01XX</li>
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Verifikasi DP 50%</li>
-                            </ul>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-3 shadow-sm hover:shadow-md transition">
+                        <div className="w-10 h-10 rounded-xl bg-[#1b68b0] text-white flex items-center justify-center font-black text-sm">
+                            02
                         </div>
+                        <h3 className="font-bold text-base text-[#242222]">Divisi HT (Cutting)</h3>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                            Pemotongan lembaran kaca secara presisi. Sisa potongan layak pakai langsung dialokasikan ke Rak Scrap WMS, lalu masuk ke oven tempering.
+                        </p>
+                    </div>
 
-                        {/* STEP 2 */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 hover:border-[#2563EB] transition duration-300 shadow-md relative group">
-                            <div className="w-12 h-12 bg-[#2563EB] text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">
-                                02
-                            </div>
-                            <h3 className="font-bold text-lg text-[#0F172A]">Divisi HT (Cutting)</h3>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                                Pemotongan lembar kaca presisi, mengalokasikan sisa sisa potongan ke Rak Scrap WMS, serta pemanasan di oven tempering.
-                            </p>
-                            <ul className="text-xs text-slate-700 space-y-1.5 pt-2">
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Potong Presisi CNC</li>
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Input WMS Scrap Rak</li>
-                            </ul>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-3 shadow-sm hover:shadow-md transition">
+                        <div className="w-10 h-10 rounded-xl bg-[#70b03c]/10 text-[#70b03c] flex items-center justify-center font-black text-sm">
+                            03
                         </div>
+                        <h3 className="font-bold text-base text-[#242222]">Divisi GM / BV / Etsa</h3>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                            Finishing tepi kaca dengan Gosok Mesin (GM), lekukan Bevel 2cm artistik, dan ornamen ukiran sandblast etsa custom sesuai spesifikasi.
+                        </p>
+                    </div>
 
-                        {/* STEP 3 */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 hover:border-[#2563EB] transition duration-300 shadow-md relative group">
-                            <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">
-                                03
-                            </div>
-                            <h3 className="font-bold text-lg text-[#0F172A]">Divisi GM / BV / Etsa</h3>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                                Pemrosesan finishing tepi kaca (Gosok Mesin Halus), pembentukan Bevel 2cm artistik, dan sandblasting / ukiran etsa.
-                            </p>
-                            <ul className="text-xs text-slate-700 space-y-1.5 pt-2">
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Edgework GM & Bevel</li>
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Ukiran Custom Etsa</li>
-                            </ul>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-3 shadow-sm hover:shadow-md transition">
+                        <div className="w-10 h-10 rounded-xl bg-[#70b03c] text-white flex items-center justify-center font-black text-sm">
+                            04
                         </div>
-
-                        {/* STEP 4 */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 hover:border-[#2563EB] transition duration-300 shadow-md relative group">
-                            <div className="w-12 h-12 bg-[#0F172A] text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md">
-                                04
-                            </div>
-                            <h3 className="font-bold text-lg text-[#0F172A]">QC & Pengiriman 4 Warna</h3>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                                Quality Control akhir, pencetakan Surat Jalan 4 Warna (Putih, Merah, Kuning, Hijau), armada kurir, serta pelunasan COD.
-                            </p>
-                            <ul className="text-xs text-slate-700 space-y-1.5 pt-2">
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Surat Jalan 4 Rangkap</li>
-                                <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#2563EB]" /> Pelunasan Sisa COD</li>
-                            </ul>
-                        </div>
+                        <h3 className="font-bold text-base text-[#242222]">QC & Surat Jalan 4W</h3>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                            Pemeriksaan cacat fisik (QC), pencetakan 4 lembar Surat Jalan resmi, armada logistik, dan verifikasi pelunasan COD kasir.
+                        </p>
                     </div>
                 </div>
             </section>
 
-            {/* SECTION 5: WMS SCRAP GLASS SPOTLIGHT - UTB THEMED */}
-            <section id="wms-scrap" className="py-20 px-4 md:px-8 max-w-7xl mx-auto">
-                <div className="bg-gradient-to-r from-[#1b68b0] via-[#15528c] to-[#70b03c] text-white rounded-3xl p-8 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center shadow-xl relative overflow-hidden">
-                    <div className="lg:col-span-7 space-y-6">
-                        <span className="bg-white/20 border border-white/30 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
-                            🌱 Zero-Waste Manufacturing Innovation
-                        </span>
+            {/* 8. WMS SCRAP GLASS SPOTLIGHT */}
+            <section id="wms-scrap" className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
+                <div className="bg-gradient-to-r from-[#1b68b0] to-[#15528c] text-white rounded-3xl p-8 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center shadow-xl">
+                    <div className="lg:col-span-7 space-y-5">
                         <h2 className="text-3xl sm:text-4xl font-black">
-                            Manajemen Smart WMS <span className="text-amber-200">Rak Kaca Sisa Potongan</span>
+                            Manajemen Smart WMS Rak Kaca Sisa Potongan
                         </h2>
-                        <p className="text-blue-50 text-sm sm:text-base leading-relaxed">
-                            Pabrik kami tidak membuang sisa potongan kaca. Melalui sistem WMS Rak Scrap, potongan kaca bernilai tinggi langsung dicatat oleh Divisi HT dan dialokasikan untuk order kecil mendatang. Hasilnya? Penghematan konsumsi bahan baku dan biaya produksi yang lebih terjangkau bagi konsumen.
+                        <p className="text-blue-100 text-xs sm:text-sm leading-relaxed">
+                            Pabrik mengeliminasi pembuangan sisa potongan kaca bernilai tinggi. Melalui sistem WMS Rak Scrap, potongan kaca dicatat oleh Divisi HT dan secara otomatis direkomendasikan saat ada order kaca kecil.
                         </p>
                         <div className="flex flex-wrap gap-4 pt-2">
-                            <div className="bg-white/15 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20 text-xs font-mono">
-                                <span className="text-blue-100 block">Stok Scrap Layak Pakai:</span>
-                                <span className="text-white font-bold text-lg">{scrapCount} Lembar Tersedia</span>
+                            <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-xs font-mono">
+                                <span className="text-blue-200 block text-[11px]">Stok Scrap Ready:</span>
+                                <span className="text-white font-bold text-lg">{scrapCount} Lembar Terdata</span>
                             </div>
-                            <div className="bg-white/15 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20 text-xs font-mono">
-                                <span className="text-blue-100 block">Efisiensi Bahan Kaca:</span>
-                                <span className="text-white font-bold text-lg">+34% Cost Savings</span>
+                            <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-xs font-mono">
+                                <span className="text-blue-200 block text-[11px]">Efisiensi Bahan Kaca:</span>
+                                <span className="text-white font-bold text-lg">+34% Penghematan</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="lg:col-span-5 bg-white text-[#242222] border border-slate-200 rounded-2xl p-6 space-y-3 shadow-xl">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3 text-xs">
-                            <span className="font-extrabold text-[#242222]">Katalog Rak WMS Monitoring</span>
-                            <span className="text-[#1b68b0] font-mono text-[11px] font-bold">Real-Time Sync</span>
+                    <div className="lg:col-span-5 bg-white text-slate-800 rounded-2xl p-5 space-y-3 shadow-lg">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-2.5 text-xs">
+                            <span className="font-extrabold text-[#242222]">Contoh Rak WMS Monitoring</span>
+                            <span className="text-[#1b68b0] font-mono text-[10px] font-bold">Sinkronisasi Pabrik</span>
                         </div>
                         <div className="space-y-2 text-xs">
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                                 <div>
                                     <span className="font-bold text-[#242222] block">Rak A-01 (Kaca Bening)</span>
-                                    <span className="text-slate-500 text-[11px]">Clear Float 8mm • 120 x 85 cm</span>
+                                    <span className="text-slate-500 text-[10px]">Clear Float 8mm • 120 x 85 cm</span>
                                 </div>
-                                <span className="bg-[#70b03c] text-white font-bold px-2 py-1 rounded text-[10px]">
-                                    READY
+                                <span className="bg-[#70b03c] text-white font-bold px-2 py-0.5 rounded text-[10px]">
+                                    SIAP PAKAI
                                 </span>
                             </div>
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                                 <div>
                                     <span className="font-bold text-[#242222] block">Rak B-03 (Dark Grey)</span>
-                                    <span className="text-slate-500 text-[11px]">Tinted Grey 10mm • 90 x 60 cm</span>
+                                    <span className="text-slate-500 text-[10px]">Tinted Grey 10mm • 90 x 60 cm</span>
                                 </div>
-                                <span className="bg-[#70b03c] text-white font-bold px-2 py-1 rounded text-[10px]">
-                                    READY
+                                <span className="bg-[#70b03c] text-white font-bold px-2 py-0.5 rounded text-[10px]">
+                                    SIAP PAKAI
                                 </span>
                             </div>
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                                 <div>
                                     <span className="font-bold text-[#242222] block">Rak C-02 (Bronze Mirror)</span>
-                                    <span className="text-slate-500 text-[11px]">Reflektif 6mm • 150 x 50 cm</span>
+                                    <span className="text-slate-500 text-[10px]">Reflektif 6mm • 150 x 50 cm</span>
                                 </div>
-                                <span className="bg-[#70b03c] text-white font-bold px-2 py-1 rounded text-[10px]">
-                                    READY
+                                <span className="bg-[#70b03c] text-white font-bold px-2 py-0.5 rounded text-[10px]">
+                                    SIAP PAKAI
                                 </span>
                             </div>
                         </div>
@@ -968,35 +1014,32 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                 </div>
             </section>
 
-            {/* SECTION 6: FAQ ACCORDION */}
-            <section id="faq" className="py-20 px-4 md:px-8 max-w-5xl mx-auto space-y-10">
+            {/* 9. FAQ SECTION */}
+            <section id="faq" className="py-20 px-4 md:px-8 max-w-4xl mx-auto space-y-8">
                 <div className="text-center space-y-3">
-                    <span className="bg-[#2563EB]/10 border border-[#2563EB]/30 text-[#1E3A8A] text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
-                        ❓ Pertanyaan Umum
-                    </span>
-                    <h2 className="text-3xl sm:text-4xl font-black text-[#0F172A]">
-                        Pertanyaan & <span className="text-[#2563EB]">Jawaban Operasional</span>
+                    <h2 className="text-3xl sm:text-4xl font-black text-[#242222]">
+                        Pertanyaan & Jawaban Seputar Sistem
                     </h2>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                     {faqs.map((faq, idx) => (
                         <div 
                             key={idx} 
-                            className={`bg-white border rounded-2xl overflow-hidden shadow-sm transition ${
-                                faqOpen === idx ? 'border-[#2563EB] ring-2 ring-[#2563EB]/10' : 'border-slate-200'
+                            className={`bg-white border rounded-2xl overflow-hidden shadow-xs transition ${
+                                faqOpen === idx ? 'border-[#1b68b0] ring-2 ring-[#1b68b0]/15' : 'border-slate-200'
                             }`}
                         >
                             <button 
                                 onClick={() => setFaqOpen(faqOpen === idx ? null : idx)}
-                                className="w-full p-6 text-left font-bold text-[#0F172A] text-sm sm:text-base flex justify-between items-center gap-4 hover:text-[#2563EB] transition"
+                                className="w-full p-5 text-left font-bold text-[#242222] text-sm sm:text-base flex justify-between items-center gap-4 hover:text-[#1b68b0] transition cursor-pointer"
                             >
                                 <span>{faq.q}</span>
-                                <ChevronDown className={`w-5 h-5 text-[#2563EB] shrink-0 transition transform ${faqOpen === idx ? 'rotate-180' : ''}`} />
+                                <ChevronDown className={`w-5 h-5 text-[#1b68b0] shrink-0 transition transform ${faqOpen === idx ? 'rotate-180' : ''}`} />
                             </button>
 
                             {faqOpen === idx && (
-                                <div className="px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4">
+                                <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
                                     {faq.a}
                                 </div>
                             )}
@@ -1005,69 +1048,103 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                 </div>
             </section>
 
-            {/* CERAH FOOTER - UTB THEMED */}
-            <footer className="bg-slate-100 text-[#242222] border-t border-slate-200 pt-16 pb-12 px-4 md:px-8">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-200">
-                    <div className="lg:col-span-2 space-y-4">
-                        <div className="flex items-center gap-3">
-                            <img src="/assets/Logo_UTB.png" alt="Logo UTB" className="h-10 w-auto object-contain" />
-                            <div>
-                                <span className="font-black text-xl tracking-wider text-[#242222] block">UTB</span>
-                                <span className="text-[10px] text-[#70b03c] font-extrabold uppercase tracking-wider block">Kerja Praktek</span>
-                            </div>
-                        </div>
-                        <p className="text-slate-600 text-xs leading-relaxed max-w-sm">
-                            Universitas Teknologi Bandung (UTB) — Proyek Kerja Praktek Sistem Informasi Manufaktur Kaca & Operasional Terintegrasi. Mengelola alur pemesanan toko, pemrosesan multi-divisi, pelacakan sisa kaca, dan pengiriman 4 rangkap.
+            {/* 10. BOTTOM CTA BANNER */}
+            <section className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
+                <div className="bg-white border border-slate-200 rounded-3xl p-8 md:p-12 text-center space-y-6 shadow-xl">
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-[#1b68b0]/10 text-[#1b68b0] flex items-center justify-center">
+                        <Activity className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-2 max-w-xl mx-auto">
+                        <h3 className="text-2xl sm:text-3xl font-black text-[#242222]">
+                            Siap Meningkatkan keuntungan Perusahaan?
+                        </h3>
+                        <p className="text-slate-600 text-xs sm:text-sm">
+                            Masuk menggunakan akun staf atau karyawan Anda untuk mengelola orderan toko, alur pengerjaan divisi, stok inventaris, dan pengiriman.
                         </p>
-                        <div className="flex items-center gap-3 text-xs text-slate-600 pt-2">
-                            <span className="bg-white border border-slate-200 px-3 py-1 rounded-full font-semibold">Laravel 11</span>
-                            <span className="bg-white border border-slate-200 px-3 py-1 rounded-full font-semibold">Inertia React</span>
-                            <span className="bg-white border border-slate-200 px-3 py-1 rounded-full font-semibold">Tailwind CSS</span>
-                        </div>
                     </div>
-
-                    <div className="space-y-3 text-xs">
-                        <h4 className="font-bold text-[#242222] uppercase tracking-wider">Navigasi Utama</h4>
-                        <ul className="space-y-2 text-slate-600">
-                            <li><a href="#visualizer" className="hover:text-[#1b68b0] transition font-medium">Simulator Visualizer</a></li>
-                            <li><a href="#kalkulator" className="hover:text-[#1b68b0] transition font-medium">Kalkulator Biaya Kaca</a></li>
-                            <li><a href="#workflow" className="hover:text-[#1b68b0] transition font-medium">Alur 4 Divisi Produksi</a></li>
-                            <li><a href="#wms-scrap" className="hover:text-[#1b68b0] transition font-medium">WMS Rak Scrap Glass</a></li>
-                        </ul>
-                    </div>
-
-                    <div className="space-y-3 text-xs">
-                        <h4 className="font-bold text-[#242222] uppercase tracking-wider">Divisi Operasional</h4>
-                        <ul className="space-y-2 text-slate-600">
-                            <li><span className="text-[#1b68b0] font-semibold">Admin Toko</span> — Transaksi SPO & DP</li>
-                            <li><span className="text-[#1b68b0] font-semibold">Divisi HT</span> — Cutting & Tempering</li>
-                            <li><span className="text-[#1b68b0] font-semibold">Divisi GM/BV/Etsa</span> — Finishing Edge</li>
-                            <li><span className="text-[#1b68b0] font-semibold">QC & Logistics</span> — Surat Jalan 4 Warna</li>
-                        </ul>
-                    </div>
-
-                    <div className="space-y-3 text-xs">
-                        <h4 className="font-bold text-[#242222] uppercase tracking-wider">Akses Karyawan</h4>
-                        <p className="text-slate-600">
-                            Masuk menggunakan kredensial role karyawan untuk mengakses dashboard operasional.
-                        </p>
+                    <div className="flex flex-wrap justify-center gap-3 pt-2">
                         {auth.user ? (
-                            <Link href="/dashboard" className="inline-block bg-[#70b03c] hover:bg-[#5e9632] text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md">
+                            <Link 
+                                href="/dashboard" 
+                                className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs shadow-md transition"
+                            >
                                 Buka Dashboard ({auth.user.name})
                             </Link>
                         ) : (
-                            <Link href={route('login')} className="inline-block bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md">
-                                Masuk
+                            <Link 
+                                href={route('login')} 
+                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs shadow-md transition flex items-center gap-2"
+                            >
+                                <span>Mulai Sekarang</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            </section>
+
+            {/* 11. ENTERPRISE FOOTER */}
+            <footer className="bg-white text-slate-700 border-t border-slate-200 pt-14 pb-10 px-4 md:px-8">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 pb-10 border-b border-slate-200">
+                    <div className="lg:col-span-2 space-y-3">
+                        <div className="flex items-center gap-3">
+                            <img src="/assets/Logo_UTB.png" alt="Logo UTB" className="h-9 w-auto object-contain" />
+                            <div>
+                                <span className="font-black text-lg tracking-wider text-[#242222] block">UTB</span>
+                                <span className="text-[10px] text-[#70b03c] font-extrabold uppercase tracking-wider block">Kerja Praktek</span>
+                            </div>
+                        </div>
+                        <p className="text-slate-500 text-xs leading-relaxed max-w-sm">
+                            Universitas Teknologi Bandung (UTB) — Sistem Informasi Manajemen Operasional Pabrik & Toko Kaca Terintegrasi. Menghubungkan front-office toko, pemrosesan 4 divisi presisi, optimalisasi sisa bahan kaca, dan logistik 4 rangkap.
+                        </p>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-1">
+                            <span className="bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md font-semibold">Sidik</span>
+                            <span className="bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md font-semibold">Hendri</span>
+                            <span className="bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md font-semibold">Rizky</span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs">
+                        <h4 className="font-bold text-[#242222] uppercase tracking-wider">Navigasi Utama</h4>
+                        <ul className="space-y-1.5 text-slate-600">
+                            <li><a href="#features" className="hover:text-[#1b68b0] transition">Modul Terintegrasi</a></li>
+                            <li><a href="#interactive-lab" className="hover:text-[#1b68b0] transition">Interactive Lab</a></li>
+                            <li><a href="#workflow" className="hover:text-[#1b68b0] transition">Alur 4 Divisi Produksi</a></li>
+                            <li><a href="#wms-scrap" className="hover:text-[#1b68b0] transition">WMS Rak Scrap Glass</a></li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs">
+                        <h4 className="font-bold text-[#242222] uppercase tracking-wider">Divisi Pabrik</h4>
+                        <ul className="space-y-1.5 text-slate-600">
+                            <li><span className="text-[#1b68b0] font-semibold">Admin Toko</span> — Transaksi SPO & DP</li>
+                            <li><span className="text-[#1b68b0] font-semibold">Divisi HT</span> — Cutting & Tempering</li>
+                            <li><span className="text-[#1b68b0] font-semibold">Divisi GM/BV/Etsa</span> — Finishing Edge</li>
+                            <li><span className="text-[#70b03c] font-semibold">QC & Logistics</span> — Surat Jalan 4 Warna</li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs">
+                        <h4 className="font-bold text-[#242222] uppercase tracking-wider">Akses Karyawan</h4>
+                        <p className="text-slate-500 text-[11px]">
+                            Gunakan kredensial akun terdaftar untuk masuk ke dashboard operasional.
+                        </p>
+                        {auth.user ? (
+                            <Link href="/dashboard" className="inline-block bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-3.5 py-1.5 rounded-lg text-xs shadow-xs">
+                                Dashboard ({auth.user.name})
+                            </Link>
+                        ) : (
+                            <Link href={route('login')} className="inline-block bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-1.5 rounded-lg text-xs shadow-xs">
+                                Masuk ke Sistem
                             </Link>
                         )}
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto pt-8 flex flex-col sm:flex-row justify-between items-center text-[11px] text-slate-500 gap-4">
-                    <p>© 2026 Universitas Teknologi Bandung (UTB) — Proyek Kerja Praktek CV Cahya Karunia Jaya. All rights reserved.</p>
-                    <div className="flex gap-6">
-                        <span className="hover:text-[#1b68b0]">Privacy Policy</span>
-                        <span className="hover:text-[#1b68b0]">Terms of Operational Standard</span>
+                <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row justify-between items-center text-[11px] text-slate-500 gap-3">
+                    <p>© 2026 Universitas Teknologi Bandung (UTB) — Proyek Kerja Praktek Sistem Informasi Manufaktur Kaca. All rights reserved.</p>
+                    <div className="flex gap-4">
+                        <span className="hover:text-[#1b68b0]">Standard Operating Procedure</span>
                         <span className="hover:text-[#1b68b0]">System Security</span>
                     </div>
                 </div>
