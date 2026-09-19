@@ -10,6 +10,11 @@ use App\Models\Delivery;
 use App\Models\User;
 use App\Models\ActivityLog;
 use App\Models\FinanceTransaction;
+use App\Models\SheetGlass;
+use App\Models\Supplier;
+use App\Models\Accessory;
+use App\Models\Tool;
+use App\Models\Supply;
 use Illuminate\Support\Facades\Hash;
 
 class SypOperationalController extends Controller
@@ -55,6 +60,11 @@ class SypOperationalController extends Controller
             'users' => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get(),
             'activityLogs' => ActivityLog::latest()->take(100)->get(),
             'financeTransactions' => FinanceTransaction::with(['user', 'approver'])->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get(),
+            'sheetGlasses' => SheetGlass::orderBy('id', 'desc')->get(),
+            'suppliers' => Supplier::orderBy('id', 'desc')->get(),
+            'accessories' => Accessory::orderBy('id', 'desc')->get(),
+            'tools' => Tool::with(['borrows' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get(),
+            'supplies' => Supply::with(['usages' => fn($q) => $q->latest(), 'restocks' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get(),
             'metrics' => [
                 'totalOrders' => Order::count(),
                 'inProcess' => Order::where('status', 'pengerjaan')->count(),

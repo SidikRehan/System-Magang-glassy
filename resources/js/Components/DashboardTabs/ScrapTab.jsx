@@ -29,6 +29,7 @@ export default function ScrapTab({
     handleOpenEditStockModal,
     handleRequestRestockStatus,
     setShowScrapModal,
+    handleDeleteStockItem,
 }) {
     // If not passed externally, calculate internally
     const filteredSheetGlasses = externalFilteredSheetGlasses || sheetGlasses.filter(g => {
@@ -323,6 +324,16 @@ export default function ScrapTab({
                                                                 >
                                                                     <Edit className="w-3.5 h-3.5" /> Edit
                                                                 </button>
+
+                                                                {handleDeleteStockItem && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteStockItem(item.id)}
+                                                                        className="bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 font-bold p-1.5 rounded-lg text-xs transition flex items-center justify-center cursor-pointer shadow-2xs"
+                                                                        title="Hapus Kaca"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
                                                             </>
                                                         )}
 

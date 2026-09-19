@@ -38,9 +38,39 @@ import EmployeesTab from '@/Components/DashboardTabs/EmployeesTab';
 import AddScrapModal from '@/Components/Modals/AddScrapModal';
 import AddStockModal from '@/Components/Modals/AddStockModal';
 import EditStockModal from '@/Components/Modals/EditStockModal';
+import RestockStockModal from '@/Components/Modals/RestockStockModal';
+import AddSupplierModal from '@/Components/Modals/AddSupplierModal';
+import EditSupplierModal from '@/Components/Modals/EditSupplierModal';
+import SupplierWaModal from '@/Components/Modals/SupplierWaModal';
+import AddAccessoryModal from '@/Components/Modals/AddAccessoryModal';
+import EditAccessoryModal from '@/Components/Modals/EditAccessoryModal';
+import RestockAccessoryModal from '@/Components/Modals/RestockAccessoryModal';
+import AddSupplyModal from '@/Components/Modals/AddSupplyModal';
+import UseSupplyModal from '@/Components/Modals/UseSupplyModal';
+import RequestRestockSupplyModal from '@/Components/Modals/RequestRestockSupplyModal';
+import AddToolModal from '@/Components/Modals/AddToolModal';
+import BorrowToolModal from '@/Components/Modals/BorrowToolModal';
+import ReturnToolModal from '@/Components/Modals/ReturnToolModal';
+import EditToolModal from '@/Components/Modals/EditToolModal';
+import CompleteRepairModal from '@/Components/Modals/CompleteRepairModal';
+import PromoteOrderModal from '@/Components/Modals/PromoteOrderModal';
+import SalesRekapModal from '@/Components/Modals/SalesRekapModal';
 
 
-export default function Dashboard({ orders: initialOrders = [], scrapGlasses: initialScrap = [], deliveries: initialDeliveries = [], users: initialUsersList = [], activityLogs: initialActivityLogsList = [], financeTransactions: initialFinanceTransactions = [], metrics = {} }) {
+export default function Dashboard({ 
+    orders: initialOrders = [], 
+    scrapGlasses: initialScrap = [], 
+    deliveries: initialDeliveries = [], 
+    users: initialUsersList = [], 
+    activityLogs: initialActivityLogsList = [], 
+    financeTransactions: initialFinanceTransactions = [], 
+    sheetGlasses: initialSheetGlasses = [],
+    suppliers: initialSuppliers = [],
+    accessories: initialAccessories = [],
+    tools: initialTools = [],
+    supplies: initialSupplies = [],
+    metrics = {} 
+}) {
     const scrapGlasses = initialScrap;
     const orders = initialOrders;
     const { auth = {} } = usePage().props;
@@ -591,13 +621,19 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     });
 
     // Supplier Management State
-    const [suppliersList, setSuppliersList] = useState([
+    const [suppliersList, setSuppliersList] = useState(initialSuppliers?.length > 0 ? initialSuppliers : [
         { id: 1, name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)', category: 'Kaca Cermin & Bening', phone: '6281234567890', pic: 'Pak Gunawan', address: 'Kawasan Industri Ancol, Jakarta Utara', status: 'Mitra Utama' },
         { id: 2, name: 'PT Mulia Glass Float & Mirror', category: 'Kaca Float & Cermin Grey', phone: '6281398765432', pic: 'Ibu Siska', address: 'Jl. Raya Lemahabang, Cikarang', status: 'Mitra Aktif' },
         { id: 3, name: 'PT Kaca Tempered Nusantara', category: 'Kaca Tempered & Laminated', phone: '6281908070605', pic: 'Pak Irwan', address: 'Kawasan Industri Jababeka, Bekasi', status: 'Mitra Aktif' },
         { id: 4, name: 'PT Global Tinted Glass Import', category: 'Kaca Tinted & Dark Grey', phone: '6281577889900', pic: 'Pak Budianto', address: 'Kawasan Industri MM2100, Cibitung', status: 'Mitra Impor' },
         { id: 5, name: 'CV ArtGlass Dekoratif Etsa', category: 'Kaca Etsa & Sandblast', phone: '6281288990011', pic: 'Pak Rudy', address: 'Jl. Soekarno Hatta, Bandung', status: 'Mitra Lokal' },
     ]);
+
+    useEffect(() => {
+        if (initialSuppliers && initialSuppliers.length > 0) {
+            setSuppliersList(initialSuppliers);
+        }
+    }, [initialSuppliers]);
     const [supplierSearchTerm, setSupplierSearchTerm] = useState('');
     const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
     const [newSupplierForm, setNewSupplierForm] = useState({
@@ -684,11 +720,19 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
     const handleDeleteSupplier = (id) => {
         if (confirm('Apakah Anda yakin ingin menghapus data supplier ini?')) {
-            setSuppliersList(prev => prev.filter(sup => sup.id !== id));
+            router.delete(route('inventory.suppliers.destroy', id), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSuppliersList(prev => prev.filter(sup => sup.id !== id));
+                },
+                onError: () => {
+                    setSuppliersList(prev => prev.filter(sup => sup.id !== id));
+                }
+            });
         }
     };
     // Operational Tools & Machinery Management State (Alat Penunjang)
-    const [toolsList, setToolsList] = useState([
+    const [toolsList, setToolsList] = useState(initialTools?.length > 0 ? initialTools : [
         { id: 1, tool_code: 'ALT-001', name: 'Mesin Bor Kaca Portable Heavy Duty', category: 'Mesin Bor & Potong', total_qty: 3, available_qty: 2, unit: 'Unit', condition: 'Bagus', location: 'Rak Alat A1' },
         { id: 2, tool_code: 'ALT-002', name: 'Mesin Slepan / Hand Grinder Edge Polish', category: 'Mesin Bor & Potong', total_qty: 4, available_qty: 3, unit: 'Unit', condition: 'Bagus', location: 'Rak Alat A2' },
         { id: 3, tool_code: 'ALT-003', name: 'Set Mata Bor Kaca Diamond Coated (6-50mm)', category: 'Mata Bor & Mata Potong', total_qty: 10, available_qty: 8, unit: 'Set', condition: 'Bagus', location: 'Kotak Perkakas B1' },
@@ -703,6 +747,28 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         { id: 12, tool_code: 'ALT-012', name: 'Tali Webbing Ratchet Tie Down 5 Ton (Pengikat Kaca)', category: 'Peralatan Lapangan', total_qty: 12, available_qty: 10, unit: 'Set', condition: 'Bagus', location: 'Gudang Logistik Mobil' },
         { id: 13, tool_code: 'ALT-013', name: 'Matras Busa Pelindung Kaca Armada', category: 'Peralatan Lapangan', total_qty: 6, available_qty: 4, unit: 'Pcs', condition: 'Bagus', location: 'Gudang Logistik Mobil' },
     ]);
+
+    useEffect(() => {
+        if (initialTools && initialTools.length > 0) {
+            setToolsList(initialTools);
+            const extractedBorrows = initialTools.flatMap(t => (t.borrows || []).map(b => ({
+                id: b.id,
+                tool_id: t.id,
+                tool_code: t.tool_code,
+                tool_name: t.name,
+                borrower_name: b.borrower_name,
+                purpose: b.purpose,
+                borrow_date: b.borrow_date,
+                expected_return: b.expected_return,
+                actual_return: b.actual_return,
+                qty_borrowed: b.qty_borrowed,
+                status: b.status
+            })));
+            if (extractedBorrows.length > 0) {
+                setToolBorrowings(extractedBorrows);
+            }
+        }
+    }, [initialTools]);
 
     const [toolBorrowings, setToolBorrowings] = useState([
         {
@@ -889,7 +955,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     };
 
     // Warehouse Operational Supplies State (Perlengkapan Gudang - Habis Pakai)
-    const [warehouseSuppliesList, setWarehouseSuppliesList] = useState([
+    const [warehouseSuppliesList, setWarehouseSuppliesList] = useState(initialSupplies?.length > 0 ? initialSupplies : [
         { id: 1, item_code: 'PLK-001', name: 'Sarung Tangan Safety Antigores / Cut Resistant', category: 'APD & Keselamatan Kerja', stock_qty: 45, min_stock: 10, unit: 'Pasang', location: 'Rak APD A1', status: 'Aman' },
         { id: 2, item_code: 'PLK-002', name: 'Kacamata Safety Bening Protective Goggles', category: 'APD & Keselamatan Kerja', stock_qty: 28, min_stock: 5, unit: 'Pcs', location: 'Rak APD A2', status: 'Aman' },
         { id: 3, item_code: 'PLK-003', name: 'Cutter Heavy Duty Operasional & Mata Pisau Refill', category: 'Perkakas Tangan Habis Pakai', stock_qty: 15, min_stock: 5, unit: 'Set', location: 'Rak Alat B1', status: 'Aman' },
@@ -899,6 +965,45 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         { id: 7, item_code: 'PLK-007', name: 'Oli Pelumas Mesin Bor & Mesin Potong (Lubricant)', category: 'Perawatan Mesin & Pelumas', stock_qty: 4, min_stock: 5, unit: 'Liter', location: 'Gudang Mesin D1', status: 'Menipis' },
         { id: 8, item_code: 'PLK-008', name: 'Masker Respirator Filter Debu Etsa & Gosok', category: 'APD & Keselamatan Kerja', stock_qty: 50, min_stock: 15, unit: 'Pcs', location: 'Rak APD A3', status: 'Aman' },
     ]);
+
+    useEffect(() => {
+        if (initialSupplies && initialSupplies.length > 0) {
+            setWarehouseSuppliesList(initialSupplies);
+            const extractedUsages = initialSupplies.flatMap(s => (s.usages || []).map(u => ({
+                id: u.id,
+                supply_id: s.id,
+                item_code: s.item_code,
+                item_name: s.name,
+                used_qty: u.used_qty,
+                unit: s.unit,
+                user_division: u.user_division,
+                taker_name: u.taker_name,
+                usage_date: u.usage_date,
+                notes: u.notes
+            })));
+            if (extractedUsages.length > 0) {
+                setSupplyUsageLogs(extractedUsages);
+            }
+            const extractedRestocks = initialSupplies.flatMap(s => (s.restocks || []).map(r => ({
+                id: r.id,
+                supply_id: s.id,
+                item_code: s.item_code,
+                item_name: s.name,
+                request_qty: r.request_qty,
+                unit: s.unit,
+                requester_name: r.requester_name,
+                urgency: r.urgency,
+                request_date: r.request_date,
+                status: r.status,
+                reason: r.reason,
+                approved_date: r.approved_date,
+                notes: r.notes
+            })));
+            if (extractedRestocks.length > 0) {
+                setSupplyRestockRequests(extractedRestocks);
+            }
+        }
+    }, [initialSupplies]);
 
     const [supplyUsageLogs, setSupplyUsageLogs] = useState([
         { id: 1, item_code: 'PLK-001', item_name: 'Sarung Tangan Safety Antigores / Cut Resistant', used_qty: 5, unit: 'Pasang', user_division: 'Divisi Potong (HT)', taker_name: 'Pekerja Supri', usage_date: '2026-09-04', notes: 'Penggantian sarung tangan kerja tim potong kaca cermin' },
@@ -1343,7 +1448,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     };
 
     // Accessories Management State
-    const [accessoriesList, setAccessoriesList] = useState([
+    const [accessoriesList, setAccessoriesList] = useState(initialAccessories?.length > 0 ? initialAccessories : [
         {
             id: 1,
             acc_code: 'ACC-001',
@@ -1415,6 +1520,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             status: 'Menipis'
         }
     ]);
+
+    useEffect(() => {
+        if (initialAccessories && initialAccessories.length > 0) {
+            setAccessoriesList(initialAccessories);
+        }
+    }, [initialAccessories]);
     const [accSearchTerm, setAccSearchTerm] = useState('');
     const [showAddAccModal, setShowAddAccModal] = useState(false);
     const [showEditAccModal, setShowEditAccModal] = useState(false);
@@ -1512,7 +1623,15 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
     const handleDeleteAcc = (id) => {
         if (confirm('Apakah Anda yakin ingin menghapus aksesoris ini?')) {
-            setAccessoriesList(prev => prev.filter(acc => acc.id !== id));
+            router.delete(route('inventory.accessories.destroy', id), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setAccessoriesList(prev => prev.filter(acc => acc.id !== id));
+                },
+                onError: () => {
+                    setAccessoriesList(prev => prev.filter(acc => acc.id !== id));
+                }
+            });
         }
     };
 
@@ -1569,16 +1688,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const rateBV = parseFloat(newStockForm.rate_bv) || 15000;
         const rateEtsa = parseFloat(newStockForm.rate_etsa) || 50000;
 
-        const status = qty > 10 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
-
-        const newItem = {
-            id: Date.now(),
+        const payload = {
             item_code: autoCode,
             name: newStockForm.name,
             category: newStockForm.category,
             length_cm: len,
             width_cm: wid,
-            size: sizeStr,
             thickness_mm: thickness,
             buy_price: buyPrice,
             sell_price: sellPrice,
@@ -1588,34 +1703,48 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             rate_etsa: rateEtsa,
             qty: qty,
             unit: 'Lembar',
-            last_restock: new Date().toISOString().split('T')[0],
-            status: status,
             supplier_name: newStockForm.supplier_name,
             supplier_phone: newStockForm.supplier_phone,
             supplier_pic: newStockForm.supplier_pic
         };
 
-        setSheetGlasses(prev => [newItem, ...prev]);
-        setShowAddStockModal(false);
-        setNewStockForm({
-            item_code: '',
-            name: '',
-            category: 'Kaca Cermin',
-            length_cm: 183,
-            width_cm: 244,
-            size: '183 x 244 cm',
-            thickness_mm: 5,
-            buy_price: '',
-            sell_price: '',
-            rate_gm: 10000,
-            rate_ht: 1000,
-            rate_bv: 15000,
-            rate_etsa: 50000,
-            qty: 0,
-            unit: 'Lembar',
-            supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
-            supplier_phone: '6281234567890',
-            supplier_pic: 'Pak Gunawan'
+        router.post(route('inventory.sheet_glasses.store'), payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowAddStockModal(false);
+                setNewStockForm({
+                    item_code: '',
+                    name: '',
+                    category: 'Kaca Cermin',
+                    length_cm: 183,
+                    width_cm: 244,
+                    size: '183 x 244 cm',
+                    thickness_mm: 5,
+                    buy_price: '',
+                    sell_price: '',
+                    rate_gm: 10000,
+                    rate_ht: 1000,
+                    rate_bv: 15000,
+                    rate_etsa: 50000,
+                    qty: 0,
+                    unit: 'Lembar',
+                    supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
+                    supplier_phone: '6281234567890',
+                    supplier_pic: 'Pak Gunawan'
+                });
+            },
+            onError: () => {
+                const status = qty > 10 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
+                const newItem = {
+                    id: Date.now(),
+                    ...payload,
+                    size: sizeStr,
+                    last_restock: new Date().toISOString().split('T')[0],
+                    status: status
+                };
+                setSheetGlasses(prev => [newItem, ...prev]);
+                setShowAddStockModal(false);
+            }
         });
     };
 
@@ -1675,35 +1804,60 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         const rateBV = parseFloat(editStockForm.rate_bv) || 15000;
         const rateEtsa = parseFloat(editStockForm.rate_etsa) || 50000;
 
-        const status = qty > 10 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
+        const payload = {
+            name: editStockForm.name,
+            category: editStockForm.category,
+            length_cm: len,
+            width_cm: wid,
+            thickness_mm: thickness,
+            buy_price: buyPrice,
+            sell_price: sellPrice,
+            rate_gm: rateGM,
+            rate_ht: rateHT,
+            rate_bv: rateBV,
+            rate_etsa: rateEtsa,
+            qty: qty,
+            unit: 'Lembar',
+            supplier_name: editStockForm.supplier_name,
+            supplier_phone: editStockForm.supplier_phone,
+            supplier_pic: editStockForm.supplier_pic
+        };
 
-        setSheetGlasses(prev => prev.map(item => {
-            if (item.id === editStockForm.id) {
-                return {
-                    ...item,
-                    item_code: editStockForm.item_code,
-                    name: editStockForm.name,
-                    category: editStockForm.category,
-                    length_cm: len,
-                    width_cm: wid,
-                    size: sizeStr,
-                    thickness_mm: thickness,
-                    buy_price: buyPrice,
-                    sell_price: sellPrice,
-                    rate_gm: rateGM,
-                    rate_ht: rateHT,
-                    rate_bv: rateBV,
-                    rate_etsa: rateEtsa,
-                    qty: qty,
-                    status: status,
-                    supplier_name: editStockForm.supplier_name,
-                    supplier_phone: editStockForm.supplier_phone,
-                    supplier_pic: editStockForm.supplier_pic
-                };
+        router.post(route('inventory.sheet_glasses.update', editStockForm.id), payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowEditStockModal(false);
+            },
+            onError: () => {
+                const status = qty > 10 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
+                setSheetGlasses(prev => prev.map(item => {
+                    if (item.id === editStockForm.id) {
+                        return {
+                            ...item,
+                            ...payload,
+                            size: sizeStr,
+                            status: status
+                        };
+                    }
+                    return item;
+                }));
+                setShowEditStockModal(false);
             }
-            return item;
-        }));
-        setShowEditStockModal(false);
+        });
+    };
+
+    const handleDeleteStockItem = (id) => {
+        if (confirm('Apakah Anda yakin ingin menghapus katalog kaca ini dari inventaris?')) {
+            router.delete(route('inventory.sheet_glasses.destroy', id), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSheetGlasses(prev => prev.filter(item => item.id !== id));
+                },
+                onError: () => {
+                    setSheetGlasses(prev => prev.filter(item => item.id !== id));
+                }
+            });
+        }
     };
 
     // Print Panel & Dispatch State for Pengiriman
@@ -1797,7 +1951,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         setShowBarangKeluarModal(true);
     };
 
-    const [sheetGlasses, setSheetGlasses] = useState([
+    const [sheetGlasses, setSheetGlasses] = useState(initialSheetGlasses?.length > 0 ? initialSheetGlasses : [
         {
             id: 1,
             item_code: 'BRG-001',
@@ -1997,6 +2151,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             status: 'Aman'
         }
     ]);
+
+    useEffect(() => {
+        if (initialSheetGlasses && initialSheetGlasses.length > 0) {
+            setSheetGlasses(initialSheetGlasses);
+        }
+    }, [initialSheetGlasses]);
 
     const handleRecordRawMaterialSuccess = (glassTypeName, sheetsUsed) => {
         setSheetGlasses(prev => prev.map(item => {
@@ -3759,6 +3919,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             handleOpenEditStockModal={handleOpenEditStockModal}
                             handleRequestRestockStatus={handleRequestRestockStatus}
                             setShowScrapModal={setShowScrapModal}
+                            handleDeleteStockItem={handleDeleteStockItem}
                         />
                     )}
 
@@ -4013,93 +4174,11 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 handleDispatchOrderSubmit={handleDispatchOrderSubmit}
             />
             {/* MODAL RESTOCK BARANG LEMBARAN */}
-            {showRestockModal && selectedStockItem && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <RotateCcw className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Restock Kaca Lembaran
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">{selectedStockItem.item_code}</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowRestockModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleConfirmRestock} className="space-y-4 text-xs">
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Kode Barang:</span>
-                                    <strong className="text-[#1b68b0] font-mono">{selectedStockItem.item_code}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Nama Barang:</span>
-                                    <strong className="text-slate-800">{selectedStockItem.name}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Ukuran Standard:</span>
-                                    <strong className="text-slate-800 font-mono">{selectedStockItem.size}</strong>
-                                </div>
-                                <div className="flex justify-between border-t border-slate-200 pt-2.5">
-                                    <span className="text-slate-500">Stok Saat Ini:</span>
-                                    <strong className="text-[#70b03c] font-mono font-bold">{selectedStockItem.qty} {selectedStockItem.unit || 'Lembar'}</strong>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Jumlah Lembar Masuk / Restock (+):</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    required
-                                    value={restockQtyInput}
-                                    onChange={e => setRestockQtyInput(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    placeholder="e.g. 10"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Tanggal Restock Terakhir:</label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={restockDateInput}
-                                    onChange={e => setRestockDateInput(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowRestockModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Restock</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <RestockStockModal
+                show={showRestockModal}
+                onClose={() => { setShowRestockModal(false); setSelectedStockItem(null); }}
+                selectedStockItem={selectedStockItem}
+            />
 
             {/* MODAL TAMBAH JENIS BARANG STOK BARU */}
             <AddStockModal
@@ -4136,2177 +4215,118 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             />
 
             {/* MODAL TAMBAH SUPPLIER BARU */}
-            {showAddSupplierModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Building2 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Tambah Perusahaan Supplier & Mitra Baru
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">Daftar mitra pabrikasi / importir</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowAddSupplierModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleAddSupplierSubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. PT Asahimas Flat Glass Tbk"
-                                    value={newSupplierForm.name}
-                                    onChange={e => setNewSupplierForm({ ...newSupplierForm, name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Kaca Cermin & Bening"
-                                        value={newSupplierForm.category}
-                                        onChange={e => setNewSupplierForm({ ...newSupplierForm, category: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Status Kemitraan:</label>
-                                    <select
-                                        value={newSupplierForm.status}
-                                        onChange={e => setNewSupplierForm({ ...newSupplierForm, status: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Mitra Utama">Mitra Utama</option>
-                                        <option value="Mitra Aktif">Mitra Aktif</option>
-                                        <option value="Mitra Impor">Mitra Impor</option>
-                                        <option value="Mitra Lokal">Mitra Lokal</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Pak Gunawan"
-                                        value={newSupplierForm.pic}
-                                        onChange={e => setNewSupplierForm({ ...newSupplierForm, pic: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. 6281234567890"
-                                        value={newSupplierForm.phone}
-                                        onChange={e => setNewSupplierForm({ ...newSupplierForm, phone: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="e.g. Kawasan Industri Ancol, Jl. Ancol IX No. 5, Jakarta Utara"
-                                    value={newSupplierForm.address}
-                                    onChange={e => setNewSupplierForm({ ...newSupplierForm, address: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddSupplierModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Data Supplier</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <AddSupplierModal
+                show={showAddSupplierModal}
+                onClose={() => setShowAddSupplierModal(false)}
+            />
 
             {/* MODAL EDIT SUPPLIER */}
-            {showEditSupplierModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Edit3 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Edit Data Perusahaan Supplier & Mitra
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">{editSupplierForm.name}</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowEditSupplierModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleEditSupplierSubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={editSupplierForm.name}
-                                    onChange={e => setEditSupplierForm({ ...editSupplierForm, name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={editSupplierForm.category}
-                                        onChange={e => setEditSupplierForm({ ...editSupplierForm, category: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Status Kemitraan:</label>
-                                    <select
-                                        value={editSupplierForm.status}
-                                        onChange={e => setEditSupplierForm({ ...editSupplierForm, status: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Mitra Utama">Mitra Utama</option>
-                                        <option value="Mitra Aktif">Mitra Aktif</option>
-                                        <option value="Mitra Impor">Mitra Impor</option>
-                                        <option value="Mitra Lokal">Mitra Lokal</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={editSupplierForm.pic}
-                                        onChange={e => setEditSupplierForm({ ...editSupplierForm, pic: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={editSupplierForm.phone}
-                                        onChange={e => setEditSupplierForm({ ...editSupplierForm, phone: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
-                                <textarea
-                                    rows="2"
-                                    value={editSupplierForm.address}
-                                    onChange={e => setEditSupplierForm({ ...editSupplierForm, address: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowEditSupplierModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Perubahan Supplier</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <EditSupplierModal
+                show={showEditSupplierModal}
+                onClose={() => setShowEditSupplierModal(false)}
+                supplier={editSupplierForm}
+            />
 
             {/* MODAL TAMBAH AKSESORIS BARU */}
-            {showAddAccModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Plug className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Tambah Aksesoris / Hardware Kaca
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Registrasi komponen dan aksesoris perlengkapan baru</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowAddAccModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleAddAccSubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Kode Barang (Opsional):</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. ACC-007"
-                                    value={newAccForm.acc_code}
-                                    onChange={e => setNewAccForm({ ...newAccForm, acc_code: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Aksesoris Kaca Baru:</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. Lem Silikon Bening Glass Sealant"
-                                    value={newAccForm.name}
-                                    onChange={e => setNewAccForm({ ...newAccForm, name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        placeholder="e.g. 25000"
-                                        value={newAccForm.buy_price}
-                                        onChange={e => setNewAccForm({ ...newAccForm, buy_price: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        placeholder="e.g. 45000"
-                                        value={newAccForm.sell_price}
-                                        onChange={e => setNewAccForm({ ...newAccForm, sell_price: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Awal (Qty):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        required
-                                        value={newAccForm.qty}
-                                        onChange={e => setNewAccForm({ ...newAccForm, qty: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
-                                    <select
-                                        value={newAccForm.unit}
-                                        onChange={e => setNewAccForm({ ...newAccForm, unit: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Pcs">Pcs</option>
-                                        <option value="Set">Set</option>
-                                        <option value="Pasang">Pasang</option>
-                                        <option value="Batang">Batang</option>
-                                        <option value="Meter">Meter</option>
-                                        <option value="Box">Box</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddAccModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Aksesoris Baru</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <AddAccessoryModal
+                show={showAddAccModal}
+                onClose={() => setShowAddAccModal(false)}
+            />
 
             {/* MODAL EDIT AKSESORIS */}
-            {showEditAccModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Edit3 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Edit Data Aksesoris / Hardware
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Perbarui informasi kode, harga, atau stok aksesoris</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowEditAccModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleEditAccSubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Kode Barang:</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={editAccForm.acc_code}
-                                    onChange={e => setEditAccForm({ ...editAccForm, acc_code: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Aksesoris Kaca:</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={editAccForm.name}
-                                    onChange={e => setEditAccForm({ ...editAccForm, name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={editAccForm.buy_price}
-                                        onChange={e => setEditAccForm({ ...editAccForm, buy_price: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={editAccForm.sell_price}
-                                        onChange={e => setEditAccForm({ ...editAccForm, sell_price: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Quantity:</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        required
-                                        value={editAccForm.qty}
-                                        onChange={e => setEditAccForm({ ...editAccForm, qty: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
-                                    <select
-                                        value={editAccForm.unit}
-                                        onChange={e => setEditAccForm({ ...editAccForm, unit: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Pcs">Pcs</option>
-                                        <option value="Set">Set</option>
-                                        <option value="Pasang">Pasang</option>
-                                        <option value="Batang">Batang</option>
-                                        <option value="Meter">Meter</option>
-                                        <option value="Box">Box</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowEditAccModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Perubahan Aksesoris</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <EditAccessoryModal
+                show={showEditAccModal}
+                onClose={() => setShowEditAccModal(false)}
+                accessory={editAccForm}
+            />
 
             {/* MODAL RESTOCK AKSESORIS */}
-            {showRestockAccModal && selectedAccItem && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#5f9733]">
-                                    <RotateCcw className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Restock Aksesoris Masuk
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Penerimaan stok aksesoris ke gudang</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowRestockAccModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleConfirmAccRestock} className="space-y-4 text-xs">
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Kode Aksesoris:</span>
-                                    <strong className="text-[#1b68b0] font-mono font-bold">{selectedAccItem.acc_code}</strong>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Nama Aksesoris:</span>
-                                    <strong className="text-slate-800 font-semibold">{selectedAccItem.name}</strong>
-                                </div>
-                                <div className="flex justify-between items-center border-t border-slate-200 pt-2">
-                                    <span className="text-slate-500">Stok Saat Ini:</span>
-                                    <strong className="text-[#5f9733] font-mono font-bold">{selectedAccItem.qty} {selectedAccItem.unit || 'Pcs'}</strong>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Jumlah Restock Masuk (+):</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    required
-                                    value={accRestockQty}
-                                    onChange={e => setAccRestockQty(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    placeholder="e.g. 10"
-                                />
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowRestockAccModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Restock Aksesoris</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <RestockAccessoryModal
+                show={showRestockAccModal}
+                onClose={() => { setShowRestockAccModal(false); setSelectedAccItem(null); }}
+                selectedAccItem={selectedAccItem}
+            />
 
             {/* MODAL SETUJUI RESTOCK & ORDER SUPPLIER VIA WHATSAPP */}
-            {showSupplierWaModal && selectedWaStockItem && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#5f9733]">
-                                    <MessageCircle className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Setujui Ajuan & Chat WhatsApp Supplier
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Verifikasi pesanan restok dan buka obrolan WhatsApp</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowSupplierWaModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSendWaOrder} className="space-y-4 text-xs">
-                            {/* NOTICE AJUAN GUDANG */}
-                            <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl flex items-center gap-3">
-                                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                                <div>
-                                    <div className="font-bold text-amber-900">Pengajuan Masuk Dari Admin Gudang</div>
-                                    <div className="text-[11px] text-amber-700">Gudang mendeteksi persediaan bahan kaca ini telah menipis dan perlu segera di-restock.</div>
-                                </div>
-                            </div>
-
-                            {/* ITEM DETAIL */}
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Kode Barang:</span>
-                                    <strong className="text-[#1b68b0] font-mono font-bold">{selectedWaStockItem.item_code}</strong>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Nama Barang:</span>
-                                    <strong className="text-slate-800 font-semibold">{selectedWaStockItem.name}</strong>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Jenis & Ukuran:</span>
-                                    <strong className="text-slate-700 font-mono">{selectedWaStockItem.category} | {selectedWaStockItem.size}</strong>
-                                </div>
-                                <div className="flex justify-between items-center border-t border-slate-200 pt-2">
-                                    <span className="text-slate-500">Sisa Stok di Gudang:</span>
-                                    <strong className="text-rose-600 font-mono font-bold">{selectedWaStockItem.qty} {selectedWaStockItem.unit || 'Lembar'} (Perlu Restock)</strong>
-                                </div>
-                            </div>
-
-                            {/* SUPPLIER DETAILS */}
-                            <div className="space-y-3">
-                                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl flex items-center justify-between text-xs">
-                                    <span className="font-bold text-emerald-800 flex items-center gap-1.5">
-                                        <span>Supplier Otomatis Terhubung:</span>
-                                    </span>
-                                    <span className="font-bold text-slate-800 bg-white px-2.5 py-1 rounded-xl border border-emerald-200 shadow-xs">
-                                        {selectedWaStockItem.supplier_name}
-                                    </span>
-                                </div>
-
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold flex items-center justify-between">
-                                        <span>Nama Supplier / Distributor Kaca:</span>
-                                        <span className="text-[10px] text-[#1b68b0] font-mono">Pilih distributor</span>
-                                    </label>
-                                    <select
-                                        value={supplierName}
-                                        onChange={e => {
-                                            const name = e.target.value;
-                                            setSupplierName(name);
-                                            const foundSup = MASTER_SUPPLIERS.find(s => s.name === name);
-                                            if (foundSup) setSupplierPhone(foundSup.phone);
-                                        }}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        {MASTER_SUPPLIERS.map(sup => (
-                                            <option key={sup.id} value={sup.name}>
-                                                {sup.name} ({sup.pic})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-slate-700 block mb-1 font-semibold">No. WhatsApp Supplier:</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={supplierPhone}
-                                            onChange={e => setSupplierPhone(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                            placeholder="6281234567890"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-700 block mb-1 font-semibold">Jumlah Lembar Dipesan (Qty):</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            required
-                                            value={waOrderQty}
-                                            onChange={e => setWaOrderQty(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* LIVE PREVIEW WHATSAPP MESSAGE */}
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold flex items-center justify-between">
-                                    <span>Draft Pesan WhatsApp ke Supplier:</span>
-                                    <span className="text-[10px] text-emerald-600 font-mono">Format Otomatis</span>
-                                </label>
-                                <div className="bg-emerald-50/50 border border-emerald-200 p-3.5 rounded-2xl font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
-{`Halo ${supplierName},
-
-Kami dari CV Cahya Karunia Jaya (SYP GLASS OPERATIONAL).
-Kami ingin memesan/restock bahan kaca berikut:
-
-• Barang: ${selectedWaStockItem.name} (${selectedWaStockItem.item_code})
-• Jenis Kaca: ${selectedWaStockItem.category}
-• Ukuran Standard: ${selectedWaStockItem.size}
-• Jumlah Pemesanan: ${waOrderQty} Lembar
-• Status: Pengajuan Restock Gudang (Disetujui Admin Toko)
-
-Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga. Terima kasih!`}
-                                </div>
-                            </div>
-
-                            {/* ACTION BUTTONS */}
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSupplierWaModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-2 text-xs cursor-pointer"
-                                >
-                                    <MessageCircle className="w-4 h-4" />
-                                    <span>Setujui & Buka Chat WhatsApp Supplier</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <SupplierWaModal
+                show={showSupplierWaModal}
+                onClose={() => { setShowSupplierWaModal(false); setSelectedWaStockItem(null); }}
+                selectedWaStockItem={selectedWaStockItem}
+                suppliersList={suppliersList}
+            />
 
             {/* MODAL KONFIRMASI PERSETUJUAN DEAL & PENGATURAN DP */}
-            {showPromoteModal && targetPromoteOrder && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Handshake className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Persetujuan Deal & Pengaturan DP
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">SPO: {targetPromoteOrder.spo_number}</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => { setShowPromoteModal(false); setTargetPromoteOrder(null); }} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
+            <PromoteOrderModal
+                show={showPromoteModal}
+                onClose={() => { setShowPromoteModal(false); setTargetPromoteOrder(null); }}
+                targetPromoteOrder={targetPromoteOrder}
+                onConfirmPromote={handleConfirmPromote}
+            />
 
-                        <form onSubmit={handleConfirmPromote} className="space-y-4 text-xs">
-                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">No. SPO:</span>
-                                    <strong className="text-[#1b68b0] font-mono">{targetPromoteOrder.spo_number}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Customer:</span>
-                                    <strong className="text-slate-800">{targetPromoteOrder.customer_name} {targetPromoteOrder.customer_phone ? `(${targetPromoteOrder.customer_phone})` : ''}</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Total Tagihan Order:</span>
-                                    <strong className="text-slate-900 font-mono text-sm font-bold">Rp {Number(targetPromoteOrder.total_price).toLocaleString()}</strong>
-                                </div>
-                            </div>
+            {/* MODAL TAMBAH PERLENGKAPAN GUDANG BARU */}
+            <AddSupplyModal
+                show={showAddSupplyModal}
+                onClose={() => setShowAddSupplyModal(false)}
+            />
 
-                            {/* PILIHAN SKEMA PEMBAYARAN / DP */}
-                            <div className="space-y-2">
-                                <label className="text-slate-700 font-bold block">Pilih Skema Pembayaran / DP Customer:</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setPromotePaymentOption('dp')}
-                                        className={`py-2 px-2.5 rounded-xl border font-bold text-xs transition cursor-pointer ${promotePaymentOption === 'dp' ? 'bg-[#1b68b0] border-[#1b68b0] text-white shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                                    >
-                                        DP Persentase
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPromotePaymentOption('custom')}
-                                        className={`py-2 px-2.5 rounded-xl border font-bold text-xs transition cursor-pointer ${promotePaymentOption === 'custom' ? 'bg-[#1b68b0] border-[#1b68b0] text-white shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                                    >
-                                        Nominal Custom
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPromotePaymentOption('lunas')}
-                                        className={`py-2 px-2.5 rounded-xl border font-bold text-xs transition cursor-pointer ${promotePaymentOption === 'lunas' ? 'bg-[#1b68b0] border-[#1b68b0] text-white shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                                    >
-                                        Lunas (100%)
-                                    </button>
-                                </div>
-                            </div>
+            {/* MODAL CATAT PEMAKAIAN PERLENGKAPAN OPERASIONAL */}
+            <UseSupplyModal
+                show={showUseSupplyModal}
+                onClose={() => setShowUseSupplyModal(false)}
+                suppliesList={warehouseSuppliesList}
+            />
 
-                            {/* DETAIL INPUT SESUAI OPSI */}
-                            {promotePaymentOption === 'dp' && (
-                                <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                                    <label className="text-slate-600 block font-semibold">Pilih Persentase DP:</label>
-                                    <div className="flex gap-2">
-                                        {[20, 30, 50, 70].map(pct => (
-                                            <button
-                                                key={pct}
-                                                type="button"
-                                                onClick={() => setPromoteDpPercent(pct)}
-                                                className={`flex-1 py-1.5 rounded-xl border text-xs font-bold font-mono transition cursor-pointer ${promoteDpPercent === pct ? 'bg-[#1b68b0] text-white border-[#1b68b0] shadow-xs' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'}`}
-                                            >
-                                                {pct}%
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+            {/* MODAL PENGAJUAN RESTOK PERLENGKAPAN GUDANG KE ADMIN TOKO */}
+            <RequestRestockSupplyModal
+                show={showRequestRestockModal}
+                onClose={() => setShowRequestRestockModal(false)}
+                suppliesList={warehouseSuppliesList}
+            />
 
-                            {promotePaymentOption === 'custom' && (
-                                <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                                    <label className="text-slate-600 block font-semibold">Nominal DP Diterima (Rp):</label>
-                                    <input
-                                        type="number"
-                                        step="10000"
-                                        min="0"
-                                        max={targetPromoteOrder.total_price}
-                                        value={promoteCustomPaidAmount}
-                                        onChange={e => setPromoteCustomPaidAmount(e.target.value)}
-                                        className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono font-bold text-sm focus:border-[#1b68b0]"
-                                        placeholder="Masukkan nominal DP Rupiah"
-                                    />
-                                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                                        <span className="text-[10px] text-slate-500">Preset:</span>
-                                        {[
-                                            { label: 'Rp 100rb', val: 100000 },
-                                            { label: 'Rp 200rb', val: 200000 },
-                                            { label: 'Rp 500rb', val: 500000 },
-                                            { label: 'Rp 1 Jt', val: 1000000 },
-                                            { label: '50%', val: Math.round(targetPromoteOrder.total_price * 0.5) }
-                                        ].map((preset, pIdx) => (
-                                            <button
-                                                key={pIdx}
-                                                type="button"
-                                                onClick={() => setPromoteCustomPaidAmount(preset.val)}
-                                                className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 transition cursor-pointer"
-                                            >
-                                                {preset.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+            {/* MODAL TAMBAH ALAT PENUNJANG BARU */}
+            <AddToolModal
+                show={showAddToolModal}
+                onClose={() => setShowAddToolModal(false)}
+            />
 
-                            {/* RINCIAN PERHITUNGAN */}
-                            <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl space-y-1 text-emerald-900">
-                                <div className="flex justify-between font-bold">
-                                    <span>Nominal DP Diterima:</span>
-                                    <span className="font-mono text-sm text-emerald-800">
-                                        Rp {Number(getPromotePaidAmount()).toLocaleString()}
-                                        <span className="text-xs ml-1 font-semibold text-emerald-700">
-                                            ({targetPromoteOrder.total_price > 0 ? Math.round((getPromotePaidAmount() / targetPromoteOrder.total_price) * 100) : 0}%)
-                                        </span>
-                                    </span>
-                                </div>
-                                <div className="flex justify-between text-xs text-slate-600">
-                                    <span>Sisa Tagihan Pelunasan (COD):</span>
-                                    <span className="font-mono font-bold text-slate-800">Rp {Number(Math.max(0, targetPromoteOrder.total_price - getPromotePaidAmount())).toLocaleString()}</span>
-                                </div>
-                            </div>
+            {/* MODAL CATAT PEMINJAMAN ALAT */}
+            <BorrowToolModal
+                show={showBorrowToolModal}
+                onClose={() => setShowBorrowToolModal(false)}
+                toolsList={toolsList}
+            />
 
-                            <p className="text-[11px] text-slate-500 leading-normal">
-                                *Mengubah status draf menjadi <strong>Order Pengerjaan</strong> dan memicu antrean produksi ke Admin Gudang.
-                            </p>
+            {/* MODAL KONFIRMASI PENGEMBALIAN ALAT */}
+            <ReturnToolModal
+                show={showReturnToolModal}
+                onClose={() => { setShowReturnToolModal(false); setSelectedReturnBorrow(null); }}
+                selectedReturnBorrow={selectedReturnBorrow}
+            />
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowPromoteModal(false); setTargetPromoteOrder(null); }}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer text-xs"
-                                >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    <span>Confirm Deal & Kirim ke Gudang</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* MODAL UPDATE KONDISI & STOK ALAT */}
+            <EditToolModal
+                show={showEditToolModal}
+                onClose={() => { setShowEditToolModal(false); setSelectedToolForEdit(null); }}
+                tool={selectedToolForEdit}
+            />
 
-            {/* MODAL: TAMBAH PERLENGKAPAN GUDANG BARU */}
-            {showAddSupplyModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Archive className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Tambah Perlengkapan Gudang Baru
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Registrasi barang perlengkapan operasional & consumables gudang</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowAddSupplyModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
+            {/* MODAL FORM DETAIL PERBAIKAN SELESAI */}
+            <CompleteRepairModal
+                show={showCompleteRepairModal}
+                onClose={() => { setShowCompleteRepairModal(false); setSelectedRepairTool(null); }}
+                selectedRepairTool={selectedRepairTool}
+            />
 
-                        <form onSubmit={handleAddSupplySubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Barang (Opsional):</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Otomatis jika kosong"
-                                        value={newSupplyForm.item_code}
-                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, item_code: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Perlengkapan:</label>
-                                    <select
-                                        value={newSupplyForm.category}
-                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, category: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="APD & Keselamatan Kerja">APD & Keselamatan Kerja (Sarung Tangan, Kacamata)</option>
-                                        <option value="Perkakas Tangan Habis Pakai">Perkakas Tangan Habis Pakai (Cutter, Pisau)</option>
-                                        <option value="Peralatan Packaging & Pengiriman">Packaging & Pengiriman (Lakban, Plastik)</option>
-                                        <option value="Bahan Kimia & Kebersihan Kaca">Bahan Kimia & Cleaning (Pembersih Kaca, Spiritus)</option>
-                                        <option value="Consumables Mesin Potong & Gosok">Consumables Mesin (Amplas, Pad)</option>
-                                        <option value="Perawatan Mesin & Pelumas">Pelumas & Maintenance (Oli, Penetran)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Perlengkapan / Barang Habis Pakai:*</label>
-                                <input
-                                    type="text"
-                                    placeholder="Contoh: Sarung Tangan Safety Antigores / Cutter Blade Refill"
-                                    value={newSupplyForm.name}
-                                    onChange={e => setNewSupplyForm({ ...newSupplyForm, name: e.target.value })}
-                                    required
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Awal:*</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={newSupplyForm.stock_qty}
-                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, stock_qty: e.target.value })}
-                                        required
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Min. Stok (Alert):</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={newSupplyForm.min_stock}
-                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, min_stock: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Pcs/Pasang/Roll/Box"
-                                        value={newSupplyForm.unit}
-                                        onChange={e => setNewSupplyForm({ ...newSupplyForm, unit: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Lokasi Simpan di Gudang:</label>
-                                <input
-                                    type="text"
-                                    placeholder="Contoh: Rak APD A1 / Gudang Packaging"
-                                    value={newSupplyForm.location}
-                                    onChange={e => setNewSupplyForm({ ...newSupplyForm, location: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowAddSupplyModal(false)} 
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Barang Baru</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL: CATAT PEMAKAIAN PERLENGKAPAN OPERASIONAL */}
-            {showUseSupplyModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <FileText className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Catat Pemakaian Perlengkapan
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Dokumentasikan pemakaian barang operasional oleh divisi terkait</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowUseSupplyModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleUseSupplySubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Pilih Barang Perlengkapan:*</label>
-                                <select
-                                    value={useSupplyForm.supply_id}
-                                    onChange={e => setUseSupplyForm({ ...useSupplyForm, supply_id: e.target.value })}
-                                    required
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                >
-                                    <option value="">-- Pilih Barang Perlengkapan --</option>
-                                    {warehouseSuppliesList.map(s => (
-                                        <option key={s.id} value={s.id} disabled={s.stock_qty <= 0}>
-                                            [{s.item_code}] {s.name} (Sisa Stok: {s.stock_qty} {s.unit})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Jumlah Dipakai:*</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={useSupplyForm.used_qty}
-                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, used_qty: e.target.value })}
-                                        required
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Tanggal Pemakaian:</label>
-                                    <input
-                                        type="date"
-                                        value={useSupplyForm.usage_date}
-                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, usage_date: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Divisi Pengambil:*</label>
-                                    <select
-                                        value={useSupplyForm.user_division}
-                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, user_division: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Divisi Potong (HT)">Divisi Potong (HT)</option>
-                                        <option value="Divisi Gosok (GM)">Divisi Gosok (GM)</option>
-                                        <option value="Divisi Bevel (BV)">Divisi Bevel (BV)</option>
-                                        <option value="Divisi Etsa">Divisi Etsa</option>
-                                        <option value="Admin Gudang / Pengiriman">Admin Gudang & Pengiriman</option>
-                                        <option value="Teknisi Lapangan">Teknisi Lapangan</option>
-                                        <option value="Umum & Maintenance">Umum & Maintenance</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Nama Pengambil/Pekerja:*</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Contoh: Supri / Bambang"
-                                        value={useSupplyForm.taker_name}
-                                        onChange={e => setUseSupplyForm({ ...useSupplyForm, taker_name: e.target.value })}
-                                        required
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Catatan / Keperluan Pemakaian:</label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="Contoh: Penggantian APD bulanan / packing peti kayu SPO-0129"
-                                    value={useSupplyForm.notes}
-                                    onChange={e => setUseSupplyForm({ ...useSupplyForm, notes: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                ></textarea>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowUseSupplyModal(false)} 
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Log Pemakaian</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL: PENGAJUAN RESTOK PERLENGKAPAN GUDANG KE ADMIN TOKO */}
-            {showRequestRestockModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
-                                    <AlertTriangle className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Form Pengajuan Restok Perlengkapan
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Ajukan permintaan pembelian perlengkapan baru ke Admin Toko</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowRequestRestockModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleRequestRestockSubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Pilih Barang Perlengkapan:*</label>
-                                <select
-                                    value={requestRestockForm.supply_id}
-                                    onChange={e => setRequestRestockForm({ ...requestRestockForm, supply_id: e.target.value })}
-                                    required
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                >
-                                    <option value="">-- Pilih Barang Perlengkapan --</option>
-                                    {warehouseSuppliesList.map(s => (
-                                        <option key={s.id} value={s.id}>
-                                            [{s.item_code}] {s.name} (Sisa Stok: {s.stock_qty} {s.unit} - Status: {s.status})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Jumlah Pengajuan Restok:*</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={requestRestockForm.request_qty}
-                                        onChange={e => setRequestRestockForm({ ...requestRestockForm, request_qty: e.target.value })}
-                                        required
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Tingkat Prioritas:</label>
-                                    <select
-                                        value={requestRestockForm.priority}
-                                        onChange={e => setRequestRestockForm({ ...requestRestockForm, priority: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Biasa">Biasa (Persediaan Rutin)</option>
-                                        <option value="Mendesak / Stok Menipis">Mendesak / Stok Menipis</option>
-                                        <option value="Mendesak / Stok Habis">CRITICAL: Stok Sudah Habis!</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Catatan & Alasan Pengajuan ke Admin Toko:</label>
-                                <textarea
-                                    rows="3"
-                                    placeholder="Contoh: Stok sisa 6 galon di gudang B1, dibutuhkan untuk pengerjaan finishing beveling proyek minggu depan."
-                                    value={requestRestockForm.notes}
-                                    onChange={e => setRequestRestockForm({ ...requestRestockForm, notes: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                ></textarea>
-                            </div>
-
-                            <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-2xl text-[11px] text-blue-900 space-y-1">
-                                <span className="text-[#1b68b0] font-bold block">Informasi Pengajuan Restok:</span>
-                                <p>Pengajuan akan dikirim ke dashboard Admin Toko & tersedia tombol pintas WhatsApp pesan otomatis ke Admin Toko / Purchasing.</p>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowRequestRestockModal(false)} 
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Kirim Pengajuan Restok</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL: TAMBAH ALAT PENUNJANG BARU */}
-            {showAddToolModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Wrench className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Form Tambah Alat Penunjang / Mesin Baru
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Registrasi mesin potong, bor, atau handtool ke inventaris</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowAddToolModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleAddToolSubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Alat (Opsional):</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Otomatis jika kosong"
-                                        value={newToolForm.tool_code}
-                                        onChange={e => setNewToolForm({ ...newToolForm, tool_code: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Alat / Mesin:</label>
-                                    <select
-                                        value={newToolForm.category}
-                                        onChange={e => setNewToolForm({ ...newToolForm, category: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Mesin Bor & Potong">Mesin Bor & Potong (Kaca/Mesin)</option>
-                                        <option value="Mata Bor & Mata Potong">Mata Bor & Mata Potong Diamond</option>
-                                        <option value="Mesin & Alat Vakum">Mesin Suction Cup & Vakum Kaca</option>
-                                        <option value="Handtool & Kunci">Handtool, Obeng & Kunci L</option>
-                                        <option value="Peralatan Lapangan">Peralatan Lapangan (Tangga, dsb)</option>
-                                        <option value="Peralatan Umum & Kebersihan">Peralatan Umum & Kebersihan (Cangkul, Rumput)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Alat / Mesin Penunjang:*</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="Contoh: Mesin Bor Kaca Portable / Tangga Alumunium 4m"
-                                    value={newToolForm.name}
-                                    onChange={e => setNewToolForm({ ...newToolForm, name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Total Jumlah Unit:*</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        required
-                                        value={newToolForm.total_qty}
-                                        onChange={e => setNewToolForm({ ...newToolForm, total_qty: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
-                                    <input
-                                        type="text"
-                                        value={newToolForm.unit}
-                                        onChange={e => setNewToolForm({ ...newToolForm, unit: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                        placeholder="Unit / Set / Pcs"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Kondisi Alat:</label>
-                                    <select
-                                        value={newToolForm.condition}
-                                        onChange={e => setNewToolForm({ ...newToolForm, condition: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                                    >
-                                        <option value="Bagus">Bagus & Ready</option>
-                                        <option value="Perlu Maintenance">Perlu Maintenance</option>
-                                        <option value="Rusak">Rusak (Butuh Servis)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Lokasi Penyimpanan / Rak Storage:</label>
-                                <input
-                                    type="text"
-                                    placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
-                                    value={newToolForm.location}
-                                    onChange={e => setNewToolForm({ ...newToolForm, location: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowAddToolModal(false)} 
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Alat Ke Catalog</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL: CATAT PEMINJAMAN ALAT TEKNISI (MULTI-ITEM TOOL BORROWING) */}
-            {showBorrowToolModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Layers className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Form Pencatatan Peminjaman Alat
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Pencatatan serah terima inventaris alat kerja oleh teknisi lapangan</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowBorrowToolModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleBorrowToolSubmit} className="space-y-4 text-xs">
-                            {/* DYNAMIC MULTI-TOOL SELECTION ROWS */}
-                            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                                <div className="flex justify-between items-center border-b border-slate-200 pb-2.5">
-                                    <label className="text-slate-800 font-bold text-xs flex items-center gap-1.5">
-                                        <span>Daftar Alat / Mesin Dipinjam ({borrowToolForm.selected_items.length} Alat):</span>
-                                    </label>
-                                    <button
-                                        type="button"
-                                        onClick={handleAddBorrowItemRow}
-                                        className="bg-[#1b68b0]/10 text-[#1b68b0] hover:bg-[#1b68b0] hover:text-white border border-[#1b68b0]/20 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>Tambah Alat Lain</span>
-                                    </button>
-                                </div>
-
-                                {borrowToolForm.selected_items.map((item, idx) => (
-                                    <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-                                        <span className="font-mono text-xs text-[#1b68b0] font-bold px-1">#{idx + 1}</span>
-                                        <div className="flex-1 min-w-[200px]">
-                                            <select
-                                                required
-                                                value={item.tool_id}
-                                                onChange={e => handleBorrowItemChange(idx, 'tool_id', e.target.value)}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white text-xs cursor-pointer"
-                                            >
-                                                <option value="">-- Pilih Alat Dari Inventory --</option>
-                                                {toolsList.map(t => (
-                                                    <option key={t.id} value={t.id} disabled={t.available_qty <= 0}>
-                                                        {t.tool_code} - {t.name} (Tersedia: {t.available_qty} {t.unit})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="w-28">
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                required
-                                                value={item.qty}
-                                                onChange={e => handleBorrowItemChange(idx, 'qty', e.target.value)}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white text-xs text-center"
-                                                placeholder="Qty Unit"
-                                            />
-                                        </div>
-                                        {borrowToolForm.selected_items.length > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveBorrowItemRow(idx)}
-                                                className="text-rose-500 hover:bg-rose-50 p-2 rounded-xl border border-rose-200 transition cursor-pointer"
-                                                title="Hapus item ini"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Nama Peminjam / Teknisi:*</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="Contoh: Teknisi Asep / Pak Mulyadi"
-                                    value={borrowToolForm.borrower_name}
-                                    onChange={e => setBorrowToolForm({ ...borrowToolForm, borrower_name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Keperluan Pekerjaan / Project:*</label>
-                                <textarea
-                                    required
-                                    rows="2"
-                                    placeholder="Contoh: Pengeboran engsel sekat kaca tempered SPO-0129 Dago Pakar"
-                                    value={borrowToolForm.purpose}
-                                    onChange={e => setBorrowToolForm({ ...borrowToolForm, purpose: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                ></textarea>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Tanggal Pinjam:</label>
-                                    <input
-                                        type="date"
-                                        value={borrowToolForm.borrow_date}
-                                        onChange={e => setBorrowToolForm({ ...borrowToolForm, borrow_date: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 block mb-1 font-semibold">Estimasi Tanggal Kembali:</label>
-                                    <input
-                                        type="date"
-                                        value={borrowToolForm.expected_return}
-                                        onChange={e => setBorrowToolForm({ ...borrowToolForm, expected_return: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowBorrowToolModal(false)} 
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Catat Peminjaman Alat</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL KONFIRMASI / EDIT PENGEMBALIAN ALAT */}
-            {showReturnToolModal && selectedReturnBorrow && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <RotateCcw className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Konfirmasi & Pengembalian Alat
-                                    </h3>
-                                    <p className="text-xs text-slate-500">Verifikasi pengembalian alat dan catat kondisi fisik saat dikembalikan</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowReturnToolModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleConfirmReturnSubmit} className="space-y-4 text-xs">
-                            {/* BORROWER INFO SUMMARY */}
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500 font-medium">Peminjam / Teknisi:</span>
-                                    <span className="font-bold text-[#1b68b0]">{selectedReturnBorrow.borrower_name}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500 font-medium">Keperluan / Proyek:</span>
-                                    <span className="text-slate-800 font-semibold">{selectedReturnBorrow.purpose}</span>
-                                </div>
-                                <div className="flex justify-between items-center border-t border-slate-200 pt-2">
-                                    <span className="text-slate-500">Tanggal Dipinjam:</span>
-                                    <span className="font-mono text-amber-700 font-bold">{selectedReturnBorrow.borrow_date}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Estimasi Rencana Kembali:</span>
-                                    <span className="font-mono text-[#1b68b0] font-bold">{selectedReturnBorrow.expected_return}</span>
-                                </div>
-
-                                {/* ITEMS LIST */}
-                                <div className="border-t border-slate-200 pt-2 space-y-1">
-                                    <span className="text-slate-500 block font-semibold text-[11px]">Daftar Alat Dipinjam:</span>
-                                    {Array.isArray(selectedReturnBorrow.items) && selectedReturnBorrow.items.length > 0 ? (
-                                        selectedReturnBorrow.items.map((it, idx) => (
-                                            <div key={idx} className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 flex justify-between text-[11px] shadow-xs">
-                                                <span className="text-slate-800 font-bold">{it.tool_name} ({it.tool_code})</span>
-                                                <span className="text-amber-700 font-mono font-bold">{it.qty} {it.unit}</span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 flex justify-between text-[11px] shadow-xs">
-                                            <span className="text-slate-800 font-bold">{selectedReturnBorrow.tool_name}</span>
-                                            <span className="text-amber-700 font-mono font-bold">{selectedReturnBorrow.qty_borrowed} Unit</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* EDITABLE ACTUAL RETURN DATE INPUT */}
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-                                <label className="text-xs font-bold text-slate-800 block flex justify-between items-center">
-                                    <span>Tanggal Pengembalian Sebenarnya:</span>
-                                    <span className="text-[10px] text-slate-500 font-normal">(Bisa disesuaikan lebih awal / lambat)</span>
-                                </label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={actualReturnDate}
-                                    onChange={e => setActualReturnDate(e.target.value)}
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0]"
-                                />
-
-                                {/* DYNAMIC TIME DIFFERENCE BADGE */}
-                                {actualReturnDate && selectedReturnBorrow.expected_return && (
-                                    <div className="text-[11px] font-mono pt-1">
-                                        {actualReturnDate > selectedReturnBorrow.expected_return ? (
-                                            <span className="text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-xl border border-amber-200 font-bold block">
-                                                Pengembalian Lebih Lama / Terlambat dari estimasi ({selectedReturnBorrow.expected_return})
-                                            </span>
-                                        ) : actualReturnDate < selectedReturnBorrow.expected_return ? (
-                                            <span className="text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-xl border border-blue-200 font-bold block">
-                                                Pengembalian Lebih Cepat dari estimasi ({selectedReturnBorrow.expected_return})
-                                            </span>
-                                        ) : (
-                                            <span className="text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-xl border border-emerald-200 font-bold block">
-                                                Tepat Waktu Sesuai Estimasi ({selectedReturnBorrow.expected_return})
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* LAPORAN KONDISI / KEHILANGAN SAAT PENGEMBALIAN */}
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
-                                <label className="text-xs font-bold text-slate-800 block">
-                                    Status Kondisi Fisik Alat Saat Dikembalikan:
-                                </label>
-                                <select
-                                    value={returnConditionStatus}
-                                    onChange={e => setReturnConditionStatus(e.target.value)}
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-bold focus:border-[#1b68b0] cursor-pointer"
-                                >
-                                    <option value="Baik">Dikembalikan Dalam Kondisi Baik & Lengkap</option>
-                                    <option value="Ada Rusak">Ada Unit Yang Rusak (Perlu Perbaikan / Patah)</option>
-                                    <option value="Ada Hilang">Ada Unit Yang Hilang / Tertinggal</option>
-                                </select>
-
-                                {returnConditionStatus === 'Ada Rusak' && (
-                                    <div className="pt-2 grid grid-cols-2 gap-3 bg-amber-50 p-3 rounded-xl border border-amber-200">
-                                        <div>
-                                            <label className="text-[11px] text-amber-900 font-bold block mb-1">Jumlah Unit Rusak:</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={returnDamagedQty}
-                                                onChange={e => setReturnDamagedQty(e.target.value)}
-                                                className="w-full bg-white border border-amber-300 rounded-lg p-2 text-xs text-amber-800 font-mono font-bold"
-                                            />
-                                        </div>
-                                        <div className="text-[10px] text-slate-600 self-center">
-                                            Stok alat di katalog akan otomatis bertambah pada status <b className="text-amber-800">Rusak/Servis</b>.
-                                        </div>
-                                    </div>
-                                )}
-
-                                {returnConditionStatus === 'Ada Hilang' && (
-                                    <div className="pt-2 grid grid-cols-2 gap-3 bg-rose-50 p-3 rounded-xl border border-rose-200">
-                                        <div>
-                                            <label className="text-[11px] text-rose-900 font-bold block mb-1">Jumlah Unit Hilang:</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={returnLostQty}
-                                                onChange={e => setReturnLostQty(e.target.value)}
-                                                className="w-full bg-white border border-rose-300 rounded-lg p-2 text-xs text-rose-800 font-mono font-bold"
-                                            />
-                                        </div>
-                                        <div className="text-[10px] text-slate-600 self-center">
-                                            Stok alat di katalog akan otomatis bertambah pada status <b className="text-rose-800">Hilang</b>.
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* OPTIONAL NOTES */}
-                            <div>
-                                <label className="text-xs text-slate-700 font-semibold block mb-1">Catatan Pengembalian / Kondisi Alat (Opsional):</label>
-                                <input
-                                    type="text"
-                                    value={returnNotes}
-                                    onChange={e => setReturnNotes(e.target.value)}
-                                    placeholder="Contoh: Alat dikembalikan dalam kondisi lengkap & bersih."
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            {/* MODAL ACTIONS */}
-                            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowReturnToolModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Konfirmasi & Simpan Pengembalian</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL UPDATE KONDISI & LAPORKAN RUSAK/HILANG (KATALOG) */}
-            {showEditToolModal && selectedToolForEdit && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <Wrench className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Update Kondisi & Stok Alat ({selectedToolForEdit.tool_code})
-                                    </h3>
-                                    <p className="text-xs text-slate-500">{selectedToolForEdit.name}</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowEditToolModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSaveToolEditSubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                                <div>
-                                    <label className="text-slate-700 font-semibold block mb-1">Total Unit Dimiliki:</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={toolEditForm.total_qty}
-                                        onChange={e => setToolEditForm({ ...toolEditForm, total_qty: e.target.value })}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-mono font-bold focus:border-[#1b68b0]"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 font-semibold block mb-1">Status Utama Alat:</label>
-                                    <select
-                                        value={toolEditForm.condition}
-                                        onChange={e => setToolEditForm({ ...toolEditForm, condition: e.target.value })}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-bold focus:border-[#1b68b0] cursor-pointer"
-                                    >
-                                        <option value="Bagus">Bagus (100% Layak Operasional)</option>
-                                        <option value="Rusak Ringan">Rusak Ringan (Perlu Servis Kecil)</option>
-                                        <option value="Rusak Berat">Rusak Berat (Tidak Bisa Digunakan)</option>
-                                        <option value="Hilang">Hilang (Unit Rusak/Hilang Total)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                                <div>
-                                    <label className="text-amber-800 font-bold block mb-1">Jumlah Unit Rusak (Perlu Servis):</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={toolEditForm.damaged_qty}
-                                        onChange={e => setToolEditForm({ ...toolEditForm, damaged_qty: e.target.value })}
-                                        className="w-full bg-white border border-amber-300 rounded-xl p-2 text-amber-700 font-mono font-bold focus:border-amber-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-rose-800 font-bold block mb-1">Jumlah Unit Hilang:</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={toolEditForm.lost_qty}
-                                        onChange={e => setToolEditForm({ ...toolEditForm, lost_qty: e.target.value })}
-                                        className="w-full bg-white border border-rose-300 rounded-xl p-2 text-rose-700 font-mono font-bold focus:border-rose-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 font-semibold block mb-1">Catatan Perbaikan / Kronologi Kerusakan / Hilang:</label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="Contoh: 1 unit mata bor diamond patah saat pengerjaan sekat kaca tempered SPO-0129 Dago."
-                                    value={toolEditForm.condition_notes}
-                                    onChange={e => setToolEditForm({ ...toolEditForm, condition_notes: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                                ></textarea>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 font-semibold block mb-1">Lokasi Penyimpanan Alat:</label>
-                                <input
-                                    type="text"
-                                    value={toolEditForm.location}
-                                    onChange={e => setToolEditForm({ ...toolEditForm, location: e.target.value })}
-                                    placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white font-mono"
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowEditToolModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Perubahan Kondisi Alat</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL FORM DETAIL PERBAIKAN SELESAI / EDIT DETAIL PERBAIKAN */}
-            {showCompleteRepairModal && selectedRepairTool && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#5f9733]">
-                                    <CheckCircle2 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Form Detail Perbaikan Selesai ({selectedRepairTool.tool_code})
-                                    </h3>
-                                    <p className="text-xs text-slate-500">{selectedRepairTool.name}</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowCompleteRepairModal(false)} 
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSaveCompleteRepairSubmit} className="space-y-4 text-xs">
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-                                <div>
-                                    <label className="text-amber-800 font-bold block mb-1">Bagian Mesin / Alat Yang Rusak:</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="Contoh: Mata bor diamond retak & motor carbon brush aus"
-                                        value={repairForm.damaged_part}
-                                        onChange={e => setRepairForm({ ...repairForm, damaged_part: e.target.value })}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#70b03c]"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="text-[#1b68b0] font-bold block mb-1">Tindakan Perbaikan Yang Dilakukan:</label>
-                                    <textarea
-                                        rows="2"
-                                        required
-                                        placeholder="Contoh: Pembersihan motor rotor, penyetelan presisi & penggantian sparepart aus"
-                                        value={repairForm.action_taken}
-                                        onChange={e => setRepairForm({ ...repairForm, action_taken: e.target.value })}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-medium focus:border-[#1b68b0]"
-                                    ></textarea>
-                                </div>
-
-                                <div>
-                                    <label className="text-slate-700 font-bold block mb-1">Komponen / Sparepart Yang Diganti (Opsional):</label>
-                                    <textarea
-                                        rows="2"
-                                        placeholder="Contoh: Carbon Brush Heavy Duty 2 pcs, Bearing SKF 608 1 pc"
-                                        value={repairForm.replaced_components}
-                                        onChange={e => setRepairForm({ ...repairForm, replaced_components: e.target.value })}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-medium focus:border-[#1b68b0]"
-                                    ></textarea>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                                <div>
-                                    <label className="text-slate-700 font-bold block mb-1">Biaya Servis / Sparepart (Rp):</label>
-                                    <input
-                                        type="number"
-                                        placeholder="e.g. 75000"
-                                        value={repairForm.repair_cost}
-                                        onChange={e => setRepairForm({ ...repairForm, repair_cost: e.target.value })}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-amber-700 font-mono font-bold focus:border-amber-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-slate-700 font-bold block mb-1">Tanggal Selesai:</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={repairForm.completion_date}
-                                        onChange={e => setRepairForm({ ...repairForm, completion_date: e.target.value })}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-mono font-bold focus:border-[#70b03c]"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-slate-700 font-bold block mb-1">Teknisi / Tempat Perbaikan (Servis):</label>
-                                <input
-                                    type="text"
-                                    placeholder="Contoh: Bengkel Teknik Maju / Servis Internal Toko"
-                                    value={repairForm.technician_name}
-                                    onChange={e => setRepairForm({ ...repairForm, technician_name: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white"
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCompleteRepairModal(false)}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span>Simpan Detail Perbaikan & Kembalikan Ke Stok</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL POPUP DETAIL EKSEKUSI PENGERJAAN ORDER (PREMIUM REDESIGN) */}
-            <DivisionExecutionModal
-                show={showExecutionModal}
-                onClose={() => { setShowExecutionModal(false); setSelectedExecutionOrder(null); }}
-                selectedExecutionOrder={selectedExecutionOrder}
-                roleTitles={roleTitles}
-                userRole={userRole}
-                productionSubTab={productionSubTab}
+            {/* MODAL REKAP RINCIAN PEMILAHAN ORDERAN */}
+            <SalesRekapModal
+                show={showRekapModal}
+                onClose={() => setShowRekapModal(false)}
+                orders={orders}
                 isDivisionWorker={isDivisionWorker}
-                onAcknowledgeRevision={handleAcknowledgeRevision}
-                onOpenComplaintModal={handleOpenComplaintModal}
-                onOpenScrapPopup={handleOpenScrapPopup}
-                onFinishJobSubmit={handleFinishJobSubmit}
-                formatIndonesianDate={formatIndonesianDate}
-                formatIndonesianDateTime={formatIndonesianDateTime}
-                onOpenSketchLightbox={handleOpenSketchLightbox}
-                sheetGlasses={sheetGlasses}
-                scrapGlasses={initialScrap}
-                onRecordRawMaterialSuccess={handleRecordRawMaterialSuccess}
-                onOpenStickerModal={handleOpenStickerModal}
-            />
-
-            {/* MODAL POPUP FORM SISA UNTUK POTONG (INPUT SCRAP GLASS - REDESIGN) */}
-            <ScrapPopupModal
-                show={showScrapPopupModal}
-                onClose={() => setShowScrapPopupModal(false)}
-                form={scrapPopupForm}
-                setForm={setScrapPopupForm}
-                onSubmit={handleSaveScrapFromPopup}
-            />
-
-            {/* MODAL POPUP LAPORKAN KACA CACAT / BARET */}
-            <ComplaintModal
-                show={showComplaintModal}
-                onClose={() => setShowComplaintModal(false)}
-                form={complaintForm}
-                setForm={setComplaintForm}
-                onSubmit={handleSubmitComplaint}
-                onPhotoChange={handleComplaintPhotoChange}
-                selectedExecutionOrder={selectedExecutionOrder}
                 userRole={userRole}
+                formatIndonesianDate={formatIndonesianDate}
+                isDateInTimeRange={isDateInTimeRange}
             />
-
-            {/* MODAL REKAP RINCIAN PEMILAHAN ORDERAN (MASUK & SELESAI) */}
-            {showRekapModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto text-slate-800">
-                        {/* MODAL HEADER */}
-                        <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <BarChart3 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-base font-bold text-slate-800">
-                                        Rekapitulasi Pemilahan Orderan Masuk & Selesai
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">
-                                        Divisi: <strong className="text-[#1b68b0]">{isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'SEMUA DIVISI'}</strong>
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowRekapModal(false)}
-                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* RENTANG WAKTU SELECTOR BUTTONS */}
-                        <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200">
-                            <span className="text-xs font-bold text-slate-600 pl-2">Filter Rentang Waktu:</span>
-                            {[
-                                { key: 'today', label: 'Hari Ini' },
-                                { key: '2days', label: '2 Hari' },
-                                { key: 'week', label: '1 Minggu' },
-                                { key: 'month', label: '1 Bulan' },
-                                { key: 'year', label: '1 Tahun' },
-                                { key: 'all', label: 'Semua Waktu' }
-                            ].map(item => (
-                                <button
-                                    key={item.key}
-                                    type="button"
-                                    onClick={() => setStatTimeRange(item.key)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                                        statTimeRange === item.key
-                                            ? 'bg-[#1b68b0] text-white shadow-xs'
-                                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                                    }`}
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* STAT SUMMARY CARDS */}
-                        {(() => {
-                            const curKey = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'HT';
-
-                            const enteredList = initialOrders.filter(o => {
-                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
-                                const dateToCheck = ts.started_at || ts.created_at || o.created_at || o.order_date;
-                                const matchDiv = isDivisionWorker ? (o.current_division === userRole || (o.division_progress?.[curKey] && o.division_progress?.[curKey] !== 'N/A' && o.division_progress?.[curKey] !== 'Belum')) : true;
-                                return matchDiv && isDateInTimeRange(dateToCheck, statTimeRange);
-                            });
-
-                            const completedList = initialOrders.filter(o => {
-                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
-                                const dateToCheck = ts.completed_at || o.execution_completed_at;
-                                const matchDiv = (o.division_progress && o.division_progress[curKey] === 'Selesai');
-                                return matchDiv && isDateInTimeRange(dateToCheck, statTimeRange);
-                            });
-
-                            const completionRate = enteredList.length > 0 ? Math.round((completedList.length / enteredList.length) * 100) : (completedList.length > 0 ? 100 : 0);
-
-                            // Group by date YYYY-MM-DD
-                            const dateGroupMap = {};
-                            enteredList.forEach(o => {
-                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
-                                const dStr = (ts.started_at || ts.created_at || o.created_at || o.order_date || '').split('T')[0].split(' ')[0];
-                                if (dStr) {
-                                    if (!dateGroupMap[dStr]) dateGroupMap[dStr] = { date: dStr, entered: [], completed: [] };
-                                    dateGroupMap[dStr].entered.push(o);
-                                }
-                            });
-                            completedList.forEach(o => {
-                                const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
-                                const dStr = (ts.completed_at || o.execution_completed_at || '').split('T')[0].split(' ')[0];
-                                if (dStr) {
-                                    if (!dateGroupMap[dStr]) dateGroupMap[dStr] = { date: dStr, entered: [], completed: [] };
-                                    if (!dateGroupMap[dStr].completed.some(item => item.id === o.id)) {
-                                        dateGroupMap[dStr].completed.push(o);
-                                    }
-                                }
-                            });
-
-                            const sortedDates = Object.keys(dateGroupMap).sort().reverse();
-
-                            return (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
-                                            <span className="text-xs font-bold text-[#1b68b0] block">Total Order Masuk</span>
-                                            <span className="text-2xl font-mono font-bold text-slate-900">{enteredList.length} Order</span>
-                                        </div>
-                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
-                                            <span className="text-xs font-bold text-[#5f9733] block">Total Order Selesai</span>
-                                            <span className="text-2xl font-mono font-bold text-slate-900">{completedList.length} Order</span>
-                                        </div>
-                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
-                                            <span className="text-xs font-bold text-amber-700 block">Persentase Selesai</span>
-                                            <span className="text-2xl font-mono font-bold text-slate-900">{completionRate}%</span>
-                                        </div>
-                                    </div>
-
-                                    {/* TABLE RINCIAN PER HARI */}
-                                    <div className="space-y-2">
-                                        <h4 className="text-xs font-bold text-slate-700 font-mono flex items-center justify-between">
-                                            <span>Rincian Pemilihan Per-Hari ({sortedDates.length} Hari Terdeteksi):</span>
-                                            <span className="text-[10px] text-slate-500">Menampilkan tanggal dengan transaksi order</span>
-                                        </h4>
-
-                                        {sortedDates.length > 0 ? (
-                                            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-                                                <table className="w-full text-left text-xs">
-                                                    <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] border-b border-slate-200 font-bold">
-                                                        <tr>
-                                                            <th className="p-3">Tanggal</th>
-                                                            <th className="p-3">Order Masuk</th>
-                                                            <th className="p-3">Order Selesai</th>
-                                                            <th className="p-3 text-right">Daftar SPO</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-slate-100 bg-white">
-                                                        {sortedDates.map(dStr => {
-                                                            const group = dateGroupMap[dStr];
-                                                            return (
-                                                                <tr key={dStr} className="hover:bg-slate-50 transition">
-                                                                    <td className="p-3 font-bold text-slate-800">{formatIndonesianDate(dStr)}</td>
-                                                                    <td className="p-3">
-                                                                        <span className="bg-blue-50 text-[#1b68b0] px-2.5 py-1 rounded-lg border border-blue-200 font-bold text-xs">
-                                                                            {group.entered.length} Order
-                                                                        </span>
-                                                                    </td>
-                                                                    <td className="p-3">
-                                                                        <span className="bg-emerald-50 text-[#5f9733] px-2.5 py-1 rounded-lg border border-emerald-200 font-bold text-xs">
-                                                                            {group.completed.length} Order
-                                                                        </span>
-                                                                    </td>
-                                                                    <td className="p-3 text-right">
-                                                                        <div className="flex flex-wrap items-center justify-end gap-1">
-                                                                            {group.entered.map(o => (
-                                                                                <span key={'e_' + o.id} className="text-[10px] bg-slate-50 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md font-mono">
-                                                                                    #{o.spo_number}
-                                                                                </span>
-                                                                            ))}
-                                                                            {group.completed.map(o => (
-                                                                                <span key={'c_' + o.id} className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono font-bold">
-                                                                                    ✓ #{o.spo_number}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        ) : (
-                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center text-xs text-slate-500 font-mono">
-                                                Tidak ada data orderan masuk atau selesai pada rentang waktu ini.
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })()}
-
-                        <div className="flex justify-end pt-2 border-t border-slate-200">
-                            <button
-                                type="button"
-                                onClick={() => setShowRekapModal(false)}
-                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs cursor-pointer transition"
-                            >
-                                Tutup Rekap
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* MODAL DECISION ADMIN GUDANG UNTUK KOMPLAIN KACA */}
             <GudangDecisionModal
