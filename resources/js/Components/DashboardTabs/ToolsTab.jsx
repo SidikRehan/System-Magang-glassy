@@ -13,7 +13,7 @@ export default function ToolsTab({
     setRepairFilterTab,
     setShowAddToolModal,
     setShowBorrowToolModal,
-    setNewBorrowForm,
+    setBorrowToolForm,
     handleOpenEditToolModal,
     handleOpenReturnModal,
     handleStartRepair,
@@ -88,8 +88,8 @@ export default function ToolsTab({
                                     alert('Belum ada alat di katalog! Silakan tambah alat baru terlebih dahulu.');
                                     return;
                                 }
-                                if (userRole === 'driver' && setNewBorrowForm) {
-                                    setNewBorrowForm(prev => ({
+                                if (userRole === 'driver' && setBorrowToolForm) {
+                                    setBorrowToolForm(prev => ({
                                         ...prev,
                                         borrower_name: userName,
                                         purpose: 'Operasional Pengiriman Armada Supir (' + userName + ')'
