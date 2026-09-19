@@ -1,4 +1,10 @@
 import React from 'react';
+import { 
+    Boxes, Plus, Search, Eye, EyeOff, RefreshCw, 
+    MessageSquare, Edit, Trash2, Calendar, Scissors, 
+    Layers, CheckCircle2, AlertTriangle, Clock, ShieldCheck, 
+    Lock, Check, Package, Send
+} from 'lucide-react';
 import { isMatchSearch } from '@/Utils/dashboardHelpers';
 
 export default function ScrapTab({
@@ -39,31 +45,47 @@ export default function ScrapTab({
     });
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6">
+            {/* HEADER TAB */}
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-extrabold text-slate-100">Manajemen Stok Inventory Kaca</h2>
-                    <p className="text-slate-400 text-sm">Monitoring stok bahan kaca lembaran baru dan kaca sisa potongan rak</p>
+                    <h2 className="text-2xl font-black text-[#242222] flex items-center gap-2.5">
+                        <Boxes className="w-6 h-6 text-[#1b68b0]" />
+                        <span>Manajemen Stok Inventory Kaca</span>
+                    </h2>
+                    <p className="text-slate-500 text-xs font-medium mt-1">
+                        Monitoring ketersediaan bahan kaca lembaran baru dan inventaris sisa potongan kaca di rak storage.
+                    </p>
                 </div>
 
                 {/* SUB TAB TOGGLE (Bahan Lembaran Baru vs Sisa Potongan) */}
-                <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
+                <div className="flex items-center bg-slate-100 border border-slate-200 p-1 rounded-xl gap-1">
                     <button
                         onClick={() => setStockSubTab('lembaran')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${stockSubTab === 'lembaran' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                            stockSubTab === 'lembaran' 
+                                ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200' 
+                                : 'text-slate-600 hover:text-[#242222]'
+                        }`}
                     >
-                        <span>📦 Stok Kaca Lembaran (Baru)</span>
+                        <Boxes className="w-3.5 h-3.5" />
+                        <span>Kaca Lembaran (Baru)</span>
                         {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length > 0 && (
-                            <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">
-                                {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length} Restock
+                            <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full font-mono">
+                                {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length}
                             </span>
                         )}
                     </button>
                     <button
                         onClick={() => setStockSubTab('sisa')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${stockSubTab === 'sisa' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            stockSubTab === 'sisa' 
+                                ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200' 
+                                : 'text-slate-600 hover:text-[#242222]'
+                        }`}
                     >
-                        ♻️ Kaca Sisa Potongan Rak ({initialScrap.length})
+                        <Scissors className="w-3.5 h-3.5" />
+                        <span>Kaca Sisa Potongan ({initialScrap.length})</span>
                     </button>
                 </div>
             </div>
@@ -73,48 +95,60 @@ export default function ScrapTab({
                     {/* 4 FILTER CARDS AT THE TOP */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {[
-                            { key: 'all', label: 'Semua Stok Bahan', count: sheetGlasses.length, icon: '📦' },
-                            { key: 'aman', label: 'Aman', count: sheetGlasses.filter(g => g.status === 'Aman').length, icon: '✅' },
-                            { key: 'menipis', label: 'Menipis', count: sheetGlasses.filter(g => g.status === 'Menipis').length, icon: '⚠️' },
-                            { key: 'pengajuan', label: 'Pengajuan Proses Restock', count: sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length, icon: '⏳' },
-                        ].map(card => (
-                            <div
-                                key={card.key}
-                                onClick={() => setActiveStockCard(card.key)}
-                                className={`relative cursor-pointer border rounded-xl p-4 text-center transition ${activeStockCard === card.key ? 'bg-cyan-500/15 border-cyan-400 text-slate-100 shadow-lg shadow-cyan-500/10' : card.key === 'pengajuan' && card.count > 0 ? 'bg-rose-950/20 border-rose-500/60 text-slate-100 shadow-lg shadow-rose-500/20 animate-pulse' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/40'}`}
-                            >
-                                {card.key === 'pengajuan' && card.count > 0 && (
-                                    <span className="absolute -top-2.5 -right-2 bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border border-rose-300 animate-bounce flex items-center gap-1 font-mono">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                                        🔔 Restock Gudang
-                                    </span>
-                                )}
-                                <div className={`text-2xl font-black ${card.key === 'aman' ? 'text-emerald-400' : card.key === 'menipis' ? 'text-amber-400' : card.key === 'pengajuan' ? 'text-rose-400' : 'text-cyan-400'}`}>{card.count}</div>
-                                <div className="text-xs font-semibold mt-1">{card.icon} {card.label}</div>
-                            </div>
-                        ))}
+                            { key: 'all', label: 'Semua Stok Bahan', count: sheetGlasses.length, icon: Boxes, color: 'text-[#1b68b0]' },
+                            { key: 'aman', label: 'Stok Aman', count: sheetGlasses.filter(g => g.status === 'Aman').length, icon: CheckCircle2, color: 'text-[#70b03c]' },
+                            { key: 'menipis', label: 'Stok Menipis', count: sheetGlasses.filter(g => g.status === 'Menipis').length, icon: AlertTriangle, color: 'text-amber-600' },
+                            { key: 'pengajuan', label: 'Pengajuan Restock', count: sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length, icon: Clock, color: 'text-rose-600' },
+                        ].map(card => {
+                            const IconComponent = card.icon;
+                            const isActive = activeStockCard === card.key;
+                            return (
+                                <div
+                                    key={card.key}
+                                    onClick={() => setActiveStockCard(card.key)}
+                                    className={`relative cursor-pointer border rounded-2xl p-4 transition shadow-xs ${
+                                        isActive 
+                                            ? 'bg-blue-50/50 border-2 border-[#1b68b0]' 
+                                            : 'bg-white border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    {card.key === 'pengajuan' && card.count > 0 && (
+                                        <span className="absolute -top-2.5 -right-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                                            Perlu Restock
+                                        </span>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-slate-500">{card.label}</span>
+                                        <IconComponent className={`w-4 h-4 ${card.color}`} />
+                                    </div>
+                                    <div className={`text-2xl font-black mt-1 ${card.color}`}>{card.count}</div>
+                                </div>
+                            );
+                        })}
                     </div>
 
-                    {/* BUTTON TAMBAH BARANG BARU DIRECTLY BELOW CARDS */}
+                    {/* BUTTON TAMBAH BARANG BARU */}
                     {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                         <div className="flex justify-start">
                             <button
                                 onClick={() => setShowAddStockModal(true)}
-                                className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50 cursor-pointer"
+                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
                             >
-                                <span className="text-base">✨</span> + Tambah Jenis Barang Baru
+                                <Plus className="w-4 h-4" />
+                                <span>Tambah Jenis Barang Baru</span>
                             </button>
                         </div>
                     )}
 
                     {/* TABLE HEADER & SEARCH BAR */}
-                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
-                        <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-3">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
+                        <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-100 pb-3">
                             <div className="flex items-center gap-3">
-                                <h3 className="font-bold text-slate-100 text-base">
-                                    📊 Tabel Bahan Stok Kaca Lembaran (Baru): <span className="text-cyan-400 uppercase tracking-wider">{activeStockCard}</span>
+                                <h3 className="font-black text-[#242222] text-sm flex items-center gap-2">
+                                    <Boxes className="w-4 h-4 text-[#1b68b0]" />
+                                    <span>Tabel Kaca Lembaran: <span className="text-[#1b68b0] uppercase">{activeStockCard}</span></span>
                                 </h3>
-                                <span className="text-xs bg-cyan-500/10 text-cyan-400 px-2.5 py-1 rounded-full border border-cyan-500/20 font-mono font-bold">
+                                <span className="text-xs bg-blue-50 text-[#1b68b0] px-2.5 py-0.5 rounded-full border border-blue-200 font-mono font-bold">
                                     {filteredSheetGlasses.length} Barang
                                 </span>
                             </div>
@@ -123,190 +157,199 @@ export default function ScrapTab({
                                 <button
                                     type="button"
                                     onClick={() => setShowTableSupplierInfo(prev => !prev)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${showTableSupplierInfo
-                                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                                        : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
-                                        }`}
-                                    title="Klik untuk menayangkan / menyembunyikan info supplier di tabel"
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition border flex items-center gap-1.5 cursor-pointer ${
+                                        showTableSupplierInfo
+                                            ? 'bg-blue-50 text-[#1b68b0] border-blue-200'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                    }`}
+                                    title="Tampilkan / sembunyikan info supplier di tabel"
                                 >
-                                    {showTableSupplierInfo ? '👁️ Supplier: Tampil' : '🙈 Supplier: Sembunyi'}
+                                    {showTableSupplierInfo ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                    <span>Supplier: {showTableSupplierInfo ? 'Tampil' : 'Sembunyi'}</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setShowTablePricingInfo(prev => !prev)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${showTablePricingInfo
-                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                        : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
-                                        }`}
-                                    title="Klik untuk menayangkan / menyembunyikan modal harga beli supplier di tabel"
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition border flex items-center gap-1.5 cursor-pointer ${
+                                        showTablePricingInfo
+                                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                    }`}
+                                    title="Tampilkan / sembunyikan modal harga beli supplier di tabel"
                                 >
-                                    {showTablePricingInfo ? '👁️ Modal Beli: Tampil' : '🙈 Modal Beli: Sembunyi'}
+                                    {showTablePricingInfo ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                    <span>Modal Beli: {showTablePricingInfo ? 'Tampil' : 'Sembunyi'}</span>
                                 </button>
 
-                                <input
-                                    type="text"
-                                    placeholder="🔍 Cari Kode / Nama / Jenis Kaca..."
-                                    value={stockSearchTerm}
-                                    onChange={e => setStockSearchTerm(e.target.value)}
-                                    className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-400 focus:outline-none"
-                                />
+                                <div className="relative">
+                                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Cari Kode / Nama / Jenis Kaca..."
+                                        value={stockSearchTerm}
+                                        onChange={e => setStockSearchTerm(e.target.value)}
+                                        className="bg-white border border-slate-300 rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#242222] focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] focus:outline-none w-56"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-800/40 text-slate-400 uppercase text-xs">
+                        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                     <tr>
-                                        <th className="p-3">Kode Barang & Restock</th>
+                                        <th className="p-3">Kode & Restock</th>
                                         <th className="p-3">Nama Barang</th>
-                                        <th className="p-3">Jenis Barang</th>
+                                        <th className="p-3">Jenis Kaca</th>
                                         <th className="p-3">Ukuran Barang</th>
-                                        <th className="p-3">Harga Jual</th>
-                                        <th className="p-3">Quantity</th>
-                                        <th className="p-3">Aksi</th>
-                                        <th className="p-3">Status</th>
+                                        <th className="p-3">Harga Jual & Jasa</th>
+                                        <th className="p-3 text-center">Quantity</th>
+                                        <th className="p-3 text-center">Status</th>
+                                        <th className="p-3 text-right">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-800">
+                                <tbody className="divide-y divide-slate-100">
                                     {filteredSheetGlasses.length === 0 ? (
                                         <tr>
-                                            <td colSpan="8" className="p-6 text-center text-slate-500 text-xs italic">
-                                                Tidak ada barang stok lembaran yang sesuai dengan filter/pencarian.
+                                            <td colSpan="8" className="p-8 text-center text-slate-400 text-xs italic">
+                                                Tidak ada barang stok lembaran yang sesuai dengan filter / pencarian.
                                             </td>
                                         </tr>
                                     ) : (
                                         filteredSheetGlasses.map(item => (
-                                            <tr key={item.id} className="hover:bg-slate-800/30">
+                                            <tr key={item.id} className="hover:bg-slate-50/70 transition">
                                                 <td className="p-3">
-                                                    <div className="font-extrabold text-cyan-400 font-mono">{item.item_code}</div>
-                                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5 flex items-center gap-1">
-                                                        <span>📅 Restock:</span>
-                                                        <strong className="text-slate-300">{item.last_restock}</strong>
+                                                    <div className="font-extrabold text-[#1b68b0] font-mono text-xs">{item.item_code}</div>
+                                                    <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
+                                                        <Calendar className="w-3 h-3 text-slate-400" />
+                                                        <span>{item.last_restock}</span>
                                                     </div>
                                                 </td>
-                                                <td className="p-3 font-bold text-slate-100">
+                                                <td className="p-3 font-bold text-[#242222]">
                                                     <div>{item.name}</div>
                                                     {showTableSupplierInfo && (
-                                                        <div className="text-[11px] text-emerald-400 font-mono mt-0.5 flex items-center gap-1">
-                                                            <span>🏭 Supplier:</span>
-                                                            <span className="font-semibold text-slate-300">{item.supplier_name}</span>
+                                                        <div className="text-[11px] text-[#70b03c] font-medium mt-0.5">
+                                                            Supplier: <span className="text-slate-700">{item.supplier_name}</span>
                                                         </div>
                                                     )}
                                                 </td>
                                                 <td className="p-3">
-                                                    <span className="bg-slate-800 text-cyan-300 border border-slate-700 px-2.5 py-1 rounded-full text-xs font-semibold">
+                                                    <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-2 py-0.5 rounded text-[11px] font-semibold">
                                                         {item.category}
                                                     </span>
                                                 </td>
-                                                <td className="p-3 font-mono font-bold text-slate-200">{item.size}</td>
+                                                <td className="p-3 font-mono font-bold text-slate-700">{item.size}</td>
                                                 <td className="p-3 text-xs">
                                                     {canViewPricing ? (
                                                         <div className="space-y-0.5 font-mono">
-                                                            <div><span className="text-emerald-400 font-extrabold text-sm">Rp {Number(item.sell_price || 0).toLocaleString()}</span> <span className="text-[10px] text-slate-400 font-sans">/lembar</span></div>
+                                                            <div>
+                                                                <span className="text-emerald-700 font-black text-xs">Rp {Number(item.sell_price || 0).toLocaleString('id-ID')}</span>
+                                                                <span className="text-[10px] text-slate-400 font-sans"> /lbr</span>
+                                                            </div>
                                                             {showTablePricingInfo && (
-                                                                <div className="text-slate-400 text-[11px] pt-0.5 border-t border-slate-800">Beli: <span className="text-amber-400 font-bold">Rp {Number(item.buy_price || 0).toLocaleString()}</span></div>
+                                                                <div className="text-slate-500 text-[11px] pt-0.5 border-t border-slate-100">
+                                                                    Beli: <span className="text-amber-700 font-bold">Rp {Number(item.buy_price || 0).toLocaleString('id-ID')}</span>
+                                                                </div>
                                                             )}
-                                                            <div className="text-[10px] text-cyan-300/90 pt-1 flex flex-wrap gap-1 border-t border-slate-800/60 font-sans">
-                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">HT: Rp {Number(item.rate_ht || 1000).toLocaleString()}</span>
-                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">GM: Rp {Number(item.rate_gm || 10000).toLocaleString()}</span>
-                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">BV: Rp {Number(item.rate_bv || 15000).toLocaleString()}</span>
-                                                                <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono">Etsa: Rp {Number(item.rate_etsa || 50000).toLocaleString()}</span>
+                                                            <div className="text-[10px] text-slate-500 pt-1 flex flex-wrap gap-1 border-t border-slate-100 font-sans">
+                                                                <span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 font-mono">HT: {Number(item.rate_ht || 1000).toLocaleString('id-ID')}</span>
+                                                                <span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 font-mono">GM: {Number(item.rate_gm || 10000).toLocaleString('id-ID')}</span>
+                                                                <span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 font-mono">BV: {Number(item.rate_bv || 15000).toLocaleString('id-ID')}</span>
+                                                                <span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 font-mono">Etsa: {Number(item.rate_etsa || 50000).toLocaleString('id-ID')}</span>
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-slate-500 text-xs italic">🔒 Rahasia</span>
+                                                        <span className="text-slate-400 text-xs italic flex items-center gap-1">
+                                                            <Lock className="w-3 h-3" /> Rahasia
+                                                        </span>
                                                     )}
                                                 </td>
-                                                <td className="p-3">
-                                                    <span className={`font-extrabold font-mono text-sm px-2.5 py-1 rounded-lg border ${item.qty <= 5 ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : item.qty <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`}>
+                                                <td className="p-3 text-center">
+                                                    <span className={`font-extrabold font-mono text-xs px-2.5 py-1 rounded-lg border ${item.qty <= 5 ? 'bg-rose-50 text-rose-700 border-rose-200' : item.qty <= 10 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
                                                         {item.qty} {item.unit || 'Lembar'}
                                                     </span>
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                                                        {/* JIKA ROLE ADMIN TOKO ATAU OWNER */}
+                                                <td className="p-3 text-center">
+                                                    {item.status === 'Aman' && (
+                                                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                            Aman
+                                                        </span>
+                                                    )}
+                                                    {item.status === 'Menipis' && (
+                                                        <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                            Menipis
+                                                        </span>
+                                                    )}
+                                                    {item.status === 'Pengajuan Proses Restock' && (
+                                                        <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                                                            Pengajuan Restock
+                                                        </span>
+                                                    )}
+                                                    {item.status === 'Sedang Dipesan Supplier' && (
+                                                        <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-[#1b68b0] animate-ping"></span>
+                                                            Sedang Dipesan
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <div className="flex flex-wrap items-center justify-end gap-1.5">
                                                         {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                             <>
                                                                 {item.status === 'Pengajuan Proses Restock' && (
                                                                     <button
                                                                         onClick={() => handleOpenSupplierWaModal(item)}
-                                                                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs transition shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 animate-bounce cursor-pointer"
-                                                                        title="Setujui pengajuan restock dan langsung chat supplier via WhatsApp"
+                                                                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                                        title="Setujui dan chat WA supplier"
                                                                     >
-                                                                        💬 Setujui & Chat WA Supplier
+                                                                        <MessageSquare className="w-3.5 h-3.5" /> WA Supplier
                                                                     </button>
                                                                 )}
 
                                                                 <button
                                                                     onClick={() => handleOpenRestockModal(item)}
-                                                                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-md flex items-center gap-1 cursor-pointer"
+                                                                    className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
                                                                 >
-                                                                    🔄 {item.status === 'Sedang Dipesan Supplier' ? 'Konfirmasi Terima Restock' : 'Restock Barang'}
+                                                                    <RefreshCw className="w-3.5 h-3.5" /> Restock
                                                                 </button>
 
                                                                 <button
                                                                     onClick={() => handleOpenEditStockModal(item)}
-                                                                    className="bg-[#2563EB] hover:bg-blue-600 text-white font-extrabold px-3 py-1.5 rounded-lg text-xs transition shadow-md shadow-blue-500/20 flex items-center gap-1 cursor-pointer"
-                                                                    title="Edit Informasi & Harga Kaca Ini"
+                                                                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                                    title="Edit Informasi Kaca"
                                                                 >
-                                                                    ✏️ Edit
+                                                                    <Edit className="w-3.5 h-3.5" /> Edit
                                                                 </button>
                                                             </>
                                                         )}
 
-                                                        {/* JIKA ROLE ADMIN GUDANG ATAU DIVISI */}
                                                         {(userRole === 'admin_gudang' || userRole.startsWith('divisi_')) && (
                                                             item.status === 'Pengajuan Proses Restock' ? (
-                                                                <span className="text-[11px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1">
-                                                                    ⏳ Pengajuan Menunggu Persetujuan Toko
+                                                                <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-bold">
+                                                                    Menunggu Toko
                                                                 </span>
                                                             ) : item.status === 'Sedang Dipesan Supplier' ? (
                                                                 <button
                                                                     onClick={() => handleOpenRestockModal(item)}
-                                                                    className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black px-2.5 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1 cursor-pointer"
-                                                                    title="Validasi kedatangan fisik lembaran kaca dari supplier ke rak gudang"
+                                                                    className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                    title="Validasi kedatangan fisik lembaran kaca"
                                                                 >
-                                                                    📦 Terima Fisik di Gudang
+                                                                    <Package className="w-3.5 h-3.5" /> Terima Fisik
                                                                 </button>
                                                             ) : (
                                                                 <button
                                                                     onClick={() => handleRequestRestockStatus(item.id)}
-                                                                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-md flex items-center gap-1 cursor-pointer"
-                                                                    title="Ajukan kebutuhan restock barang ini ke Admin Toko"
+                                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                    title="Ajukan kebutuhan restock barang ini"
                                                                 >
-                                                                    📩 Ajukan Stok
+                                                                    <Send className="w-3.5 h-3.5" /> Ajukan Stok
                                                                 </button>
                                                             )
                                                         )}
                                                     </div>
-                                                </td>
-                                                <td className="p-3">
-                                                    {item.status === 'Aman' && (
-                                                        <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                                                            Aman
-                                                        </span>
-                                                    )}
-                                                    {item.status === 'Menipis' && (
-                                                        <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                                                            Menipis
-                                                        </span>
-                                                    )}
-                                                    {item.status === 'Pengajuan Proses Restock' && (
-                                                        <div className="space-y-1">
-                                                            <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
-                                                                Pengajuan Restock Gudang
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {item.status === 'Sedang Dipesan Supplier' && (
-                                                        <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                                                            Sedang Dipesan (WA Supplier)
-                                                        </span>
-                                                    )}
                                                 </td>
                                             </tr>
                                         ))
@@ -320,37 +363,62 @@ export default function ScrapTab({
                 /* TABEL KACA SISA POTONGAN DI RAK */
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-slate-100">✂️ Stok Kaca Sisa Potongan di Rak Storage</h3>
+                        <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
+                            <Scissors className="w-4 h-4 text-[#1b68b0]" />
+                            <span>Stok Kaca Sisa Potongan di Rak Storage</span>
+                        </h3>
                         {(userRole === 'divisi_ht' || userRole === 'admin_gudang') && (
-                            <button onClick={() => setShowScrapModal(true)} className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm cursor-pointer">
-                                ➕ + Input Kaca Sisa Baru
+                            <button 
+                                onClick={() => setShowScrapModal(true)} 
+                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Input Kaca Sisa Baru</span>
                             </button>
                         )}
                     </div>
 
-                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-800/40 text-slate-400 uppercase text-xs">
-                                <tr>
-                                    <th className="p-3">Kode Sisa</th>
-                                    <th className="p-3">Jenis Kaca</th>
-                                    <th className="p-3">Ukuran (P x L)</th>
-                                    <th className="p-3">Lokasi Rak Storage</th>
-                                    <th className="p-3">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-800">
-                                {initialScrap.map(s => (
-                                    <tr key={s.id} className="hover:bg-slate-800/30">
-                                        <td className="p-3 font-bold text-cyan-400">{s.scrap_code}</td>
-                                        <td className="p-3">{s.glass_type}</td>
-                                        <td className="p-3 font-bold">{s.length_cm} x {s.width_cm} cm</td>
-                                        <td className="p-3"><span className="bg-purple-500/20 text-purple-300 px-2.5 py-1 rounded-full text-xs border border-purple-500/30">{s.rak_location}</span></td>
-                                        <td className="p-3"><span className="text-emerald-400 font-bold">{s.status}</span></td>
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+                        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
+                                    <tr>
+                                        <th className="p-3">Kode Sisa</th>
+                                        <th className="p-3">Jenis Kaca</th>
+                                        <th className="p-3">Ukuran (P x L)</th>
+                                        <th className="p-3">Lokasi Rak Storage</th>
+                                        <th className="p-3 text-center">Status</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {initialScrap.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="p-8 text-center text-slate-400 text-xs italic">
+                                                Belum ada data kaca sisa potongan di rak storage.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        initialScrap.map(s => (
+                                            <tr key={s.id} className="hover:bg-slate-50/70 transition">
+                                                <td className="p-3 font-mono font-extrabold text-[#1b68b0]">{s.scrap_code}</td>
+                                                <td className="p-3 font-bold text-[#242222]">{s.glass_type}</td>
+                                                <td className="p-3 font-mono font-bold text-slate-700">{s.length_cm} x {s.width_cm} cm</td>
+                                                <td className="p-3">
+                                                    <span className="bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-purple-200">
+                                                        {s.rak_location}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 text-center">
+                                                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                                                        {s.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

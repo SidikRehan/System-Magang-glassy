@@ -3190,7 +3190,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         onClick={() => setActiveTab('deliveries')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'deliveries' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
-                        <Truck className="w-3.5 h-3.5" /> Pengiriman ({initialOrders.filter(o => o.status === 'pengiriman').length})
+                        <Truck className="w-3.5 h-3.5" /> Pengiriman
                     </button>
                 )}
                 {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
@@ -3206,7 +3206,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         onClick={() => setActiveTab('scrap')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'scrap' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
-                        <Boxes className="w-3.5 h-3.5" /> Stok Kaca
+                        <Boxes className="w-3.5 h-3.5" /> Kaca
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'owner') && (
@@ -3230,7 +3230,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         onClick={() => setActiveTab('supplies')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'supplies' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
-                        <Archive className="w-3.5 h-3.5" /> Perlengkapan
+                        <Archive className="w-3.5 h-3.5" /> Gudang
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
@@ -3238,7 +3238,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         onClick={() => setActiveTab('tools')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'tools' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
-                        <Wrench className="w-3.5 h-3.5" /> Penunjang
+                        <Wrench className="w-3.5 h-3.5" /> Alat
                     </button>
                 )}
                 {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
@@ -3272,23 +3272,23 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         <nav className="space-y-1 flex-1">
                             {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <BarChart3 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Dashboard Utama</span>
+                                    <BarChart3 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Dashboard</span>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
+                                    <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                                 <button onClick={() => { setActiveTab('deliveries'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
-                                        <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>{userRole === 'driver' ? 'Pengiriman Saya' : 'Pengiriman Multi-Alamat'}</span>
+                                        <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengiriman</span>
                                     </div>
                                     <span className="bg-blue-50 text-[#1b68b0] border border-blue-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                                        {initialOrders.filter(o => o.status === 'pengiriman').length} Siap
+                                        {initialOrders.filter(o => o.status === 'pengiriman').length}
                                     </span>
                                 </button>
                             )}
@@ -3296,7 +3296,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('production'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'production' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
-                                        <Sliders className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Disposisi & Divisi</span>
+                                        <Sliders className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Disposisi</span>
                                     </div>
                                 </button>
                             )}
@@ -3304,21 +3304,21 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('scrap'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
-                                        <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Stok Kaca</span>
+                                        <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Kaca</span>
                                     </div>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('suppliers'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Data Supplier</span>
+                                    <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Supplier</span>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('accessories'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
-                                        <Plug className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Aksesoris Konsumen</span>
+                                        <Plug className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Aksesoris</span>
                                     </div>
                                 </button>
                             )}
@@ -3326,31 +3326,31 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('supplies'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
-                                        <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Perlengkapan</span>
+                                        <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Gudang</span>
                                     </div>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat Penunjang</span>
+                                    <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat</span>
                                 </button>
                             )}
 
                             {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('employees'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
-                                        <Users className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengelolaan Karyawan</span>
+                                        <Users className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Karyawan</span>
                                     </div>
                                     <span className="bg-blue-50 text-[#1b68b0] border border-blue-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                                        {employeesList.length} Staff
+                                        {employeesList.length}
                                     </span>
                                 </button>
                             )}
 
                             {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('finance'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance & Laba/Rugi</span>
+                                    <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
                                 </button>
                             )}
                         </nav>
@@ -3388,23 +3388,23 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                     <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
                         {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <BarChart3 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Dashboard Utama</span>
+                                <BarChart3 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Dashboard</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
+                                <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                             <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
-                                    <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>{userRole === 'driver' ? 'Pengiriman Saya' : 'Pengiriman Multi-Alamat'}</span>
+                                    <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengiriman</span>
                                 </div>
                                 <span className="bg-blue-50 text-[#1b68b0] border border-blue-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                                    {initialOrders.filter(o => o.status === 'pengiriman').length} Siap
+                                    {initialOrders.filter(o => o.status === 'pengiriman').length}
                                 </span>
                             </button>
                         )}
@@ -3412,7 +3412,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('production')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'production' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
-                                    <Sliders className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Disposisi & Divisi</span>
+                                    <Sliders className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Disposisi</span>
                                 </div>
                                 {(() => {
                                     if (!isDivisionWorker) return null;
@@ -3434,12 +3434,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
-                                    <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Stok Kaca</span>
+                                    <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Kaca</span>
                                 </div>
                                 {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length > 0 && (
                                     <span className="bg-amber-50 text-amber-700 border border-amber-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
                                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                        {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length} Restock
+                                        {sheetGlasses.filter(g => g.status === 'Pengajuan Proses Restock').length}
                                     </span>
                                 )}
                             </button>
@@ -3447,19 +3447,19 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                         {(userRole === 'admin_toko' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Data Supplier & Mitra</span>
+                                <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Supplier</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
-                                    <Plug className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Aksesoris Konsumen</span>
+                                    <Plug className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Aksesoris</span>
                                 </div>
                                 {accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length > 0 && (
                                     <span className="bg-amber-50 text-amber-700 border border-amber-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
                                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                        {accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length} Restock
+                                        {accessoriesList.filter(a => a.status === 'Menipis' || a.status === 'Habis' || a.status === 'Pengajuan Restock').length}
                                     </span>
                                 )}
                             </button>
@@ -3468,12 +3468,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
-                                    <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Perlengkapan Gudang</span>
+                                    <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Gudang</span>
                                 </div>
                                 {(supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length + warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length) > 0 && (
                                     <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
                                         <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-ping"></span>
-                                        {supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length + warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length} Restock
+                                        {supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length + warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length}
                                     </span>
                                 )}
                             </button>
@@ -3481,24 +3481,24 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat Penunjang</span>
+                                <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat</span>
                             </button>
                         )}
 
                         {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
-                                    <Users className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengelolaan Karyawan</span>
+                                    <Users className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Karyawan</span>
                                 </div>
                                 <span className="bg-blue-50 text-[#1b68b0] border border-blue-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                                    {employeesList.length} Staff
+                                    {employeesList.length}
                                 </span>
                             </button>
                         )}
 
                         {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance & Laba/Rugi</span>
+                                <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
                             </button>
                         )}
                     </nav>

@@ -1,4 +1,9 @@
 import React from 'react';
+import { 
+    Plug, Plus, Search, RefreshCw, Send, 
+    Edit, Trash2, AlertTriangle, CheckCircle2, 
+    Lock, Package, AlertCircle
+} from 'lucide-react';
 
 export default function AccessoriesTab({
     userRole,
@@ -33,168 +38,187 @@ export default function AccessoriesTab({
     );
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6">
+            {/* HEADER TAB */}
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-extrabold text-slate-100">🔌 Stok Aksesoris</h2>
-                    <p className="text-slate-400 text-sm">Kelola inventory aksesoris (lem sealant, lis alumunium, handle, engsel, spider fitting, & karet lis)</p>
+                    <h2 className="text-2xl font-black text-[#242222] flex items-center gap-2.5">
+                        <Plug className="w-6 h-6 text-[#1b68b0]" />
+                        <span>Stok Aksesoris Konsumen</span>
+                    </h2>
+                    <p className="text-slate-500 text-xs font-medium mt-1">
+                        Kelola inventory aksesoris (sealant, lis aluminium, handle pintu, engsel patch fitting, spider fitting, & karet lis).
+                    </p>
                 </div>
             </div>
 
             {/* 4 STATS CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-                    <span className="text-xs text-slate-400 block">Total Item Aksesoris</span>
-                    <h3 className="text-2xl font-black text-cyan-400 mt-1">{accessoriesList.length} Item</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                    <span className="text-xs text-slate-500 font-semibold block">Total Item Aksesoris</span>
+                    <h3 className="text-2xl font-black text-[#1b68b0] mt-1">{accessoriesList.length} Item</h3>
                 </div>
-                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-                    <span className="text-xs text-slate-400 block">Stok Aman</span>
-                    <h3 className="text-2xl font-black text-emerald-400 mt-1">{accessoriesList.filter(a => a.status === 'Aman').length} Item</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                    <span className="text-xs text-slate-500 font-semibold block">Stok Aman</span>
+                    <h3 className="text-2xl font-black text-[#70b03c] mt-1">{accessoriesList.filter(a => a.status === 'Aman').length} Item</h3>
                 </div>
-                <div className={`relative border rounded-xl p-4 transition ${needingRestockCount > 0 ? 'bg-amber-950/20 border-amber-500/60 shadow-lg shadow-amber-500/20 animate-pulse' : 'bg-slate-900/80 border-slate-800'}`}>
-                    {needingRestockCount > 0 && (
-                        <span className="absolute -top-2.5 -right-2 bg-amber-400 text-slate-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border border-amber-300 animate-bounce flex items-center gap-1 font-mono">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
-                            🔔 Perlu Restock
-                        </span>
-                    )}
-                    <span className="text-xs text-slate-400 block">Stok Menipis / Perlu Restock</span>
-                    <h3 className="text-2xl font-black text-amber-400 mt-1">{needingRestockCount} Item</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                    <span className="text-xs text-slate-500 font-semibold block">Stok Menipis / Perlu Restock</span>
+                    <div className="flex items-center gap-2 mt-1">
+                        <h3 className={`text-2xl font-black ${needingRestockCount > 0 ? 'text-amber-600' : 'text-slate-700'}`}>
+                            {needingRestockCount} Item
+                        </h3>
+                        {needingRestockCount > 0 && (
+                            <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                                Perlu Restock
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-                    <span className="text-xs text-slate-400 block">Estimasi Nilai Inventory</span>
-                    <h3 className="text-2xl font-black text-purple-400 mt-1">Rp {Number(estimatedInventoryValue).toLocaleString()}</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                    <span className="text-xs text-slate-500 font-semibold block">Estimasi Nilai Inventory</span>
+                    <h3 className="text-2xl font-black text-[#242222] mt-1">Rp {Number(estimatedInventoryValue).toLocaleString('id-ID')}</h3>
                 </div>
             </div>
 
-            {/* BUTTON TAMBAH AKSESORIS DIRECTLY BELOW CARDS */}
+            {/* BUTTON TAMBAH AKSESORIS */}
             {(userRole === 'admin_toko' || userRole === 'owner') && (
                 <div className="flex justify-start">
                     <button
                         onClick={() => setShowAddAccModal(true)}
-                        className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black px-5 py-2.5 rounded-xl shadow-xl shadow-emerald-500/20 text-sm flex items-center gap-2 transition transform hover:scale-105 border border-cyan-300/50 cursor-pointer"
+                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
                     >
-                        <span className="text-base">✨</span> + Tambah Aksesoris Baru
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Aksesoris Baru</span>
                     </button>
                 </div>
             )}
 
             {/* SEARCH BAR & ACCESSORIES TABLE */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
-                <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-3">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-3">
-                        <h3 className="font-bold text-slate-100 text-base">
-                            📋 Tabel Inventory & Harga Aksesoris Kaca
+                        <h3 className="font-black text-[#242222] text-sm flex items-center gap-2">
+                            <Plug className="w-4 h-4 text-[#1b68b0]" />
+                            <span>Tabel Inventory & Harga Aksesoris Kaca</span>
                         </h3>
-                        <span className="text-xs bg-cyan-500/10 text-cyan-400 px-2.5 py-1 rounded-full border border-cyan-500/20 font-mono font-bold">
+                        <span className="text-xs bg-blue-50 text-[#1b68b0] px-2.5 py-0.5 rounded-full border border-blue-200 font-mono font-bold">
                             {accessoriesList.length} Items
                         </span>
                     </div>
 
-                    <input
-                        type="text"
-                        placeholder="🔍 Cari Kode / Nama Aksesoris..."
-                        value={accSearchTerm}
-                        onChange={e => setAccSearchTerm(e.target.value)}
-                        className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-400 focus:outline-none"
-                    />
+                    <div className="relative">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari Kode / Nama Aksesoris..."
+                            value={accSearchTerm}
+                            onChange={e => setAccSearchTerm(e.target.value)}
+                            className="bg-white border border-slate-300 rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#242222] focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] focus:outline-none w-64"
+                        />
+                    </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-800/40 text-slate-400 uppercase text-xs">
+                        <thead className="bg-slate-50/80 text-slate-500 uppercase text-[11px] font-bold border-b border-slate-200">
                             <tr>
                                 <th className="p-3">Kode Barang</th>
                                 <th className="p-3">Nama Aksesoris</th>
                                 <th className="p-3">Harga Beli & Jual</th>
                                 <th className="p-3">Stok Quantity</th>
                                 <th className="p-3">Status</th>
-                                <th className="p-3">Aksi</th>
+                                <th className="p-3 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-slate-100 text-xs">
                             {filteredAccessories.map(acc => (
-                                <tr key={acc.id} className="hover:bg-slate-800/30">
-                                    <td className="p-3 font-extrabold text-cyan-400 font-mono">
+                                <tr key={acc.id} className="hover:bg-slate-50/70 transition">
+                                    <td className="p-3 font-extrabold text-[#1b68b0] font-mono text-xs">
                                         {acc.acc_code}
                                     </td>
-                                    <td className="p-3 font-bold text-slate-100">
-                                        <div>{acc.name}</div>
+                                    <td className="p-3 font-bold text-[#242222]">
+                                        <div className="flex items-center gap-1.5">
+                                            <Package className="w-3.5 h-3.5 text-slate-400" />
+                                            <span>{acc.name}</span>
+                                        </div>
                                     </td>
                                     <td className="p-3 text-xs">
                                         {canViewPricing ? (
                                             <div className="space-y-0.5 font-mono">
-                                                <div className="text-slate-400">Beli: <span className="text-amber-400 font-bold">Rp {Number(acc.buy_price || 0).toLocaleString()}</span></div>
-                                                <div className="text-slate-400">Jual: <span className="text-emerald-400 font-bold">Rp {Number(acc.sell_price || 0).toLocaleString()}</span></div>
+                                                <div className="text-slate-500 text-[11px]">Beli: <span className="text-amber-700 font-bold">Rp {Number(acc.buy_price || 0).toLocaleString('id-ID')}</span></div>
+                                                <div className="text-slate-700 font-bold">Jual: <span className="text-emerald-700 font-black">Rp {Number(acc.sell_price || 0).toLocaleString('id-ID')}</span></div>
                                             </div>
                                         ) : (
-                                            <span className="text-slate-500 text-xs italic">🔒 Rahasia</span>
+                                            <span className="text-slate-400 text-xs italic flex items-center gap-1">
+                                                <Lock className="w-3 h-3" /> Rahasia
+                                            </span>
                                         )}
                                     </td>
                                     <td className="p-3">
-                                        <span className={`font-extrabold font-mono text-sm px-2.5 py-1 rounded-lg border ${acc.qty <= 5 ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : acc.qty <= 15 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`}>
+                                        <span className={`font-extrabold font-mono text-xs px-2.5 py-1 rounded-lg border ${acc.qty <= 5 ? 'bg-rose-50 text-rose-700 border-rose-200' : acc.qty <= 15 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
                                             {acc.qty} {acc.unit || 'Pcs'}
                                         </span>
                                     </td>
                                     <td className="p-3">
                                         {acc.status === 'Aman' && (
-                                            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                                 Aman
                                             </span>
                                         )}
                                         {acc.status === 'Menipis' && (
-                                            <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                                            <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                                 Menipis
                                             </span>
                                         )}
                                         {acc.status === 'Habis' && (
-                                            <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                                            <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
                                                 Habis
                                             </span>
                                         )}
                                         {acc.status === 'Pengajuan Restock' && (
-                                            <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                                                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+                                            <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
                                                 Pengajuan Restock
                                             </span>
                                         )}
                                     </td>
-                                    <td className="p-3">
-                                        <div className="flex flex-wrap items-center gap-2">
+                                    <td className="p-3 text-center">
+                                        <div className="flex items-center justify-center gap-1.5">
                                             <button
                                                 onClick={() => { setSelectedAccItem(acc); setAccRestockQty(10); setShowRestockAccModal(true); }}
-                                                className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-2.5 py-1.5 rounded-lg text-xs transition shadow-md shadow-cyan-500/20 cursor-pointer"
+                                                className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
                                                 title="Restock Aksesoris Masuk"
                                             >
-                                                🔄 Restock
+                                                <RefreshCw className="w-3.5 h-3.5" /> Restock
                                             </button>
                                             {acc.status !== 'Pengajuan Restock' && (
                                                 <button
                                                     onClick={() => handleRequestAccRestockStatus(acc.id)}
-                                                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-md flex items-center gap-1 cursor-pointer"
+                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
                                                     title="Ajukan kebutuhan restock aksesoris ini"
                                                 >
-                                                    📩 Ajukan Stok
+                                                    <Send className="w-3.5 h-3.5" /> Ajukan
                                                 </button>
                                             )}
                                             {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                 <>
                                                     <button
                                                         onClick={() => handleOpenEditAccModal(acc)}
-                                                        className="bg-[#2563EB] hover:bg-blue-600 text-white font-extrabold px-2.5 py-1.5 rounded-lg text-xs transition shadow-md shadow-blue-500/20 cursor-pointer"
+                                                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
                                                         title="Edit Aksesoris"
                                                     >
-                                                        ✏️ Edit
+                                                        <Edit className="w-3.5 h-3.5" /> Edit
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteAcc(acc.id)}
-                                                        className="bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 px-2 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
+                                                        className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 p-1.5 rounded-lg text-xs font-bold transition shadow-2xs cursor-pointer"
                                                         title="Hapus Aksesoris"
                                                     >
-                                                        🗑️
+                                                        <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </>
                                             )}
@@ -204,7 +228,7 @@ export default function AccessoriesTab({
                             ))}
                             {filteredAccessories.length === 0 && (
                                 <tr>
-                                    <td colSpan="6" className="p-6 text-center text-slate-500 text-xs italic">
+                                    <td colSpan="6" className="p-8 text-center text-slate-400 text-xs italic">
                                         Tidak ada item aksesoris yang sesuai dengan pencarian.
                                     </td>
                                 </tr>

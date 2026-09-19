@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
+import { 
+    Truck, User, Calendar, MapPin, ClipboardList, 
+    Printer, Fuel, CreditCard, CheckSquare, XSquare, 
+    Plus, AlertCircle, FileText, CheckCircle2, Phone, 
+    ShieldCheck, Sparkles, Send, Clock, Camera
+} from 'lucide-react';
 import { isDriverMatch } from '@/Utils/dashboardHelpers';
 
 export default function DeliveriesTab({
@@ -76,20 +82,23 @@ export default function DeliveriesTab({
 
     return (
         <div className="space-y-6">
+            {/* HEADER TAB */}
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
-                        🚚 {userRole === 'driver' ? `Pengiriman Saya (${userName})` : 'Penugasan Pengiriman Multi-Alamat & Surat Jalan 4 Warna'}
+                    <h2 className="text-2xl font-black text-[#242222] flex items-center gap-2.5">
+                        <Truck className="w-6 h-6 text-[#1b68b0]" />
+                        <span>{userRole === 'driver' ? `Pengiriman Saya (${userName})` : 'Penugasan Pengiriman Multi-Alamat & Surat Jalan'}</span>
                     </h2>
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-slate-500 text-xs font-medium mt-1">
                         {userRole === 'driver' 
-                            ? `Daftar penugasan trip & manifest pengiriman alamat konsumen yang ditugaskan khusus untuk akun supir Anda (${userName}).`
-                            : 'Admin dapat memilih beberapa alamat/SPO konsumen sekaligus untuk diangkut 1 armada & supir, serta mencetak Rute Manifest Multi-Stop.'}
+                            ? `Daftar penugasan trip & manifest pengiriman alamat konsumen khusus untuk akun supir Anda (${userName}).`
+                            : 'Kelola alokasi armada multi-stop, cetak rute manifest surat jalan 4 warna, dan pantau pengiriman.'}
                     </p>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs font-bold text-cyan-400 flex items-center gap-2">
-                    <span>🚚 Order Siap / Sedang Kirim:</span>
-                    <span className="bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                <div className="bg-white border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold text-[#242222] flex items-center gap-2 shadow-xs">
+                    <Truck className="w-4 h-4 text-[#1b68b0]" />
+                    <span className="text-slate-600">Order Siap / Kirim:</span>
+                    <span className="bg-blue-50 text-[#1b68b0] px-2 py-0.5 rounded-full font-mono font-black border border-blue-200">
                         {userRole === 'driver'
                             ? initialOrders.filter(o => isDriverMatch(o.assigned_driver || o.driver_name, userName) && (o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan')).length
                             : initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan').length} SPO
@@ -112,44 +121,44 @@ export default function DeliveriesTab({
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* WIDGET 1: SERAH TERIMA UANG COD SURAT JALAN MERAH */}
-                        <div className="bg-slate-900/90 border border-rose-500/40 rounded-2xl p-5 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                        <div className="bg-white border border-rose-200 rounded-2xl p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
                             <div className="space-y-3">
-                                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                                     <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
-                                        <h3 className="font-extrabold text-slate-100 text-sm flex items-center gap-1.5">
-                                            🔴 Tagihan COD Surat Jalan Merah Anda
+                                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                                        <h3 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
+                                            <CreditCard className="w-4 h-4 text-rose-600" /> Tagihan COD Surat Jalan Merah
                                         </h3>
                                     </div>
-                                    <span className="text-[11px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold">
+                                    <span className="text-[11px] font-mono bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full font-bold">
                                         {myCodOrders.length} Order COD
                                     </span>
                                 </div>
 
                                 <div>
-                                    <span className="text-xs text-slate-400">Total Uang COD Ditagih di Lapangan:</span>
-                                    <div className="text-2xl font-black text-rose-400 font-mono mt-0.5">
+                                    <span className="text-xs text-slate-500 font-medium">Total Uang COD Ditagih di Lapangan:</span>
+                                    <div className="text-2xl font-black text-rose-600 font-mono mt-0.5">
                                         Rp {totalPendingCod.toLocaleString('id-ID')}
                                     </div>
                                 </div>
 
                                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                                     {myCodOrders.length === 0 ? (
-                                        <p className="text-xs text-slate-500 italic py-2">Tidak ada tagihan COD aktif untuk rute supir Anda saat ini.</p>
+                                        <p className="text-xs text-slate-400 italic py-3 text-center">Tidak ada tagihan COD aktif untuk rute supir Anda saat ini.</p>
                                     ) : (
                                         myCodOrders.map(ord => {
                                             const sisa = Math.max(0, Number(ord.total_price || 0) - Number(ord.paid_amount || 0));
                                             return (
-                                                <div key={ord.id} className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex justify-between items-center text-xs">
+                                                <div key={ord.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs">
                                                     <div>
-                                                        <div className="font-bold text-slate-200">#{ord.spo_number} - {ord.customer_name}</div>
-                                                        <div className="text-rose-400 font-mono font-bold mt-0.5">Tagihan: Rp {sisa.toLocaleString('id-ID')}</div>
+                                                        <div className="font-black text-[#242222]">#{ord.spo_number} - {ord.customer_name}</div>
+                                                        <div className="text-rose-600 font-mono font-bold mt-0.5">Tagihan: Rp {sisa.toLocaleString('id-ID')}</div>
                                                     </div>
                                                     <button
                                                         onClick={() => handleOpenCodModal(ord)}
-                                                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition shadow-md flex items-center gap-1 cursor-pointer"
+                                                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer text-xs"
                                                     >
-                                                        💵 Setor Kas ke Kasir
+                                                        <CreditCard className="w-3.5 h-3.5" /> Setor Kas ke Kasir
                                                     </button>
                                                 </div>
                                             );
@@ -157,39 +166,40 @@ export default function DeliveriesTab({
                                     )}
                                 </div>
                             </div>
-                            <div className="text-[11px] text-slate-400 border-t border-slate-800 pt-2 mt-3">
-                                💡 Serahkan uang tunai pelunasan ke Kasir Toko agar surat jalan merah ditutup dan status order lunas.
+                            <div className="text-[11px] text-slate-500 border-t border-slate-100 pt-2.5 mt-3 flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span>Serahkan uang tunai pelunasan ke Kasir Toko agar surat jalan merah ditutup dan status order lunas.</span>
                             </div>
                         </div>
 
                         {/* WIDGET 2: KLAIM BIAYA ARMADA (BBM SOLAR / TOL / PARKIR) */}
-                        <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                        <div className="bg-white border border-amber-200 rounded-2xl p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
                             <div className="space-y-3">
-                                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-base">⛽</span>
-                                        <h3 className="font-extrabold text-slate-100 text-sm">
+                                        <Fuel className="w-4 h-4 text-amber-600" />
+                                        <h3 className="font-extrabold text-[#242222] text-sm">
                                             Klaim Biaya Armada (BBM Solar & Tol)
                                         </h3>
                                     </div>
                                     <button
                                         onClick={() => setShowDriverClaimModal(true)}
-                                        className="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-lg text-xs transition shadow-md shadow-amber-400/20 flex items-center gap-1 cursor-pointer"
+                                        className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                                     >
-                                        ➕ Ajukan Klaim Baru
+                                        <Plus className="w-3.5 h-3.5" /> Ajukan Klaim
                                     </button>
                                 </div>
 
                                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                                     {myClaims.length === 0 ? (
-                                        <p className="text-xs text-slate-500 italic py-2">Belum ada pengajuan klaim BBM / Tol untuk akun Anda.</p>
+                                        <p className="text-xs text-slate-400 italic py-3 text-center">Belum ada pengajuan klaim BBM / Tol untuk akun Anda.</p>
                                     ) : (
                                         myClaims.map(clm => (
-                                            <div key={clm.id} className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex justify-between items-center text-xs">
+                                            <div key={clm.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs">
                                                 <div>
-                                                    <div className="font-bold text-slate-200">{clm.title}</div>
-                                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5 flex flex-wrap items-center gap-2">
-                                                        <span className="text-amber-300 font-bold">Rp {Number(clm.amount || 0).toLocaleString('id-ID')}</span>
+                                                    <div className="font-bold text-[#242222]">{clm.title}</div>
+                                                    <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex flex-wrap items-center gap-2">
+                                                        <span className="text-amber-700 font-black">Rp {Number(clm.amount || 0).toLocaleString('id-ID')}</span>
                                                         <span>• {clm.vehicle_plate || 'Armada'}</span>
                                                         <span>• {clm.transaction_date}</span>
                                                     </div>
@@ -197,15 +207,16 @@ export default function DeliveriesTab({
                                                         const pList = getPhotoList(clm.receipt_photo_path);
                                                         if (pList.length === 0) return null;
                                                         return (
-                                                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                                                 {pList.map((p, pIdx) => (
                                                                     <button
                                                                         key={pIdx}
                                                                         type="button"
                                                                         onClick={() => handleOpenSketchLightbox(p, `Struk Nota #${clm.transaction_code} (${pIdx + 1}/${pList.length})`)}
-                                                                        className="text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1 cursor-pointer"
+                                                                        className="text-[10px] bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-lg font-mono font-bold flex items-center gap-1 cursor-pointer"
                                                                     >
-                                                                        <span>📷 Struk #{pIdx + 1}</span>
+                                                                        <Camera className="w-3 h-3 text-slate-500" />
+                                                                        <span>Struk #{pIdx + 1}</span>
                                                                     </button>
                                                                 ))}
                                                             </div>
@@ -214,17 +225,17 @@ export default function DeliveriesTab({
                                                 </div>
                                                 <div>
                                                     {clm.approval_status === 'pending' && (
-                                                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
-                                                            ⏳ Menunggu
+                                                        <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" /> Menunggu
                                                         </span>
                                                     )}
                                                     {clm.approval_status === 'approved' && (
-                                                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
-                                                            ✅ Disetujui
+                                                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1">
+                                                            <CheckCircle2 className="w-3 h-3" /> Disetujui
                                                         </span>
                                                     )}
                                                     {clm.approval_status === 'rejected' && (
-                                                        <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+                                                        <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
                                                             ✕ Ditolak
                                                         </span>
                                                     )}
@@ -234,13 +245,13 @@ export default function DeliveriesTab({
                                     )}
                                 </div>
                             </div>
-                            <div className="text-[11px] text-slate-400 border-t border-slate-800 pt-2 mt-3 flex justify-between items-center">
-                                <span>Total Klaim Saya: <strong className="text-amber-300">{myClaims.length} Pengajuan</strong></span>
+                            <div className="text-[11px] text-slate-500 border-t border-slate-100 pt-2.5 mt-3 flex justify-between items-center">
+                                <span>Total Klaim: <strong className="text-[#242222]">{myClaims.length} Pengajuan</strong></span>
                                 <button
                                     onClick={() => setShowDriverClaimModal(true)}
-                                    className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+                                    className="text-[#1b68b0] hover:underline font-bold cursor-pointer"
                                 >
-                                    Klaim BBM / Parkir
+                                    + Klaim BBM / Parkir
                                 </button>
                             </div>
                         </div>
@@ -250,59 +261,59 @@ export default function DeliveriesTab({
 
             {/* PANEL ATAS: PENUGASAN MULTI-ALAMAT ARMADA (KHUSUS ADMIN TOKO / WMS LOGISTICS, BUKAN DRIVER) */}
             {userRole !== 'driver' && (
-                <div className="bg-slate-900/90 border-2 border-cyan-500/40 rounded-2xl p-5 shadow-2xl space-y-4">
-                    <div className="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-2">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+                    <div className="flex flex-wrap justify-between items-center border-b border-slate-100 pb-3 gap-2">
                         <div className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
-                            <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
-                                📋 Form Penugasan Rute Mobil Multi-Alamat (Admin Toko / WMS Logistics)
+                            <ClipboardList className="w-5 h-5 text-[#1b68b0]" />
+                            <h3 className="text-sm font-black text-[#242222]">
+                                Form Penugasan Rute Mobil Multi-Alamat (WMS Logistics)
                             </h3>
                         </div>
-                        <span className="text-xs bg-cyan-500/10 text-cyan-300 px-3 py-1 rounded-full border border-cyan-500/30 font-bold">
-                            Pilih {selectedBatchOrderIds.length} Alamat → Tetapkan Supir & Mobil
+                        <span className="text-xs bg-blue-50 text-[#1b68b0] px-3 py-1 rounded-full border border-blue-200 font-bold">
+                            {selectedBatchOrderIds.length} Alamat Dipilih
                         </span>
                     </div>
 
                     <form onSubmit={handleAssignBatchDeliverySubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                         {/* 1. PILIH SUPIR / DRIVER */}
                         <div>
-                            <label className="text-slate-300 block mb-1 font-bold">1. Pilih Supir / Driver Armada:</label>
+                            <label className="text-slate-700 block mb-1.5 font-bold">1. Supir / Driver Armada:</label>
                             <select
                                 value={dispatchDriverInput}
                                 onChange={e => setDispatchDriverInput(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
+                                className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
                             >
-                                <option value="Pak Budi (Supir Utama DC)">👨‍✈️ Pak Budi (Supir Utama DC)</option>
-                                <option value="Pak Mulyadi (Driver Engkel)">👨‍✈️ Pak Mulyadi (Driver Engkel)</option>
-                                <option value="Pak Asep (Driver L300)">👨‍✈️ Pak Asep (Driver Pick Up)</option>
-                                <option value="Pak Hendra (Driver Subcon)">👨‍✈️ Pak Hendra (Driver Subcon)</option>
+                                <option value="Pak Budi (Supir Utama DC)">Pak Budi (Supir Utama DC)</option>
+                                <option value="Pak Mulyadi (Driver Engkel)">Pak Mulyadi (Driver Engkel)</option>
+                                <option value="Pak Asep (Driver L300)">Pak Asep (Driver Pick Up)</option>
+                                <option value="Pak Hendra (Driver Subcon)">Pak Hendra (Driver Subcon)</option>
                             </select>
                         </div>
 
                         {/* 2. PILIH KENDARAAN & PLAT */}
                         <div>
-                            <label className="text-slate-300 block mb-1 font-bold">2. Jenis & No. Plat Mobil:</label>
+                            <label className="text-slate-700 block mb-1.5 font-bold">2. Jenis & No. Plat Mobil:</label>
                             <select
                                 value={dispatchVehicleInput}
                                 onChange={e => setDispatchVehicleInput(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
+                                className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
                             >
-                                <option value="Engkel Box (D 8472 AB)">🚚 Engkel Box (D 8472 AB)</option>
-                                <option value="Pick Up L300 (D 8192 XY)">🛻 Pick Up L300 (D 8192 XY)</option>
-                                <option value="Truck Engkel Long (D 8011 GH)">🚛 Truck Engkel Long (D 8011 GH)</option>
-                                <option value="Armada Subcon (B 9920 FK)">🚚 Armada Subcon (B 9920 FK)</option>
+                                <option value="Engkel Box (D 8472 AB)">Engkel Box (D 8472 AB)</option>
+                                <option value="Pick Up L300 (D 8192 XY)">Pick Up L300 (D 8192 XY)</option>
+                                <option value="Truck Engkel Long (D 8011 GH)">Truck Engkel Long (D 8011 GH)</option>
+                                <option value="Armada Subcon (B 9920 FK)">Armada Subcon (B 9920 FK)</option>
                             </select>
                         </div>
 
                         {/* 3. CATATAN INTRO PENGIRIMAN */}
                         <div>
-                            <label className="text-slate-300 block mb-1 font-bold">3. Catatan Rute / Instruksi Supir:</label>
+                            <label className="text-slate-700 block mb-1.5 font-bold">3. Catatan Rute / Instruksi Supir:</label>
                             <input
                                 type="text"
                                 value={dispatchNotesInput}
                                 onChange={e => setDispatchNotesInput(e.target.value)}
                                 placeholder="Contoh: Dahulukan Alamat Antapani sebelum jam 12..."
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-cyan-400"
+                                className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0]"
                             />
                         </div>
 
@@ -311,13 +322,14 @@ export default function DeliveriesTab({
                             <button
                                 type="submit"
                                 disabled={selectedBatchOrderIds.length === 0}
-                                className={`w-full font-extrabold px-4 py-2.5 rounded-lg text-xs shadow-lg flex items-center justify-center gap-2 transition ${
+                                className={`w-full font-bold px-4 py-2.5 rounded-xl text-xs shadow-xs flex items-center justify-center gap-2 transition ${
                                     selectedBatchOrderIds.length > 0
-                                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-cyan-500/20 cursor-pointer transform hover:-translate-y-0.5'
-                                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                        ? 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer'
+                                        : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                                 }`}
                             >
-                                🚀 Tugaskan Mobil ke {selectedBatchOrderIds.length} Alamat Terpilih
+                                <Send className="w-3.5 h-3.5" />
+                                <span>Tugaskan Mobil ({selectedBatchOrderIds.length} Alamat)</span>
                             </button>
                         </div>
                     </form>
@@ -327,21 +339,22 @@ export default function DeliveriesTab({
             {/* SECTION DAFTAR TRIP MOBIL AKTIF & RUTE MANIFEST MULTI-STOP */}
             <div className="space-y-4">
                 <div className="flex flex-wrap justify-between items-center gap-2">
-                    <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
-                        🚛 {userRole === 'driver' ? `Daftar Penugasan Trip Akun Supir: ${userName}` : 'Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif'}
+                    <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
+                        <Truck className="w-5 h-5 text-[#1b68b0]" />
+                        <span>{userRole === 'driver' ? `Daftar Penugasan Trip Akun Supir: ${userName}` : 'Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif'}</span>
                     </h3>
                     <div className="flex flex-wrap gap-2 text-xs">
                         {userRole === 'driver' ? (
-                            <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                                👤 Akun Supir Aktif: {userName}
+                            <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
+                                <User className="w-3.5 h-3.5" /> Akun Supir: {userName}
                             </span>
                         ) : (
                             <>
-                                <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                                    🏭 Admin Gudang: Siap Cetak SJ 4 Warna & Gate Pass
+                                <span className="bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                                    Admin Gudang: Siap Cetak SJ & Gate Pass
                                 </span>
-                                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                                    🚚 Divisi Supir: Terbit di Tugas Pengiriman Driver
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                                    Divisi Supir: Terbit di Tugas Driver
                                 </span>
                             </>
                         )}
@@ -388,7 +401,7 @@ export default function DeliveriesTab({
 
                     if (trips.length === 0) {
                         return (
-                            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-8 text-center text-slate-400">
+                            <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 shadow-xs">
                                 {userRole === 'driver' 
                                     ? `Belum ada trip pengiriman yang ditugaskan untuk ${userName}. Silakan konfirmasi ke Admin Gudang.`
                                     : 'Belum ada trip pengiriman aktif. Silakan centang alamat pada tabel di bawah untuk menugaskan armada!'}
@@ -399,19 +412,20 @@ export default function DeliveriesTab({
                     return (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             {trips.map((trip, idx) => (
-                                <div key={idx} className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-5 shadow-xl space-y-3 relative">
-                                    <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+                                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 relative">
+                                    <div className="flex flex-wrap justify-between items-start border-b border-slate-100 pb-3 gap-2">
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="bg-cyan-500/20 text-cyan-300 font-mono font-extrabold text-xs px-2.5 py-0.5 rounded border border-cyan-500/30">
+                                                <span className="bg-blue-50 text-[#1b68b0] font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
                                                     {trip.trip_code}
                                                 </span>
-                                                <h4 className="font-extrabold text-slate-100 text-sm">
-                                                    👨‍✈️ {trip.driver_name}
+                                                <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
+                                                    <User className="w-3.5 h-3.5 text-slate-500" />
+                                                    <span>{trip.driver_name}</span>
                                                 </h4>
                                             </div>
-                                            <p className="text-xs text-slate-400 mt-0.5">
-                                                🚚 {trip.vehicle_plate} — <strong className="text-cyan-400">{trip.orders.length} Alamat Tujuan</strong>
+                                            <p className="text-xs text-slate-500 mt-1">
+                                                {trip.vehicle_plate} — <strong className="text-[#1b68b0]">{trip.orders.length} Alamat Tujuan</strong>
                                             </p>
                                         </div>
                                         <div className="flex flex-wrap gap-1.5 justify-end">
@@ -420,18 +434,18 @@ export default function DeliveriesTab({
                                                     setSelectedBatchWaybillTrip(trip);
                                                     setShowBatchWaybillModal(true);
                                                 }}
-                                                className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                             >
-                                                🖨️ Cetak Semua SJ Trip
+                                                <Printer className="w-3.5 h-3.5 text-[#1b68b0]" /> Cetak Semua SJ
                                             </button>
                                             <button
                                                 onClick={() => {
                                                     setSelectedTripDataForModal(trip);
                                                     setShowMultiAddressModal(true);
                                                 }}
-                                                className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                             >
-                                                🖨️ Manifest Rute Multi-Alamat
+                                                <FileText className="w-3.5 h-3.5 text-cyan-600" /> Manifest Rute
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -445,9 +459,9 @@ export default function DeliveriesTab({
                                                     });
                                                     setShowBarangKeluarModal(true);
                                                 }}
-                                                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                             >
-                                                📋 Gate Pass Mobil
+                                                <ClipboardList className="w-3.5 h-3.5 text-[#70b03c]" /> Gate Pass
                                             </button>
                                         </div>
                                     </div>
@@ -457,29 +471,30 @@ export default function DeliveriesTab({
                                         {trip.orders.map((ord, stopIdx) => {
                                             const isLunas = ord.payment_status === 'Lunas';
                                             return (
-                                                <div key={ord.id} className="flex items-start gap-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
-                                                    <span className="bg-cyan-950 text-cyan-300 border border-cyan-700/50 text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 mt-0.5">
+                                                <div key={ord.id} className="flex items-start gap-2.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+                                                    <span className="bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/20 text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5">
                                                         STOP #{stopIdx + 1}
                                                     </span>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex justify-between items-center gap-2">
-                                                            <span className="font-extrabold text-slate-200 truncate">
+                                                            <span className="font-bold text-[#242222] truncate">
                                                                 SPO: {ord.spo_number} — {ord.customer_name}
                                                             </span>
-                                                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded shrink-0 font-bold ${isLunas ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                                                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
                                                                 {isLunas ? 'LUNAS' : 'COD'}
                                                             </span>
                                                         </div>
-                                                        <p className="text-slate-400 text-[11px] truncate mt-0.5">
-                                                            📍 {ord.customer_address || '-'} ({ord.customer_phone})
+                                                        <p className="text-slate-500 text-[11px] truncate mt-1 flex items-center gap-1">
+                                                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                            <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
                                                         </p>
                                                     </div>
                                                     <button
                                                         onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
-                                                        className="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-1 rounded text-[11px] font-bold transition shrink-0 cursor-pointer"
-                                                        title="Cetak Surat Jalan 4 Warna khusus Alamat Ini"
+                                                        className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
+                                                        title="Cetak Surat Jalan khusus Alamat Ini"
                                                     >
-                                                        🖨️ SJ
+                                                        <Printer className="w-3 h-3" /> SJ
                                                     </button>
                                                 </div>
                                             );
@@ -493,38 +508,46 @@ export default function DeliveriesTab({
             </div>
 
             {/* TABEL PILIHAN SPO & ALAMAT PENGIRIMAN */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
-                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-3">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
                     <div>
-                        <h3 className="text-base font-extrabold text-slate-100">
-                            📦 Daftar Order SPO Siap Kirim & Pilihan Alamat Tujuan
+                        <h3 className="text-sm font-black text-[#242222]">
+                            Daftar Order SPO Siap Kirim & Pilihan Alamat Tujuan
                         </h3>
-                        <p className="text-xs text-slate-400">Centang kotak pada sebelah kiri nomor SPO untuk memilih beberapa alamat sekaligus yang akan dikirim mobil.</p>
+                        <p className="text-xs text-slate-500 font-medium">Centang kotak pada sebelah kiri nomor SPO untuk memilih beberapa alamat sekaligus yang akan dikirim armada.</p>
                     </div>
                     <button
                         type="button"
                         onClick={toggleSelectAllReadyOrders}
-                        className="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
+                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shadow-2xs flex items-center gap-1.5"
                     >
-                        {selectedBatchOrderIds.length > 0 ? '❌ Batal Pilih Semua' : '☑️ Pilih Semua Order'}
+                        {selectedBatchOrderIds.length > 0 ? (
+                            <>
+                                <XSquare className="w-3.5 h-3.5 text-rose-500" /> Batal Pilih Semua
+                            </>
+                        ) : (
+                            <>
+                                <CheckSquare className="w-3.5 h-3.5 text-[#1b68b0]" /> Pilih Semua Order
+                            </>
+                        )}
                     </button>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-800/60 text-slate-400 uppercase text-xs">
+                        <thead className="bg-slate-50/80 text-slate-500 uppercase text-[11px] font-bold border-b border-slate-200">
                             <tr>
                                 <th className="p-3 w-10 text-center">Pilih</th>
                                 <th className="p-3">Nomor SPO</th>
-                                <th className="p-3">Nama Cust & Telp</th>
+                                <th className="p-3">Customer & Telp</th>
                                 <th className="p-3">Alamat Tujuan Pengiriman</th>
                                 <th className="p-3">Spesifikasi Barang Kaca</th>
-                                <th className="p-3">Supir & Mobil Assigned</th>
-                                <th className="p-3">Status Payment</th>
-                                <th className="p-3 text-center">Aksi Dokumen</th>
+                                <th className="p-3">Supir & Mobil</th>
+                                <th className="p-3">Status Pembayaran</th>
+                                <th className="p-3 text-center">Dokumen</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-slate-100 text-xs">
                             {(() => {
                                 const tableOrders = initialOrders
                                     .filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan' || o.status === 'selesai')
@@ -533,7 +556,7 @@ export default function DeliveriesTab({
                                 if (tableOrders.length === 0) {
                                     return (
                                         <tr>
-                                            <td colSpan="8" className="p-8 text-center text-slate-500 italic">
+                                            <td colSpan="8" className="p-8 text-center text-slate-400 italic">
                                                 {userRole === 'driver'
                                                     ? `Belum ada order pengiriman yang ditugaskan oleh Admin Toko untuk supir ${userName}.`
                                                     : 'Belum ada order SPO yang siap kirim.'}
@@ -557,43 +580,43 @@ export default function DeliveriesTab({
                                     const isLunas = ord.payment_status === 'Lunas';
 
                                     return (
-                                        <tr key={ord.id} className={`transition ${isSelected ? 'bg-cyan-950/40 border-l-4 border-l-cyan-400' : 'hover:bg-slate-800/30'}`}>
+                                        <tr key={ord.id} className={`transition ${isSelected ? 'bg-blue-50/60 border-l-4 border-l-[#1b68b0]' : 'hover:bg-slate-50/70'}`}>
                                             <td className="p-3 text-center">
                                                 <input
                                                     type="checkbox"
                                                     checked={isSelected}
                                                     onChange={() => toggleSelectOrderForBatch(ord.id)}
-                                                    className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 bg-slate-950 border-slate-700 cursor-pointer"
+                                                    className="w-4 h-4 rounded text-[#1b68b0] focus:ring-[#1b68b0] border-slate-300 cursor-pointer"
                                                 />
                                             </td>
 
                                             <td className="p-3">
-                                                <div className="font-extrabold text-cyan-400 font-mono text-sm">
+                                                <div className="font-extrabold text-[#1b68b0] font-mono text-xs">
                                                     {ord.spo_number}
                                                 </div>
                                                 {ord.trip_code && (
-                                                    <div className="text-[10px] text-cyan-300 font-mono mt-0.5">
+                                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">
                                                         Trip: {ord.trip_code}
                                                     </div>
                                                 )}
                                             </td>
 
                                             <td className="p-3">
-                                                <div className="font-bold text-slate-100">{ord.customer_name}</div>
-                                                <div className="text-xs text-cyan-300 font-mono mt-0.5">{ord.customer_phone}</div>
+                                                <div className="font-bold text-[#242222]">{ord.customer_name}</div>
+                                                <div className="text-[11px] text-slate-500 font-mono mt-0.5">{ord.customer_phone}</div>
                                             </td>
 
                                             <td className="p-3 max-w-xs">
-                                                <div className="text-xs text-slate-200 font-medium leading-snug line-clamp-2" title={ord.customer_address}>
-                                                    📍 {ord.customer_address || 'Alamat lokasi pengiriman'}
+                                                <div className="text-xs text-slate-600 font-medium leading-snug line-clamp-2" title={ord.customer_address}>
+                                                    {ord.customer_address || 'Alamat lokasi pengiriman'}
                                                 </div>
                                             </td>
 
                                             <td className="p-3 space-y-1 max-w-xs">
                                                 {itemsList.map((it, idx) => (
-                                                    <div key={idx} className="bg-slate-950/60 p-1.5 rounded border border-slate-800 text-xs flex justify-between gap-2">
-                                                        <span className="font-bold text-cyan-300 truncate">#{idx + 1}. {it.glass_type}</span>
-                                                        <span className="font-mono text-slate-300 text-[11px] shrink-0">{it.qty || 1} Pcs</span>
+                                                    <div key={idx} className="bg-slate-50 p-1.5 rounded-lg border border-slate-200 text-xs flex justify-between gap-2">
+                                                        <span className="font-semibold text-slate-700 truncate">#{idx + 1}. {it.glass_type}</span>
+                                                        <span className="font-mono text-[#242222] font-bold text-[11px] shrink-0">{it.qty || 1} Pcs</span>
                                                     </div>
                                                 ))}
                                             </td>
@@ -601,23 +624,23 @@ export default function DeliveriesTab({
                                             <td className="p-3">
                                                 {ord.assigned_driver ? (
                                                     <>
-                                                        <div className="font-bold text-slate-100 text-xs">
-                                                            👨‍✈️ {ord.assigned_driver}
+                                                        <div className="font-bold text-[#242222] text-xs">
+                                                            {ord.assigned_driver}
                                                         </div>
-                                                        <div className="text-[11px] text-cyan-300 font-semibold mt-0.5">
-                                                            🚚 {ord.assigned_vehicle}
+                                                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                                            {ord.assigned_vehicle}
                                                         </div>
                                                     </>
                                                 ) : (
-                                                    <span className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold inline-block">
-                                                        ⏳ Belum Ditugaskan
+                                                    <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-bold inline-block">
+                                                        Belum Ditugaskan
                                                     </span>
                                                 )}
                                             </td>
 
                                             <td className="p-3">
-                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold inline-block ${isLunas ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`}>
-                                                    {isLunas ? 'LUNAS (Surat Jalan Putih)' : 'COD (Surat Jalan Merah)'}
+                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold inline-block ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                                                    {isLunas ? 'LUNAS (SJ Putih)' : 'COD (SJ Merah)'}
                                                 </span>
                                             </td>
 
@@ -625,9 +648,9 @@ export default function DeliveriesTab({
                                                 <button
                                                     type="button"
                                                     onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
-                                                    className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-extrabold transition inline-flex items-center gap-1 shadow cursor-pointer"
+                                                    className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 px-2.5 py-1 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs"
                                                 >
-                                                    🖨️ Cetak SJ 4 Warna
+                                                    <Printer className="w-3.5 h-3.5" /> Cetak SJ
                                                 </button>
                                             </td>
                                         </tr>
