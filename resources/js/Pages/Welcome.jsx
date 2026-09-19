@@ -147,34 +147,6 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
         <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans selection:bg-[#2563EB] selection:text-white overflow-x-hidden">
             <Head title="UTB - Universitas Teknologi Bandung" />
 
-            {/* TOP STATUS BAR - UTB CERAH BANNER */}
-            <div className="bg-slate-100 text-[#242222] border-b border-slate-200 px-4 md:px-8 py-2 text-xs">
-                <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <span className="bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 px-3 py-0.5 rounded-full font-bold flex items-center gap-2 shadow-xs text-[11px] tracking-wide">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#70b03c] opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#70b03c]"></span>
-                            </span>
-                            SISTEM OPERASIONAL KERJA PRAKTEK
-                        </span>
-                        <span className="hidden md:inline-flex items-center gap-1.5 text-slate-600 text-[11px]">
-                            <Database className="w-3.5 h-3.5 text-[#1b68b0]" />
-                            Rak Scrap WMS: <strong className="text-[#242222] font-semibold">{scrapCount} Lembar Ready</strong>
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-slate-600 text-[11px] font-medium">
-                        <span className="hidden sm:inline-flex items-center gap-1.5 font-bold text-[#70b03c]">
-                            <ShieldCheck className="w-3.5 h-3.5 text-[#70b03c]" />
-                            Universitas Teknologi Bandung
-                        </span>
-                        <span className="text-slate-400 hidden sm:inline">•</span>
-                        <span className="text-slate-600 font-semibold">CV Cahya Karunia Jaya</span>
-                    </div>
-                </div>
-            </div>
-
             {/* ENTERPRISE NAVBAR */}
             <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/90 px-4 md:px-8 py-3.5 shadow-xs transition-all">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -225,7 +197,7 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                             </Link>
                         ) : (
                             <Link href={route('login')} className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shadow-md shadow-[#1b68b0]/25 transition transform hover:-translate-y-0.5 flex items-center gap-2">
-                                Login Akses Karyawan <ArrowRight className="w-4 h-4" />
+                                Masuk
                             </Link>
                         )}
 
@@ -290,23 +262,14 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                     {/* LEFT COLUMN: HERO TEXT & ACTIONS */}
                     <div className="lg:col-span-7 space-y-7">
-                        {/* BADGE */}
-                        <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200/80 text-[#1E3A8A] px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-xs">
-                            <Factory className="w-4 h-4 text-[#2563EB]" />
-                            <span>Platform Terintegrasi Manufaktur & Operasional Kaca</span>
-                        </div>
-
                         {/* HEADLINE */}
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-[#0F172A]">
-                            Sidik Ganteng <br />
-                            <span className="bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] bg-clip-text text-transparent">
-                                Banget
-                            </span>
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-[#242222]">
+                            Sistem Oprasional Kaca
                         </h1>
 
                         {/* DESCRIPTION */}
                         <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl font-normal">
-                            Solusi digitalisasi terpadu industri kaca: Otomasi Surat Pesanan Order (SPO), disosiasi pemrosesan multi-divisi (<strong className="text-[#1E3A8A]">HT / GM / BV / Etsa</strong>), manajemen sisa kaca di rak (<strong className="text-[#1E3A8A]">WMS Scrap Storage</strong>), cetak <strong className="text-[#1E3A8A]">Surat Jalan 4 Rangkap</strong>, serta akuntansi pelunasan DP & COD.
+                            Solusi digitalisasi terpadu industri kaca: Otomasi Surat Pesanan Order (SPO), disosiasi pemrosesan multi-divisi (<strong className="text-[#1b68b0]">HT / GM / BV / Etsa</strong>), manajemen sisa kaca di rak (<strong className="text-[#1b68b0]">WMS Scrap Storage</strong>), cetak <strong className="text-[#1b68b0]">Surat Jalan 4 Rangkap</strong>, serta akuntansi pelunasan DP & COD.
                         </p>
 
                         {/* ACTION BUTTONS */}
@@ -317,7 +280,7 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                                 </Link>
                             ) : (
                                 <Link href={route('login')} className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-black px-7 py-3.5 rounded-xl shadow-lg shadow-[#1b68b0]/25 text-sm flex items-center gap-2.5 transition transform hover:-translate-y-0.5">
-                                    <ArrowRight className="w-5 h-5" /> Login Akses Karyawan →
+                                    Masuk
                                 </Link>
                             )}
                             <a href="#visualizer" className="bg-white border border-slate-300 hover:border-[#1b68b0] hover:bg-slate-50 text-[#242222] font-bold px-6 py-3.5 rounded-xl text-sm transition flex items-center gap-2 shadow-xs">
@@ -1094,7 +1057,7 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                             </Link>
                         ) : (
                             <Link href={route('login')} className="inline-block bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md">
-                                Login Akses Karyawan →
+                                Masuk
                             </Link>
                         )}
                     </div>

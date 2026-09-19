@@ -51,7 +51,7 @@ export default function Login({ status, canResetPassword }) {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] text-[#242222] font-sans flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
-            <Head title="Log in - UTB Kerja Praktek" />
+            <Head title="Masuk - UTB" />
 
             {/* Subtle Ambient Background */}
             <div className="absolute -top-32 -right-32 w-96 h-96 bg-[#1b68b0]/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -59,19 +59,14 @@ export default function Login({ status, canResetPassword }) {
 
             <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl shadow-xl space-y-6 relative z-10">
                 <div className="text-center space-y-2">
-                    <Link href="/" className="inline-flex flex-col items-center gap-2 group">
+                    <Link href="/" className="inline-flex flex-col items-center group">
                         <img 
                             src="/assets/Logo_UTB.png" 
                             alt="Logo UTB" 
                             className="h-16 w-auto object-contain transform group-hover:scale-105 transition duration-200" 
                         />
-                        <div>
-                            <span className="font-black text-2xl text-[#242222] tracking-tight block">UTB</span>
-                            <span className="text-[11px] text-[#70b03c] font-extrabold tracking-wider uppercase block">Kerja Praktek</span>
-                        </div>
                     </Link>
                     <h2 className="text-lg font-extrabold text-[#242222] pt-1">Masuk Ke Sistem Operasional</h2>
-                    <p className="text-xs text-slate-500">Silakan login sesuai akun role masing-masing</p>
                 </div>
 
                 {status && <div className="mb-4 text-xs font-semibold text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200">{status}</div>}
@@ -95,7 +90,7 @@ export default function Login({ status, canResetPassword }) {
 
                 <form onSubmit={submit} className="space-y-4">
                     <div>
-                        <InputLabel htmlFor="email" value="Email Role" className="text-[#242222] text-xs font-bold" />
+                        <InputLabel htmlFor="email" value="Email" className="text-[#242222] text-xs font-bold" />
                         <TextInput
                             id="email"
                             type="email"
@@ -137,7 +132,7 @@ export default function Login({ status, canResetPassword }) {
 
                     <div className="pt-2">
                         <PrimaryButton className="w-full justify-center bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold py-3 text-sm rounded-xl shadow-lg shadow-[#1b68b0]/20 transition" disabled={processing}>
-                            Log in Ke Dashboard Role →
+                            Masuk
                         </PrimaryButton>
                     </div>
                 </form>

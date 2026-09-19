@@ -3104,20 +3104,6 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
         <div className="h-screen bg-[#F8FAFC] text-[#242222] font-sans flex flex-col overflow-hidden">
             <Head title={`Dashboard (${roleTitles[userRole] || userRole}) - UTB`} />
 
-            {/* TOP BAR - CERAH */}
-            <div className="bg-slate-100 border-b border-slate-200 px-3 sm:px-6 py-2 flex flex-wrap justify-between items-center text-[11px] sm:text-xs shrink-0 gap-2 text-[#242222]">
-                <div className="flex items-center gap-2">
-                    <span className="bg-[#70b03c]/15 text-[#70b03c] border border-[#70b03c]/30 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full font-bold flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#70b03c] animate-ping"></span>
-                        AUTHENTICATED ROLE LOGIN ACTIVE
-                    </span>
-                    <span className="text-slate-600 hidden sm:inline font-medium">CV Cahya Karunia Jaya - Kerja Praktek UTB</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <Link href="/" className="text-[#1b68b0] hover:underline flex items-center gap-1 font-semibold">🌐 Landing Page Public</Link>
-                </div>
-            </div>
-
             {/* HEADER - CERAH */}
             <header className="bg-white border-b border-slate-200 shrink-0 px-3 sm:px-6 py-3 flex flex-wrap md:flex-nowrap justify-between items-center z-40 gap-3 shadow-xs">
                 <div className="flex items-center gap-2.5 sm:gap-3">
@@ -3164,6 +3150,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-4 ml-auto md:ml-0">
+                    <Link href="/" className="text-[#1b68b0] hover:underline text-xs font-semibold hidden sm:flex items-center gap-1">🌐 Landing Page</Link>
                     <div className="bg-[#70b03c]/10 border border-[#70b03c]/30 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-[#70b03c] whitespace-nowrap">
                         Role: {roleTitles[userRole] || userRole}
                     </div>
