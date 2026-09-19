@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Tag, Printer, Copy, Check, X, SlidersHorizontal, Eye } from 'lucide-react';
 
 export default function GlassStickerModal({
     show,
@@ -238,7 +239,7 @@ export default function GlassStickerModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150">
             {/* PRINT CSS STYLES FOR IN-PAGE FALLBACK */}
             <style>{`
                 @media print {
@@ -342,63 +343,64 @@ export default function GlassStickerModal({
                 }
             `}</style>
 
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-5xl p-6 shadow-2xl space-y-5 max-h-[92vh] flex flex-col no-print-wrapper">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col no-print-wrapper text-slate-800">
                 {/* MODAL HEADER */}
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-xl">
-                            🏷️
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3.5 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                            <Tag className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
+                            <h3 className="font-bold text-slate-800 text-base">
                                 Cetak Stiker Label Orderan Kaca (Admin Gudang)
                             </h3>
-                            <p className="text-xs text-slate-400 font-mono">
+                            <p className="text-xs text-slate-500 font-mono">
                                 SPO: {activeOrder.spo_number || activeOrder.id} — {activeOrder.customer_name} ({stickerItems.length} Stiker Kaca)
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-slate-400 hover:text-white text-2xl font-bold transition cursor-pointer px-2"
+                        className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
                     >
-                        &times;
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* CONTROLS & PRINT FORMAT SELECTION */}
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0 text-xs">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3.5 shrink-0 text-xs">
                     <div>
-                        <label className="text-slate-400 font-bold block mb-1.5">📐 Format Layout Cetak Label:</label>
+                        <label className="text-slate-600 font-bold block mb-1">Format Layout Cetak Label:</label>
                         <select
                             value={layoutMode}
                             onChange={e => setLayoutMode(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg text-slate-200 px-3 py-2 font-bold focus:border-cyan-500 focus:outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-xl text-slate-800 px-3 py-2 font-semibold focus:border-[#1b68b0] focus:outline-none"
                         >
-                            <option value="a4_grid">📄 Lembar A4 Grid (3 Kolom x N Baris - Sesuai Template Word/PDF)</option>
-                            <option value="thermal_single">🏷️ Roll Thermal Printer Continuous (100mm x 75mm)</option>
+                            <option value="a4_grid">Lembar A4 Grid (3 Kolom x N Baris)</option>
+                            <option value="thermal_single">Roll Thermal Printer (100mm x 75mm)</option>
                         </select>
                     </div>
 
                     <div>
-                        <label className="text-slate-400 font-bold block mb-1.5">🔢 Jumlah Stiker Kaca:</label>
+                        <label className="text-slate-600 font-bold block mb-1">Jumlah Stiker Kaca:</label>
                         <select
                             value={expandByQty ? 'true' : 'false'}
                             onChange={e => setExpandByQty(e.target.value === 'true')}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg text-slate-200 px-3 py-2 font-bold focus:border-cyan-500 focus:outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-xl text-slate-800 px-3 py-2 font-semibold focus:border-[#1b68b0] focus:outline-none"
                         >
-                            <option value="true">✅ 1 Stiker per Lembar Kaca (Sesuai Qty Order)</option>
-                            <option value="false">⏹️ 1 Stiker per Baris Spesifikasi Item</option>
+                            <option value="true">1 Stiker per Lembar Kaca (Sesuai Qty)</option>
+                            <option value="false">1 Stiker per Baris Spesifikasi Item</option>
                         </select>
                     </div>
 
-                    <div className="flex items-end gap-2">
+                    <div className="flex items-end">
                         <button
                             type="button"
                             onClick={handlePrint}
-                            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black px-4 py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 cursor-pointer transform hover:scale-[1.02]"
+                            className="w-full bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                         >
-                            <span>🖨️ KETIK LANGSUNG CETAK ({stickerItems.length})</span>
+                            <Printer className="w-4 h-4" />
+                            <span>Cetak Stiker ({stickerItems.length})</span>
                         </button>
                     </div>
                 </div>
@@ -406,37 +408,40 @@ export default function GlassStickerModal({
                 {/* PREVIEW CONTAINER */}
                 <div className="flex-1 overflow-y-auto pr-1 space-y-3">
                     <div className="flex justify-between items-center px-1 flex-wrap gap-2">
-                        <span className="text-xs font-extrabold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <span>🔍 Preview Visual Stiker ({layoutMode === 'a4_grid' ? 'Standard 3-Kolom' : '1-Kolom Thermal Roll'})</span>
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <Eye className="w-3.5 h-3.5 text-[#1b68b0]" />
+                            <span>Preview Stiker ({layoutMode === 'a4_grid' ? '3-Kolom A4' : '1-Kolom Thermal Roll'})</span>
                         </span>
                         <div className="flex items-center gap-2">
                             {copiedNotification && (
-                                <span className="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">
-                                    ✓ Teks Tersalin ke Clipboard!
+                                <span className="text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
+                                    <span>Tersalin ke Clipboard!</span>
                                 </span>
                             )}
                             <button
                                 type="button"
                                 onClick={handleCopyToClipboard}
-                                className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition flex items-center gap-1"
-                                title="Salin teks template stiker ke clipboard jika perlu dipaste ke Microsoft Word"
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-1.5"
+                                title="Salin teks template stiker ke clipboard"
                             >
-                                📋 Salin Teks Template
+                                <Copy className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Salin Template</span>
                             </button>
                         </div>
                     </div>
 
                     {/* PRINTABLE AREA CONTAINER */}
-                    <div id="printable-sticker-container" className="bg-white p-6 rounded-xl border border-slate-700 text-slate-900 shadow-inner">
-                        <div className={`grid ${layoutMode === 'a4_grid' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3' : 'grid-cols-1 max-w-sm mx-auto'} gap-4 sticker-grid`}>
+                    <div id="printable-sticker-container" className="bg-slate-50/50 p-5 rounded-2xl border border-slate-200 text-slate-900">
+                        <div className={`grid ${layoutMode === 'a4_grid' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3' : 'grid-cols-1 max-w-sm mx-auto'} gap-3.5 sticker-grid`}>
                             {stickerItems.map((stk, idx) => (
                                 <div
                                     key={stk.id}
-                                    className="sticker-card border-2 border-dashed border-slate-400 p-4 rounded-lg bg-white flex flex-col items-center justify-center text-center shadow-sm relative group hover:border-cyan-500 transition"
+                                    className="sticker-card border border-dashed border-slate-300 p-4 rounded-xl bg-white flex flex-col items-center justify-center text-center shadow-2xs relative group hover:border-[#1b68b0] transition"
                                 >
                                     {/* Piece counter badge for reference */}
                                     {stk.totalPiece > 1 && (
-                                        <span className="no-print absolute top-1 right-2 text-[9px] font-mono font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">
+                                        <span className="no-print absolute top-2 right-2 text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md">
                                             #{stk.pieceIndex}/{stk.totalPiece}
                                         </span>
                                     )}
@@ -446,7 +451,7 @@ export default function GlassStickerModal({
                                         type="text"
                                         value={stk.customerName}
                                         onChange={e => handleUpdateStickerItem(idx, 'customerName', e.target.value)}
-                                        className="sticker-text-customer text-center w-full font-black border-none focus:bg-amber-50 focus:ring-1 focus:ring-cyan-500 rounded p-0 text-slate-950 uppercase"
+                                        className="sticker-text-customer text-center w-full font-black border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-950 uppercase"
                                     />
 
                                     {/* Line 2: Location / Address / City */}
@@ -456,7 +461,7 @@ export default function GlassStickerModal({
                                             value={stk.location}
                                             placeholder="LOKASI / KOTA (OPSIONAL)"
                                             onChange={e => handleUpdateStickerItem(idx, 'location', e.target.value)}
-                                            className="sticker-text-location text-center w-full font-bold border-none focus:bg-amber-50 focus:ring-1 focus:ring-cyan-500 rounded p-0 text-slate-900 uppercase"
+                                            className="sticker-text-location text-center w-full font-bold border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-800 uppercase"
                                         />
                                     )}
 
@@ -465,7 +470,7 @@ export default function GlassStickerModal({
                                         type="text"
                                         value={stk.glassType}
                                         onChange={e => handleUpdateStickerItem(idx, 'glassType', e.target.value)}
-                                        className="sticker-text-glasstype text-center w-full font-bold border-none focus:bg-amber-50 focus:ring-1 focus:ring-cyan-500 rounded p-0 text-slate-900 uppercase"
+                                        className="sticker-text-glasstype text-center w-full font-bold border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-800 uppercase"
                                     />
 
                                     {/* Line 4: Dimensions & Process Code (e.g. 20 X 302,5 GMKLL) */}
@@ -473,16 +478,16 @@ export default function GlassStickerModal({
                                         type="text"
                                         value={stk.dimAndProcess}
                                         onChange={e => handleUpdateStickerItem(idx, 'dimAndProcess', e.target.value)}
-                                        className="sticker-text-dimproc text-center w-full font-black border-none focus:bg-amber-50 focus:ring-1 focus:ring-cyan-500 rounded p-0 text-slate-950 uppercase"
+                                        className="sticker-text-dimproc text-center w-full font-black border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-950 uppercase"
                                     />
 
-                                    {/* Line 5: Code / Position / Notes (e.g. KODE: BEVERAGES KOLOM D DEPAN) */}
+                                    {/* Line 5: Code / Position / Notes */}
                                     <input
                                         type="text"
                                         value={stk.codeLocation}
                                         placeholder="KODE / CATATAN POSISI (OPSIONAL)"
                                         onChange={e => handleUpdateStickerItem(idx, 'codeLocation', e.target.value)}
-                                        className="sticker-text-codeloc text-center w-full font-bold border-none focus:bg-amber-50 focus:ring-1 focus:ring-cyan-500 rounded p-0 text-slate-800 uppercase"
+                                        className="sticker-text-codeloc text-center w-full font-bold border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-700 uppercase"
                                     />
                                 </div>
                             ))}
@@ -491,24 +496,25 @@ export default function GlassStickerModal({
                 </div>
 
                 {/* FOOTER ACTIONS */}
-                <div className="flex justify-between items-center border-t border-slate-800 pt-3 shrink-0 no-print flex-wrap gap-2">
-                    <span className="text-xs text-slate-400">
-                        ⚡ Admin Gudang tidak perlu lagi mengetik di Word. Cukup klik tombol biru di atas!
+                <div className="flex justify-between items-center border-t border-slate-200 pt-3 shrink-0 no-print flex-wrap gap-2">
+                    <span className="text-xs text-slate-500">
+                        Stiker label siap cetak langsung tanpa perlu format manual di dokumen eksternal.
                     </span>
                     <div className="flex gap-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg text-xs transition cursor-pointer"
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer"
                         >
                             Tutup
                         </button>
                         <button
                             type="button"
                             onClick={handlePrint}
-                            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black px-5 py-2 rounded-lg text-xs transition flex items-center gap-1.5 shadow-md shadow-cyan-500/20 cursor-pointer"
+                            className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl text-xs transition flex items-center gap-2 shadow-xs cursor-pointer"
                         >
-                            <span>🖨️ Cetak Stiker Sekarang</span>
+                            <Printer className="w-4 h-4" />
+                            <span>Cetak Stiker Sekarang</span>
                         </button>
                     </div>
                 </div>

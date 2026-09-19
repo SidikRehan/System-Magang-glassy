@@ -3,7 +3,8 @@ import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import { 
     BarChart3, FileText, Truck, Sliders, Boxes, Building2, 
     Plug, Archive, Wrench, Users, CreditCard, Search, 
-    LogOut, Menu, X, AlertTriangle 
+    LogOut, Menu, X, AlertTriangle, Handshake, CheckCircle2, ArrowRight,
+    Plus, Edit3, Layers, Download, Trash2, RotateCcw, MessageCircle, Check, Calendar
 } from 'lucide-react';
 import NewOrderModal from '@/Components/Modals/NewOrderModal';
 import EditDraftOrderModal from '@/Components/Modals/EditDraftOrderModal';
@@ -3882,72 +3883,86 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             />
             {/* MODAL RESTOCK BARANG LEMBARAN */}
             {showRestockModal && selectedStockItem && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
-                                🔄 Restock Kaca Lembaran
-                            </h3>
-                            <button onClick={() => setShowRestockModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <RotateCcw className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Restock Kaca Lembaran
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-mono">{selectedStockItem.item_code}</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowRestockModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleConfirmRestock} className="space-y-4 text-xs">
-                            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
                                 <div className="flex justify-between">
-                                    <span className="text-slate-400">Kode Barang:</span>
-                                    <strong className="text-cyan-400 font-mono">{selectedStockItem.item_code}</strong>
+                                    <span className="text-slate-500">Kode Barang:</span>
+                                    <strong className="text-[#1b68b0] font-mono">{selectedStockItem.item_code}</strong>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-slate-400">Nama Barang:</span>
-                                    <strong className="text-slate-200">{selectedStockItem.name}</strong>
+                                    <span className="text-slate-500">Nama Barang:</span>
+                                    <strong className="text-slate-800">{selectedStockItem.name}</strong>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-slate-400">Ukuran Standard:</span>
-                                    <strong className="text-slate-200 font-mono">{selectedStockItem.size}</strong>
+                                    <span className="text-slate-500">Ukuran Standard:</span>
+                                    <strong className="text-slate-800 font-mono">{selectedStockItem.size}</strong>
                                 </div>
-                                <div className="flex justify-between border-t border-slate-800 pt-2">
-                                    <span className="text-slate-400">Stok Saat Ini:</span>
-                                    <strong className="text-emerald-400 font-mono">{selectedStockItem.qty} {selectedStockItem.unit || 'Lembar'}</strong>
+                                <div className="flex justify-between border-t border-slate-200 pt-2.5">
+                                    <span className="text-slate-500">Stok Saat Ini:</span>
+                                    <strong className="text-[#70b03c] font-mono font-bold">{selectedStockItem.qty} {selectedStockItem.unit || 'Lembar'}</strong>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Jumlah Lembar Masuk / Restock (+):</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Jumlah Lembar Masuk / Restock (+):</label>
                                 <input
                                     type="number"
                                     min="1"
                                     required
                                     value={restockQtyInput}
                                     onChange={e => setRestockQtyInput(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     placeholder="e.g. 10"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Tanggal Restock Terakhir:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Tanggal Restock Terakhir:</label>
                                 <input
                                     type="date"
                                     required
                                     value={restockDateInput}
                                     onChange={e => setRestockDateInput(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowRestockModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-cyan-500/20"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Restock
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Restock</span>
                                 </button>
                             </div>
                         </form>
@@ -3957,36 +3972,46 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL TAMBAH JENIS BARANG STOK BARU */}
             {showAddStockModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-cyan-400"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    ➕ Tambah Jenis Barang / Kaca Lembaran Baru
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Plus className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Tambah Jenis Barang / Kaca Lembaran Baru
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-mono">Master Katalog Kaca</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowAddStockModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowAddStockModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleAddStockItemSubmit} className="space-y-4 text-xs">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kode Barang (Opsional):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Barang (Opsional):</label>
                                     <input
                                         type="text"
                                         placeholder="e.g. KCB-003"
                                         value={newStockForm.item_code}
                                         onChange={e => setNewStockForm({ ...newStockForm, item_code: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kategori Kaca:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Kaca:</label>
                                     <select
                                         value={newStockForm.category}
                                         onChange={e => setNewStockForm({ ...newStockForm, category: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Kaca Cermin">Kaca Cermin</option>
                                         <option value="Kaca Bening">Kaca Bening</option>
@@ -3998,142 +4023,146 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Barang Kaca Baru:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Barang Kaca Baru:</label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="e.g. Kaca Cermin Riben 5mm"
                                     value={newStockForm.name}
                                     onChange={e => setNewStockForm({ ...newStockForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Ukuran Standard (cm):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Ukuran Standard (cm):</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="e.g. 152 x 213 cm"
                                         value={newStockForm.size}
                                         onChange={e => setNewStockForm({ ...newStockForm, size: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Stok Awal (Qty Lembar):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Awal (Qty Lembar):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         required
                                         value={newStockForm.qty}
                                         onChange={e => setNewStockForm({ ...newStockForm, qty: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             {/* HARGA BELI, HARGA JUAL & KETEBALAN */}
-                            <div className="grid grid-cols-3 gap-3 border-t border-slate-800 pt-3 my-1">
+                            <div className="grid grid-cols-3 gap-3 border-t border-slate-200 pt-3 my-1">
                                 <div>
-                                    <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
+                                    <label className="text-amber-800 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         placeholder="e.g. 250.000"
                                         value={formatNumberDots(newStockForm.buy_price)}
                                         onChange={e => setNewStockForm({ ...newStockForm, buy_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:border-amber-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-900 font-mono font-bold focus:border-amber-500 focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
+                                    <label className="text-[#70b03c] block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         placeholder="e.g. 450.000"
                                         value={formatNumberDots(newStockForm.sell_price)}
                                         onChange={e => setNewStockForm({ ...newStockForm, sell_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-emerald-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-cyan-400 block mb-1 font-semibold">Ketebalan (mm):</label>
+                                    <label className="text-[#1b68b0] block mb-1 font-semibold">Ketebalan (mm):</label>
                                     <input
                                         type="number"
                                         min="1"
                                         placeholder="e.g. 5"
                                         value={newStockForm.thickness_mm}
                                         onChange={e => setNewStockForm({ ...newStockForm, thickness_mm: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             {/* TARIF PROSES KHUSUS JENIS KACA INI */}
-                            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2 border-b my-1">
+                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 my-1">
                                 <div className="flex items-center justify-between flex-wrap gap-1">
-                                    <label className="text-cyan-300 font-bold block text-xs flex items-center gap-1.5">
-                                        ⚙️ Tarif Proses Khusus Kaca Ini (Permeter / m²):
+                                    <label className="text-slate-800 font-bold block text-xs flex items-center gap-1.5">
+                                        <Sliders className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                        <span>Tarif Proses Khusus Kaca Ini (Permeter / m²):</span>
                                     </label>
-                                    <span className="text-[10px] text-slate-400 font-mono">*Bisa disesuaikan per jenis kaca</span>
+                                    <span className="text-[10px] text-slate-500 font-mono">*Bisa disesuaikan per jenis kaca</span>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="1.000"
                                             value={formatNumberDots(newStockForm.rate_ht)}
                                             onChange={e => setNewStockForm({ ...newStockForm, rate_ht: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="10.000"
                                             value={formatNumberDots(newStockForm.rate_gm)}
                                             onChange={e => setNewStockForm({ ...newStockForm, rate_gm: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="15.000"
                                             value={formatNumberDots(newStockForm.rate_bv)}
                                             onChange={e => setNewStockForm({ ...newStockForm, rate_bv: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="50.000"
                                             value={formatNumberDots(newStockForm.rate_etsa)}
                                             onChange={e => setNewStockForm({ ...newStockForm, rate_etsa: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="border-t border-slate-800 pt-3 space-y-3">
-                                <h4 className="font-bold text-slate-300 flex items-center justify-between">
-                                    <span>🏢 Informasi Supplier Utama (Opsional)</span>
-                                    <span className="text-[10px] text-cyan-400 font-normal">✨ Klik pilihan supplier untuk otomatis isi data</span>
+                            <div className="border-t border-slate-200 pt-3 space-y-3">
+                                <h4 className="font-bold text-slate-800 flex items-center justify-between text-xs">
+                                    <span className="flex items-center gap-1.5">
+                                        <Building2 className="w-4 h-4 text-[#1b68b0]" />
+                                        <span>Informasi Supplier Utama (Opsional)</span>
+                                    </span>
+                                    <span className="text-[10px] text-[#1b68b0] font-normal">Auto-fill dari mitra</span>
                                 </h4>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Pilih Supplier Terdaftar (Otomatis Terisi):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Pilih Supplier Terdaftar (Otomatis Terisi):</label>
                                     <select
                                         value={suppliersList.some(s => s.name === newStockForm.supplier_name) ? newStockForm.supplier_name : (newStockForm.supplier_name ? 'CUSTOM' : '')}
                                         onChange={e => {
@@ -4159,54 +4188,55 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                                 }));
                                             }
                                         }}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400 text-xs mb-2 cursor-pointer"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white text-xs mb-2 cursor-pointer"
                                     >
                                         <option value="">-- Klik Untuk Pilih Supplier Terdaftar (Auto Fill) --</option>
                                         {suppliersList.map(sup => (
                                             <option key={sup.id} value={sup.name}>
-                                                🏢 {sup.name} (PIC: {sup.pic} - {sup.phone})
+                                                {sup.name} (PIC: {sup.pic} - {sup.phone})
                                             </option>
                                         ))}
-                                        <option value="CUSTOM">➕ Input Manual Supplier Baru...</option>
+                                        <option value="CUSTOM">+ Input Manual Supplier Baru...</option>
                                     </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">No WhatsApp Supplier:</label>
+                                        <label className="text-slate-700 block mb-1 font-semibold">No WhatsApp Supplier:</label>
                                         <input
                                             type="text"
                                             placeholder="e.g. 6281234567890"
                                             value={newStockForm.supplier_phone}
                                             onChange={e => setNewStockForm({ ...newStockForm, supplier_phone: e.target.value })}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Nama PIC Supplier:</label>
+                                        <label className="text-slate-700 block mb-1 font-semibold">Nama PIC Supplier:</label>
                                         <input
                                             type="text"
                                             placeholder="e.g. Pak Gunawan"
                                             value={newStockForm.supplier_pic}
                                             onChange={e => setNewStockForm({ ...newStockForm, supplier_pic: e.target.value })}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowAddStockModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black px-5 py-2 rounded-xl transition shadow-lg shadow-emerald-500/20"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Jenis Barang Baru
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Jenis Barang Baru</span>
                                 </button>
                             </div>
                         </form>
@@ -4216,36 +4246,46 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL EDIT JENIS BARANG KACA STOK */}
             {showEditStockModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-blue-400"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    ✏️ Edit Data & Harga Kaca ({editStockForm.item_code || 'KACA'})
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Edit3 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Edit Data & Harga Kaca ({editStockForm.item_code || 'KACA'})
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-mono">Ubah spesifikasi, harga & proses</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowEditStockModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowEditStockModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleEditStockSubmit} className="space-y-4 text-xs">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kode Barang:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Barang:</label>
                                     <input
                                         type="text"
                                         placeholder="e.g. KCB-003"
                                         value={editStockForm.item_code}
                                         onChange={e => setEditStockForm({ ...editStockForm, item_code: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kategori Kaca:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Kaca:</label>
                                     <select
                                         value={editStockForm.category}
                                         onChange={e => setEditStockForm({ ...editStockForm, category: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Kaca Cermin">Kaca Cermin</option>
                                         <option value="Kaca Bening">Kaca Bening</option>
@@ -4257,176 +4297,181 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Barang Kaca:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Barang Kaca:</label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="e.g. Kaca Cermin Riben 5mm"
                                     value={editStockForm.name}
                                     onChange={e => setEditStockForm({ ...editStockForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Ukuran Standard (cm):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Ukuran Standard (cm):</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="e.g. 152 x 213 cm"
                                         value={editStockForm.size}
                                         onChange={e => setEditStockForm({ ...editStockForm, size: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Jumlah Stok (Qty Lembar):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Jumlah Stok (Qty Lembar):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         required
                                         value={editStockForm.qty}
                                         onChange={e => setEditStockForm({ ...editStockForm, qty: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             {/* HARGA BELI, HARGA JUAL & KETEBALAN */}
-                            <div className="grid grid-cols-3 gap-3 border-t border-slate-800 pt-3 my-1">
+                            <div className="grid grid-cols-3 gap-3 border-t border-slate-200 pt-3 my-1">
                                 <div>
-                                    <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
+                                    <label className="text-amber-800 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         placeholder="e.g. 250.000"
                                         value={formatNumberDots(editStockForm.buy_price)}
                                         onChange={e => setEditStockForm({ ...editStockForm, buy_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:border-amber-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-900 font-mono font-bold focus:border-amber-500 focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
+                                    <label className="text-[#70b03c] block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         placeholder="e.g. 450.000"
                                         value={formatNumberDots(editStockForm.sell_price)}
                                         onChange={e => setEditStockForm({ ...editStockForm, sell_price: parseNumberDots(e.target.value) })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-emerald-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-cyan-400 block mb-1 font-semibold">Ketebalan (mm):</label>
+                                    <label className="text-[#1b68b0] block mb-1 font-semibold">Ketebalan (mm):</label>
                                     <input
                                         type="number"
                                         min="1"
                                         placeholder="e.g. 5"
                                         value={editStockForm.thickness_mm}
                                         onChange={e => setEditStockForm({ ...editStockForm, thickness_mm: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             {/* TARIF PROSES KHUSUS JENIS KACA INI */}
-                            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2 border-b my-1">
+                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 my-1">
                                 <div className="flex items-center justify-between flex-wrap gap-1">
-                                    <label className="text-cyan-300 font-bold block text-xs flex items-center gap-1.5">
-                                        ⚙️ Tarif Proses Khusus Kaca Ini (Permeter / m²):
+                                    <label className="text-slate-800 font-bold block text-xs flex items-center gap-1.5">
+                                        <Sliders className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                        <span>Tarif Proses Khusus Kaca Ini (Permeter / m²):</span>
                                     </label>
-                                    <span className="text-[10px] text-slate-400 font-mono">*Bisa disesuaikan per jenis kaca</span>
+                                    <span className="text-[10px] text-slate-500 font-mono">*Bisa disesuaikan per jenis kaca</span>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">HT (Halus Tepi) /m:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="1.000"
                                             value={formatNumberDots(editStockForm.rate_ht)}
                                             onChange={e => setEditStockForm({ ...editStockForm, rate_ht: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">GM (Gosok Mesin) /m:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="10.000"
                                             value={formatNumberDots(editStockForm.rate_gm)}
                                             onChange={e => setEditStockForm({ ...editStockForm, rate_gm: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">BV (Beveling) /m:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="15.000"
                                             value={formatNumberDots(editStockForm.rate_bv)}
                                             onChange={e => setEditStockForm({ ...editStockForm, rate_bv: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
+                                        <label className="text-slate-600 block mb-1 text-[10px] font-semibold">Etsa (Sandblast) /m²:</label>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             placeholder="50.000"
                                             value={formatNumberDots(editStockForm.rate_etsa)}
                                             onChange={e => setEditStockForm({ ...editStockForm, rate_etsa: parseNumberDots(e.target.value) })}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold text-xs focus:border-cyan-400"
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-[#1b68b0] font-mono font-bold text-xs focus:border-[#1b68b0]"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="border-t border-slate-800 pt-3 space-y-3">
-                                <h4 className="font-bold text-slate-300 flex items-center justify-between">
-                                    <span>🏢 Informasi Supplier Utama</span>
+                            <div className="border-t border-slate-200 pt-3 space-y-3">
+                                <h4 className="font-bold text-slate-800 flex items-center justify-between text-xs">
+                                    <span className="flex items-center gap-1.5">
+                                        <Building2 className="w-4 h-4 text-[#1b68b0]" />
+                                        <span>Informasi Supplier Utama</span>
+                                    </span>
                                 </h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Nama Supplier:</label>
+                                        <label className="text-slate-700 block mb-1 font-semibold">Nama Supplier:</label>
                                         <input
                                             type="text"
                                             placeholder="e.g. PT Asahimas Flat Glass Tbk"
                                             value={editStockForm.supplier_name}
                                             onChange={e => setEditStockForm({ ...editStockForm, supplier_name: e.target.value })}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">No WA Supplier:</label>
+                                        <label className="text-slate-700 block mb-1 font-semibold">No WA Supplier:</label>
                                         <input
                                             type="text"
                                             placeholder="e.g. 6281234567890"
                                             value={editStockForm.supplier_phone}
                                             onChange={e => setEditStockForm({ ...editStockForm, supplier_phone: e.target.value })}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowEditStockModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-black px-5 py-2 rounded-xl transition shadow-lg shadow-blue-500/20"
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Perubahan
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Perubahan</span>
                                 </button>
                             </div>
                         </form>
@@ -4436,49 +4481,59 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL TAMBAH SUPPLIER BARU */}
             {showAddSupplierModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    🏭 Tambah Perusahaan Supplier & Mitra Baru
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Building2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Tambah Perusahaan Supplier & Mitra Baru
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-mono">Daftar mitra pabrikasi / importir</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowAddSupplierModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowAddSupplierModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleAddSupplierSubmit} className="space-y-4 text-xs">
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="e.g. PT Asahimas Flat Glass Tbk"
                                     value={newSupplierForm.name}
                                     onChange={e => setNewSupplierForm({ ...newSupplierForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="e.g. Kaca Cermin & Bening"
                                         value={newSupplierForm.category}
                                         onChange={e => setNewSupplierForm({ ...newSupplierForm, category: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Status Kemitraan:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Status Kemitraan:</label>
                                     <select
                                         value={newSupplierForm.status}
                                         onChange={e => setNewSupplierForm({ ...newSupplierForm, status: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Mitra Utama">Mitra Utama</option>
                                         <option value="Mitra Aktif">Mitra Aktif</option>
@@ -4490,53 +4545,54 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="e.g. Pak Gunawan"
                                         value={newSupplierForm.pic}
                                         onChange={e => setNewSupplierForm({ ...newSupplierForm, pic: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="e.g. 6281234567890"
                                         value={newSupplierForm.phone}
                                         onChange={e => setNewSupplierForm({ ...newSupplierForm, phone: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
                                 <textarea
                                     rows="2"
                                     placeholder="e.g. Kawasan Industri Ancol, Jl. Ancol IX No. 5, Jakarta Utara"
                                     value={newSupplierForm.address}
                                     onChange={e => setNewSupplierForm({ ...newSupplierForm, address: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowAddSupplierModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black px-5 py-2 rounded-xl transition shadow-lg shadow-emerald-500/20"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Data Supplier
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Data Supplier</span>
                                 </button>
                             </div>
                         </form>
@@ -4546,47 +4602,57 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL EDIT SUPPLIER */}
             {showEditSupplierModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-blue-400"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    ✏️ Edit Data Perusahaan Supplier & Mitra
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Edit3 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Edit Data Perusahaan Supplier & Mitra
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-mono">{editSupplierForm.name}</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowEditSupplierModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowEditSupplierModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleEditSupplierSubmit} className="space-y-4 text-xs">
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Perusahaan Supplier / Fabrikator:</label>
                                 <input
                                     type="text"
                                     required
                                     value={editSupplierForm.name}
                                     onChange={e => setEditSupplierForm({ ...editSupplierForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Spesialisasi Kategori Kaca:</label>
                                     <input
                                         type="text"
                                         required
                                         value={editSupplierForm.category}
                                         onChange={e => setEditSupplierForm({ ...editSupplierForm, category: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Status Kemitraan:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Status Kemitraan:</label>
                                     <select
                                         value={editSupplierForm.status}
                                         onChange={e => setEditSupplierForm({ ...editSupplierForm, status: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Mitra Utama">Mitra Utama</option>
                                         <option value="Mitra Aktif">Mitra Aktif</option>
@@ -4598,50 +4664,51 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Nama PIC / Contact Person:</label>
                                     <input
                                         type="text"
                                         required
                                         value={editSupplierForm.pic}
                                         onChange={e => setEditSupplierForm({ ...editSupplierForm, pic: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">No. WhatsApp (Format 62...):</label>
                                     <input
                                         type="text"
                                         required
                                         value={editSupplierForm.phone}
                                         onChange={e => setEditSupplierForm({ ...editSupplierForm, phone: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Alamat Pabrik / Gudang Supplier:</label>
                                 <textarea
                                     rows="2"
                                     value={editSupplierForm.address}
                                     onChange={e => setEditSupplierForm({ ...editSupplierForm, address: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowEditSupplierModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-5 py-2 rounded-xl transition shadow-lg shadow-blue-500/20"
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Perubahan Supplier
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Perubahan Supplier</span>
                                 </button>
                             </div>
                         </form>
@@ -4651,85 +4718,95 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL TAMBAH AKSESORIS BARU */}
             {showAddAccModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-cyan-400"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    🔌 Tambah Aksesoris / Hardware Kaca Baru
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Plug className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Tambah Aksesoris / Hardware Kaca
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Registrasi komponen dan aksesoris perlengkapan baru</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowAddAccModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowAddAccModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleAddAccSubmit} className="space-y-4 text-xs">
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Kode Barang (Opsional):</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Kode Barang (Opsional):</label>
                                 <input
                                     type="text"
                                     placeholder="e.g. ACC-007"
                                     value={newAccForm.acc_code}
                                     onChange={e => setNewAccForm({ ...newAccForm, acc_code: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Aksesoris Kaca Baru:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Aksesoris Kaca Baru:</label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="e.g. Lem Silikon Bening Glass Sealant"
                                     value={newAccForm.name}
                                     onChange={e => setNewAccForm({ ...newAccForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         placeholder="e.g. 25000"
                                         value={newAccForm.buy_price}
                                         onChange={e => setNewAccForm({ ...newAccForm, buy_price: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:border-amber-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         placeholder="e.g. 45000"
                                         value={newAccForm.sell_price}
                                         onChange={e => setNewAccForm({ ...newAccForm, sell_price: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-emerald-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Stok Awal (Qty):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Awal (Qty):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         required
                                         value={newAccForm.qty}
                                         onChange={e => setNewAccForm({ ...newAccForm, qty: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Satuan Unit:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
                                     <select
                                         value={newAccForm.unit}
                                         onChange={e => setNewAccForm({ ...newAccForm, unit: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Pcs">Pcs</option>
                                         <option value="Set">Set</option>
@@ -4741,19 +4818,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowAddAccModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black px-5 py-2 rounded-xl transition shadow-lg shadow-emerald-500/20"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Aksesoris Baru
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Aksesoris Baru</span>
                                 </button>
                             </div>
                         </form>
@@ -4763,82 +4841,92 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL EDIT AKSESORIS */}
             {showEditAccModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-blue-400"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    ✏️ Edit Data Aksesoris / Hardware
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Edit3 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Edit Data Aksesoris / Hardware
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Perbarui informasi kode, harga, atau stok aksesoris</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowEditAccModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowEditAccModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleEditAccSubmit} className="space-y-4 text-xs">
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Kode Barang:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Kode Barang:</label>
                                 <input
                                     type="text"
                                     required
                                     value={editAccForm.acc_code}
                                     onChange={e => setEditAccForm({ ...editAccForm, acc_code: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Aksesoris Kaca:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Aksesoris Kaca:</label>
                                 <input
                                     type="text"
                                     required
                                     value={editAccForm.name}
                                     onChange={e => setEditAccForm({ ...editAccForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-amber-400 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Beli Supplier (Rp):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         value={editAccForm.buy_price}
                                         onChange={e => setEditAccForm({ ...editAccForm, buy_price: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:border-amber-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-emerald-400 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Harga Jual Customer (Rp):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         value={editAccForm.sell_price}
                                         onChange={e => setEditAccForm({ ...editAccForm, sell_price: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-emerald-300 font-mono font-bold focus:border-emerald-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Stok Quantity:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Quantity:</label>
                                     <input
                                         type="number"
                                         min="0"
                                         required
                                         value={editAccForm.qty}
                                         onChange={e => setEditAccForm({ ...editAccForm, qty: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Satuan Unit:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
                                     <select
                                         value={editAccForm.unit}
                                         onChange={e => setEditAccForm({ ...editAccForm, unit: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Pcs">Pcs</option>
                                         <option value="Set">Set</option>
@@ -4850,19 +4938,20 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowEditAccModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-5 py-2 rounded-xl transition shadow-lg shadow-blue-500/20"
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Perubahan Aksesoris
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Perubahan Aksesoris</span>
                                 </button>
                             </div>
                         </form>
@@ -4872,60 +4961,71 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL RESTOCK AKSESORIS */}
             {showRestockAccModal && selectedAccItem && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-cyan-400"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    🔄 Restock Aksesoris Masuk
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#5f9733]">
+                                    <RotateCcw className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Restock Aksesoris Masuk
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Penerimaan stok aksesoris ke gudang</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowRestockAccModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowRestockAccModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleConfirmAccRestock} className="space-y-4 text-xs">
-                            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-400">Kode Aksesoris:</span>
-                                    <strong className="text-cyan-400 font-mono">{selectedAccItem.acc_code}</strong>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500">Kode Aksesoris:</span>
+                                    <strong className="text-[#1b68b0] font-mono font-bold">{selectedAccItem.acc_code}</strong>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-400">Nama Aksesoris:</span>
-                                    <strong className="text-slate-200">{selectedAccItem.name}</strong>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500">Nama Aksesoris:</span>
+                                    <strong className="text-slate-800 font-semibold">{selectedAccItem.name}</strong>
                                 </div>
-                                <div className="flex justify-between border-t border-slate-800 pt-2">
-                                    <span className="text-slate-400">Stok saat ini:</span>
-                                    <strong className="text-emerald-400 font-mono">{selectedAccItem.qty} {selectedAccItem.unit || 'Pcs'}</strong>
+                                <div className="flex justify-between items-center border-t border-slate-200 pt-2">
+                                    <span className="text-slate-500">Stok Saat Ini:</span>
+                                    <strong className="text-[#5f9733] font-mono font-bold">{selectedAccItem.qty} {selectedAccItem.unit || 'Pcs'}</strong>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Jumlah Restock Masuk (+):</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Jumlah Restock Masuk (+):</label>
                                 <input
                                     type="number"
                                     min="1"
                                     required
                                     value={accRestockQty}
                                     onChange={e => setAccRestockQty(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     placeholder="e.g. 10"
                                 />
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowRestockAccModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-cyan-500/20"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Restock Aksesoris
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Restock Aksesoris</span>
                                 </button>
                             </div>
                         </form>
@@ -4935,63 +5035,73 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MODAL SETUJUI RESTOCK & ORDER SUPPLIER VIA WHATSAPP */}
             {showSupplierWaModal && selectedWaStockItem && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
-                                <h3 className="font-extrabold text-slate-100 text-base">
-                                    💬 Setujui Ajuan Restock & Chat Supplier (WhatsApp)
-                                </h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#5f9733]">
+                                    <MessageCircle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Setujui Ajuan & Chat WhatsApp Supplier
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Verifikasi pesanan restok dan buka obrolan WhatsApp</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowSupplierWaModal(false)} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowSupplierWaModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleSendWaOrder} className="space-y-4 text-xs">
                             {/* NOTICE AJUAN GUDANG */}
-                            <div className="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl flex items-center gap-2">
-                                <span className="text-xl">📩</span>
+                            <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl flex items-center gap-3">
+                                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
                                 <div>
-                                    <div className="font-bold text-rose-300">Pengajuan Masuk Dari Admin Gudang</div>
-                                    <div className="text-[11px] text-slate-400">Gudang telah mendeteksi stok bahan kaca ini perlu segera di-restock.</div>
+                                    <div className="font-bold text-amber-900">Pengajuan Masuk Dari Admin Gudang</div>
+                                    <div className="text-[11px] text-amber-700">Gudang mendeteksi persediaan bahan kaca ini telah menipis dan perlu segera di-restock.</div>
                                 </div>
                             </div>
 
                             {/* ITEM DETAIL */}
-                            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-400">Kode Barang:</span>
-                                    <strong className="text-cyan-400 font-mono">{selectedWaStockItem.item_code}</strong>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500">Kode Barang:</span>
+                                    <strong className="text-[#1b68b0] font-mono font-bold">{selectedWaStockItem.item_code}</strong>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-400">Nama Barang:</span>
-                                    <strong className="text-slate-200">{selectedWaStockItem.name}</strong>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500">Nama Barang:</span>
+                                    <strong className="text-slate-800 font-semibold">{selectedWaStockItem.name}</strong>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-400">Jenis & Ukuran:</span>
-                                    <strong className="text-slate-200 font-mono">{selectedWaStockItem.category} | {selectedWaStockItem.size}</strong>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500">Jenis & Ukuran:</span>
+                                    <strong className="text-slate-700 font-mono">{selectedWaStockItem.category} | {selectedWaStockItem.size}</strong>
                                 </div>
-                                <div className="flex justify-between border-t border-slate-800 pt-2">
-                                    <span className="text-slate-400">Sisa Stok di Gudang:</span>
-                                    <strong className="text-rose-400 font-mono">{selectedWaStockItem.qty} {selectedWaStockItem.unit || 'Lembar'} (Perlu Restock)</strong>
+                                <div className="flex justify-between items-center border-t border-slate-200 pt-2">
+                                    <span className="text-slate-500">Sisa Stok di Gudang:</span>
+                                    <strong className="text-rose-600 font-mono font-bold">{selectedWaStockItem.qty} {selectedWaStockItem.unit || 'Lembar'} (Perlu Restock)</strong>
                                 </div>
                             </div>
 
                             {/* SUPPLIER DETAILS */}
                             <div className="space-y-3">
-                                <div className="bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-xl flex items-center justify-between text-xs">
-                                    <span className="font-bold text-emerald-300 flex items-center gap-1.5">
-                                        <span>⚡ Supplier Otomatis Terhubung:</span>
+                                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl flex items-center justify-between text-xs">
+                                    <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                                        <span>Supplier Otomatis Terhubung:</span>
                                     </span>
-                                    <span className="font-bold text-slate-100 bg-slate-900 px-2.5 py-1 rounded border border-slate-700">
+                                    <span className="font-bold text-slate-800 bg-white px-2.5 py-1 rounded-xl border border-emerald-200 shadow-xs">
                                         {selectedWaStockItem.supplier_name}
                                     </span>
                                 </div>
 
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold flex items-center justify-between">
+                                    <label className="text-slate-700 block mb-1 font-semibold flex items-center justify-between">
                                         <span>Nama Supplier / Distributor Kaca:</span>
-                                        <span className="text-[10px] text-cyan-400 font-mono">Pilih atau ubah distributor</span>
+                                        <span className="text-[10px] text-[#1b68b0] font-mono">Pilih distributor</span>
                                     </label>
                                     <select
                                         value={supplierName}
@@ -5001,7 +5111,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                                             const foundSup = MASTER_SUPPLIERS.find(s => s.name === name);
                                             if (foundSup) setSupplierPhone(foundSup.phone);
                                         }}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-cyan-300 font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         {MASTER_SUPPLIERS.map(sup => (
                                             <option key={sup.id} value={sup.name}>
@@ -5013,25 +5123,25 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">No. WhatsApp Supplier:</label>
+                                        <label className="text-slate-700 block mb-1 font-semibold">No. WhatsApp Supplier:</label>
                                         <input
                                             type="text"
                                             required
                                             value={supplierPhone}
                                             onChange={e => setSupplierPhone(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-emerald-400 font-mono font-bold focus:border-cyan-400"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                             placeholder="6281234567890"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-slate-400 block mb-1 font-semibold">Jumlah Lembar Dipesan (Qty):</label>
+                                        <label className="text-slate-700 block mb-1 font-semibold">Jumlah Lembar Dipesan (Qty):</label>
                                         <input
                                             type="number"
                                             min="1"
                                             required
                                             value={waOrderQty}
                                             onChange={e => setWaOrderQty(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono font-bold focus:border-cyan-400"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                         />
                                     </div>
                                 </div>
@@ -5039,12 +5149,12 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
                             {/* LIVE PREVIEW WHATSAPP MESSAGE */}
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold flex items-center justify-between">
-                                    <span>💬 Draft Pesan WhatsApp Ke Supplier:</span>
-                                    <span className="text-[10px] text-emerald-400 font-mono">Auto-generated</span>
+                                <label className="text-slate-700 block mb-1 font-semibold flex items-center justify-between">
+                                    <span>Draft Pesan WhatsApp ke Supplier:</span>
+                                    <span className="text-[10px] text-emerald-600 font-mono">Format Otomatis</span>
                                 </label>
-                                <div className="bg-[#0b141a] border border-emerald-500/30 p-3 rounded-xl font-mono text-[11px] text-slate-200 whitespace-pre-wrap leading-relaxed">
-                                    {`Halo ${supplierName},
+                                <div className="bg-emerald-50/50 border border-emerald-200 p-3.5 rounded-2xl font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
+{`Halo ${supplierName},
 
 Kami dari CV Cahya Karunia Jaya (SYP GLASS OPERATIONAL).
 Kami ingin memesan/restock bahan kaca berikut:
@@ -5060,19 +5170,20 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             {/* ACTION BUTTONS */}
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowSupplierWaModal(false)}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-emerald-500/20 flex items-center gap-1.5"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-2 text-xs cursor-pointer"
                                 >
-                                    📱 Setujui & Buka Chat WhatsApp Supplier →
+                                    <MessageCircle className="w-4 h-4" />
+                                    <span>Setujui & Buka Chat WhatsApp Supplier</span>
                                 </button>
                             </div>
                         </form>
@@ -5082,53 +5193,66 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL KONFIRMASI PERSETUJUAN DEAL & PENGATURAN DP */}
             {showPromoteModal && targetPromoteOrder && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
-                                🤝 Persetujuan Deal & Pengaturan DP
-                            </h3>
-                            <button onClick={() => { setShowPromoteModal(false); setTargetPromoteOrder(null); }} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Handshake className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Persetujuan Deal & Pengaturan DP
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-mono">SPO: {targetPromoteOrder.spo_number}</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => { setShowPromoteModal(false); setTargetPromoteOrder(null); }} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleConfirmPromote} className="space-y-4 text-xs">
-                            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-slate-400">No. SPO:</span>
-                                    <strong className="text-cyan-400 font-mono">{targetPromoteOrder.spo_number}</strong>
+                                    <span className="text-slate-500">No. SPO:</span>
+                                    <strong className="text-[#1b68b0] font-mono">{targetPromoteOrder.spo_number}</strong>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-slate-400">Customer:</span>
-                                    <strong className="text-slate-200">{targetPromoteOrder.customer_name} {targetPromoteOrder.customer_phone ? `(${targetPromoteOrder.customer_phone})` : ''}</strong>
+                                    <span className="text-slate-500">Customer:</span>
+                                    <strong className="text-slate-800">{targetPromoteOrder.customer_name} {targetPromoteOrder.customer_phone ? `(${targetPromoteOrder.customer_phone})` : ''}</strong>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-slate-400">Total Tagihan Order:</span>
-                                    <strong className="text-slate-100 font-mono text-sm">Rp {Number(targetPromoteOrder.total_price).toLocaleString()}</strong>
+                                    <span className="text-slate-500">Total Tagihan Order:</span>
+                                    <strong className="text-slate-900 font-mono text-sm font-bold">Rp {Number(targetPromoteOrder.total_price).toLocaleString()}</strong>
                                 </div>
                             </div>
 
                             {/* PILIHAN SKEMA PEMBAYARAN / DP */}
                             <div className="space-y-2">
-                                <label className="text-slate-300 font-bold block">Pilih Skema Pembayaran / DP Customer:</label>
+                                <label className="text-slate-700 font-bold block">Pilih Skema Pembayaran / DP Customer:</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setPromotePaymentOption('dp')}
-                                        className={`py-2 px-2.5 rounded-lg border font-bold text-xs transition ${promotePaymentOption === 'dp' ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+                                        className={`py-2 px-2.5 rounded-xl border font-bold text-xs transition cursor-pointer ${promotePaymentOption === 'dp' ? 'bg-[#1b68b0] border-[#1b68b0] text-white shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
                                     >
                                         DP Persentase
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setPromotePaymentOption('custom')}
-                                        className={`py-2 px-2.5 rounded-lg border font-bold text-xs transition ${promotePaymentOption === 'custom' ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+                                        className={`py-2 px-2.5 rounded-xl border font-bold text-xs transition cursor-pointer ${promotePaymentOption === 'custom' ? 'bg-[#1b68b0] border-[#1b68b0] text-white shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
                                     >
                                         Nominal Custom
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setPromotePaymentOption('lunas')}
-                                        className={`py-2 px-2.5 rounded-lg border font-bold text-xs transition ${promotePaymentOption === 'lunas' ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+                                        className={`py-2 px-2.5 rounded-xl border font-bold text-xs transition cursor-pointer ${promotePaymentOption === 'lunas' ? 'bg-[#1b68b0] border-[#1b68b0] text-white shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
                                     >
                                         Lunas (100%)
                                     </button>
@@ -5137,15 +5261,15 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             {/* DETAIL INPUT SESUAI OPSI */}
                             {promotePaymentOption === 'dp' && (
-                                <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                                    <label className="text-slate-400 block font-semibold">Pilih Persentase DP:</label>
+                                <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                    <label className="text-slate-600 block font-semibold">Pilih Persentase DP:</label>
                                     <div className="flex gap-2">
                                         {[20, 30, 50, 70].map(pct => (
                                             <button
                                                 key={pct}
                                                 type="button"
                                                 onClick={() => setPromoteDpPercent(pct)}
-                                                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold font-mono transition ${promoteDpPercent === pct ? 'bg-cyan-500 text-slate-950 border-cyan-400' : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'}`}
+                                                className={`flex-1 py-1.5 rounded-xl border text-xs font-bold font-mono transition cursor-pointer ${promoteDpPercent === pct ? 'bg-[#1b68b0] text-white border-[#1b68b0] shadow-xs' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'}`}
                                             >
                                                 {pct}%
                                             </button>
@@ -5155,8 +5279,8 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             )}
 
                             {promotePaymentOption === 'custom' && (
-                                <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                                    <label className="text-slate-400 block font-semibold">Nominal DP Diterima (Rp):</label>
+                                <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                    <label className="text-slate-600 block font-semibold">Nominal DP Diterima (Rp):</label>
                                     <input
                                         type="number"
                                         step="10000"
@@ -5164,11 +5288,11 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                         max={targetPromoteOrder.total_price}
                                         value={promoteCustomPaidAmount}
                                         onChange={e => setPromoteCustomPaidAmount(e.target.value)}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-emerald-400 font-mono font-bold text-sm focus:border-emerald-400"
+                                        className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono font-bold text-sm focus:border-[#1b68b0]"
                                         placeholder="Masukkan nominal DP Rupiah"
                                     />
                                     <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                                        <span className="text-[10px] text-slate-400">Preset:</span>
+                                        <span className="text-[10px] text-slate-500">Preset:</span>
                                         {[
                                             { label: 'Rp 100rb', val: 100000 },
                                             { label: 'Rp 200rb', val: 200000 },
@@ -5180,7 +5304,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                                 key={pIdx}
                                                 type="button"
                                                 onClick={() => setPromoteCustomPaidAmount(preset.val)}
-                                                className="px-2 py-0.5 bg-slate-900 hover:bg-cyan-500/20 hover:text-cyan-300 border border-slate-700 rounded text-[10px] font-mono text-slate-300 transition"
+                                                className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 transition cursor-pointer"
                                             >
                                                 {preset.label}
                                             </button>
@@ -5190,39 +5314,40 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             )}
 
                             {/* RINCIAN PERHITUNGAN */}
-                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl space-y-1 text-emerald-300">
+                            <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl space-y-1 text-emerald-900">
                                 <div className="flex justify-between font-bold">
                                     <span>Nominal DP Diterima:</span>
-                                    <span className="font-mono text-sm">
+                                    <span className="font-mono text-sm text-emerald-800">
                                         Rp {Number(getPromotePaidAmount()).toLocaleString()}
-                                        <span className="text-[11px] ml-1 opacity-80">
+                                        <span className="text-xs ml-1 font-semibold text-emerald-700">
                                             ({targetPromoteOrder.total_price > 0 ? Math.round((getPromotePaidAmount() / targetPromoteOrder.total_price) * 100) : 0}%)
                                         </span>
                                     </span>
                                 </div>
-                                <div className="flex justify-between text-[11px] text-emerald-400/80">
+                                <div className="flex justify-between text-xs text-slate-600">
                                     <span>Sisa Tagihan Pelunasan (COD):</span>
-                                    <span className="font-mono">Rp {Number(Math.max(0, targetPromoteOrder.total_price - getPromotePaidAmount())).toLocaleString()}</span>
+                                    <span className="font-mono font-bold text-slate-800">Rp {Number(Math.max(0, targetPromoteOrder.total_price - getPromotePaidAmount())).toLocaleString()}</span>
                                 </div>
                             </div>
 
-                            <p className="text-[11px] text-slate-400 italic">
+                            <p className="text-[11px] text-slate-500 leading-normal">
                                 *Mengubah status draf menjadi <strong>Order Pengerjaan</strong> dan memicu antrean produksi ke Admin Gudang.
                             </p>
 
-                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-800">
+                            <div className="pt-2 flex justify-end gap-3 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => { setShowPromoteModal(false); setTargetPromoteOrder(null); }}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-emerald-500/20 flex items-center gap-1.5"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer text-xs"
                                 >
-                                    🚀 Confirm Deal & Kirim ke Gudang
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span>Confirm Deal & Kirim ke Gudang</span>
                                 </button>
                             </div>
                         </form>
@@ -5232,33 +5357,46 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL: TAMBAH PERLENGKAPAN GUDANG BARU */}
             {showAddSupplyModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
-                                🧰 Tambah Perlengkapan Gudang Baru
-                            </h3>
-                            <button onClick={() => setShowAddSupplyModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Archive className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Tambah Perlengkapan Gudang Baru
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Registrasi barang perlengkapan operasional & consumables gudang</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowAddSupplyModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleAddSupplySubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kode Barang (Opsional):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Barang (Opsional):</label>
                                     <input
                                         type="text"
                                         placeholder="Otomatis jika kosong"
                                         value={newSupplyForm.item_code}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, item_code: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kategori Perlengkapan:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Perlengkapan:</label>
                                     <select
                                         value={newSupplyForm.category}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, category: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="APD & Keselamatan Kerja">APD & Keselamatan Kerja (Sarung Tangan, Kacamata)</option>
                                         <option value="Perkakas Tangan Habis Pakai">Perkakas Tangan Habis Pakai (Cutter, Pisau)</option>
@@ -5271,65 +5409,77 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Perlengkapan / Barang Habis Pakai:*</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Perlengkapan / Barang Habis Pakai:*</label>
                                 <input
                                     type="text"
                                     placeholder="Contoh: Sarung Tangan Safety Antigores / Cutter Blade Refill"
                                     value={newSupplyForm.name}
                                     onChange={e => setNewSupplyForm({ ...newSupplyForm, name: e.target.value })}
                                     required
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Stok Awal:*</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Stok Awal:*</label>
                                     <input
                                         type="number"
                                         min="0"
                                         value={newSupplyForm.stock_qty}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, stock_qty: e.target.value })}
                                         required
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Min. Stok (Alert):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Min. Stok (Alert):</label>
                                     <input
                                         type="number"
                                         min="1"
                                         value={newSupplyForm.min_stock}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, min_stock: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Satuan Unit:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
                                     <input
                                         type="text"
                                         placeholder="Pcs/Pasang/Roll/Box"
                                         value={newSupplyForm.unit}
                                         onChange={e => setNewSupplyForm({ ...newSupplyForm, unit: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Lokasi Simpan di Gudang:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Lokasi Simpan di Gudang:</label>
                                 <input
                                     type="text"
                                     placeholder="Contoh: Rak APD A1 / Gudang Packaging"
                                     value={newSupplyForm.location}
                                     onChange={e => setNewSupplyForm({ ...newSupplyForm, location: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowAddSupplyModal(false)} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Batal</button>
-                                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black">✨ Simpan Barang Baru</button>
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowAddSupplyModal(false)} 
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Barang Baru</span>
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -5338,23 +5488,36 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL: CATAT PEMAKAIAN PERLENGKAPAN OPERASIONAL */}
             {showUseSupplyModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
-                                📝 Catat Pemakaian Perlengkapan Operasional
-                            </h3>
-                            <button onClick={() => setShowUseSupplyModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <FileText className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Catat Pemakaian Perlengkapan
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Dokumentasikan pemakaian barang operasional oleh divisi terkait</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowUseSupplyModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleUseSupplySubmit} className="space-y-4 text-xs">
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Pilih Barang Perlengkapan:*</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Pilih Barang Perlengkapan:*</label>
                                 <select
                                     value={useSupplyForm.supply_id}
                                     onChange={e => setUseSupplyForm({ ...useSupplyForm, supply_id: e.target.value })}
                                     required
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                 >
                                     <option value="">-- Pilih Barang Perlengkapan --</option>
                                     {warehouseSuppliesList.map(s => (
@@ -5365,36 +5528,36 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </select>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Jumlah Dipakai:*</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Jumlah Dipakai:*</label>
                                     <input
                                         type="number"
                                         min="1"
                                         value={useSupplyForm.used_qty}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, used_qty: e.target.value })}
                                         required
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Tanggal Pemakaian:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Tanggal Pemakaian:</label>
                                     <input
                                         type="date"
                                         value={useSupplyForm.usage_date}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, usage_date: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Divisi Pengambil:*</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Divisi Pengambil:*</label>
                                     <select
                                         value={useSupplyForm.user_division}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, user_division: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Divisi Potong (HT)">Divisi Potong (HT)</option>
                                         <option value="Divisi Gosok (GM)">Divisi Gosok (GM)</option>
@@ -5406,32 +5569,44 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Nama Pengambil/Pekerja:*</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Nama Pengambil/Pekerja:*</label>
                                     <input
                                         type="text"
                                         placeholder="Contoh: Supri / Bambang"
                                         value={useSupplyForm.taker_name}
                                         onChange={e => setUseSupplyForm({ ...useSupplyForm, taker_name: e.target.value })}
                                         required
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Catatan / Keperluan Pemakaian:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Catatan / Keperluan Pemakaian:</label>
                                 <textarea
                                     rows="2"
                                     placeholder="Contoh: Penggantian APD bulanan / packing peti kayu SPO-0129"
                                     value={useSupplyForm.notes}
                                     onChange={e => setUseSupplyForm({ ...useSupplyForm, notes: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 ></textarea>
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowUseSupplyModal(false)} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Batal</button>
-                                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black">✓ Simpan Log Pemakaian</button>
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowUseSupplyModal(false)} 
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Log Pemakaian</span>
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -5440,23 +5615,36 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL: PENGAJUAN RESTOK PERLENGKAPAN GUDANG KE ADMIN TOKO */}
             {showRequestRestockModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-extrabold text-amber-400 text-lg flex items-center gap-2">
-                                📩 Form Pengajuan Restok Perlengkapan ke Admin Toko
-                            </h3>
-                            <button onClick={() => setShowRequestRestockModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                                    <AlertTriangle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Form Pengajuan Restok Perlengkapan
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Ajukan permintaan pembelian perlengkapan baru ke Admin Toko</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowRequestRestockModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleRequestRestockSubmit} className="space-y-4 text-xs">
                             <div>
-                                <label className="text-slate-300 block mb-1 font-bold">Pilih Barang Perlengkapan:*</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Pilih Barang Perlengkapan:*</label>
                                 <select
                                     value={requestRestockForm.supply_id}
                                     onChange={e => setRequestRestockForm({ ...requestRestockForm, supply_id: e.target.value })}
                                     required
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                 >
                                     <option value="">-- Pilih Barang Perlengkapan --</option>
                                     {warehouseSuppliesList.map(s => (
@@ -5467,52 +5655,62 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                 </select>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-300 block mb-1 font-bold">Jumlah Pengajuan Restok:*</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Jumlah Pengajuan Restok:*</label>
                                     <input
                                         type="number"
                                         min="1"
                                         value={requestRestockForm.request_qty}
                                         onChange={e => setRequestRestockForm({ ...requestRestockForm, request_qty: e.target.value })}
                                         required
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-amber-300 font-extrabold focus:border-amber-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-300 block mb-1 font-bold">Tingkat Prioritas:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Tingkat Prioritas:</label>
                                     <select
                                         value={requestRestockForm.priority}
                                         onChange={e => setRequestRestockForm({ ...requestRestockForm, priority: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Biasa">Biasa (Persediaan Rutin)</option>
                                         <option value="Mendesak / Stok Menipis">Mendesak / Stok Menipis</option>
-                                        <option value="Mendesak / Stok Habis">🚨 CRITICAL: Stok Sudah Habis!</option>
+                                        <option value="Mendesak / Stok Habis">CRITICAL: Stok Sudah Habis!</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-300 block mb-1 font-bold">Catatan & Alasan Pengajuan ke Admin Toko:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Catatan & Alasan Pengajuan ke Admin Toko:</label>
                                 <textarea
                                     rows="3"
                                     placeholder="Contoh: Stok sisa 6 galon di gudang B1, dibutuhkan untuk pengerjaan finishing beveling proyek minggu depan."
                                     value={requestRestockForm.notes}
                                     onChange={e => setRequestRestockForm({ ...requestRestockForm, notes: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-amber-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 ></textarea>
                             </div>
 
-                            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                                <span className="text-cyan-400 font-bold block">💡 Info Pengajuan Restok:</span>
+                            <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-2xl text-[11px] text-blue-900 space-y-1">
+                                <span className="text-[#1b68b0] font-bold block">Informasi Pengajuan Restok:</span>
                                 <p>Pengajuan akan dikirim ke dashboard Admin Toko & tersedia tombol pintas WhatsApp pesan otomatis ke Admin Toko / Purchasing.</p>
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowRequestRestockModal(false)} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Batal</button>
-                                <button type="submit" className="px-5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black flex items-center gap-1.5 shadow-lg shadow-amber-500/20">
-                                    <span>🚀</span> Kirim Pengajuan (+ Kirim WA)
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowRequestRestockModal(false)} 
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    <span>Kirim Pengajuan Restok</span>
                                 </button>
                             </div>
                         </form>
@@ -5522,33 +5720,46 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL: TAMBAH ALAT PENUNJANG BARU */}
             {showAddToolModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
-                                🛠️ Form Tambah Alat Penunjang / Mesin Baru
-                            </h3>
-                            <button onClick={() => setShowAddToolModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Wrench className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Form Tambah Alat Penunjang / Mesin Baru
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Registrasi mesin potong, bor, atau handtool ke inventaris</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowAddToolModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleAddToolSubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kode Alat (Opsional):</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kode Alat (Opsional):</label>
                                     <input
                                         type="text"
                                         placeholder="Otomatis jika kosong"
                                         value={newToolForm.tool_code}
                                         onChange={e => setNewToolForm({ ...newToolForm, tool_code: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-mono focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kategori Alat / Mesin:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kategori Alat / Mesin:</label>
                                     <select
                                         value={newToolForm.category}
                                         onChange={e => setNewToolForm({ ...newToolForm, category: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Mesin Bor & Potong">Mesin Bor & Potong (Kaca/Mesin)</option>
                                         <option value="Mata Bor & Mata Potong">Mata Bor & Mata Potong Diamond</option>
@@ -5561,45 +5772,45 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Alat / Mesin Penunjang:*</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Alat / Mesin Penunjang:*</label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="Contoh: Mesin Bor Kaca Portable / Tangga Alumunium 4m"
                                     value={newToolForm.name}
                                     onChange={e => setNewToolForm({ ...newToolForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Total Jumlah Unit:*</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Total Jumlah Unit:*</label>
                                     <input
                                         type="number"
                                         min="1"
                                         required
                                         value={newToolForm.total_qty}
                                         onChange={e => setNewToolForm({ ...newToolForm, total_qty: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-emerald-400 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Satuan Unit:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
                                     <input
                                         type="text"
                                         value={newToolForm.unit}
                                         onChange={e => setNewToolForm({ ...newToolForm, unit: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                         placeholder="Unit / Set / Pcs"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Kondisi Alat:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Kondisi Alat:</label>
                                     <select
                                         value={newToolForm.condition}
                                         onChange={e => setNewToolForm({ ...newToolForm, condition: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                     >
                                         <option value="Bagus">Bagus & Ready</option>
                                         <option value="Perlu Maintenance">Perlu Maintenance</option>
@@ -5609,19 +5820,31 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Lokasi Penyimpanan / Rak Storage:</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Lokasi Penyimpanan / Rak Storage:</label>
                                 <input
                                     type="text"
                                     placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
                                     value={newToolForm.location}
                                     onChange={e => setNewToolForm({ ...newToolForm, location: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="pt-3 flex justify-end gap-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowAddToolModal(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition">Batal</button>
-                                <button type="submit" className="bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black px-5 py-2 rounded-lg transition shadow-lg">✨ Simpan Alat Ke Catalog</button>
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowAddToolModal(false)} 
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Alat Ke Catalog</span>
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -5630,40 +5853,54 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL: CATAT PEMINJAMAN ALAT TEKNISI (MULTI-ITEM TOOL BORROWING) */}
             {showBorrowToolModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
-                                📋 Form Pencatatan Peminjaman Alat Oleh Admin
-                            </h3>
-                            <button onClick={() => setShowBorrowToolModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Layers className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Form Pencatatan Peminjaman Alat
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Pencatatan serah terima inventaris alat kerja oleh teknisi lapangan</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowBorrowToolModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleBorrowToolSubmit} className="space-y-4 text-xs">
                             {/* DYNAMIC MULTI-TOOL SELECTION ROWS */}
-                            <div className="space-y-3 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
-                                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                    <label className="text-slate-200 font-extrabold text-xs flex items-center gap-1.5">
-                                        🛠️ Daftar Alat / Mesin Yang Dipinjam ({borrowToolForm.selected_items.length} Alat):
+                            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                <div className="flex justify-between items-center border-b border-slate-200 pb-2.5">
+                                    <label className="text-slate-800 font-bold text-xs flex items-center gap-1.5">
+                                        <span>Daftar Alat / Mesin Dipinjam ({borrowToolForm.selected_items.length} Alat):</span>
                                     </label>
                                     <button
                                         type="button"
                                         onClick={handleAddBorrowItemRow}
-                                        className="bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/40 px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow"
+                                        className="bg-[#1b68b0]/10 text-[#1b68b0] hover:bg-[#1b68b0] hover:text-white border border-[#1b68b0]/20 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                                     >
-                                        ➕ Tambah Alat Lain
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambah Alat Lain</span>
                                     </button>
                                 </div>
 
                                 {borrowToolForm.selected_items.map((item, idx) => (
-                                    <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                                        <span className="font-mono text-xs text-cyan-400 font-bold px-1">#{idx + 1}</span>
+                                    <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+                                        <span className="font-mono text-xs text-[#1b68b0] font-bold px-1">#{idx + 1}</span>
                                         <div className="flex-1 min-w-[200px]">
                                             <select
                                                 required
                                                 value={item.tool_id}
                                                 onChange={e => handleBorrowItemChange(idx, 'tool_id', e.target.value)}
-                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-cyan-300 font-bold focus:border-cyan-400 text-xs"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white text-xs cursor-pointer"
                                             >
                                                 <option value="">-- Pilih Alat Dari Inventory --</option>
                                                 {toolsList.map(t => (
@@ -5680,7 +5917,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                                 required
                                                 value={item.qty}
                                                 onChange={e => handleBorrowItemChange(idx, 'qty', e.target.value)}
-                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-amber-400 font-mono font-bold focus:border-cyan-400 text-xs text-center"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white text-xs text-center"
                                                 placeholder="Qty Unit"
                                             />
                                         </div>
@@ -5688,10 +5925,10 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveBorrowItemRow(idx)}
-                                                className="bg-rose-500/20 text-rose-300 hover:bg-rose-500 hover:text-white px-2.5 py-2 rounded-lg text-xs font-bold transition"
+                                                className="text-rose-500 hover:bg-rose-50 p-2 rounded-xl border border-rose-200 transition cursor-pointer"
                                                 title="Hapus item ini"
                                             >
-                                                🗑️
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         )}
                                     </div>
@@ -5699,53 +5936,65 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Nama Peminjam / Teknisi:*</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Nama Peminjam / Teknisi:*</label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="Contoh: Teknisi Asep / Pak Mulyadi"
                                     value={borrowToolForm.borrower_name}
                                     onChange={e => setBorrowToolForm({ ...borrowToolForm, borrower_name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-slate-400 block mb-1 font-semibold">Keperluan Pekerjaan / Project:*</label>
+                                <label className="text-slate-700 block mb-1 font-semibold">Keperluan Pekerjaan / Project:*</label>
                                 <textarea
                                     required
                                     rows="2"
                                     placeholder="Contoh: Pengeboran engsel sekat kaca tempered SPO-0129 Dago Pakar"
                                     value={borrowToolForm.purpose}
                                     onChange={e => setBorrowToolForm({ ...borrowToolForm, purpose: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 ></textarea>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Tanggal Pinjam:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Tanggal Pinjam:</label>
                                     <input
                                         type="date"
                                         value={borrowToolForm.borrow_date}
                                         onChange={e => setBorrowToolForm({ ...borrowToolForm, borrow_date: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 block mb-1 font-semibold">Estimasi Tanggal Kembali:</label>
+                                    <label className="text-slate-700 block mb-1 font-semibold">Estimasi Tanggal Kembali:</label>
                                     <input
                                         type="date"
                                         value={borrowToolForm.expected_return}
                                         onChange={e => setBorrowToolForm({ ...borrowToolForm, expected_return: e.target.value })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:border-cyan-400"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                                     />
                                 </div>
                             </div>
 
-                            <div className="pt-3 flex justify-end gap-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setShowBorrowToolModal(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition">Batal</button>
-                                <button type="submit" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black px-5 py-2 rounded-lg transition shadow-lg">📋 Catat Peminjaman Alat</button>
+                            <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowBorrowToolModal(false)} 
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    <span>Catat Peminjaman Alat</span>
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -5754,82 +6003,95 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL KONFIRMASI / EDIT PENGEMBALIAN ALAT */}
             {showReturnToolModal && selectedReturnBorrow && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
-                                ↩️ Konfirmasi & Edit Tanggal Pengembalian Alat
-                            </h3>
-                            <button onClick={() => setShowReturnToolModal(false)} className="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <RotateCcw className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Konfirmasi & Pengembalian Alat
+                                    </h3>
+                                    <p className="text-xs text-slate-500">Verifikasi pengembalian alat dan catat kondisi fisik saat dikembalikan</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowReturnToolModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleConfirmReturnSubmit} className="space-y-4">
+                        <form onSubmit={handleConfirmReturnSubmit} className="space-y-4 text-xs">
                             {/* BORROWER INFO SUMMARY */}
-                            <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 text-xs space-y-2">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400 font-semibold">Peminjam / Teknisi:</span>
-                                    <span className="font-extrabold text-cyan-300">👨‍🔧 {selectedReturnBorrow.borrower_name}</span>
+                                    <span className="text-slate-500 font-medium">Peminjam / Teknisi:</span>
+                                    <span className="font-bold text-[#1b68b0]">{selectedReturnBorrow.borrower_name}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400 font-semibold">Keperluan / Proyek:</span>
-                                    <span className="text-slate-200">📝 {selectedReturnBorrow.purpose}</span>
+                                    <span className="text-slate-500 font-medium">Keperluan / Proyek:</span>
+                                    <span className="text-slate-800 font-semibold">{selectedReturnBorrow.purpose}</span>
                                 </div>
-                                <div className="flex justify-between items-center border-t border-slate-800/60 pt-1.5">
-                                    <span className="text-slate-400">Tanggal Dipinjam:</span>
-                                    <span className="font-mono text-amber-400 font-bold">{selectedReturnBorrow.borrow_date}</span>
+                                <div className="flex justify-between items-center border-t border-slate-200 pt-2">
+                                    <span className="text-slate-500">Tanggal Dipinjam:</span>
+                                    <span className="font-mono text-amber-700 font-bold">{selectedReturnBorrow.borrow_date}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400">Estimasi Rencana Kembali:</span>
-                                    <span className="font-mono text-cyan-400 font-bold">{selectedReturnBorrow.expected_return}</span>
+                                    <span className="text-slate-500">Estimasi Rencana Kembali:</span>
+                                    <span className="font-mono text-[#1b68b0] font-bold">{selectedReturnBorrow.expected_return}</span>
                                 </div>
 
                                 {/* ITEMS LIST */}
-                                <div className="border-t border-slate-800/60 pt-2 space-y-1">
-                                    <span className="text-slate-400 block font-semibold text-[11px]">Daftar Alat Dipinjam:</span>
+                                <div className="border-t border-slate-200 pt-2 space-y-1">
+                                    <span className="text-slate-500 block font-semibold text-[11px]">Daftar Alat Dipinjam:</span>
                                     {Array.isArray(selectedReturnBorrow.items) && selectedReturnBorrow.items.length > 0 ? (
                                         selectedReturnBorrow.items.map((it, idx) => (
-                                            <div key={idx} className="bg-slate-900 px-2 py-1 rounded border border-slate-800 flex justify-between text-[11px]">
-                                                <span className="text-slate-200 font-bold">{it.tool_name} ({it.tool_code})</span>
-                                                <span className="text-amber-400 font-mono font-bold">{it.qty} {it.unit}</span>
+                                            <div key={idx} className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 flex justify-between text-[11px] shadow-xs">
+                                                <span className="text-slate-800 font-bold">{it.tool_name} ({it.tool_code})</span>
+                                                <span className="text-amber-700 font-mono font-bold">{it.qty} {it.unit}</span>
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="bg-slate-900 px-2 py-1 rounded border border-slate-800 flex justify-between text-[11px]">
-                                            <span className="text-slate-200 font-bold">{selectedReturnBorrow.tool_name}</span>
-                                            <span className="text-amber-400 font-mono font-bold">{selectedReturnBorrow.qty_borrowed} Unit</span>
+                                        <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 flex justify-between text-[11px] shadow-xs">
+                                            <span className="text-slate-800 font-bold">{selectedReturnBorrow.tool_name}</span>
+                                            <span className="text-amber-700 font-mono font-bold">{selectedReturnBorrow.qty_borrowed} Unit</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
                             {/* EDITABLE ACTUAL RETURN DATE INPUT */}
-                            <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2">
-                                <label className="text-xs font-extrabold text-emerald-400 block flex justify-between items-center">
-                                    <span>📅 Tanggal Pengembalian Sebenarnya:</span>
-                                    <span className="text-[10px] text-slate-400 font-normal">(Bisa diedit lebih cepat/lebih lama)</span>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                                <label className="text-xs font-bold text-slate-800 block flex justify-between items-center">
+                                    <span>Tanggal Pengembalian Sebenarnya:</span>
+                                    <span className="text-[10px] text-slate-500 font-normal">(Bisa disesuaikan lebih awal / lambat)</span>
                                 </label>
                                 <input
                                     type="date"
                                     required
                                     value={actualReturnDate}
                                     onChange={e => setActualReturnDate(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-mono font-bold focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0]"
                                 />
 
                                 {/* DYNAMIC TIME DIFFERENCE BADGE */}
                                 {actualReturnDate && selectedReturnBorrow.expected_return && (
                                     <div className="text-[11px] font-mono pt-1">
                                         {actualReturnDate > selectedReturnBorrow.expected_return ? (
-                                            <span className="text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20 font-bold block">
-                                                ⚠️ Pengembalian Lebih Lama / Terlambat dari estimasi ({selectedReturnBorrow.expected_return})
+                                            <span className="text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-xl border border-amber-200 font-bold block">
+                                                Pengembalian Lebih Lama / Terlambat dari estimasi ({selectedReturnBorrow.expected_return})
                                             </span>
                                         ) : actualReturnDate < selectedReturnBorrow.expected_return ? (
-                                            <span className="text-cyan-300 bg-cyan-500/10 px-2.5 py-1 rounded border border-cyan-500/20 font-bold block">
-                                                ⚡ Pengembalian Lebih Cepat dari estimasi ({selectedReturnBorrow.expected_return})
+                                            <span className="text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-xl border border-blue-200 font-bold block">
+                                                Pengembalian Lebih Cepat dari estimasi ({selectedReturnBorrow.expected_return})
                                             </span>
                                         ) : (
-                                            <span className="text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20 font-bold block">
-                                                ✅ Tepat Waktu Sesuai Estimasi ({selectedReturnBorrow.expected_return})
+                                            <span className="text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-xl border border-emerald-200 font-bold block">
+                                                Tepat Waktu Sesuai Estimasi ({selectedReturnBorrow.expected_return})
                                             </span>
                                         )}
                                     </div>
@@ -5837,52 +6099,52 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             </div>
 
                             {/* LAPORAN KONDISI / KEHILANGAN SAAT PENGEMBALIAN */}
-                            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                                <label className="text-xs font-bold text-slate-300 block">
-                                    ⚙️ Status Kondisi Fisik Alat Saat Dikembalikan:
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                                <label className="text-xs font-bold text-slate-800 block">
+                                    Status Kondisi Fisik Alat Saat Dikembalikan:
                                 </label>
                                 <select
                                     value={returnConditionStatus}
                                     onChange={e => setReturnConditionStatus(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-100 font-bold focus:border-cyan-400"
+                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-bold focus:border-[#1b68b0] cursor-pointer"
                                 >
-                                    <option value="Baik">✅ Dikembalikan Dalam Kondisi Baik & Lengkap</option>
-                                    <option value="Ada Rusak">⚠️ Ada Unit Yang Rusak (Perlu Perbaikan / Patah)</option>
-                                    <option value="Ada Hilang">❌ Ada Unit Yang Hilang / Tertinggal</option>
+                                    <option value="Baik">Dikembalikan Dalam Kondisi Baik & Lengkap</option>
+                                    <option value="Ada Rusak">Ada Unit Yang Rusak (Perlu Perbaikan / Patah)</option>
+                                    <option value="Ada Hilang">Ada Unit Yang Hilang / Tertinggal</option>
                                 </select>
 
                                 {returnConditionStatus === 'Ada Rusak' && (
-                                    <div className="pt-2 grid grid-cols-2 gap-3 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                                    <div className="pt-2 grid grid-cols-2 gap-3 bg-amber-50 p-3 rounded-xl border border-amber-200">
                                         <div>
-                                            <label className="text-[11px] text-amber-300 font-bold block mb-1">Jumlah Unit Rusak:</label>
+                                            <label className="text-[11px] text-amber-900 font-bold block mb-1">Jumlah Unit Rusak:</label>
                                             <input
                                                 type="number"
                                                 min="1"
                                                 value={returnDamagedQty}
                                                 onChange={e => setReturnDamagedQty(e.target.value)}
-                                                className="w-full bg-slate-950 border border-amber-500/40 rounded p-1.5 text-xs text-amber-300 font-mono font-bold"
+                                                className="w-full bg-white border border-amber-300 rounded-lg p-2 text-xs text-amber-800 font-mono font-bold"
                                             />
                                         </div>
-                                        <div className="text-[10px] text-slate-400 self-center">
-                                            ⚠️ Stok alat di katalog akan otomatis bertambah pada kategori <b className="text-amber-300">Rusak/Servis</b>.
+                                        <div className="text-[10px] text-slate-600 self-center">
+                                            Stok alat di katalog akan otomatis bertambah pada status <b className="text-amber-800">Rusak/Servis</b>.
                                         </div>
                                     </div>
                                 )}
 
                                 {returnConditionStatus === 'Ada Hilang' && (
-                                    <div className="pt-2 grid grid-cols-2 gap-3 bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/20">
+                                    <div className="pt-2 grid grid-cols-2 gap-3 bg-rose-50 p-3 rounded-xl border border-rose-200">
                                         <div>
-                                            <label className="text-[11px] text-rose-300 font-bold block mb-1">Jumlah Unit Hilang:</label>
+                                            <label className="text-[11px] text-rose-900 font-bold block mb-1">Jumlah Unit Hilang:</label>
                                             <input
                                                 type="number"
                                                 min="1"
                                                 value={returnLostQty}
                                                 onChange={e => setReturnLostQty(e.target.value)}
-                                                className="w-full bg-slate-950 border border-rose-500/40 rounded p-1.5 text-xs text-rose-300 font-mono font-bold"
+                                                className="w-full bg-white border border-rose-300 rounded-lg p-2 text-xs text-rose-800 font-mono font-bold"
                                             />
                                         </div>
-                                        <div className="text-[10px] text-slate-400 self-center">
-                                            ❌ Stok alat di katalog akan otomatis bertambah pada kategori <b className="text-rose-300">Hilang</b>.
+                                        <div className="text-[10px] text-slate-600 self-center">
+                                            Stok alat di katalog akan otomatis bertambah pada status <b className="text-rose-800">Hilang</b>.
                                         </div>
                                     </div>
                                 )}
@@ -5890,30 +6152,31 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
                             {/* OPTIONAL NOTES */}
                             <div>
-                                <label className="text-xs text-slate-400 block mb-1">Catatan Pengembalian / Kondisi Alat (Opsional):</label>
+                                <label className="text-xs text-slate-700 font-semibold block mb-1">Catatan Pengembalian / Kondisi Alat (Opsional):</label>
                                 <input
                                     type="text"
                                     value={returnNotes}
                                     onChange={e => setReturnNotes(e.target.value)}
                                     placeholder="Contoh: Alat dikembalikan dalam kondisi lengkap & bersih."
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
                             {/* MODAL ACTIONS */}
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowReturnToolModal(false)}
-                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-semibold transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-extrabold text-slate-950 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Konfirmasi & Simpan Pengembalian
+                                    <Check className="w-4 h-4" />
+                                    <span>Konfirmasi & Simpan Pengembalian</span>
                                 </button>
                             </div>
                         </form>
@@ -5923,103 +6186,114 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL UPDATE KONDISI & LAPORKAN RUSAK/HILANG (KATALOG) */}
             {showEditToolModal && selectedToolForEdit && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div>
-                                <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
-                                    ⚙️ Update Kondisi & Stok Alat ({selectedToolForEdit.tool_code})
-                                </h3>
-                                <p className="text-xs text-slate-400">{selectedToolForEdit.name}</p>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <Wrench className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Update Kondisi & Stok Alat ({selectedToolForEdit.tool_code})
+                                    </h3>
+                                    <p className="text-xs text-slate-500">{selectedToolForEdit.name}</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowEditToolModal(false)} className="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowEditToolModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleSaveToolEditSubmit} className="space-y-4 text-xs">
-                            <div className="grid grid-cols-2 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                                 <div>
-                                    <label className="text-slate-400 font-semibold block mb-1">Total Unit Dimiliki:</label>
+                                    <label className="text-slate-700 font-semibold block mb-1">Total Unit Dimiliki:</label>
                                     <input
                                         type="number"
                                         min="1"
                                         value={toolEditForm.total_qty}
                                         onChange={e => setToolEditForm({ ...toolEditForm, total_qty: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:border-cyan-400"
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-mono font-bold focus:border-[#1b68b0]"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-400 font-semibold block mb-1">Status Utama Alat:</label>
+                                    <label className="text-slate-700 font-semibold block mb-1">Status Utama Alat:</label>
                                     <select
                                         value={toolEditForm.condition}
                                         onChange={e => setToolEditForm({ ...toolEditForm, condition: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold focus:border-cyan-400"
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-bold focus:border-[#1b68b0] cursor-pointer"
                                     >
-                                        <option value="Bagus">✅ Bagus (100% Layak Operasional)</option>
-                                        <option value="Rusak Ringan">⚠️ Rusak Ringan (Perlu Servis Kecil)</option>
-                                        <option value="Rusak Berat">❌ Rusak Berat (Tidak Bisa Digunakan)</option>
-                                        <option value="Hilang">❗ Hilang (Unit Rusak/Hilang Total)</option>
+                                        <option value="Bagus">Bagus (100% Layak Operasional)</option>
+                                        <option value="Rusak Ringan">Rusak Ringan (Perlu Servis Kecil)</option>
+                                        <option value="Rusak Berat">Rusak Berat (Tidak Bisa Digunakan)</option>
+                                        <option value="Hilang">Hilang (Unit Rusak/Hilang Total)</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                                 <div>
-                                    <label className="text-amber-400 font-bold block mb-1">Jumlah Unit Rusak (Perlu Servis):</label>
+                                    <label className="text-amber-800 font-bold block mb-1">Jumlah Unit Rusak (Perlu Servis):</label>
                                     <input
                                         type="number"
                                         min="0"
                                         value={toolEditForm.damaged_qty}
                                         onChange={e => setToolEditForm({ ...toolEditForm, damaged_qty: e.target.value })}
-                                        className="w-full bg-slate-900 border border-amber-500/40 rounded-lg p-2 text-amber-300 font-mono font-bold focus:border-amber-400"
+                                        className="w-full bg-white border border-amber-300 rounded-xl p-2 text-amber-700 font-mono font-bold focus:border-amber-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-rose-400 font-bold block mb-1">Jumlah Unit Hilang:</label>
+                                    <label className="text-rose-800 font-bold block mb-1">Jumlah Unit Hilang:</label>
                                     <input
                                         type="number"
                                         min="0"
                                         value={toolEditForm.lost_qty}
                                         onChange={e => setToolEditForm({ ...toolEditForm, lost_qty: e.target.value })}
-                                        className="w-full bg-slate-900 border border-rose-500/40 rounded-lg p-2 text-rose-300 font-mono font-bold focus:border-rose-400"
+                                        className="w-full bg-white border border-rose-300 rounded-xl p-2 text-rose-700 font-mono font-bold focus:border-rose-500"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-300 font-semibold block mb-1">Catatan Perbaikan / Kronologi Kerusakan / Hilang:</label>
+                                <label className="text-slate-700 font-semibold block mb-1">Catatan Perbaikan / Kronologi Kerusakan / Hilang:</label>
                                 <textarea
                                     rows="2"
                                     placeholder="Contoh: 1 unit mata bor diamond patah saat pengerjaan sekat kaca tempered SPO-0129 Dago."
                                     value={toolEditForm.condition_notes}
                                     onChange={e => setToolEditForm({ ...toolEditForm, condition_notes: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200 focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                 ></textarea>
                             </div>
 
                             <div>
-                                <label className="text-slate-300 font-semibold block mb-1">Lokasi Penyimpanan Alat:</label>
+                                <label className="text-slate-700 font-semibold block mb-1">Lokasi Penyimpanan Alat:</label>
                                 <input
                                     type="text"
                                     value={toolEditForm.location}
                                     onChange={e => setToolEditForm({ ...toolEditForm, location: e.target.value })}
                                     placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200 focus:border-cyan-400 font-mono"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white font-mono"
                                 />
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowEditToolModal(false)}
-                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-semibold transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 font-extrabold text-slate-950 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition"
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Perubahan Kondisi Alat
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Perubahan Kondisi Alat</span>
                                 </button>
                             </div>
                         </form>
@@ -6029,103 +6303,114 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL FORM DETAIL PERBAIKAN SELESAI / EDIT DETAIL PERBAIKAN */}
             {showCompleteRepairModal && selectedRepairTool && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <div>
-                                <h3 className="font-extrabold text-base text-emerald-400 flex items-center gap-2">
-                                    🔧 Form Detail Perbaikan Selesai ({selectedRepairTool.tool_code})
-                                </h3>
-                                <p className="text-xs text-slate-400">{selectedRepairTool.name}</p>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#5f9733]">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">
+                                        Form Detail Perbaikan Selesai ({selectedRepairTool.tool_code})
+                                    </h3>
+                                    <p className="text-xs text-slate-500">{selectedRepairTool.name}</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowCompleteRepairModal(false)} className="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+                            <button 
+                                onClick={() => setShowCompleteRepairModal(false)} 
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleSaveCompleteRepairSubmit} className="space-y-4 text-xs">
-                            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-3">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                                 <div>
-                                    <label className="text-amber-400 font-extrabold block mb-1">📌 Bagian Mesin / Alat Yang Rusak:</label>
+                                    <label className="text-amber-800 font-bold block mb-1">Bagian Mesin / Alat Yang Rusak:</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="Contoh: Mata bor diamond retak & motor carbon brush aus"
                                         value={repairForm.damaged_part}
                                         onChange={e => setRepairForm({ ...repairForm, damaged_part: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-semibold focus:border-emerald-400"
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#70b03c]"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="text-cyan-400 font-extrabold block mb-1">🛠️ Tindakan Perbaikan Yang Dilakukan:</label>
+                                    <label className="text-[#1b68b0] font-bold block mb-1">Tindakan Perbaikan Yang Dilakukan:</label>
                                     <textarea
                                         rows="2"
                                         required
                                         placeholder="Contoh: Pembersihan motor rotor, penyetelan presisi & penggantian sparepart aus"
                                         value={repairForm.action_taken}
                                         onChange={e => setRepairForm({ ...repairForm, action_taken: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-emerald-400"
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-medium focus:border-[#1b68b0]"
                                     ></textarea>
                                 </div>
 
                                 <div>
-                                    <label className="text-teal-300 font-extrabold block mb-1">🔩 Komponen / Sparepart Yang Diganti (Opsional):</label>
+                                    <label className="text-slate-700 font-bold block mb-1">Komponen / Sparepart Yang Diganti (Opsional):</label>
                                     <textarea
                                         rows="2"
                                         placeholder="Contoh: Carbon Brush Heavy Duty 2 pcs, Bearing SKF 608 1 pc"
                                         value={repairForm.replaced_components}
                                         onChange={e => setRepairForm({ ...repairForm, replaced_components: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 font-medium focus:border-emerald-400"
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-medium focus:border-[#1b68b0]"
                                     ></textarea>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                                 <div>
-                                    <label className="text-slate-300 font-bold block mb-1">💵 Biaya Servis / Sparepart (Rp):</label>
+                                    <label className="text-slate-700 font-bold block mb-1">Biaya Servis / Sparepart (Rp):</label>
                                     <input
                                         type="number"
                                         placeholder="e.g. 75000"
                                         value={repairForm.repair_cost}
                                         onChange={e => setRepairForm({ ...repairForm, repair_cost: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-amber-300 font-mono font-bold focus:border-emerald-400"
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-amber-700 font-mono font-bold focus:border-amber-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-slate-300 font-bold block mb-1">📅 Tanggal Selesai:</label>
+                                    <label className="text-slate-700 font-bold block mb-1">Tanggal Selesai:</label>
                                     <input
                                         type="date"
                                         required
                                         value={repairForm.completion_date}
                                         onChange={e => setRepairForm({ ...repairForm, completion_date: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:border-emerald-400"
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-mono font-bold focus:border-[#70b03c]"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-slate-300 font-bold block mb-1">👨‍🔧 Teknisi / Tempat Perbaikan (Servis):</label>
+                                <label className="text-slate-700 font-bold block mb-1">Teknisi / Tempat Perbaikan (Servis):</label>
                                 <input
                                     type="text"
                                     placeholder="Contoh: Bengkel Teknik Maju / Servis Internal Toko"
                                     value={repairForm.technician_name}
                                     onChange={e => setRepairForm({ ...repairForm, technician_name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-semibold focus:border-emerald-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
                                 <button
                                     type="button"
                                     onClick={() => setShowCompleteRepairModal(false)}
-                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-semibold transition"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-extrabold text-slate-950 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition"
+                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
                                 >
-                                    ✓ Simpan Detail Perbaikan & Kembalikan Ke Stok
+                                    <Check className="w-4 h-4" />
+                                    <span>Simpan Detail Perbaikan & Kembalikan Ke Stok</span>
                                 </button>
                             </div>
                         </form>
@@ -6178,49 +6463,51 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* MODAL REKAP RINCIAN PEMILAHAN ORDERAN (MASUK & SELESAI) */}
             {showRekapModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in">
-                    <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-2xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto text-slate-800">
                         {/* MODAL HEADER */}
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl">📊</span>
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <BarChart3 className="w-5 h-5" />
+                                </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-slate-100 uppercase tracking-wide">
-                                        Rekapitulasi Pemilihan Orderan Masuk & Selesai
+                                    <h3 className="text-base font-bold text-slate-800">
+                                        Rekapitulasi Pemilahan Orderan Masuk & Selesai
                                     </h3>
-                                    <p className="text-[11px] text-slate-400 font-mono">
-                                        Divisi: <strong className="text-cyan-300">{isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'SEMUA DIVISI'}</strong>
+                                    <p className="text-xs text-slate-500 font-mono">
+                                        Divisi: <strong className="text-[#1b68b0]">{isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'SEMUA DIVISI'}</strong>
                                     </p>
                                 </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowRekapModal(false)}
-                                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm cursor-pointer transition"
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
                             >
-                                ✕
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* RENTANG WAKTU SELECTOR BUTTONS */}
-                        <div className="flex flex-wrap items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
-                            <span className="text-xs font-mono font-bold text-slate-400 pl-1">Filter Rentang Waktu:</span>
+                        <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200">
+                            <span className="text-xs font-bold text-slate-600 pl-2">Filter Rentang Waktu:</span>
                             {[
-                                { key: 'today', label: '📅 Hari Ini' },
-                                { key: '2days', label: '📆 2 Hari' },
-                                { key: 'week', label: '🗓️ 1 Minggu' },
-                                { key: 'month', label: '📊 1 Bulan' },
-                                { key: 'year', label: '🗓️ 1 Tahun' },
-                                { key: 'all', label: '🌐 Semua Waktu' }
+                                { key: 'today', label: 'Hari Ini' },
+                                { key: '2days', label: '2 Hari' },
+                                { key: 'week', label: '1 Minggu' },
+                                { key: 'month', label: '1 Bulan' },
+                                { key: 'year', label: '1 Tahun' },
+                                { key: 'all', label: 'Semua Waktu' }
                             ].map(item => (
                                 <button
                                     key={item.key}
                                     type="button"
                                     onClick={() => setStatTimeRange(item.key)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                                         statTimeRange === item.key
-                                            ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
-                                            : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                                            ? 'bg-[#1b68b0] text-white shadow-xs'
+                                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                                     }`}
                                 >
                                     {item.label}
@@ -6274,63 +6561,63 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             return (
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div className="bg-slate-950 p-3.5 rounded-xl border border-cyan-500/30 text-center space-y-1">
-                                            <span className="text-[11px] font-mono text-cyan-400 font-bold block">📥 Total Order Masuk</span>
-                                            <span className="text-2xl font-mono font-black text-cyan-300">{enteredList.length} Order</span>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
+                                            <span className="text-xs font-bold text-[#1b68b0] block">Total Order Masuk</span>
+                                            <span className="text-2xl font-mono font-bold text-slate-900">{enteredList.length} Order</span>
                                         </div>
-                                        <div className="bg-slate-950 p-3.5 rounded-xl border border-emerald-500/30 text-center space-y-1">
-                                            <span className="text-[11px] font-mono text-emerald-400 font-bold block">✅ Total Order Selesai</span>
-                                            <span className="text-2xl font-mono font-black text-emerald-300">{completedList.length} Order</span>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
+                                            <span className="text-xs font-bold text-[#5f9733] block">Total Order Selesai</span>
+                                            <span className="text-2xl font-mono font-bold text-slate-900">{completedList.length} Order</span>
                                         </div>
-                                        <div className="bg-slate-950 p-3.5 rounded-xl border border-amber-500/30 text-center space-y-1">
-                                            <span className="text-[11px] font-mono text-amber-400 font-bold block">📈 Persentase Selesai</span>
-                                            <span className="text-2xl font-mono font-black text-amber-300">{completionRate}%</span>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
+                                            <span className="text-xs font-bold text-amber-700 block">Persentase Selesai</span>
+                                            <span className="text-2xl font-mono font-bold text-slate-900">{completionRate}%</span>
                                         </div>
                                     </div>
 
                                     {/* TABLE RINCIAN PER HARI */}
                                     <div className="space-y-2">
-                                        <h4 className="text-xs font-bold text-slate-300 font-mono flex items-center justify-between">
-                                            <span>📅 Rincian Pemilihan Per-Hari ({sortedDates.length} Hari Terdeteksi):</span>
+                                        <h4 className="text-xs font-bold text-slate-700 font-mono flex items-center justify-between">
+                                            <span>Rincian Pemilihan Per-Hari ({sortedDates.length} Hari Terdeteksi):</span>
                                             <span className="text-[10px] text-slate-500">Menampilkan tanggal dengan transaksi order</span>
                                         </h4>
 
                                         {sortedDates.length > 0 ? (
-                                            <div className="border border-slate-800 rounded-xl overflow-hidden">
-                                                <table className="w-full text-left text-xs font-mono">
-                                                    <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                                            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] border-b border-slate-200 font-bold">
                                                         <tr>
-                                                            <th className="p-2.5">Tanggal</th>
-                                                            <th className="p-2.5">📥 Order Masuk</th>
-                                                            <th className="p-2.5">✅ Order Selesai</th>
-                                                            <th className="p-2.5 text-right">Daftar SPO</th>
+                                                            <th className="p-3">Tanggal</th>
+                                                            <th className="p-3">Order Masuk</th>
+                                                            <th className="p-3">Order Selesai</th>
+                                                            <th className="p-3 text-right">Daftar SPO</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-slate-800 bg-slate-900/60">
+                                                    <tbody className="divide-y divide-slate-100 bg-white">
                                                         {sortedDates.map(dStr => {
                                                             const group = dateGroupMap[dStr];
                                                             return (
-                                                                <tr key={dStr} className="hover:bg-slate-800/50">
-                                                                    <td className="p-2.5 font-bold text-amber-300">{formatIndonesianDate(dStr)}</td>
-                                                                    <td className="p-2.5">
-                                                                        <span className="bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/30 font-extrabold">
+                                                                <tr key={dStr} className="hover:bg-slate-50 transition">
+                                                                    <td className="p-3 font-bold text-slate-800">{formatIndonesianDate(dStr)}</td>
+                                                                    <td className="p-3">
+                                                                        <span className="bg-blue-50 text-[#1b68b0] px-2.5 py-1 rounded-lg border border-blue-200 font-bold text-xs">
                                                                             {group.entered.length} Order
                                                                         </span>
                                                                     </td>
-                                                                    <td className="p-2.5">
-                                                                        <span className="bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-extrabold">
+                                                                    <td className="p-3">
+                                                                        <span className="bg-emerald-50 text-[#5f9733] px-2.5 py-1 rounded-lg border border-emerald-200 font-bold text-xs">
                                                                             {group.completed.length} Order
                                                                         </span>
                                                                     </td>
-                                                                    <td className="p-2.5 text-right">
+                                                                    <td className="p-3 text-right">
                                                                         <div className="flex flex-wrap items-center justify-end gap-1">
                                                                             {group.entered.map(o => (
-                                                                                <span key={'e_' + o.id} className="text-[9px] bg-slate-950 text-cyan-400 border border-slate-800 px-1.5 py-0.5 rounded">
+                                                                                <span key={'e_' + o.id} className="text-[10px] bg-slate-50 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md font-mono">
                                                                                     #{o.spo_number}
                                                                                 </span>
                                                                             ))}
                                                                             {group.completed.map(o => (
-                                                                                <span key={'c_' + o.id} className="text-[9px] bg-slate-950 text-emerald-400 border border-slate-800 px-1.5 py-0.5 rounded">
+                                                                                <span key={'c_' + o.id} className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono font-bold">
                                                                                     ✓ #{o.spo_number}
                                                                                 </span>
                                                                             ))}
@@ -6343,7 +6630,7 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                                                 </table>
                                             </div>
                                         ) : (
-                                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-500 font-mono">
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center text-xs text-slate-500 font-mono">
                                                 Tidak ada data orderan masuk atau selesai pada rentang waktu ini.
                                             </div>
                                         )}
@@ -6352,11 +6639,11 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
                             );
                         })()}
 
-                        <div className="flex justify-end pt-2 border-t border-slate-800">
+                        <div className="flex justify-end pt-2 border-t border-slate-200">
                             <button
                                 type="button"
                                 onClick={() => setShowRekapModal(false)}
-                                className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs cursor-pointer transition"
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs cursor-pointer transition"
                             >
                                 Tutup Rekap
                             </button>
@@ -6460,43 +6747,48 @@ Mohon informasi ketersediaan, estimasi waktu pengiriman, dan invoice total harga
 
             {/* GLOBAL SKETCH LIGHTBOX MODAL */}
             {sketchLightbox.isOpen && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-cyan-500/50 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_80px_rgba(6,182,212,0.25)]">
-                        <div className="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl">📐</span>
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800">
+                        <div className="p-4 bg-white border-b border-slate-200 flex justify-between items-center">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                    <FileText className="w-5 h-5" />
+                                </div>
                                 <div>
-                                    <h3 className="font-black text-cyan-400 text-base">
+                                    <h3 className="font-bold text-slate-800 text-base">
                                         Sketsa Pola & Gambar Sambungan Kaca
                                     </h3>
-                                    <p className="text-xs text-slate-400 font-mono">No SPO: {sketchLightbox.title}</p>
+                                    <p className="text-xs text-slate-500 font-mono">No SPO: {sketchLightbox.title}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 <a
                                     href={sketchLightbox.url}
                                     target="_blank"
                                     rel="noreferrer"
                                     download
-                                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs transition flex items-center gap-1 shadow-lg shadow-cyan-500/20"
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
                                 >
-                                    ⬇️ Unduh Gambar
+                                    <Download className="w-4 h-4" />
+                                    <span>Unduh Gambar</span>
                                 </a>
                                 <button
                                     onClick={() => setSketchLightbox({ isOpen: false, url: '', title: '' })}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition cursor-pointer"
-                                >&times;</button>
+                                    className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
                         </div>
-                        <div className="flex-1 p-6 bg-black/95 flex items-center justify-center overflow-auto">
+                        <div className="flex-1 p-6 bg-slate-900 flex items-center justify-center overflow-auto">
                             <img
                                 src={sketchLightbox.url}
                                 alt="Detail Sketsa Kaca"
-                                className="max-w-full max-h-[75vh] object-contain rounded-xl border border-slate-800 shadow-2xl"
+                                className="max-w-full max-h-[75vh] object-contain rounded-2xl border border-slate-700 shadow-2xl"
                             />
                         </div>
-                        <div className="p-3.5 bg-slate-950 border-t border-slate-800 text-center text-xs text-slate-400 font-mono">
-                            💡 Acuan gambar sketsa pola fisik & posisi sambungan kaca untuk semua divisi operasional SYP Glass (Gudang, Potong, Gosok, Bevel, Etsa).
+                        <div className="p-3.5 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500 font-mono">
+                            Acuan gambar sketsa pola fisik & posisi sambungan kaca untuk semua divisi operasional SYP Glass (Gudang, Potong, Gosok, Bevel, Etsa).
                         </div>
                     </div>
                 </div>

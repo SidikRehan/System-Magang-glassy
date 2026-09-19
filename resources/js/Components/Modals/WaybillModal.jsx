@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Printer, Tag, X } from 'lucide-react';
 
 export default function WaybillModal({
     show,
@@ -18,30 +19,30 @@ export default function WaybillModal({
     const colorConfig = {
         Putih: {
             title: 'LEMBAR PUTIH — KONSUMEN (LUNAS)',
-            bgColor: 'bg-white text-slate-900 border-slate-400',
+            bgColor: 'bg-white text-slate-900 border-slate-300',
             headerBg: 'bg-slate-900 text-white',
-            badgeBg: 'bg-slate-950 text-white',
+            badgeBg: 'bg-slate-900 text-white',
             borderTop: 'border-t-8 border-t-slate-800'
         },
         Merah: {
             title: 'LEMBAR MERAH — TAGIHAN COD DRIVER / SUPIR',
-            bgColor: 'bg-rose-50 text-slate-900 border-rose-400',
+            bgColor: 'bg-rose-50/70 text-slate-900 border-rose-300',
             headerBg: 'bg-rose-700 text-white',
-            badgeBg: 'bg-rose-800 text-white',
+            badgeBg: 'bg-rose-700 text-white',
             borderTop: 'border-t-8 border-t-rose-600'
         },
         Kuning: {
             title: 'LEMBAR KUNING — PABRIK & ARSIP GUDANG',
-            bgColor: 'bg-amber-50 text-slate-900 border-amber-400',
+            bgColor: 'bg-amber-50/70 text-slate-900 border-amber-300',
             headerBg: 'bg-amber-600 text-white',
-            badgeBg: 'bg-amber-700 text-white',
+            badgeBg: 'bg-amber-600 text-white',
             borderTop: 'border-t-8 border-t-amber-500'
         },
         Hijau: {
             title: 'LEMBAR HIJAU — KEUANGAN & AKUNTANSI TOKO',
-            bgColor: 'bg-emerald-50 text-slate-900 border-emerald-400',
+            bgColor: 'bg-emerald-50/70 text-slate-900 border-emerald-300',
             headerBg: 'bg-emerald-700 text-white',
-            badgeBg: 'bg-emerald-800 text-white',
+            badgeBg: 'bg-emerald-700 text-white',
             borderTop: 'border-t-8 border-t-emerald-600'
         }
     };
@@ -59,7 +60,7 @@ export default function WaybillModal({
         }];
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
             <style>{`
                 @media print {
                     body * {
@@ -85,15 +86,17 @@ export default function WaybillModal({
                     }
                 }
             `}</style>
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto no-print-wrapper">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3 no-print">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xl">🖨️</span>
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-3xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto no-print-wrapper text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3.5 no-print">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                            <Printer className="w-5 h-5" />
+                        </div>
                         <div>
-                            <h3 className="font-extrabold text-slate-100 text-base">
+                            <h3 className="font-bold text-slate-800 text-base">
                                 Dokumen Resmi Surat Jalan (4 Warna)
                             </h3>
-                            <p className="text-xs text-slate-400 font-mono">SPO: {waybillOrder.spo_number || waybillOrder.id}</p>
+                            <p className="text-xs text-slate-500 font-mono">SPO: {waybillOrder.spo_number || waybillOrder.id}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -101,32 +104,38 @@ export default function WaybillModal({
                             <button
                                 type="button"
                                 onClick={() => onOpenStickerModal(waybillOrder)}
-                                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                className="bg-[#1b68b0]/10 hover:bg-[#1b68b0]/20 text-[#1b68b0] border border-[#1b68b0]/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
                                 title="Cetak Stiker Label Orderan Kaca untuk Admin Gudang & Divisi"
                             >
-                                🏷️ Cetak Stiker Label
+                                <Tag className="w-3.5 h-3.5" />
+                                <span>Cetak Stiker Label</span>
                             </button>
                         )}
-                        <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl font-bold cursor-pointer px-2">&times;</button>
+                        <button 
+                            onClick={onClose} 
+                            className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
 
                 {/* PILIHAN WARNA SURAT JALAN */}
-                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 no-print">
-                    <span className="text-xs text-slate-300 font-bold">Pilih Lembar Warna Surat Jalan:</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 no-print">
+                    <span className="text-xs text-slate-700 font-bold">Pilih Lembar Warna Surat Jalan:</span>
                     <div className="flex flex-wrap gap-2">
                         {['Putih', 'Merah', 'Kuning', 'Hijau'].map(c => (
                             <button
                                 key={c}
                                 type="button"
                                 onClick={() => setActiveColor(c)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-black transition border cursor-pointer ${
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
                                     activeColor === c
-                                        ? c === 'Merah' ? 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/20'
-                                        : c === 'Kuning' ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20'
-                                        : c === 'Hijau' ? 'bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-500/20'
-                                        : 'bg-white text-slate-950 border-slate-300 shadow-md'
-                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                        ? c === 'Merah' ? 'bg-rose-50 text-rose-800 border-rose-300 ring-2 ring-rose-500/20 shadow-xs'
+                                        : c === 'Kuning' ? 'bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20 shadow-xs'
+                                        : c === 'Hijau' ? 'bg-emerald-50 text-emerald-900 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs'
+                                        : 'bg-white text-slate-900 border-slate-300 ring-2 ring-[#1b68b0]/20 shadow-xs'
+                                        : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
                                 }`}
                             >
                                 Lembar {c}
@@ -136,7 +145,7 @@ export default function WaybillModal({
                 </div>
 
                 {/* PRINTABLE DOKUMEN CONTAINER */}
-                <div id="printable-waybill" className={`p-6 rounded-xl space-y-4 font-sans border-2 shadow-inner ${currentConfig.bgColor} ${currentConfig.borderTop}`}>
+                <div id="printable-waybill" className={`p-6 rounded-2xl space-y-4 font-sans border shadow-xs ${currentConfig.bgColor} ${currentConfig.borderTop}`}>
                     {/* HEADER KOP DOKUMEN */}
                     <div className="flex justify-between items-start border-b-2 border-slate-900 pb-3">
                         <div>
@@ -145,7 +154,7 @@ export default function WaybillModal({
                             <p className="text-[11px] text-slate-600">Jl. Raya Industri Kaca No. 88, Bandung | Telp/WA: 0812-3456-7890</p>
                         </div>
                         <div className="text-right">
-                            <span className={`${currentConfig.badgeBg} px-3 py-1 rounded text-xs font-black tracking-widest inline-block uppercase mb-1`}>
+                            <span className={`${currentConfig.badgeBg} px-3 py-1 rounded-md text-xs font-bold tracking-widest inline-block uppercase mb-1`}>
                                 SURAT JALAN ({activeColor.toUpperCase()})
                             </span>
                             <div className="text-xs font-mono font-bold">No: SJ-{waybillOrder.spo_number || waybillOrder.id}</div>
@@ -153,14 +162,14 @@ export default function WaybillModal({
                         </div>
                     </div>
 
-                    <div className="text-center font-black text-xs py-1 rounded border border-slate-400 bg-slate-200/60 uppercase tracking-wide">
+                    <div className="text-center font-bold text-xs py-1.5 rounded-lg border border-slate-300 bg-white/70 uppercase tracking-wide">
                         {currentConfig.title}
                     </div>
 
                     {/* DETAIL TUJUAN & KONSUMEN */}
-                    <div className="grid grid-cols-2 gap-4 text-xs bg-white/80 p-3 rounded-lg border border-slate-300">
+                    <div className="grid grid-cols-2 gap-4 text-xs bg-white/90 p-3.5 rounded-xl border border-slate-300">
                         <div className="space-y-1">
-                            <div><strong>No. SPO:</strong> <span className="font-mono text-cyan-700 font-bold">{waybillOrder.spo_number || waybillOrder.id}</span></div>
+                            <div><strong>No. SPO:</strong> <span className="font-mono text-[#1b68b0] font-bold">{waybillOrder.spo_number || waybillOrder.id}</span></div>
                             <div><strong>Penerima / Customer:</strong> <span className="font-bold">{waybillOrder.customer_name}</span></div>
                             <div><strong>No. Telepon:</strong> {waybillOrder.customer_phone}</div>
                             <div><strong>Alamat Tujuan:</strong> {waybillOrder.customer_address || '-'}</div>
@@ -171,7 +180,7 @@ export default function WaybillModal({
                             <div><strong>Kendaraan / Plat:</strong> {waybillOrder.assigned_vehicle || 'Engkel Box (D 8472 AB)'}</div>
                             <div>
                                 <strong>Status Pembayaran:</strong>{' '}
-                                <span className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${isLunas ? 'bg-emerald-200 text-emerald-900 border border-emerald-400' : 'bg-rose-200 text-rose-900 border border-rose-400'}`}>
+                                <span className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${isLunas ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`}>
                                     {waybillOrder.payment_status || 'DP 50%'} {activeColor === 'Merah' && !isLunas ? '— (WAJIB TAGIH COD)' : ''}
                                 </span>
                             </div>
@@ -180,21 +189,21 @@ export default function WaybillModal({
 
                     {/* TABEL RINCIAN KACA */}
                     <div>
-                        <table className="w-full text-xs text-left border-collapse border border-slate-400 bg-white">
-                            <thead className="bg-slate-200 uppercase font-bold text-[11px]">
+                        <table className="w-full text-xs text-left border-collapse border border-slate-300 bg-white rounded-lg overflow-hidden">
+                            <thead className="bg-slate-100 uppercase font-bold text-[11px] text-slate-700">
                                 <tr>
-                                    <th className="border border-slate-400 p-2 text-center">No</th>
-                                    <th className="border border-slate-400 p-2">Spesifikasi Kaca & Jenis Pengerjaan</th>
-                                    <th className="border border-slate-400 p-2 text-center">Ukuran (P x L)</th>
-                                    <th className="border border-slate-400 p-2 text-center">Tebal</th>
-                                    <th className="border border-slate-400 p-2 text-center">Qty</th>
+                                    <th className="border border-slate-300 p-2 text-center">No</th>
+                                    <th className="border border-slate-300 p-2">Spesifikasi Kaca & Jenis Pengerjaan</th>
+                                    <th className="border border-slate-300 p-2 text-center">Ukuran (P x L)</th>
+                                    <th className="border border-slate-300 p-2 text-center">Tebal</th>
+                                    <th className="border border-slate-300 p-2 text-center">Qty</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {itemsList.map((it, idx) => (
-                                    <tr key={idx} className="border-b border-slate-300">
-                                        <td className="border border-slate-400 p-2 text-center font-mono">{idx + 1}</td>
-                                        <td className="border border-slate-400 p-2 font-bold">
+                                    <tr key={idx} className="border-b border-slate-200">
+                                        <td className="border border-slate-300 p-2 text-center font-mono">{idx + 1}</td>
+                                        <td className="border border-slate-300 p-2 font-bold">
                                             {it.glass_type}
                                             {Array.isArray(it.processes) && it.processes.length > 0 && (
                                                 <div className="text-[10px] text-slate-600 font-normal">
@@ -202,9 +211,9 @@ export default function WaybillModal({
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="border border-slate-400 p-2 text-center font-mono font-bold">{it.length_cm} x {it.width_cm} cm</td>
-                                        <td className="border border-slate-400 p-2 text-center font-mono">{it.thickness_mm || 5} mm</td>
-                                        <td className="border border-slate-400 p-2 text-center font-mono font-bold text-slate-950">{it.qty || 1} Lembar</td>
+                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold">{it.length_cm} x {it.width_cm} cm</td>
+                                        <td className="border border-slate-300 p-2 text-center font-mono">{it.thickness_mm || 5} mm</td>
+                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold text-slate-950">{it.qty || 1} Lembar</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -212,42 +221,43 @@ export default function WaybillModal({
                     </div>
 
                     {/* CATATAN PENGIRIMAN */}
-                    <div className="text-[11px] bg-white/60 p-2 rounded border border-slate-300">
+                    <div className="text-[11px] bg-white/70 p-2.5 rounded-xl border border-slate-300 text-slate-700">
                         <strong>Catatan Pengiriman:</strong> Barang kaca telah diperiksa dalam kondisi sempurna (tidak pecah/gurat) sebelum dimuat ke armada pengiriman. Mohon periksa kembali saat penerimaan.
                     </div>
 
                     {/* TANDA TANGAN */}
                     <div className="grid grid-cols-3 gap-3 text-center text-[10px] pt-2">
-                        <div className="border border-slate-400 p-2 rounded bg-white">
-                            <div className="font-bold mb-8">Penerima / Customer:</div>
-                            <div className="border-t border-slate-400 pt-1 font-bold">( {waybillOrder.customer_name} )</div>
+                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
+                            <div className="font-bold mb-8 text-slate-700">Penerima / Customer:</div>
+                            <div className="border-t border-slate-300 pt-1 font-bold">( {waybillOrder.customer_name} )</div>
                         </div>
-                        <div className="border border-slate-400 p-2 rounded bg-white">
-                            <div className="font-bold mb-8">Driver Pengirim:</div>
-                            <div className="border-t border-slate-400 pt-1 font-bold">( {waybillOrder.assigned_driver || 'Supir Armada'} )</div>
+                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
+                            <div className="font-bold mb-8 text-slate-700">Driver Pengirim:</div>
+                            <div className="border-t border-slate-300 pt-1 font-bold">( {waybillOrder.assigned_driver || 'Supir Armada'} )</div>
                         </div>
-                        <div className="border border-slate-400 p-2 rounded bg-white">
-                            <div className="font-bold mb-8">Admin / Hormat Kami:</div>
-                            <div className="border-t border-slate-400 pt-1 font-bold">( {userName || 'Admin Toko'} )</div>
+                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
+                            <div className="font-bold mb-8 text-slate-700">Admin / Hormat Kami:</div>
+                            <div className="border-t border-slate-300 pt-1 font-bold">( {userName || 'Admin Toko'} )</div>
                         </div>
                     </div>
                 </div>
 
-                {/* BOTTON ACTION BUTTONS */}
-                <div className="flex justify-end gap-3 pt-2 border-t border-slate-800 no-print">
+                {/* BOTTOM ACTION BUTTONS */}
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 no-print">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition text-xs cursor-pointer"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                     >
                         Tutup
                     </button>
                     <button
                         type="button"
                         onClick={() => window.print()}
-                        className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-cyan-500/20 text-xs flex items-center gap-1.5 cursor-pointer"
+                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs text-xs flex items-center gap-2 cursor-pointer"
                     >
-                        🖨️ Cetak Surat Jalan Lembar {activeColor} (Print)
+                        <Printer className="w-4 h-4" />
+                        <span>Cetak Surat Jalan Lembar {activeColor}</span>
                     </button>
                 </div>
             </div>

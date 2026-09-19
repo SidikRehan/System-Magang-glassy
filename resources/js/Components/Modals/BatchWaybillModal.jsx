@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Printer, X, Check, Layers, Sparkles } from 'lucide-react';
 
 export default function BatchWaybillModal({
     show,
@@ -21,26 +22,26 @@ export default function BatchWaybillModal({
     const colorConfig = {
         Putih: {
             title: 'LEMBAR PUTIH — KONSUMEN (LUNAS)',
-            bgColor: 'bg-white text-slate-900 border-slate-400',
-            badgeBg: 'bg-slate-950 text-white',
+            bgColor: 'bg-white text-slate-900 border-slate-300',
+            badgeBg: 'bg-slate-900 text-white',
             borderTop: 'border-t-8 border-t-slate-800'
         },
         Merah: {
             title: 'LEMBAR MERAH — TAGIHAN COD DRIVER / SUPIR',
-            bgColor: 'bg-rose-50 text-slate-900 border-rose-400',
-            badgeBg: 'bg-rose-800 text-white',
+            bgColor: 'bg-rose-50/70 text-slate-900 border-rose-300',
+            badgeBg: 'bg-rose-700 text-white',
             borderTop: 'border-t-8 border-t-rose-600'
         },
         Kuning: {
             title: 'LEMBAR KUNING — PABRIK & ARSIP GUDANG',
-            bgColor: 'bg-amber-50 text-slate-900 border-amber-400',
-            badgeBg: 'bg-amber-700 text-white',
+            bgColor: 'bg-amber-50/70 text-slate-900 border-amber-300',
+            badgeBg: 'bg-amber-600 text-white',
             borderTop: 'border-t-8 border-t-amber-500'
         },
         Hijau: {
             title: 'LEMBAR HIJAU — KEUANGAN & AKUNTANSI TOKO',
-            bgColor: 'bg-emerald-50 text-slate-900 border-emerald-400',
-            badgeBg: 'bg-emerald-800 text-white',
+            bgColor: 'bg-emerald-50/70 text-slate-900 border-emerald-300',
+            badgeBg: 'bg-emerald-700 text-white',
             borderTop: 'border-t-8 border-t-emerald-600'
         }
     };
@@ -65,7 +66,7 @@ export default function BatchWaybillModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
             <style>{`
                 @media print {
                     body * {
@@ -95,72 +96,80 @@ export default function BatchWaybillModal({
                     }
                 }
             `}</style>
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto no-print-wrapper">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto no-print-wrapper text-slate-800">
                 {/* MODAL HEADER */}
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3 no-print">
-                    <div className="flex items-center gap-2">
-                        <span className="text-2xl">🖨️</span>
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3.5 no-print">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                            <Printer className="w-5 h-5" />
+                        </div>
                         <div>
-                            <h3 className="font-extrabold text-slate-100 text-base">
+                            <h3 className="font-bold text-slate-800 text-base">
                                 Cetak Sekaligus (Batch Print) Seluruh Surat Jalan Trip Armada
                             </h3>
-                            <p className="text-xs text-cyan-400 font-mono">
+                            <p className="text-xs text-[#1b68b0] font-mono">
                                 Trip {trip_code} — {driver_name} ({vehicle_plate}) — <strong>{orders.length} Alamat SJ</strong>
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl font-bold cursor-pointer">&times;</button>
+                    <button 
+                        onClick={onClose} 
+                        className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* FILTER COMBINATION WARNA LEMBAR PENGIRIMAN (CHECKBOX MULTI-SELECT) */}
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 no-print">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                        <span className="text-xs text-slate-200 font-bold flex items-center gap-1.5">
-                            <span>🎨</span> Centang Warna Lembar yang Ingin Dicetak Sekaligus:
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 no-print">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                        <span className="text-xs text-slate-700 font-bold flex items-center gap-1.5">
+                            <Layers className="w-4 h-4 text-[#1b68b0]" />
+                            <span>Centang Warna Lembar yang Ingin Dicetak Sekaligus:</span>
                         </span>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"
                                 onClick={() => selectPreset('2warna')}
-                                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer"
+                                className="bg-[#1b68b0]/10 hover:bg-[#1b68b0]/20 text-[#1b68b0] border border-[#1b68b0]/30 text-xs font-semibold px-3 py-1 rounded-xl transition cursor-pointer"
                             >
-                                ⚡ Centang 2 Warna (Putih + Merah COD)
+                                2 Warna (Putih + Merah COD)
                             </button>
                             <button
                                 type="button"
                                 onClick={() => selectPreset('4warna')}
-                                className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer"
+                                className="bg-[#70b03c]/10 hover:bg-[#70b03c]/20 text-[#70b03c] border border-[#70b03c]/30 text-xs font-semibold px-3 py-1 rounded-xl transition cursor-pointer"
                             >
-                                🌈 Centang Semua 4 Warna
+                                Semua 4 Warna
                             </button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-medium">
                         {[
-                            { key: 'Putih', label: 'Lembar Putih (Konsumen)', bgActive: 'bg-white text-slate-950 border-slate-300' },
-                            { key: 'Merah', label: 'Lembar Merah (Tagihan COD)', bgActive: 'bg-rose-600 text-white border-rose-400' },
-                            { key: 'Kuning', label: 'Lembar Kuning (Arsip Gudang)', bgActive: 'bg-amber-400 text-slate-950 border-amber-300' },
-                            { key: 'Hijau', label: 'Lembar Hijau (Keuangan Toko)', bgActive: 'bg-emerald-600 text-white border-emerald-400' },
+                            { key: 'Putih', label: 'Lembar Putih (Konsumen)', bgActive: 'bg-white text-slate-900 border-slate-300 ring-2 ring-[#1b68b0]/20' },
+                            { key: 'Merah', label: 'Lembar Merah (Tagihan COD)', bgActive: 'bg-rose-50 text-rose-800 border-rose-300 ring-2 ring-rose-500/20' },
+                            { key: 'Kuning', label: 'Lembar Kuning (Arsip Gudang)', bgActive: 'bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20' },
+                            { key: 'Hijau', label: 'Lembar Hijau (Keuangan Toko)', bgActive: 'bg-emerald-50 text-emerald-900 border-emerald-300 ring-2 ring-emerald-500/20' },
                         ].map(c => {
                             const isChecked = selectedColors.includes(c.key);
                             return (
                                 <div
                                     key={c.key}
                                     onClick={() => toggleColor(c.key)}
-                                    className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition select-none ${
+                                    className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${
                                         isChecked
-                                            ? c.bgActive + ' shadow-md'
-                                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                                            ? c.bgActive + ' shadow-xs'
+                                            : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
                                     }`}
                                 >
                                     <input
                                         type="checkbox"
                                         checked={isChecked}
                                         onChange={() => {}}
-                                        className="w-4 h-4 rounded text-cyan-500 focus:ring-0 bg-slate-950 border-slate-700 cursor-pointer"
+                                        className="w-4 h-4 rounded text-[#1b68b0] focus:ring-0 border-slate-300 cursor-pointer"
                                     />
-                                    <span className="text-xs font-black">{c.label}</span>
+                                    <span className="text-xs font-semibold">{c.label}</span>
                                 </div>
                             );
                         })}
@@ -186,7 +195,7 @@ export default function BatchWaybillModal({
                             return (
                                 <div
                                     key={`${ord.id}-${colorKey}`}
-                                    className={`waybill-page p-6 rounded-xl space-y-4 font-sans border-2 shadow-inner ${currentConfig.bgColor} ${currentConfig.borderTop}`}
+                                    className={`waybill-page p-6 rounded-2xl space-y-4 font-sans border shadow-xs ${currentConfig.bgColor} ${currentConfig.borderTop}`}
                                 >
                                     {/* HEADER KOP DOKUMEN */}
                                     <div className="flex justify-between items-start border-b-2 border-slate-900 pb-3">
@@ -196,7 +205,7 @@ export default function BatchWaybillModal({
                                             <p className="text-[11px] text-slate-600">Jl. Raya Industri Kaca No. 88, Bandung | Telp/WA: 0812-3456-7890</p>
                                         </div>
                                         <div className="text-right">
-                                            <span className={`${currentConfig.badgeBg} px-3 py-1 rounded text-xs font-black tracking-widest inline-block uppercase mb-1`}>
+                                            <span className={`${currentConfig.badgeBg} px-3 py-1 rounded-md text-xs font-bold tracking-widest inline-block uppercase mb-1`}>
                                                 SURAT JALAN ({colorKey.toUpperCase()}) — STOP #{ordIdx + 1}
                                             </span>
                                             <div className="text-xs font-mono font-bold">No: SJ-{ord.spo_number || ord.id}</div>
@@ -204,14 +213,14 @@ export default function BatchWaybillModal({
                                         </div>
                                     </div>
 
-                                    <div className="text-center font-black text-xs py-1 rounded border border-slate-400 bg-slate-200/60 uppercase tracking-wide">
+                                    <div className="text-center font-bold text-xs py-1.5 rounded-lg border border-slate-300 bg-white/60 uppercase tracking-wide">
                                         {currentConfig.title}
                                     </div>
 
                                     {/* DETAIL TUJUAN & KONSUMEN */}
-                                    <div className="grid grid-cols-2 gap-4 text-xs bg-white/80 p-3 rounded-lg border border-slate-300">
+                                    <div className="grid grid-cols-2 gap-4 text-xs bg-white/90 p-3.5 rounded-xl border border-slate-300">
                                         <div className="space-y-1">
-                                            <div><strong>No. SPO:</strong> <span className="font-mono text-cyan-700 font-bold">{ord.spo_number || ord.id}</span></div>
+                                            <div><strong>No. SPO:</strong> <span className="font-mono text-[#1b68b0] font-bold">{ord.spo_number || ord.id}</span></div>
                                             <div><strong>Penerima / Customer:</strong> <span className="font-bold">{ord.customer_name}</span></div>
                                             <div><strong>No. Telepon:</strong> {ord.customer_phone}</div>
                                             <div><strong>Alamat Tujuan:</strong> {ord.customer_address || '-'}</div>
@@ -222,7 +231,7 @@ export default function BatchWaybillModal({
                                             <div><strong>Kendaraan / Plat:</strong> {vehicle_plate}</div>
                                             <div>
                                                 <strong>Status Pembayaran:</strong>{' '}
-                                                <span className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${isLunas ? 'bg-emerald-200 text-emerald-900 border border-emerald-400' : 'bg-rose-200 text-rose-900 border border-rose-400'}`}>
+                                                <span className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${isLunas ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`}>
                                                     {ord.payment_status || 'DP 50%'} {colorKey === 'Merah' && !isLunas ? '— (WAJIB TAGIH COD)' : ''}
                                                 </span>
                                             </div>
@@ -231,31 +240,31 @@ export default function BatchWaybillModal({
 
                                     {/* TABEL RINCIAN KACA */}
                                     <div>
-                                        <table className="w-full text-xs text-left border-collapse border border-slate-400 bg-white">
-                                            <thead className="bg-slate-200 uppercase font-bold text-[11px]">
+                                        <table className="w-full text-xs text-left border-collapse border border-slate-300 bg-white rounded-lg overflow-hidden">
+                                            <thead className="bg-slate-100 uppercase font-bold text-[11px] text-slate-700">
                                                 <tr>
-                                                    <th className="border border-slate-400 p-2 text-center">No</th>
-                                                    <th className="border border-slate-400 p-2">Spesifikasi Kaca & Jenis Pengerjaan</th>
-                                                    <th className="border border-slate-400 p-2 text-center">Ukuran (P x L)</th>
-                                                    <th className="border border-slate-400 p-2 text-center">Tebal</th>
-                                                    <th className="border border-slate-400 p-2 text-center">Qty</th>
+                                                    <th className="border border-slate-300 p-2 text-center">No</th>
+                                                    <th className="border border-slate-300 p-2">Spesifikasi Kaca & Jenis Pengerjaan</th>
+                                                    <th className="border border-slate-300 p-2 text-center">Ukuran (P x L)</th>
+                                                    <th className="border border-slate-300 p-2 text-center">Tebal</th>
+                                                    <th className="border border-slate-300 p-2 text-center">Qty</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {itemsList.map((it, idx) => (
-                                                    <tr key={idx} className="border-b border-slate-300">
-                                                        <td className="border border-slate-400 p-2 text-center font-mono">{idx + 1}</td>
-                                                        <td className="border border-slate-400 p-2 font-bold">
-                                                            {it.glass_type}
+                                                    <tr key={idx} className="border-b border-slate-200">
+                                                        <td className="border border-slate-300 p-2 text-center font-mono">{idx + 1}</td>
+                                                        <td className="border border-slate-300 p-2 font-bold">
+                                                             {it.glass_type}
                                                             {Array.isArray(it.processes) && it.processes.length > 0 && (
                                                                 <div className="text-[10px] text-slate-600 font-normal">
                                                                     Proses: {it.processes.join(', ')}
                                                                 </div>
                                                             )}
                                                         </td>
-                                                        <td className="border border-slate-400 p-2 text-center font-mono font-bold">{it.length_cm} x {it.width_cm} cm</td>
-                                                        <td className="border border-slate-400 p-2 text-center font-mono">{it.thickness_mm || 5} mm</td>
-                                                        <td className="border border-slate-400 p-2 text-center font-mono font-bold text-slate-950">{it.qty || 1} Lembar</td>
+                                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold">{it.length_cm} x {it.width_cm} cm</td>
+                                                        <td className="border border-slate-300 p-2 text-center font-mono">{it.thickness_mm || 5} mm</td>
+                                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold text-slate-950">{it.qty || 1} Lembar</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -263,23 +272,23 @@ export default function BatchWaybillModal({
                                     </div>
 
                                     {/* CATATAN PENGIRIMAN */}
-                                    <div className="text-[11px] bg-white/60 p-2 rounded border border-slate-300">
+                                    <div className="text-[11px] bg-white/70 p-2.5 rounded-xl border border-slate-300 text-slate-700">
                                         <strong>Catatan Pengiriman:</strong> Barang kaca telah diperiksa dalam kondisi sempurna (tidak pecah/gurat) sebelum dimuat ke armada pengiriman. Mohon periksa kembali saat penerimaan di lokasi Stop #{ordIdx + 1}.
                                     </div>
 
                                     {/* TANDA TANGAN */}
                                     <div className="grid grid-cols-3 gap-3 text-center text-[10px] pt-2">
-                                        <div className="border border-slate-400 p-2 rounded bg-white">
-                                            <div className="font-bold mb-8">Penerima / Customer:</div>
-                                            <div className="border-t border-slate-400 pt-1 font-bold">( {ord.customer_name} )</div>
+                                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
+                                            <div className="font-bold mb-8 text-slate-700">Penerima / Customer:</div>
+                                            <div className="border-t border-slate-300 pt-1 font-bold">( {ord.customer_name} )</div>
                                         </div>
-                                        <div className="border border-slate-400 p-2 rounded bg-white">
-                                            <div className="font-bold mb-8">Driver Pengirim:</div>
-                                            <div className="border-t border-slate-400 pt-1 font-bold">( {driver_name} )</div>
+                                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
+                                            <div className="font-bold mb-8 text-slate-700">Driver Pengirim:</div>
+                                            <div className="border-t border-slate-300 pt-1 font-bold">( {driver_name} )</div>
                                         </div>
-                                        <div className="border border-slate-400 p-2 rounded bg-white">
-                                            <div className="font-bold mb-8">Admin / Hormat Kami:</div>
-                                            <div className="border-t border-slate-400 pt-1 font-bold">( {userName || 'Admin Toko'} )</div>
+                                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
+                                            <div className="font-bold mb-8 text-slate-700">Admin / Hormat Kami:</div>
+                                            <div className="border-t border-slate-300 pt-1 font-bold">( {userName || 'Admin Toko'} )</div>
                                         </div>
                                     </div>
                                 </div>
@@ -289,20 +298,21 @@ export default function BatchWaybillModal({
                 </div>
 
                 {/* BOTTOM ACTION BUTTONS */}
-                <div className="flex justify-end gap-3 pt-2 border-t border-slate-800 no-print">
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 no-print">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg transition text-xs cursor-pointer"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-xs cursor-pointer"
                     >
                         Tutup
                     </button>
                     <button
                         type="button"
                         onClick={() => window.print()}
-                        className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold px-5 py-2 rounded-lg transition shadow-lg shadow-cyan-500/20 text-xs flex items-center gap-1.5 cursor-pointer"
+                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs text-xs flex items-center gap-2 cursor-pointer"
                     >
-                        🖨️ Cetak Sekaligus ({orders.length * selectedColors.length} Lembar SJ: {selectedColors.join(' + ')})
+                        <Printer className="w-4 h-4" />
+                        <span>Cetak Sekaligus ({orders.length * selectedColors.length} Lembar SJ: {selectedColors.join(' + ')})</span>
                     </button>
                 </div>
             </div>

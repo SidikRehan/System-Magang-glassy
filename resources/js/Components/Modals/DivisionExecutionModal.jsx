@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
+import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function DivisionExecutionModal({
     show,
@@ -526,27 +527,27 @@ export default function DivisionExecutionModal({
     };
 
     return (
-                <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 flex items-center justify-center p-2 sm:p-6 overflow-y-auto">
-                    <div className="bg-slate-900/95 border border-cyan-500/30 rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 lg:p-8 shadow-[0_0_60px_rgba(6,182,212,0.15)] space-y-5 sm:space-y-6 relative my-auto">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-6 overflow-y-auto">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 lg:p-8 shadow-2xl space-y-5 sm:space-y-6 relative my-auto text-slate-800">
                         
                         {/* DEKORASI ACCENT BG */}
-                        <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
-                        <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                        <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
                         {/* MODAL HEADER BAR */}
-                        <div className="flex justify-between items-start border-b border-slate-800/90 pb-4 relative z-10 gap-3">
+                        <div className="flex justify-between items-start border-b border-slate-200 pb-4 relative z-10 gap-3">
                             <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <span className="bg-cyan-500/10 text-cyan-300 font-extrabold text-[11px] px-3 py-1 rounded-full border border-cyan-500/30 flex items-center gap-1.5 shadow-sm">
-                                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                                    <span className="bg-[#1b68b0]/10 text-[#1b68b0] font-extrabold text-[11px] px-3 py-1 rounded-full border border-[#1b68b0]/20 flex items-center gap-1.5 shadow-xs">
+                                        <span className="w-2 h-2 rounded-full bg-[#1b68b0] animate-ping"></span>
                                         <span>MODAL EKSEKUSI WORKSTATION</span>
                                     </span>
-                                    <span className="font-black text-cyan-400 font-mono text-2xl tracking-tight">{selectedExecutionOrder.spo_number}</span>
-                                    <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border shadow-sm ${selectedExecutionOrder.priority_status === 'Prioritas' ? 'bg-red-600 text-white border-red-500 animate-pulse font-black shadow-red-600/30' : 'bg-white text-slate-950 border-slate-200'}`}>
-                                        {selectedExecutionOrder.priority_status === 'Prioritas' ? '🔥 PRIORITAS TINGGI' : '⚪ Biasa'}
+                                    <span className="font-black text-[#1b68b0] font-mono text-2xl tracking-tight">{selectedExecutionOrder.spo_number}</span>
+                                    <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border shadow-xs ${selectedExecutionOrder.priority_status === 'Prioritas' ? 'bg-red-600 text-white border-red-500 font-black' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                        {selectedExecutionOrder.priority_status === 'Prioritas' ? 'PRIORITAS TINGGI' : 'Biasa'}
                                     </span>
                                 </div>
-                                <h3 className="font-extrabold text-slate-100 text-xl tracking-tight mt-1">{selectedExecutionOrder.customer_name}</h3>
+                                <h3 className="font-extrabold text-slate-900 text-xl tracking-tight mt-1">{selectedExecutionOrder.customer_name}</h3>
                             </div>
 
                             <div className="flex items-center gap-2 sm:gap-3">
@@ -554,20 +555,23 @@ export default function DivisionExecutionModal({
                                     <button
                                         type="button"
                                         onClick={() => onOpenStickerModal(selectedExecutionOrder)}
-                                        className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                        className="bg-[#1b68b0]/10 hover:bg-[#1b68b0]/20 text-[#1b68b0] border border-[#1b68b0]/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                                         title="Cetak Stiker Label Orderan Kaca"
                                     >
-                                        🏷️ Cetak Stiker
+                                        <Tag className="w-3.5 h-3.5" />
+                                        <span>Cetak Stiker</span>
                                     </button>
                                 )}
-                                <span className="hidden sm:inline-block text-xs font-bold px-3.5 py-1.5 rounded-xl bg-slate-950 text-cyan-300 border border-slate-800 font-mono shadow-inner">
+                                <span className="hidden sm:inline-block text-xs font-bold px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 font-mono">
                                     Divisi: {roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}
                                 </span>
                                 <button 
                                     onClick={() => onClose()}
-                                    className="bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-9 h-9 flex items-center justify-center transition border border-slate-700 text-lg font-bold"
+                                    className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
                                     title="Tutup Modal"
-                                >&times;</button>
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
                         </div>
 
@@ -1641,45 +1645,52 @@ export default function DivisionExecutionModal({
 
                         {/* MODAL POPUP SUB-FORM PENOLAKAN KACA SISA (DIVISI HT) */}
                         {showRejectModal && (
-                            <div className="fixed inset-0 bg-black/85 backdrop-blur-xl z-[70] flex items-center justify-center p-4 overflow-y-auto">
-                                <div className="bg-slate-900 border border-rose-500/50 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto">
-                                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                                        <h3 className="font-extrabold text-sm text-rose-400 flex items-center gap-2">
-                                            <span>❌ Form Penolakan Kaca Sisa (Divisi HT)</span>
-                                        </h3>
+                            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4 overflow-y-auto">
+                                <div className="bg-white border border-rose-200 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto text-slate-800">
+                                    <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
+                                                <AlertTriangle className="w-4 h-4" />
+                                            </div>
+                                            <h3 className="font-bold text-sm text-slate-800">
+                                                Form Penolakan Kaca Sisa (Divisi HT)
+                                            </h3>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => setShowRejectModal(false)}
-                                            className="text-slate-400 hover:text-white text-xl font-bold"
-                                        >&times;</button>
+                                            className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1 transition cursor-pointer"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
                                     </div>
 
                                     <form onSubmit={handleRejectScrapSubmit} className="space-y-4 text-xs">
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                                        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1">
                                             <span className="text-[10px] text-slate-400 font-mono block">Order SPO #: {selectedExecutionOrder.spo_number}</span>
-                                            <div className="font-bold text-cyan-300">{selectedExecutionOrder.customer_name}</div>
-                                            <div className="text-[11px] text-amber-300 font-mono bg-slate-900 p-2 rounded border border-amber-500/30">
+                                            <div className="font-bold text-slate-800">{selectedExecutionOrder.customer_name}</div>
+                                            <div className="text-[11px] text-amber-800 font-mono bg-amber-50 p-2 rounded-xl border border-amber-200">
                                                 {selectedExecutionOrder.used_scrap_rak}
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-slate-300 font-bold block">Pilih Alasan Utama Penolakan:</label>
+                                            <label className="text-slate-700 font-bold block">Pilih Alasan Utama Penolakan:</label>
                                             <div className="space-y-1.5 font-mono text-[11px]">
                                                 {[
-                                                    { id: 'baret_cacat', label: '⚠️ Kaca Baret / Cacat / Retak Fisik' },
-                                                    { id: 'ukuran_kurang', label: '📐 Ukuran Fisik Kaca Sisa Tidak Cukup' },
-                                                    { id: 'tidak_ditemukan', label: '🔍 Kaca Tidak Ditemukan di Rak Storage' },
-                                                    { id: 'alasan_lain', label: '💬 Alasan Lainnya (Input Teks)' },
+                                                    { id: 'baret_cacat', label: 'Kaca Baret / Cacat / Retak Fisik' },
+                                                    { id: 'ukuran_kurang', label: 'Ukuran Fisik Kaca Sisa Tidak Cukup' },
+                                                    { id: 'tidak_ditemukan', label: 'Kaca Tidak Ditemukan di Rak Storage' },
+                                                    { id: 'alasan_lain', label: 'Alasan Lainnya (Input Teks)' },
                                                 ].map(opt => (
-                                                    <label key={opt.id} className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition ${rejectReasonType === opt.id ? 'bg-rose-950/60 border-rose-500 text-rose-200' : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-900'}`}>
+                                                    <label key={opt.id} className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${rejectReasonType === opt.id ? 'bg-rose-50 border-rose-400 text-rose-800 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
                                                         <input
                                                             type="radio"
                                                             name="rejectReasonType"
                                                             value={opt.id}
                                                             checked={rejectReasonType === opt.id}
                                                             onChange={e => setRejectReasonType(e.target.value)}
-                                                            className="text-rose-500 focus:ring-rose-400"
+                                                            className="text-rose-600 focus:ring-rose-500"
                                                         />
                                                         <span>{opt.label}</span>
                                                     </label>
@@ -1688,19 +1699,19 @@ export default function DivisionExecutionModal({
                                         </div>
 
                                         <div className="space-y-1">
-                                            <label className="text-slate-300 font-bold block">Catatan Penolakan (Detail Penjelasan Baret / Cacat):</label>
+                                            <label className="text-slate-700 font-bold block">Catatan Penolakan (Detail Penjelasan Baret / Cacat):</label>
                                             <textarea
                                                 rows={2}
                                                 placeholder="cth: Kaca baret di bagian tepi 40cm, retak pada sudut kanan..."
                                                 value={rejectNotes}
                                                 onChange={e => setRejectNotes(e.target.value)}
-                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:border-rose-400 text-xs"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-rose-400 text-xs"
                                             ></textarea>
                                         </div>
 
                                         {/* SECTION INPUT POTONG ULANG UKURAN SISA UTUH */}
-                                        <div className="bg-amber-950/40 border border-amber-500/40 p-3 rounded-2xl space-y-2">
-                                            <label className="flex items-center gap-2 text-amber-300 font-bold cursor-pointer">
+                                        <div className="bg-amber-50/70 border border-amber-200 p-3.5 rounded-2xl space-y-2">
+                                            <label className="flex items-center gap-2 text-amber-900 font-bold cursor-pointer">
                                                 <input
                                                     type="checkbox"
                                                     checked={resizeScrap}
@@ -1715,19 +1726,19 @@ export default function DivisionExecutionModal({
                                                             }
                                                         }
                                                     }}
-                                                    className="rounded text-amber-500 focus:ring-amber-400"
+                                                    className="rounded text-amber-600 focus:ring-amber-500"
                                                 />
-                                                <span>✂️ Potong Ulang Sisa Kaca Utuh yang Masih Bisa Dipakai</span>
+                                                <span>Potong Ulang Sisa Kaca Utuh yang Masih Bisa Dipakai</span>
                                             </label>
 
                                             {resizeScrap && (
-                                                <div className="space-y-2 pt-1 border-t border-amber-500/20">
-                                                    <p className="text-[10px] text-amber-200/80 leading-relaxed font-mono">
-                                                        💡 Masukkan ukuran baru setelah bagian baret dipotong (misal dari 150×80 cm menjadi 100×50 cm) agar stok sisa di rak tetap tersimpan akurat.
+                                                <div className="space-y-2 pt-1 border-t border-amber-200">
+                                                    <p className="text-[10px] text-amber-800 leading-relaxed font-mono">
+                                                        Masukkan ukuran baru setelah bagian baret dipotong (misal dari 150×80 cm menjadi 100×50 cm) agar stok sisa di rak tetap tersimpan akurat.
                                                     </p>
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <div>
-                                                            <label className="text-[10px] text-slate-300 block font-bold">Panjang Baru (cm):</label>
+                                                            <label className="text-[10px] text-slate-600 block font-bold">Panjang Baru (cm):</label>
                                                             <input
                                                                 type="number"
                                                                 step="0.1"
@@ -1735,11 +1746,11 @@ export default function DivisionExecutionModal({
                                                                 placeholder="Panjang cm"
                                                                 value={newLengthCm}
                                                                 onChange={e => setNewLengthCm(e.target.value)}
-                                                                className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-2.5 py-1.5 text-xs text-amber-300 font-mono font-bold"
+                                                                className="w-full bg-white border border-amber-300 rounded-xl px-2.5 py-1.5 text-xs text-amber-900 font-mono font-bold"
                                                             />
                                                         </div>
                                                         <div>
-                                                            <label className="text-[10px] text-slate-300 block font-bold">Lebar Baru (cm):</label>
+                                                            <label className="text-[10px] text-slate-600 block font-bold">Lebar Baru (cm):</label>
                                                             <input
                                                                 type="number"
                                                                 step="0.1"
@@ -1747,7 +1758,7 @@ export default function DivisionExecutionModal({
                                                                 placeholder="Lebar cm"
                                                                 value={newWidthCm}
                                                                 onChange={e => setNewWidthCm(e.target.value)}
-                                                                className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-2.5 py-1.5 text-xs text-amber-300 font-mono font-bold"
+                                                                className="w-full bg-white border border-amber-300 rounded-xl px-2.5 py-1.5 text-xs text-amber-900 font-mono font-bold"
                                                             />
                                                         </div>
                                                     </div>
@@ -1755,18 +1766,18 @@ export default function DivisionExecutionModal({
                                             )}
                                         </div>
 
-                                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                                             <button
                                                 type="button"
                                                 onClick={() => setShowRejectModal(false)}
-                                                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold cursor-pointer"
+                                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer"
                                             >Batal</button>
                                             <button
                                                 type="submit"
                                                 disabled={isSubmittingReject}
-                                                className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer"
+                                                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
                                             >
-                                                <span>{isSubmittingReject ? '⏳ Menyimpan...' : '❌ Submit Penolakan & Update Scrap'}</span>
+                                                <span>{isSubmittingReject ? 'Menyimpan...' : 'Submit Penolakan & Update Scrap'}</span>
                                             </button>
                                         </div>
                                     </form>
@@ -1776,30 +1787,37 @@ export default function DivisionExecutionModal({
 
                         {/* MODAL POPUP FORM POTONG ULANG / EDIT UKURAN KACA SISA DI RAK */}
                         {showEditScrapModal && (
-                            <div className="fixed inset-0 bg-black/85 backdrop-blur-xl z-[70] flex items-center justify-center p-4 overflow-y-auto">
-                                <div className="bg-slate-900 border border-amber-500/50 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto">
-                                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                                        <h3 className="font-extrabold text-sm text-amber-400 flex items-center gap-2">
-                                            <span>✂️ Potong Ulang & Edit Ukuran Scrap (Rak)</span>
-                                        </h3>
+                            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4 overflow-y-auto">
+                                <div className="bg-white border border-amber-200 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto text-slate-800">
+                                    <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
+                                                <Scissors className="w-4 h-4" />
+                                            </div>
+                                            <h3 className="font-bold text-sm text-slate-800">
+                                                Potong Ulang & Edit Ukuran Scrap (Rak)
+                                            </h3>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => setShowEditScrapModal(false)}
-                                            className="text-slate-400 hover:text-white text-xl font-bold cursor-pointer"
-                                        >&times;</button>
+                                            className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1 transition cursor-pointer"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
                                     </div>
 
                                     <form onSubmit={handleUpdateScrapSubmit} className="space-y-4 text-xs">
                                         {Array.isArray(scrapGlasses) && scrapGlasses.length > 0 && (
                                             <div className="space-y-1">
-                                                <label className="text-slate-300 font-bold block">Pilih Kaca Sisa yang Dipotong Ulang:</label>
+                                                <label className="text-slate-700 font-bold block">Pilih Kaca Sisa yang Dipotong Ulang:</label>
                                                 <select
                                                     value={editScrapForm.id || ''}
                                                     onChange={(e) => {
                                                         const found = scrapGlasses.find(s => String(s.id) === String(e.target.value));
                                                         if (found) handleOpenEditScrapModal(found);
                                                     }}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono font-bold cursor-pointer"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold cursor-pointer"
                                                 >
                                                     {scrapGlasses.map(s => (
                                                         <option key={s.id} value={s.id}>
@@ -1812,77 +1830,77 @@ export default function DivisionExecutionModal({
 
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <label className="text-slate-300 font-bold block">Panjang Baru (cm):</label>
+                                                <label className="text-slate-700 font-bold block">Panjang Baru (cm):</label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     required
                                                     value={editScrapForm.length_cm}
                                                     onChange={e => setEditScrapForm(f => ({ ...f, length_cm: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono font-bold"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold"
                                                 />
                                             </div>
                                             <div className="space-y-1">
-                                                <label className="text-slate-300 font-bold block">Lebar Baru (cm):</label>
+                                                <label className="text-slate-700 font-bold block">Lebar Baru (cm):</label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     required
                                                     value={editScrapForm.width_cm}
                                                     onChange={e => setEditScrapForm(f => ({ ...f, width_cm: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-amber-300 font-mono font-bold"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold"
                                                 />
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <label className="text-slate-300 font-bold block">Lokasi Rak Storage:</label>
+                                                <label className="text-slate-700 font-bold block">Lokasi Rak Storage:</label>
                                                 <input
                                                     type="text"
                                                     required
                                                     value={editScrapForm.rak_location}
                                                     onChange={e => setEditScrapForm(f => ({ ...f, rak_location: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono font-bold"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold"
                                                 />
                                             </div>
                                             <div className="space-y-1">
-                                                <label className="text-slate-300 font-bold block">Status Kondisi Kaca:</label>
+                                                <label className="text-slate-700 font-bold block">Status Kondisi Kaca:</label>
                                                 <select
                                                     value={editScrapForm.status}
                                                     onChange={e => setEditScrapForm(f => ({ ...f, status: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-bold cursor-pointer"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold cursor-pointer"
                                                 >
-                                                    <option value="Layak Pakai">✅ Layak Pakai</option>
-                                                    <option value="Baret/Cacat">⚠️ Baret / Cacat</option>
-                                                    <option value="Afval/Pecah">🔴 Afval / Pecah</option>
+                                                    <option value="Layak Pakai">Layak Pakai</option>
+                                                    <option value="Baret/Cacat">Baret / Cacat</option>
+                                                    <option value="Afval/Pecah">Afval / Pecah</option>
                                                 </select>
                                             </div>
                                         </div>
 
                                         <div className="space-y-1">
-                                            <label className="text-slate-300 font-bold block">Catatan Pemotongan Ulang:</label>
+                                            <label className="text-slate-700 font-bold block">Catatan Pemotongan Ulang:</label>
                                             <input
                                                 type="text"
                                                 placeholder="cth: Dipotong ulang karena baret pinggir..."
                                                 value={editScrapForm.notes || ''}
                                                 onChange={e => setEditScrapForm(f => ({ ...f, notes: e.target.value }))}
-                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-100"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800"
                                             />
                                         </div>
 
-                                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                                             <button
                                                 type="button"
                                                 onClick={() => setShowEditScrapModal(false)}
-                                                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold cursor-pointer"
+                                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer"
                                             >Batal</button>
                                             <button
                                                 type="submit"
                                                 disabled={isSubmittingScrapEdit}
-                                                className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer"
+                                                className="px-5 py-2 bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
                                             >
-                                                <span>{isSubmittingScrapEdit ? '⏳ Menyimpan...' : '💾 Simpan Perubahan & Log Aktivitas'}</span>
+                                                <span>{isSubmittingScrapEdit ? 'Menyimpan...' : 'Simpan Perubahan & Log Aktivitas'}</span>
                                             </button>
                                         </div>
                                     </form>

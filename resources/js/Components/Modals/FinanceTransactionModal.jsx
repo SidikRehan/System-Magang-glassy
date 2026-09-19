@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
+import { CreditCard, Wallet, X, FileText, CheckCircle2, Save, Package, Wrench, Zap } from 'lucide-react';
 
 export default function FinanceTransactionModal({
     isOpen,
@@ -104,71 +105,71 @@ export default function FinanceTransactionModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-            <div className="bg-slate-900 border-2 border-cyan-500/40 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800">
                 {/* MODAL HEADER */}
-                <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-5 border-b border-slate-800 flex justify-between items-center">
+                <div className="p-5 border-b border-slate-200 flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-300 text-lg font-bold">
-                            💰
+                        <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 border border-[#1b68b0]/20 flex items-center justify-center text-[#1b68b0]">
+                            <CreditCard className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-black text-slate-100">
+                            <h3 className="text-base font-bold text-slate-800">
                                 Catat Transaksi Keuangan & Belanja Usaha
                             </h3>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-slate-500">
                                 Input pengeluaran operasional, pembelian bahan baku ke supplier, aksesoris, atau alat kerja
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-lg transition cursor-pointer"
+                        className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-xl transition cursor-pointer"
                     >
-                        &times;
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* MODAL BODY */}
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 text-xs text-slate-200">
+                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
                     {/* TIPE TRANSAKSI (TABS PILLS) */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-2">
                             Pilih Tipe Transaksi Keuangan:
                         </label>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {[
-                                { id: 'pembelian_bahan', label: '📦 Bahan Kaca', desc: 'Beli lembaran kaca ke supplier' },
-                                { id: 'pembelian_aksesoris', label: '💎 Aksesoris', desc: 'Handle, engsel, sealant' },
-                                { id: 'pembelian_alat', label: '⚙️ Alat & Mesin', desc: 'Mata bor, mesin, suction' },
-                                { id: 'biaya_operasional', label: '⚡ Biaya Ops (OPEX)', desc: 'Listrik, BBM, gaji, servis' },
+                                { id: 'pembelian_bahan', label: 'Bahan Kaca', desc: 'Lembaran kaca ke supplier' },
+                                { id: 'pembelian_aksesoris', label: 'Aksesoris', desc: 'Handle, engsel, sealant' },
+                                { id: 'pembelian_alat', label: 'Alat & Mesin', desc: 'Mata bor, mesin, suction' },
+                                { id: 'biaya_operasional', label: 'Biaya Ops (OPEX)', desc: 'Listrik, BBM, gaji, servis' },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
                                     type="button"
                                     onClick={() => handleTypeChange(tab.id)}
                                     className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${data.type === tab.id
-                                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/10'
-                                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
+                                        ? 'bg-[#1b68b0]/10 border-[#1b68b0] text-[#1b68b0] shadow-xs font-bold ring-1 ring-[#1b68b0]/20'
+                                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
                                     }`}
                                 >
-                                    <span className="font-extrabold text-xs block">{tab.label}</span>
-                                    <span className="text-[10px] text-slate-500 line-clamp-1">{tab.desc}</span>
+                                    <span className="font-bold text-xs block">{tab.label}</span>
+                                    <span className="text-[11px] text-slate-500 line-clamp-1">{tab.desc}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     {/* DUA KOLOM: KATEGORI & NOMINAL */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
-                                Kategori Transaksi: <span className="text-rose-400">*</span>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                Kategori Transaksi <span className="text-rose-500">*</span>
                             </label>
                             <select
                                 value={data.category}
                                 onChange={e => setData('category', e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 font-bold focus:border-cyan-400 cursor-pointer"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                             >
                                 {getCategoriesForType(data.type).map(c => (
                                     <option key={c} value={c}>{c}</option>
@@ -177,28 +178,28 @@ export default function FinanceTransactionModal({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
-                                Nominal Transaksi (Rp): <span className="text-rose-400">*</span>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                Nominal Transaksi (Rp) <span className="text-rose-500">*</span>
                             </label>
                             <div className="relative">
-                                <span className="absolute left-3 top-2.5 font-mono font-bold text-cyan-400">Rp</span>
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
                                 <input
                                     type="text"
                                     required
                                     placeholder="0"
                                     value={formattedAmount}
                                     onChange={handleAmountChange}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-3 text-sm text-cyan-300 font-mono font-black focus:border-cyan-400"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-11 pr-3 text-sm text-slate-900 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                                 />
                             </div>
-                            {errors.amount && <p className="text-rose-400 text-[11px] mt-1">{errors.amount}</p>}
+                            {errors.amount && <p className="text-rose-500 text-[11px] mt-1">{errors.amount}</p>}
                         </div>
                     </div>
 
                     {/* JUDUL / DESKRIPSI TRANSAKSI */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1">
-                            Judul / Deskripsi Pembelian / Pengeluaran: <span className="text-rose-400">*</span>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Judul / Deskripsi Pembelian / Pengeluaran <span className="text-rose-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -206,15 +207,15 @@ export default function FinanceTransactionModal({
                             placeholder="Contoh: Pembelian 15 Lembar Kaca Tempered 10mm Clear Mulia"
                             value={data.title}
                             onChange={e => setData('title', e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 focus:border-cyan-400"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                         />
-                        {errors.title && <p className="text-rose-400 text-[11px] mt-1">{errors.title}</p>}
+                        {errors.title && <p className="text-rose-500 text-[11px] mt-1">{errors.title}</p>}
                     </div>
 
                     {/* SUPPLIER / PENERIMA & NOMOR FAKTUR */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
                                 Supplier / Vendor / Penerima:
                             </label>
                             <input
@@ -223,7 +224,7 @@ export default function FinanceTransactionModal({
                                 placeholder="Pilih atau ketik nama supplier..."
                                 value={data.supplier_name}
                                 onChange={e => setData('supplier_name', e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 focus:border-cyan-400"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                             />
                             <datalist id="supplier-datalist">
                                 {suppliersList.map(s => (
@@ -237,7 +238,7 @@ export default function FinanceTransactionModal({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
                                 No. Faktur / Invoice / Nota Pembelian:
                             </label>
                             <input
@@ -245,21 +246,21 @@ export default function FinanceTransactionModal({
                                 placeholder="cth: INV-2026/08/910"
                                 value={data.invoice_number}
                                 onChange={e => setData('invoice_number', e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 font-mono focus:border-cyan-400"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
                             />
                         </div>
                     </div>
 
                     {/* METODE & STATUS PEMBAYARAN */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                         <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
                                 Metode Pembayaran:
                             </label>
                             <select
                                 value={data.payment_method}
                                 onChange={e => setData('payment_method', e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 font-semibold focus:border-cyan-400 cursor-pointer"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                             >
                                 <option value="Transfer Bank BCA">Transfer Bank BCA</option>
                                 <option value="Kas Tunai">Kas Tunai Toko</option>
@@ -270,22 +271,22 @@ export default function FinanceTransactionModal({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
                                 Status Pembayaran:
                             </label>
                             <select
                                 value={data.payment_status}
                                 onChange={e => setData('payment_status', e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 font-semibold focus:border-cyan-400 cursor-pointer"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                             >
-                                <option value="Lunas">✅ Lunas</option>
-                                <option value="Tempo">⏳ Tempo (Belum Lunas)</option>
-                                <option value="DP">🟡 DP (Uang Muka)</option>
+                                <option value="Lunas">Lunas</option>
+                                <option value="Tempo">Tempo (Belum Lunas)</option>
+                                <option value="DP">DP (Uang Muka)</option>
                             </select>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
                                 Tanggal Transaksi:
                             </label>
                             <input
@@ -293,14 +294,14 @@ export default function FinanceTransactionModal({
                                 required
                                 value={data.transaction_date}
                                 onChange={e => setData('transaction_date', e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-xs text-slate-100 font-mono focus:border-cyan-400 cursor-pointer"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white cursor-pointer font-medium"
                             />
                         </div>
                     </div>
 
                     {/* CATATAN TAMBAHAN */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
                             Catatan Tambahan (Opsional):
                         </label>
                         <input
@@ -308,25 +309,26 @@ export default function FinanceTransactionModal({
                             placeholder="cth: Pengiriman via armada supplier langsung ke gudang bahan..."
                             value={data.notes}
                             onChange={e => setData('notes', e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 focus:border-cyan-400"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                         />
                     </div>
 
                     {/* MODAL ACTIONS */}
-                    <div className="pt-3 border-t border-slate-800 flex justify-end gap-3">
+                    <div className="pt-3 border-t border-slate-200 flex justify-end gap-3">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold transition cursor-pointer"
+                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition cursor-pointer text-xs"
                         >
                             Batal
                         </button>
                         <button
                             type="submit"
                             disabled={processing}
-                            className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition cursor-pointer"
+                            className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold rounded-xl shadow-xs flex items-center gap-2 transition cursor-pointer text-xs disabled:opacity-50"
                         >
-                            <span>{processing ? '⏳ Menyimpan...' : '💾 Simpan Transaksi Keuangan'}</span>
+                            <Save className="w-4 h-4" />
+                            <span>{processing ? 'Menyimpan...' : 'Simpan Transaksi Keuangan'}</span>
                         </button>
                     </div>
                 </form>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle, X, Minus, Plus, Send } from 'lucide-react';
 
 export default function ComplaintModal({
     show,
@@ -45,35 +46,37 @@ export default function ComplaintModal({
     const totalDefectiveSheets = defectiveList.reduce((acc, curr) => acc + (curr.qty_defective || 0), 0);
 
     return (
-        <div className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 sm:p-7 max-w-xl w-full space-y-5 shadow-[0_0_50px_rgba(244,63,94,0.18)] relative my-auto max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3.5">
+        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
                     <div className="flex items-center gap-2.5">
-                        <span className="text-2xl">⚠️</span>
+                        <div className="w-10 h-10 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 border border-rose-100">
+                            <AlertTriangle className="w-5 h-5" />
+                        </div>
                         <div>
-                            <h3 className="font-extrabold text-white text-base">Laporkan Kaca Cacat / Baret</h3>
-                            <p className="text-xs text-slate-400 font-mono">SPO #{selectedExecutionOrder.spo_number} — Divisi {userRole.replace('divisi_', '').toUpperCase()}</p>
+                            <h3 className="font-bold text-slate-800 text-base">Laporkan Kaca Cacat / Baret</h3>
+                            <p className="text-xs text-slate-500 font-mono">SPO #{selectedExecutionOrder.spo_number} — Divisi {userRole.replace('divisi_', '').toUpperCase()}</p>
                         </div>
                     </div>
                     <button 
                         type="button" 
                         onClick={onClose}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition border border-slate-700 text-lg font-bold cursor-pointer"
+                        className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
                     >
-                        &times;
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <form onSubmit={onSubmit} className="space-y-4 text-xs">
-
                     {/* SECTION 1: PEMILIHAN KACA BACET / CACAT PER ITEM & JUMLAH LEMBAR */}
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                            <label className="text-xs font-extrabold text-rose-300 flex items-center gap-1.5">
-                                <span>🔍 Pilih Kaca Bermasalah & Jumlah Lembar Rusak:</span>
+                            <label className="text-xs font-bold text-rose-700 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                <span>Pilih Kaca Bermasalah & Jumlah Lembar Rusak:</span>
                             </label>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                                Total Cacat: <strong className="text-rose-400">{totalDefectiveSheets} Lembar</strong>
+                            <span className="text-[11px] text-slate-500 font-mono">
+                                Total Cacat: <strong className="text-rose-600 font-bold">{totalDefectiveSheets} Lembar</strong>
                             </span>
                         </div>
 
@@ -88,34 +91,34 @@ export default function ComplaintModal({
                                         key={idx}
                                         className={`p-3 rounded-2xl border transition space-y-2 ${
                                             isDefective 
-                                                ? 'bg-rose-950/40 border-rose-500/70 shadow-md shadow-rose-500/10' 
-                                                : 'bg-slate-950/80 border-slate-800'
+                                                ? 'bg-rose-50/70 border-rose-300 shadow-xs' 
+                                                : 'bg-slate-50 border-slate-200'
                                         }`}
                                     >
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                             <div>
-                                                <div className="font-extrabold text-white text-xs flex items-center gap-1.5">
+                                                <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
                                                     <span>#{idx + 1}. {item.glass_type}</span>
                                                     {isDefective && (
-                                                        <span className="bg-rose-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-md font-mono">
-                                                            ⚠️ {qtyDef} Lembar Baret
+                                                        <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md font-mono">
+                                                            {qtyDef} Lembar Baret
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                                    Ukuran: <span className="text-slate-200 font-bold">{item.width} × {item.height} cm</span> | Tebal: <span className="text-amber-300 font-bold">{item.thickness} mm</span> | Total Pesanan: <span className="text-cyan-300 font-bold">{item.quantity} Pcs</span>
+                                                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                                                    Ukuran: <span className="text-slate-800 font-bold">{item.width} × {item.height} cm</span> | Tebal: <span className="text-amber-700 font-bold">{item.thickness} mm</span> | Total Pesanan: <span className="text-[#1b68b0] font-bold">{item.quantity} Pcs</span>
                                                 </div>
                                             </div>
 
                                             {/* STEPPER COUNTER UNTUK JUMLAH LEMBAR BARET */}
-                                            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 p-1 rounded-xl self-end sm:self-center">
+                                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 p-1 rounded-xl self-end sm:self-center">
                                                 <button
                                                     type="button"
                                                     onClick={() => handleQtyChange(idx, qtyDef - 1, item.quantity)}
-                                                    className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg flex items-center justify-center transition cursor-pointer text-sm"
+                                                    className="w-7 h-7 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg flex items-center justify-center transition cursor-pointer"
                                                     title="Kurangi lembar baret"
                                                 >
-                                                    -
+                                                    <Minus className="w-3.5 h-3.5" />
                                                 </button>
                                                 <input
                                                     type="number"
@@ -123,15 +126,15 @@ export default function ComplaintModal({
                                                     max={item.quantity}
                                                     value={qtyDef}
                                                     onChange={(e) => handleQtyChange(idx, e.target.value, item.quantity)}
-                                                    className="w-12 bg-slate-950 border border-slate-800 text-amber-300 font-black font-mono text-center rounded-lg text-xs py-1 focus:outline-none focus:border-rose-400"
+                                                    className="w-12 bg-slate-50 border border-slate-200 text-rose-700 font-black font-mono text-center rounded-lg text-xs py-1 focus:outline-none focus:border-rose-400"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => handleQtyChange(idx, qtyDef + 1, item.quantity)}
-                                                    className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg flex items-center justify-center transition cursor-pointer text-sm"
+                                                    className="w-7 h-7 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg flex items-center justify-center transition cursor-pointer"
                                                     title="Tambah lembar baret"
                                                 >
-                                                    +
+                                                    <Plus className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         </div>
@@ -142,65 +145,66 @@ export default function ComplaintModal({
                     </div>
 
                     <div className="space-y-1.5 pt-1">
-                        <label className="text-xs font-bold text-slate-300">Pilih Alasan Kendala / Cacat Kaca:</label>
+                        <label className="text-xs font-bold text-slate-700">Pilih Alasan Kendala / Cacat Kaca:</label>
                         <select
                             value={form.reason}
                             onChange={(e) => setForm({...form, reason: e.target.value})}
-                            className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-rose-400"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-rose-400 focus:bg-white"
                         >
-                            <option value="Kaca Baret / Gores">🔍 Kaca Baret / Gores (Scratch)</option>
-                            <option value="Kaca Retak / Pecah">💥 Kaca Retak / Pecah (Cracked/Broken)</option>
-                            <option value="Cacat Pabrik / Gelembung">🏭 Cacat Pabrik / Gelembung / Flek</option>
-                            <option value="Miskomunikasi Ukuran / Salah Potong HT">📏 Miskomunikasi Ukuran / Salah Potong HT</option>
-                            <option value="Kendala Lainnya">⚠️ Kendala Lainnya</option>
+                            <option value="Kaca Baret / Gores">Kaca Baret / Gores (Scratch)</option>
+                            <option value="Kaca Retak / Pecah">Kaca Retak / Pecah (Cracked/Broken)</option>
+                            <option value="Cacat Pabrik / Gelembung">Cacat Pabrik / Gelembung / Flek</option>
+                            <option value="Miskomunikasi Ukuran / Salah Potong HT">Miskomunikasi Ukuran / Salah Potong HT</option>
+                            <option value="Kendala Lainnya">Kendala Lainnya</option>
                         </select>
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-300">Catatan & Detail Keluhan:</label>
+                        <label className="text-xs font-bold text-slate-700">Catatan & Detail Keluhan:</label>
                         <textarea
                             required
                             rows={2}
                             value={form.notes}
                             onChange={(e) => setForm({...form, notes: e.target.value})}
                             placeholder="Jelaskan detail baret/cacat atau kronologi singkat..."
-                            className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-3 text-xs focus:border-rose-400 font-mono"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl p-3 text-xs focus:border-rose-400 focus:bg-white font-mono"
                         />
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-300">Foto Bukti Kaca Cacat / Baret (Opsional):</label>
+                        <label className="text-xs font-bold text-slate-700">Foto Bukti Kaca Cacat / Baret (Opsional):</label>
                         <input
                             type="file"
                             accept="image/*"
                             onChange={onPhotoChange}
-                            className="w-full bg-slate-950 border border-slate-700 text-slate-300 rounded-xl p-2 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-rose-500/20 file:text-rose-300 hover:file:bg-rose-500/30 cursor-pointer"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl p-2 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 cursor-pointer"
                         />
                         {form.photoPreview && (
-                            <div className="mt-2 relative rounded-xl overflow-hidden border border-slate-700 max-h-36">
+                            <div className="mt-2 relative rounded-2xl overflow-hidden border border-slate-200 max-h-36">
                                 <img src={form.photoPreview} alt="Preview Bukti" className="w-full h-full object-cover" />
                             </div>
                         )}
                     </div>
 
-                    <div className="bg-amber-950/50 border border-amber-500/30 p-3 rounded-xl text-[11px] text-amber-200 space-y-0.5">
-                        <span className="font-bold block text-amber-300">💡 Workflow Laporan Kaca Cacat ke Admin Gudang:</span>
+                    <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl text-[11px] text-amber-900 space-y-0.5">
+                        <span className="font-bold block text-amber-800">Workflow Laporan Kaca Cacat ke Admin Gudang:</span>
                         <p>Laporan berisi rincian item & lembar cacat ini akan dikirim ke <strong>Admin Gudang</strong>. Status orderan berubah menjadi <strong>Pending Gudang</strong>. Jika disetujui ganti barang, orderan akan diproses ulang oleh Admin Gudang.</p>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                    <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition cursor-pointer"
+                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition cursor-pointer text-xs"
                         >
                             Batal
                         </button>
                         <button
                             type="submit"
-                            className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs transition shadow-lg shadow-rose-500/20 flex items-center gap-1.5 cursor-pointer"
+                            className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
                         >
-                            <span>📤 Kirim Laporan ke Admin Gudang</span>
+                            <Send className="w-4 h-4" />
+                            <span>Kirim Laporan ke Admin Gudang</span>
                         </button>
                     </div>
                 </form>
