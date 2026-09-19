@@ -16,6 +16,16 @@ export default {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
             colors: {
+                utb: {
+                    green: '#70b03c',
+                    'green-hover': '#5e9632',
+                    blue: '#1b68b0',
+                    'blue-hover': '#15528c',
+                    black: '#242222',
+                    white: '#ffffff',
+                    surface: '#f8fafc',
+                    border: '#e2e8f0',
+                },
                 navy: '#0F172A',
                 deepblue: '#1E3A8A',
                 pblue: '#2563EB',

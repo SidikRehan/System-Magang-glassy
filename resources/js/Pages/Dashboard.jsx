@@ -3101,40 +3101,42 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
     });
 
     return (
-        <div className="h-screen bg-[#090d16] text-slate-100 font-sans flex flex-col overflow-hidden">
-            <Head title={`Dashboard (${roleTitles[userRole] || userRole}) - SYP GLASS`} />
+        <div className="h-screen bg-[#F8FAFC] text-[#242222] font-sans flex flex-col overflow-hidden">
+            <Head title={`Dashboard (${roleTitles[userRole] || userRole}) - UTB`} />
 
-            {/* TOP BAR */}
-            <div className="bg-[#0c111d] border-b border-slate-800 px-3 sm:px-6 py-2 flex flex-wrap justify-between items-center text-[11px] sm:text-xs shrink-0 gap-2">
+            {/* TOP BAR - CERAH */}
+            <div className="bg-slate-100 border-b border-slate-200 px-3 sm:px-6 py-2 flex flex-wrap justify-between items-center text-[11px] sm:text-xs shrink-0 gap-2 text-[#242222]">
                 <div className="flex items-center gap-2">
-                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full font-bold flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span className="bg-[#70b03c]/15 text-[#70b03c] border border-[#70b03c]/30 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#70b03c] animate-ping"></span>
                         AUTHENTICATED ROLE LOGIN ACTIVE
                     </span>
-                    <span className="text-slate-400 hidden sm:inline">CV Cahya Karunia Jaya - Syp Operational</span>
+                    <span className="text-slate-600 hidden sm:inline font-medium">CV Cahya Karunia Jaya - Kerja Praktek UTB</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Link href="/" className="text-cyan-400 hover:underline flex items-center gap-1 font-semibold">🌐 Landing Page Public</Link>
+                    <Link href="/" className="text-[#1b68b0] hover:underline flex items-center gap-1 font-semibold">🌐 Landing Page Public</Link>
                 </div>
             </div>
 
-            {/* HEADER */}
-            <header className="bg-[#0b0f19]/80 backdrop-blur-md border-b border-slate-800 shrink-0 px-3 sm:px-6 py-3 flex flex-wrap md:flex-nowrap justify-between items-center z-40 gap-3">
+            {/* HEADER - CERAH */}
+            <header className="bg-white border-b border-slate-200 shrink-0 px-3 sm:px-6 py-3 flex flex-wrap md:flex-nowrap justify-between items-center z-40 gap-3 shadow-xs">
                 <div className="flex items-center gap-2.5 sm:gap-3">
                     <button
                         type="button"
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                        className="md:hidden bg-slate-900 text-cyan-400 p-2 rounded-xl border border-slate-800 text-base hover:bg-slate-800 transition focus:outline-none flex items-center justify-center shrink-0"
+                        className="md:hidden bg-slate-100 text-slate-700 p-2 rounded-xl border border-slate-200 text-base hover:bg-slate-200 transition focus:outline-none flex items-center justify-center shrink-0"
                         title="Buka Navigasi Menu"
                     >
                         {mobileMenuOpen ? '✕' : '☰'}
                     </button>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center text-slate-950 font-extrabold text-lg sm:text-xl shadow-lg shadow-cyan-500/20 shrink-0">
-                        ⚡
-                    </div>
+                    <img 
+                        src="/assets/Logo_UTB.png" 
+                        alt="Logo UTB" 
+                        className="h-10 w-auto object-contain shrink-0" 
+                    />
                     <div>
-                        <h1 className="font-extrabold text-sm sm:text-lg tracking-wider text-slate-100">SYP GLASS OPERATIONAL</h1>
-                        <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-widest truncate max-w-[170px] sm:max-w-none">Logged in as: {userName}</p>
+                        <h1 className="font-black text-sm sm:text-lg tracking-wider text-[#242222]">UTB</h1>
+                        <p className="text-[10px] sm:text-xs text-[#70b03c] font-extrabold uppercase tracking-widest truncate max-w-[170px] sm:max-w-none">Kerja Praktek • {userName}</p>
                     </div>
                 </div>
 
@@ -3146,13 +3148,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             placeholder="🔍 Cari global (SPO, Customer, HP, Alamat, Kaca, Ukuran, Driver, Supplier)..."
                             value={searchTerm}
                             onChange={e => handleSearchChange(e.target.value)}
-                            className="w-full bg-slate-950/90 border border-cyan-500/30 rounded-xl px-3.5 py-1.5 sm:py-2 text-xs text-slate-100 placeholder-slate-400 focus:border-cyan-400 focus:outline-none shadow-inner transition font-medium"
+                            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-1.5 sm:py-2 text-xs text-[#242222] placeholder-slate-400 focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] focus:outline-none shadow-xs transition font-medium"
                         />
                         {searchTerm && (
                             <button
                                 type="button"
                                 onClick={() => handleSearchChange('')}
-                                className="absolute right-3 top-2 text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
+                                className="absolute right-3 top-2 text-slate-400 hover:text-[#242222] text-xs font-bold cursor-pointer"
                                 title="Hapus pencarian"
                             >
                                 ✕
@@ -3162,21 +3164,21 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-4 ml-auto md:ml-0">
-                    <div className="bg-slate-900 border border-slate-800 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-cyan-400 whitespace-nowrap">
+                    <div className="bg-[#70b03c]/10 border border-[#70b03c]/30 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-[#70b03c] whitespace-nowrap">
                         Role: {roleTitles[userRole] || userRole}
                     </div>
-                    <button onClick={handleLogout} className="bg-rose-500/20 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/30 font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs transition whitespace-nowrap">
+                    <button onClick={handleLogout} className="bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs transition whitespace-nowrap">
                         🚪 Log out
                     </button>
                 </div>
             </header>
 
             {/* MOBILE TOP TAB BAR HORIZONTAL SCROLLER */}
-            <div className="md:hidden bg-[#0c111d] border-b border-slate-800/80 px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 scrollbar-none">
+            <div className="md:hidden bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 scrollbar-none">
                 {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button 
                         onClick={() => setActiveTab('dashboard')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'dashboard' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'dashboard' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         📊 Dashboard
                     </button>
@@ -3184,7 +3186,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                     <button 
                         onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'orders' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'orders' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         📝 Orderan
                     </button>
@@ -3192,7 +3194,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                     <button 
                         onClick={() => setActiveTab('deliveries')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'deliveries' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'deliveries' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         🚚 Pengiriman ({initialOrders.filter(o => o.status === 'pengiriman').length})
                     </button>
@@ -3200,7 +3202,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
                     <button 
                         onClick={() => setActiveTab('production')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'production' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'production' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         ⚙️ Disposisi
                     </button>
@@ -3208,7 +3210,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                     <button 
                         onClick={() => setActiveTab('scrap')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'scrap' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'scrap' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         📦 Stok Kaca
                     </button>
@@ -3216,7 +3218,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'admin_toko' || userRole === 'owner') && (
                     <button 
                         onClick={() => setActiveTab('suppliers')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'suppliers' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'suppliers' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         🏢 Supplier
                     </button>
@@ -3224,7 +3226,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button 
                         onClick={() => setActiveTab('accessories')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'accessories' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'accessories' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         🔌 Aksesoris
                     </button>
@@ -3232,7 +3234,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button 
                         onClick={() => setActiveTab('supplies')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'supplies' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'supplies' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         🧰 Perlengkapan
                     </button>
@@ -3240,7 +3242,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button 
                         onClick={() => setActiveTab('tools')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'tools' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'tools' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         🛠️ Penunjang
                     </button>
@@ -3248,7 +3250,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
                     <button 
                         onClick={() => setActiveTab('employees')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'employees' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'employees' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         👥 Karyawan
                     </button>
@@ -3256,7 +3258,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button 
                         onClick={() => setActiveTab('finance')} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'finance' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'finance' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         💰 Finance
                     </button>
@@ -3266,46 +3268,46 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
             {/* MOBILE SIDEBAR DRAWER OVERLAY */}
             {mobileMenuOpen && (
                 <div className="fixed inset-0 z-50 md:hidden flex">
-                    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
-                    <aside className="relative w-72 max-w-[80vw] bg-[#0c111d] border-r border-slate-800 p-4 space-y-2 overflow-y-auto z-10 flex flex-col h-full shadow-2xl">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-800 mb-2">
-                            <span className="font-extrabold text-sm text-cyan-400 flex items-center gap-1.5">⚡ NAVIGASI SYP</span>
-                            <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white p-1 text-sm font-bold">✕</button>
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setMobileMenuOpen(false)}></div>
+                    <aside className="relative w-72 max-w-[80vw] bg-white border-r border-slate-200 p-4 space-y-2 overflow-y-auto z-10 flex flex-col h-full shadow-2xl">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-200 mb-2">
+                            <span className="font-black text-sm text-[#1b68b0] flex items-center gap-1.5">UTB NAVIGASI</span>
+                            <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-[#242222] p-1 text-sm font-bold">✕</button>
                         </div>
-                        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 mb-2 space-y-1">
-                            <div className="text-[10px] text-slate-400">User Terautentikasi:</div>
-                            <h4 className="font-bold text-xs text-slate-200">{userName}</h4>
-                            <span className="inline-block text-[9px] text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-full border border-cyan-400/20 font-bold">
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-2 space-y-1">
+                            <div className="text-[10px] text-slate-500 font-medium">User Terautentikasi:</div>
+                            <h4 className="font-extrabold text-xs text-[#242222]">{userName}</h4>
+                            <span className="inline-block text-[9px] text-[#1b68b0] bg-[#1b68b0]/10 px-2 py-0.5 rounded-full border border-[#1b68b0]/30 font-bold">
                                 {roleTitles[userRole]}
                             </span>
                         </div>
 
                         <nav className="space-y-1 flex-1">
                             {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                                <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     📊 <span>Dashboard Utama</span>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     📝 <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
-                                <button onClick={() => { setActiveTab('deliveries'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('deliveries'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         🚚 <span>{userRole === 'driver' ? 'Pengiriman Saya' : 'Pengiriman Multi-Alamat'}</span>
                                     </div>
-                                    <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-cyan-500/30 font-mono">
+                                    <span className="bg-[#1b68b0]/10 text-[#1b68b0] text-[10px] font-black px-2 py-0.5 rounded-full border border-[#1b68b0]/20 font-mono">
                                         {initialOrders.filter(o => o.status === 'pengiriman').length}
                                     </span>
                                 </button>
                             )}
 
                             {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                <button onClick={() => { setActiveTab('production'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'production' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('production'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'production' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         ⚙️ <span>Disposisi & Divisi</span>
                                     </div>
@@ -3313,7 +3315,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             )}
 
                             {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
-                                <button onClick={() => { setActiveTab('scrap'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('scrap'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         📦 <span>Stok Kaca</span>
                                     </div>
@@ -3321,13 +3323,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'owner') && (
-                                <button onClick={() => { setActiveTab('suppliers'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('suppliers'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     🏢 <span>Data Supplier</span>
                                 </button>
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                                <button onClick={() => { setActiveTab('accessories'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('accessories'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         🔌 <span>Aksesoris Konsumen</span>
                                     </div>
@@ -3335,7 +3337,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             )}
 
                             {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
-                                <button onClick={() => { setActiveTab('supplies'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('supplies'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         🧰 <span>Perlengkapan</span>
                                     </div>
@@ -3343,13 +3345,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
-                                <button onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     🛠️ <span>Alat Penunjang</span>
                                 </button>
                             )}
 
                             {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
-                                <button onClick={() => { setActiveTab('employees'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'employees' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('employees'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         👥 <span>Pengelolaan Karyawan</span>
                                     </div>
@@ -3357,7 +3359,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                             )}
 
                             {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                                <button onClick={() => { setActiveTab('finance'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                                <button onClick={() => { setActiveTab('finance'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     💰 <span>Finance & Laba/Rugi</span>
                                 </button>
                             )}
@@ -3368,42 +3370,42 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
 
             {/* MAIN APP CONTAINER */}
             <div className="flex flex-1 overflow-hidden">
-                {/* SIDEBAR (DESKTOP) */}
-                <aside className="hidden md:block w-64 bg-[#0c111d] border-r border-slate-800/80 p-4 space-y-2 shrink-0 overflow-y-auto">
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 mb-4 space-y-1">
-                        <div className="text-xs text-slate-400">User Terautentikasi:</div>
-                        <h4 className="font-bold text-sm text-slate-200">{userName}</h4>
-                        <span className="inline-block text-[10px] text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-full border border-cyan-400/20 font-bold">
+                {/* SIDEBAR (DESKTOP) - CERAH */}
+                <aside className="hidden md:block w-64 bg-white border-r border-slate-200 p-4 space-y-2 shrink-0 overflow-y-auto">
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-4 space-y-1">
+                        <div className="text-xs text-slate-500 font-medium">User Terautentikasi:</div>
+                        <h4 className="font-extrabold text-sm text-[#242222]">{userName}</h4>
+                        <span className="inline-block text-[10px] text-[#1b68b0] bg-[#1b68b0]/10 px-2 py-0.5 rounded-full border border-[#1b68b0]/30 font-bold">
                             {roleTitles[userRole]}
                         </span>
                     </div>
 
                     <nav className="space-y-1">
                         {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 📊 <span>Dashboard Utama</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 📝 <span>{userRole === 'admin_toko' || userRole === 'owner' ? 'Orderan & Draf' : 'Orderan Pengerjaan'}</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
-                            <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 <div className="flex items-center gap-3">
                                     🚚 <span>{userRole === 'driver' ? 'Pengiriman Saya' : 'Pengiriman Multi-Alamat'}</span>
                                 </div>
-                                <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-cyan-500/30 font-mono">
+                                <span className="bg-[#1b68b0]/10 text-[#1b68b0] text-[10px] font-black px-2 py-0.5 rounded-full border border-[#1b68b0]/20 font-mono">
                                     {initialOrders.filter(o => o.status === 'pengiriman').length} Siap
                                 </span>
                             </button>
                         )}
 
                         {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('production')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'production' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('production')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'production' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 <div className="flex items-center gap-3">
                                     ⚙️ <span>Disposisi & Divisi</span>
                                 </div>
@@ -3425,7 +3427,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         )}
 
                         {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 <div className="flex items-center gap-3">
                                     📦 <span>Stok Kaca</span>
                                 </div>
@@ -3439,13 +3441,13 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 🏢 <span>Data Supplier & Mitra</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 <div className="flex items-center gap-3">
                                     🔌 <span>Aksesoris Konsumen</span>
                                 </div>
@@ -3459,7 +3461,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         )}
 
                         {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 <div className="flex items-center gap-3">
                                     🧰 <span>Perlengkapan Gudang</span>
                                 </div>
@@ -3473,24 +3475,24 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'tools' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 🛠️ <span>Alat Penunjang</span>
                             </button>
                         )}
 
                         {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'employees' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 <div className="flex items-center gap-3">
                                     👥 <span>Pengelolaan Karyawan</span>
                                 </div>
-                                <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-cyan-500/30 font-mono">
+                                <span className="bg-[#1b68b0]/10 text-[#1b68b0] text-[10px] font-black px-2 py-0.5 rounded-full border border-[#1b68b0]/20 font-mono">
                                     {employeesList.length} Staff
                                 </span>
                             </button>
                         )}
 
                         {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'finance' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800/40'}`}>
+                            <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                 💰 <span>Finance & Laba/Rugi</span>
                             </button>
                         )}
@@ -3498,7 +3500,7 @@ export default function Dashboard({ orders: initialOrders = [], scrapGlasses: in
                 </aside>
 
                 {/* CONTENT MAIN */}
-                <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto">
+                <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto bg-[#F8FAFC] text-[#242222]">
 
                     {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
                     {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (

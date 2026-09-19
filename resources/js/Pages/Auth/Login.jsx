@@ -50,37 +50,42 @@ export default function Login({ status, canResetPassword }) {
     };
 
     return (
-        <div className="min-h-screen bg-[#090d16] text-slate-100 font-sans flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
-            <Head title="Log in - SYP GLASS Operational System" />
+        <div className="min-h-screen bg-[#F8FAFC] text-[#242222] font-sans flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
+            <Head title="Log in - UTB Kerja Praktek" />
 
-            {/* Glowing Ambient Background */}
-            <div className="absolute -top-32 -right-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            {/* Subtle Ambient Background */}
+            <div className="absolute -top-32 -right-32 w-96 h-96 bg-[#1b68b0]/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-[#70b03c]/10 rounded-full blur-3xl pointer-events-none"></div>
 
-            <div className="w-full max-w-md bg-slate-900/80 border border-slate-800 backdrop-blur-xl p-8 rounded-2xl shadow-2xl space-y-6">
+            <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl shadow-xl space-y-6 relative z-10">
                 <div className="text-center space-y-2">
-                    <Link href="/" className="inline-flex items-center gap-2">
-                        <div className="w-10 h-10 bg-gradient-to-tr from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center text-slate-950 font-extrabold text-xl shadow-lg shadow-cyan-500/20">
-                            ⚡
+                    <Link href="/" className="inline-flex flex-col items-center gap-2 group">
+                        <img 
+                            src="/assets/Logo_UTB.png" 
+                            alt="Logo UTB" 
+                            className="h-16 w-auto object-contain transform group-hover:scale-105 transition duration-200" 
+                        />
+                        <div>
+                            <span className="font-black text-2xl text-[#242222] tracking-tight block">UTB</span>
+                            <span className="text-[11px] text-[#70b03c] font-extrabold tracking-wider uppercase block">Kerja Praktek</span>
                         </div>
-                        <span className="font-extrabold text-xl text-slate-100 tracking-wide">SYP GLASS</span>
                     </Link>
-                    <h2 className="text-xl font-bold text-slate-200">Masuk Ke System Operasional</h2>
-                    <p className="text-xs text-slate-400">Silakan login sesuai akun role masing-masing</p>
+                    <h2 className="text-lg font-extrabold text-[#242222] pt-1">Masuk Ke Sistem Operasional</h2>
+                    <p className="text-xs text-slate-500">Silakan login sesuai akun role masing-masing</p>
                 </div>
 
-                {status && <div className="mb-4 text-xs font-semibold text-emerald-400 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">{status}</div>}
+                {status && <div className="mb-4 text-xs font-semibold text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200">{status}</div>}
 
                 {/* QUICK LOGIN DEMO ACCOUNT SELECTOR */}
-                <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 block">⚡ Quick Demo Login Role (Pilih 1-Click):</span>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#1b68b0] block">⚡ Quick Demo Login Role (Pilih 1-Click):</span>
                     <div className="grid grid-cols-2 gap-1.5 text-xs">
                         {demoAccounts.map((acc, idx) => (
                             <button
                                 key={idx}
                                 type="button"
                                 onClick={() => quickFill(acc.email)}
-                                className={`text-left p-1.5 rounded transition border text-[11px] font-semibold ${data.email === acc.email ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800'}`}
+                                className={`text-left p-1.5 rounded transition border text-[11px] font-semibold ${data.email === acc.email ? 'bg-[#1b68b0]/15 border-[#1b68b0] text-[#1b68b0] font-bold' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}
                             >
                                 {acc.label}
                             </button>
@@ -90,13 +95,13 @@ export default function Login({ status, canResetPassword }) {
 
                 <form onSubmit={submit} className="space-y-4">
                     <div>
-                        <InputLabel htmlFor="email" value="Email Role" className="text-slate-300 text-xs font-bold" />
+                        <InputLabel htmlFor="email" value="Email Role" className="text-[#242222] text-xs font-bold" />
                         <TextInput
                             id="email"
                             type="email"
                             name="email"
                             value={data.email}
-                            className="mt-1 block w-full bg-slate-800/80 border-slate-700 text-slate-100 focus:border-cyan-400 focus:ring-cyan-400 rounded-lg text-sm"
+                            className="mt-1 block w-full bg-slate-50 border-slate-300 text-[#242222] focus:border-[#1b68b0] focus:ring-[#1b68b0] rounded-lg text-sm"
                             autoComplete="username"
                             isFocused={true}
                             onChange={(e) => setData('email', e.target.value)}
@@ -105,13 +110,13 @@ export default function Login({ status, canResetPassword }) {
                     </div>
 
                     <div>
-                        <InputLabel htmlFor="password" value="Password" className="text-slate-300 text-xs font-bold" />
+                        <InputLabel htmlFor="password" value="Password" className="text-[#242222] text-xs font-bold" />
                         <TextInput
                             id="password"
                             type="password"
                             name="password"
                             value={data.password}
-                            className="mt-1 block w-full bg-slate-800/80 border-slate-700 text-slate-100 focus:border-cyan-400 focus:ring-cyan-400 rounded-lg text-sm"
+                            className="mt-1 block w-full bg-slate-50 border-slate-300 text-[#242222] focus:border-[#1b68b0] focus:ring-[#1b68b0] rounded-lg text-sm"
                             autoComplete="current-password"
                             onChange={(e) => setData('password', e.target.value)}
                         />
@@ -124,21 +129,21 @@ export default function Login({ status, canResetPassword }) {
                                 name="remember"
                                 checked={data.remember}
                                 onChange={(e) => setData('remember', e.target.checked)}
-                                className="bg-slate-800 border-slate-700 text-cyan-400 focus:ring-cyan-400"
+                                className="rounded border-slate-300 text-[#1b68b0] shadow-sm focus:ring-[#1b68b0]"
                             />
-                            <span className="ms-2 text-xs text-slate-400">Ingat Saya</span>
+                            <span className="ms-2 text-xs text-slate-600 font-medium">Ingat Saya</span>
                         </label>
                     </div>
 
                     <div className="pt-2">
-                        <PrimaryButton className="w-full justify-center bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold py-3 text-sm rounded-xl shadow-lg shadow-cyan-500/20" disabled={processing}>
-                            <i className="fa-solid fa-right-to-bracket me-2"></i> Log in Ke Dashboard Role
+                        <PrimaryButton className="w-full justify-center bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold py-3 text-sm rounded-xl shadow-lg shadow-[#1b68b0]/20 transition" disabled={processing}>
+                            Log in Ke Dashboard Role →
                         </PrimaryButton>
                     </div>
                 </form>
 
                 <div className="text-center pt-2">
-                    <Link href="/" className="text-xs text-slate-400 hover:text-cyan-400">
+                    <Link href="/" className="text-xs text-slate-500 hover:text-[#1b68b0] font-medium transition">
                         ← Kembali ke Landing Page
                     </Link>
                 </div>
