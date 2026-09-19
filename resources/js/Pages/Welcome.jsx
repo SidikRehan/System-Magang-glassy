@@ -185,19 +185,19 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                     {/* DESKTOP NAVIGATION LINKS */}
                     <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-600">
                         <a href="#features" className="hover:text-[#1b68b0] transition-colors py-1">
-                            Modul Terintegrasi
+                            Keuntungan
                         </a>
                         <a href="#interactive-lab" className="hover:text-[#1b68b0] transition-colors py-1 flex items-center gap-1">
-                             Interactive Lab
+                             Material
                         </a>
                         <a href="#workflow" className="hover:text-[#1b68b0] transition-colors py-1">
-                            Alur 4 Divisi
+                            Kemudahan
                         </a>
                         <a href="#wms-scrap" className="hover:text-[#1b68b0] transition-colors py-1">
-                            WMS Scrap Rak
+                            Efisiensi
                         </a>
                         <a href="#faq" className="hover:text-[#1b68b0] transition-colors py-1">
-                            FAQ
+                            Pertanyaan
                         </a>
                     </nav>
 
@@ -283,12 +283,12 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
 
                     {/* HERO HEADLINE */}
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-[#242222]">
-                        Digitalisasi Terpadu Operasional <span className="text-[#1b68b0]">Pabrik & Toko Kaca</span>
+                        Satu Platform Terpadu <span className="text-[#1b68b0]">Pabrik & Toko Kaca</span>
                     </h1>
 
                     {/* SUBHEADLINE */}
                     <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal max-w-2xl mx-auto">
-                        Satu platform terintegrasi untuk mengotomasi alur Surat Pesanan Order (SPO), pengerjaan 4 divisi presisi (HT, GM, BV, Etsa), inventaris rak sisa kaca (Smart WMS), hingga distribusi Surat Jalan 4 rangkap dan pelunasan COD.
+                        Eleminasi salah potong dan miskomunikasi antar toko dan pabrik. Satu platform terintegrasi untuk mengotomasi alur Pesanan, pengerjaan 4 divisi presisi, inventaris, hingga distribusi Surat Jalan dan pelunasan COD.
                     </p>
 
                     {/* DUAL ACTION BUTTONS */}
@@ -313,7 +313,7 @@ export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {
                             href="#interactive-lab" 
                             className="bg-white hover:bg-slate-50 text-slate-800 font-bold px-6 py-3.5 rounded-2xl border border-slate-200 text-sm transition flex items-center gap-2 shadow-xs hover:border-[#1b68b0]"
                         >
-                            <Sliders className="w-4 h-4 text-[#70b03c]" /> Coba Interactive Lab
+                            <Sliders className="w-4 h-4 text-[#70b03c]" /> Coba Demo Interaktif
                         </a>
                     </div>
                 </div>
