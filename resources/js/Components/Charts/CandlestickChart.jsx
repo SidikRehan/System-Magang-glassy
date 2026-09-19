@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TrendingUp, BarChart3, Activity, ArrowUpRight } from 'lucide-react';
 
 export default function CandlestickChart({ canViewPricing = true }) {
     // Mode tampilan grafik: 'line', 'area', 'bar'
@@ -64,24 +65,20 @@ export default function CandlestickChart({ canViewPricing = true }) {
     const activeItem = hoveredCandle || currentDataset[currentDataset.length - 1];
 
     return (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl relative overflow-hidden backdrop-blur-md">
-            {/* AMBIENT BACKGROUND GLOW */}
-            <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
-
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xs relative overflow-hidden">
             {/* HEADER CHART CONTROLS */}
-            <div className="flex flex-wrap justify-between items-start gap-4 border-b border-slate-800/80 pb-4 relative z-10">
+            <div className="flex flex-wrap justify-between items-start gap-4 border-b border-slate-100 pb-4 relative z-10">
                 <div>
                     <div className="flex items-center gap-2.5">
-                        <span className="text-xl">📈</span>
-                        <h3 className="font-black text-slate-100 text-lg tracking-wide">
+                        <TrendingUp className="w-5 h-5 text-[#1b68b0]" />
+                        <h3 className="font-black text-[#242222] text-lg tracking-tight">
                             {canViewPricing ? 'Grafik Tren Penjualan & Omset' : 'Grafik Tren Produksi & Volume SPO'}
                         </h3>
-                        <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-500/30 font-mono animate-pulse">
-                            ● TREN BULLISH (+38.5% YoY)
+                        <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-200 font-mono">
+                            Tren Bullish (+38.5% YoY)
                         </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-500 font-medium mt-1">
                         Visualisasi kurva tren pergerakan omset pesanan kaca & volume produksi pabrik
                     </p>
                 </div>
@@ -89,82 +86,82 @@ export default function CandlestickChart({ canViewPricing = true }) {
                 {/* MODE & TIMEFRAME SWITCHERS */}
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                     {/* TIMEFRAME BUTTONS */}
-                    <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 font-mono">
+                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 font-mono">
                         <button
                             onClick={() => setTimeframe('monthly')}
-                            className={`px-3 py-1 rounded-lg font-bold transition ${timeframe === 'monthly' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                            className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${timeframe === 'monthly' ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200' : 'text-slate-600 hover:text-[#242222]'}`}
                         >
                             Bulanan (2026)
                         </button>
                         <button
                             onClick={() => setTimeframe('weekly')}
-                            className={`px-3 py-1 rounded-lg font-bold transition ${timeframe === 'weekly' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                            className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${timeframe === 'weekly' ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200' : 'text-slate-600 hover:text-[#242222]'}`}
                         >
                             Mingguan (Q3)
                         </button>
                     </div>
 
                     {/* CHART TYPE SWITCHER */}
-                    <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 font-mono">
+                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 font-mono">
                         <button
                             onClick={() => setChartMode('line')}
                             title="Tampilan Garis Tren"
-                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'line' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                            className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${chartMode === 'line' ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200' : 'text-slate-600 hover:text-[#242222]'}`}
                         >
-                            📈 Line
+                            Line
                         </button>
                         <button
                             onClick={() => setChartMode('area')}
                             title="Tampilan Area Wave"
-                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'area' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                            className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${chartMode === 'area' ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200' : 'text-slate-600 hover:text-[#242222]'}`}
                         >
-                            🌊 Area
+                            Area
                         </button>
                         <button
                             onClick={() => setChartMode('bar')}
                             title="Tampilan Volume Bar"
-                            className={`px-2.5 py-1 rounded-lg font-bold transition ${chartMode === 'bar' ? 'bg-purple-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                            className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${chartMode === 'bar' ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200' : 'text-slate-600 hover:text-[#242222]'}`}
                         >
-                            📊 Volume
+                            Volume
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* TICKER HUD SUMMARY STRIP */}
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 text-xs font-mono">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs font-mono">
                 <div>
-                    <span className="text-slate-500 text-[10px] block">PERIODE</span>
-                    <strong className="text-cyan-400 font-extrabold text-sm">{activeItem.period} 2026</strong>
+                    <span className="text-slate-500 text-[10px] block font-bold">PERIODE</span>
+                    <strong className="text-[#1b68b0] font-black text-sm">{activeItem.period} 2026</strong>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-[10px] block">OPEN (PEMBUKA)</span>
-                    <strong className="text-slate-300 font-bold">
+                    <span className="text-slate-500 text-[10px] block font-bold">OPEN (PEMBUKA)</span>
+                    <strong className="text-slate-700 font-bold">
                         {canViewPricing ? `Rp ${activeItem.open}M` : `${activeItem.open} SPO`}
                     </strong>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-[10px] block">HIGH (TERTINGGI)</span>
-                    <strong className="text-emerald-400 font-bold">
+                    <span className="text-slate-500 text-[10px] block font-bold">HIGH (TERTINGGI)</span>
+                    <strong className="text-emerald-700 font-bold">
                         {canViewPricing ? `Rp ${activeItem.high}M` : `${activeItem.high} SPO`}
                     </strong>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-[10px] block">LOW (TERENDAH)</span>
-                    <strong className="text-rose-400 font-bold">
+                    <span className="text-slate-500 text-[10px] block font-bold">LOW (TERENDAH)</span>
+                    <strong className="text-rose-600 font-bold">
                         {canViewPricing ? `Rp ${activeItem.low}M` : `${activeItem.low} SPO`}
                     </strong>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-[10px] block">NOMINAL OMSET</span>
-                    <strong className="text-cyan-300 font-extrabold text-sm">
+                    <span className="text-slate-500 text-[10px] block font-bold">NOMINAL OMSET</span>
+                    <strong className="text-[#242222] font-black text-sm">
                         {canViewPricing ? `Rp ${activeItem.close}M` : `${activeItem.close} SPO`}
                     </strong>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-[10px] block">VOLUME ORDER</span>
-                    <span className="text-amber-300 font-bold">
-                        📦 {activeItem.volume} SPO ({activeItem.growth})
+                    <span className="text-slate-500 text-[10px] block font-bold">VOLUME ORDER</span>
+                    <span className="text-amber-700 font-bold">
+                        {activeItem.volume} SPO ({activeItem.growth})
                     </span>
                 </div>
             </div>
@@ -177,11 +174,11 @@ export default function CandlestickChart({ canViewPricing = true }) {
                 >
                     <defs>
                         <filter id="line-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#06b6d4" floodOpacity="0.6" />
+                            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#1b68b0" floodOpacity="0.25" />
                         </filter>
                         <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.35" />
-                            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+                            <stop offset="0%" stopColor="#1b68b0" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#1b68b0" stopOpacity="0.0" />
                         </linearGradient>
                     </defs>
 
@@ -195,14 +192,14 @@ export default function CandlestickChart({ canViewPricing = true }) {
                                     y1={yPos}
                                     x2={svgWidth - paddingRight}
                                     y2={yPos}
-                                    stroke="#1e293b"
+                                    stroke="#e2e8f0"
                                     strokeDasharray="4 4"
                                     strokeWidth="1"
                                 />
                                 <text
                                     x={paddingLeft - 8}
                                     y={yPos + 3}
-                                    fill="#64748b"
+                                    fill="#94a3b8"
                                     fontSize="9"
                                     fontFamily="monospace"
                                     textAnchor="end"
@@ -219,13 +216,13 @@ export default function CandlestickChart({ canViewPricing = true }) {
                         y1={chartBottom + 2}
                         x2={svgWidth - paddingRight}
                         y2={chartBottom + 2}
-                        stroke="#334155"
+                        stroke="#cbd5e1"
                         strokeWidth="1"
                     />
                     <text
                         x={paddingLeft - 8}
                         y={chartBottom + 16}
-                        fill="#475569"
+                        fill="#94a3b8"
                         fontSize="8"
                         fontFamily="monospace"
                         textAnchor="end"
@@ -233,7 +230,7 @@ export default function CandlestickChart({ canViewPricing = true }) {
                         VOL
                     </text>
 
-                    {/* AREA GRADIENT SHADING (JIKA MODE AREA) */}
+                    {/* AREA GRADIENT SHADING */}
                     {chartMode === 'area' && (
                         <path
                             d={areaPathD}
@@ -246,7 +243,7 @@ export default function CandlestickChart({ canViewPricing = true }) {
                         <polyline
                             points={linePoints}
                             fill="none"
-                            stroke="#06b6d4"
+                            stroke="#1b68b0"
                             strokeWidth="3.5"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -276,37 +273,24 @@ export default function CandlestickChart({ canViewPricing = true }) {
                                         y={10}
                                         width={stepX * 0.9}
                                         height={svgHeight - 35}
-                                        fill="#06b6d4"
-                                        fillOpacity="0.08"
+                                        fill="#1b68b0"
+                                        fillOpacity="0.06"
                                         rx="8"
                                     />
                                 )}
 
-                                {/* GLOWING NODE DOT ON TREND LINE */}
+                                {/* NODE DOT ON TREND LINE */}
                                 {chartMode !== 'bar' && (
                                     <g>
-                                        {/* OUTER GLOW CIRCLE */}
                                         <circle
                                             cx={centerX}
                                             cy={closeY}
-                                            r={isHovered ? 8 : 5}
-                                            fill={isBullish ? '#10b981' : '#f43f5e'}
-                                            stroke="#090d16"
+                                            r={isHovered ? 7 : 4.5}
+                                            fill={isBullish ? '#70b03c' : '#e11d48'}
+                                            stroke="#ffffff"
                                             strokeWidth="2.5"
                                             className="transition-all duration-200"
                                         />
-
-                                        {/* PEAK FLAME MARKER */}
-                                        {d.isPeak && (
-                                            <text
-                                                x={centerX}
-                                                y={closeY - 10}
-                                                textAnchor="middle"
-                                                fontSize="12"
-                                            >
-                                                🔥
-                                            </text>
-                                        )}
 
                                         {/* VALUE BADGE ON HOVER */}
                                         {isHovered && (
@@ -316,16 +300,17 @@ export default function CandlestickChart({ canViewPricing = true }) {
                                                     y={closeY - 32}
                                                     width="70"
                                                     height="18"
-                                                    fill="#090d16"
-                                                    stroke="#06b6d4"
+                                                    fill="#ffffff"
+                                                    stroke="#cbd5e1"
                                                     strokeWidth="1"
                                                     rx="4"
+                                                    filter="drop-shadow(0 2px 4px rgba(0,0,0,0.08))"
                                                 />
                                                 <text
                                                     x={centerX}
                                                     y={closeY - 20}
                                                     textAnchor="middle"
-                                                    fill="#38bdf8"
+                                                    fill="#1b68b0"
                                                     fontSize="9"
                                                     fontWeight="bold"
                                                     fontFamily="monospace"
@@ -337,15 +322,15 @@ export default function CandlestickChart({ canViewPricing = true }) {
                                     </g>
                                 )}
 
-                                {/* VOLUME HISTOGRAM BAR (SUB-CHART DI BAWAH) */}
+                                {/* VOLUME HISTOGRAM BAR */}
                                 <g>
                                     <rect
                                         x={centerX - (candleWidth * 0.7) / 2}
                                         y={svgHeight - 25 - getVolHeight(d.volume)}
                                         width={candleWidth * 0.7}
                                         height={getVolHeight(d.volume)}
-                                        fill={isBullish ? '#059669' : '#e11d48'}
-                                        fillOpacity={isHovered ? 0.9 : 0.55}
+                                        fill={isBullish ? '#70b03c' : '#f43f5e'}
+                                        fillOpacity={isHovered ? 0.9 : 0.6}
                                         rx="2"
                                     />
                                 </g>
@@ -354,7 +339,7 @@ export default function CandlestickChart({ canViewPricing = true }) {
                                 <text
                                     x={centerX}
                                     y={svgHeight - 8}
-                                    fill={isHovered ? '#38bdf8' : (d.isPeak ? '#22d3ee' : '#94a3b8')}
+                                    fill={isHovered ? '#1b68b0' : (d.isPeak ? '#1b68b0' : '#64748b')}
                                     fontSize="10"
                                     fontFamily="monospace"
                                     fontWeight={d.isPeak || isHovered ? 'bold' : 'normal'}
@@ -369,38 +354,38 @@ export default function CandlestickChart({ canViewPricing = true }) {
             </div>
 
             {/* CHART FOOTER METRICS */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold">
-                        📊
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#1b68b0] font-bold">
+                        <BarChart3 className="w-4 h-4" />
                     </div>
                     <div>
-                        <span className="text-slate-400 text-[11px] block">Rata-rata Omset Bulanan:</span>
-                        <strong className="text-slate-100 font-mono text-sm">
+                        <span className="text-slate-500 text-[11px] block font-medium">Rata-rata Omset Bulanan:</span>
+                        <strong className="text-[#242222] font-mono text-xs">
                             {canViewPricing ? 'Rp 82.350.000' : '38.6 SPO'}
                         </strong>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-800 pt-2 sm:pt-0 sm:pl-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
-                        🚀
+                <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#70b03c] font-bold">
+                        <ArrowUpRight className="w-4 h-4" />
                     </div>
                     <div>
-                        <span className="text-slate-400 text-[11px] block">Bulan Puncak (All-Time High):</span>
-                        <strong className="text-emerald-400 font-mono text-sm">
+                        <span className="text-slate-500 text-[11px] block font-medium">Bulan Puncak (All-Time High):</span>
+                        <strong className="text-[#70b03c] font-mono text-xs">
                             {canViewPricing ? 'Agustus (Rp 128.5M)' : 'Agustus (58 SPO)'}
                         </strong>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-800 pt-2 sm:pt-0 sm:pl-3">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-                        ⚡
+                <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 font-bold">
+                        <Activity className="w-4 h-4" />
                     </div>
                     <div>
-                        <span className="text-slate-400 text-[11px] block">Indikator Tren Moving Average:</span>
-                        <strong className="text-purple-300 font-mono text-sm">
+                        <span className="text-slate-500 text-[11px] block font-medium">Indikator Tren Moving Average:</span>
+                        <strong className="text-purple-700 font-mono text-xs">
                             Garis MA-3 Bullish (+38.5% YoY)
                         </strong>
                     </div>
