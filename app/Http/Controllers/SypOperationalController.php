@@ -815,8 +815,8 @@ class SypOperationalController extends Controller
         $order = Order::findOrFail($id);
         $userRole = auth()->user()->role ?? '';
 
-        // Strict Authorization: Only assigned division staff, admin_gudang, or owner can execute
-        if ($userRole !== $order->current_division && $userRole !== 'admin_gudang' && $userRole !== 'owner') {
+        // Strict Authorization: Only assigned division staff, admin_gudang, owner, or admin_toko can execute
+        if ($userRole !== $order->current_division && $userRole !== 'admin_gudang' && $userRole !== 'owner' && $userRole !== 'admin_toko') {
             return redirect()->back()->with('message', '⚠️ Akses Ditolak: Anda hanya memiliki izin untuk mengeksekusi pekerjaan pada divisi Anda sendiri!');
         }
 
@@ -839,6 +839,9 @@ class SypOperationalController extends Controller
             $progress[$currentDivKey] = 'Selesai';
             if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
                 $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
+            }
+            if (empty($timestamps[$currentDivKey]['started_at'])) {
+                $timestamps[$currentDivKey]['started_at'] = now()->toDateTimeString();
             }
             $timestamps[$currentDivKey]['completed_at'] = now()->toDateTimeString();
         }

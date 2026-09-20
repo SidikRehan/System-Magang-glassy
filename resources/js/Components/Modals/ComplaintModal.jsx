@@ -13,20 +13,25 @@ export default function ComplaintModal({
 }) {
     if (!show || !selectedExecutionOrder) return null;
 
-    const orderedItems = Array.isArray(selectedExecutionOrder.items) && selectedExecutionOrder.items.length > 0
+    const rawItems = Array.isArray(selectedExecutionOrder.items) && selectedExecutionOrder.items.length > 0
         ? selectedExecutionOrder.items
-        : [{
-            glass_type: selectedExecutionOrder.glass_type || 'Kaca Standard',
-            width: selectedExecutionOrder.width || 0,
-            height: selectedExecutionOrder.height || 0,
-            thickness: selectedExecutionOrder.thickness || 5,
-            quantity: selectedExecutionOrder.quantity || 1,
-        }];
+        : [selectedExecutionOrder];
+
+    const orderedItems = rawItems.map(it => ({
+        glass_type: it.glass_type || selectedExecutionOrder.glass_type || 'Kaca Standard',
+        width: it.width_cm ?? it.width ?? selectedExecutionOrder.width_cm ?? selectedExecutionOrder.width ?? 0,
+        height: it.length_cm ?? it.height ?? it.length ?? selectedExecutionOrder.length_cm ?? selectedExecutionOrder.height ?? 0,
+        thickness: it.thickness_mm ?? it.thickness ?? selectedExecutionOrder.thickness_mm ?? selectedExecutionOrder.thickness ?? 5,
+        quantity: it.qty ?? it.quantity ?? selectedExecutionOrder.qty ?? selectedExecutionOrder.quantity ?? 1,
+    }));
 
     const defectiveList = form.defectiveItems || [];
 
     const handleQtyChange = (idx, newQty, maxQty) => {
-        const clamped = Math.max(0, Math.min(maxQty, parseInt(newQty) || 0));
+        const itemMax = parseInt(maxQty) > 0 ? parseInt(maxQty) : 9999;
+        const parsed = parseInt(newQty);
+        const clamped = isNaN(parsed) ? 0 : Math.max(0, Math.min(itemMax, parsed));
+
         const updated = [...defectiveList];
         const item = orderedItems[idx] || {};
 
@@ -40,10 +45,10 @@ export default function ComplaintModal({
             qty_defective: clamped,
         };
 
-        setForm({ ...form, defectiveItems: updated });
+        setForm(prev => ({ ...prev, defectiveItems: updated }));
     };
 
-    const totalDefectiveSheets = defectiveList.reduce((acc, curr) => acc + (curr.qty_defective || 0), 0);
+    const totalDefectiveSheets = defectiveList.reduce((acc, curr) => acc + (curr?.qty_defective || 0), 0);
 
     return (
         <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
@@ -55,7 +60,7 @@ export default function ComplaintModal({
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800 text-base">Laporkan Kaca Cacat / Baret</h3>
-                            <p className="text-xs text-slate-500 font-mono">SPO #{selectedExecutionOrder.spo_number} — Divisi {userRole.replace('divisi_', '').toUpperCase()}</p>
+                            <p className="text-xs text-slate-500 font-mono">SPO #{selectedExecutionOrder.spo_number} — Divisi {(userRole || '').replace('divisi_', '').toUpperCase()}</p>
                         </div>
                     </div>
                     <button 
@@ -106,19 +111,19 @@ export default function ComplaintModal({
                                                     )}
                                                 </div>
                                                 <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                                                    Ukuran: <span className="text-slate-800 font-bold">{item.width} × {item.height} cm</span> | Tebal: <span className="text-amber-700 font-bold">{item.thickness} mm</span> | Total Pesanan: <span className="text-[#1b68b0] font-bold">{item.quantity} Pcs</span>
+                                                    Ukuran: <span className="text-slate-800 font-bold">{item.height} × {item.width} cm</span> | Tebal: <span className="text-amber-700 font-bold">{item.thickness} mm</span> | Total Pesanan: <span className="text-[#1b68b0] font-bold">{item.quantity} Pcs</span>
                                                 </div>
                                             </div>
 
                                             {/* STEPPER COUNTER UNTUK JUMLAH LEMBAR BARET */}
-                                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 p-1 rounded-xl self-end sm:self-center">
+                                            <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl self-end sm:self-center shadow-xs">
                                                 <button
                                                     type="button"
                                                     onClick={() => handleQtyChange(idx, qtyDef - 1, item.quantity)}
-                                                    className="w-7 h-7 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg flex items-center justify-center transition cursor-pointer"
+                                                    className="w-7 h-7 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold rounded-lg flex items-center justify-center transition cursor-pointer select-none"
                                                     title="Kurangi lembar baret"
                                                 >
-                                                    <Minus className="w-3.5 h-3.5" />
+                                                    <Minus className="w-3.5 h-3.5 text-slate-600" />
                                                 </button>
                                                 <input
                                                     type="number"
@@ -126,15 +131,15 @@ export default function ComplaintModal({
                                                     max={item.quantity}
                                                     value={qtyDef}
                                                     onChange={(e) => handleQtyChange(idx, e.target.value, item.quantity)}
-                                                    className="w-12 bg-slate-50 border border-slate-200 text-rose-700 font-black font-mono text-center rounded-lg text-xs py-1 focus:outline-none focus:border-rose-400"
+                                                    className="w-10 bg-slate-50 border border-slate-200 text-rose-700 font-black font-mono text-center rounded-lg text-xs py-1 focus:outline-none focus:border-rose-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => handleQtyChange(idx, qtyDef + 1, item.quantity)}
-                                                    className="w-7 h-7 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg flex items-center justify-center transition cursor-pointer"
+                                                    className="w-7 h-7 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold rounded-lg flex items-center justify-center transition cursor-pointer select-none"
                                                     title="Tambah lembar baret"
                                                 >
-                                                    <Plus className="w-3.5 h-3.5" />
+                                                    <Plus className="w-3.5 h-3.5 text-slate-600" />
                                                 </button>
                                             </div>
                                         </div>

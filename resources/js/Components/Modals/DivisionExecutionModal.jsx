@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
-import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight, Phone, MapPin, Calendar, Clock, FileText, Layers, Box, Sparkles, Plus, Minus, Edit3, Trash2, Search, RotateCcw, Info, Check, ShieldAlert, FileCheck, Layers3, AlertCircle } from 'lucide-react';
 
 export default function DivisionExecutionModal({
     show,
@@ -147,6 +147,32 @@ export default function DivisionExecutionModal({
     });
     // State penanda lembar terpotong per item (1, 2, 3 ... Qty)
     const [cutTracker, setCutTracker] = useState({});
+
+    // Calculate recommended next division
+    const computeDefaultNextDiv = React.useCallback((ord) => {
+        if (!ord) return 'QC_Ready';
+        const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
+        const reqCodes = ['HT'];
+        const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
+        if (Array.isArray(ord.processes)) ord.processes.forEach(addC);
+        if (Array.isArray(ord.items)) {
+            ord.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
+        }
+        reqCodes.sort((a, b) => fixedSeq.indexOf(a) - fixedSeq.indexOf(b));
+        const curKey = (ord.current_division || '').replace('divisi_', '').toUpperCase();
+        const curIdx = reqCodes.indexOf(curKey);
+        if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
+            const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
+            return map[reqCodes[curIdx + 1]] || 'QC_Ready';
+        }
+        return 'QC_Ready';
+    }, []);
+
+    const [selectedNextDiv, setSelectedNextDiv] = useState(() => computeDefaultNextDiv(selectedExecutionOrder));
+
+    React.useEffect(() => {
+        setSelectedNextDiv(computeDefaultNextDiv(selectedExecutionOrder));
+    }, [selectedExecutionOrder, computeDefaultNextDiv]);
 
     const getCutCount = (itemIdx) => {
         const itemState = cutTracker[itemIdx] || {};
@@ -646,64 +672,72 @@ export default function DivisionExecutionModal({
                         )}
 
                         {/* CUSTOMER & ORDER INFO GRID PANEL */}
-                        <div className="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-800 shadow-xs">
                             <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-24">📞 Telepon:</span>
-                                    <strong className="text-slate-200 font-mono">{selectedExecutionOrder.customer_phone}</strong>
+                                <div className="flex items-center gap-2">
+                                    <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span className="text-slate-500 w-24">Telepon:</span>
+                                    <strong className="text-slate-800 font-mono font-bold">{selectedExecutionOrder.customer_phone}</strong>
                                 </div>
-                                <div className="flex items-start gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-24 shrink-0">📍 Alamat Kirim:</span>
-                                    <span className="text-slate-300">{selectedExecutionOrder.customer_address}</span>
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                                    <span className="text-slate-500 w-24 shrink-0">Alamat Kirim:</span>
+                                    <span className="text-slate-700 font-semibold">{selectedExecutionOrder.customer_address}</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-2 md:border-l md:border-slate-800/80 md:pl-5">
-                                <div className="flex items-center gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-28">📅 Target Deadline:</span>
-                                    <strong className="text-amber-300 font-mono font-bold">{selectedExecutionOrder.deadline_date || '-'}</strong>
+                            <div className="space-y-2 md:border-l md:border-slate-200 md:pl-5">
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span className="text-slate-500 w-28">Target Deadline:</span>
+                                    <strong className="text-[#1b68b0] font-mono font-extrabold">{selectedExecutionOrder.deadline_date || '-'}</strong>
                                 </div>
-                                <div className="flex items-center gap-2 text-slate-300">
-                                    <span className="text-slate-500 w-28">📍 Posisi Divisi:</span>
-                                    <span className="text-cyan-300 font-semibold">{roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}</span>
+                                <div className="flex items-center gap-2">
+                                    <Layers className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span className="text-slate-500 w-28">Posisi Divisi:</span>
+                                    <span className="text-[#70b03c] font-bold">{roleTitles[selectedExecutionOrder.current_division] || selectedExecutionOrder.current_division}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* LAMPIRAN SKETSA POLA & GAMBAR SAMBUNGAN KACA */}
                         {selectedExecutionOrder.sketch_photo_path && (
-                            <div className="bg-gradient-to-r from-slate-950 via-cyan-950/30 to-slate-950 border border-cyan-500/40 p-4 rounded-2xl space-y-3 relative z-10 shadow-lg">
+                            <div className="bg-slate-50 border border-slate-200 p-4 sm:p-5 rounded-2xl space-y-3 relative z-10 shadow-xs text-slate-800">
                                 <div className="flex justify-between items-center">
-                                    <h4 className="text-xs font-black text-cyan-300 uppercase tracking-wider flex items-center gap-2">
-                                        <span>📐 SKETSA POLA & GAMBAR SAMBUNGAN KACA (ACUAN PEKERJA DIVISI)</span>
+                                    <h4 className="text-xs font-black text-[#1b68b0] uppercase tracking-wider flex items-center gap-2">
+                                        <FileText className="w-4 h-4 text-[#1b68b0]" />
+                                        <span>SKETSA POLA & GAMBAR SAMBUNGAN KACA (ACUAN PEKERJA DIVISI)</span>
                                     </h4>
                                     <button
                                         type="button"
                                         onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
-                                        className="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
+                                        className="bg-[#1b68b0]/10 hover:bg-[#1b68b0] text-[#1b68b0] hover:text-white border border-[#1b68b0]/30 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                                     >
-                                        🔍 Perbesar Gambar Sketsa
+                                        <Search className="w-3.5 h-3.5" />
+                                        <span>Perbesar Gambar Sketsa</span>
                                     </button>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div 
                                         onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
-                                        className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden border-2 border-cyan-400/50 bg-black shrink-0 shadow-lg"
+                                        className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden border-2 border-slate-200 bg-white shrink-0 shadow-xs"
                                     >
                                         <img 
                                             src={selectedExecutionOrder.sketch_photo_path.startsWith('http') || selectedExecutionOrder.sketch_photo_path.startsWith('/') ? selectedExecutionOrder.sketch_photo_path : `/storage/${selectedExecutionOrder.sketch_photo_path}`}
                                             alt="Sketsa Pola Kaca"
-                                            className="w-full h-full object-contain transition transform group-hover:scale-105"
+                                            className="w-full h-full object-contain transition transform group-hover:scale-105 p-1"
                                         />
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-bold gap-1">
-                                            🔍 Klik Perbesar
+                                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-bold gap-1">
+                                            <Search className="w-4 h-4" />
+                                            <span>Klik Perbesar</span>
                                         </div>
                                     </div>
-                                    <div className="text-xs text-slate-300 space-y-1.5">
-                                        <div className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
-                                            <span>📌 Acuan Pemotongan & Sambungan Pola Kaca</span>
+                                    <div className="text-xs text-slate-600 space-y-1.5">
+                                        <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                            <Tag className="w-4 h-4 text-[#1b68b0]" />
+                                            <span>Acuan Pemotongan & Sambungan Pola Kaca</span>
                                         </div>
-                                        <p className="text-slate-400 text-[11px] leading-relaxed">
+                                        <p className="text-slate-500 text-[11px] leading-relaxed">
                                             Admin Gudang dan Pekerja Divisi (Potong/HT, Gosok/GM, Bevel/BV, Etsa) wajib melihat sketsa ini sebagai acuan pola fisik, arah sambungan gambar/cermin, dan ukuran pemotongan kaca.
                                         </p>
                                     </div>
@@ -713,55 +747,62 @@ export default function DivisionExecutionModal({
 
                         {/* TIMELINE TANGGAL LIFECYCLE ORDER */}
                         <div className="space-y-2">
-                            <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <span>📅 Lifecycle Timeline Tanggal Track:</span>
+                            <h4 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Lifecycle Timeline Tanggal Track:</span>
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-cyan-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">📅 Pembuatan Order (Toko):</span>
-                                    <strong className="text-cyan-400 font-bold block text-xs">{formatIndonesianDate(selectedExecutionOrder.order_date)}</strong>
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                                    <span className="text-slate-500 text-[10px] block font-bold">Pembuatan Order (Toko):</span>
+                                    <strong className="text-[#1b68b0] font-bold block text-xs">{formatIndonesianDate(selectedExecutionOrder.order_date)}</strong>
                                 </div>
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-blue-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">📦 Diturunkan Gudang:</span>
-                                    <strong className="text-blue-300 font-bold block text-xs">{selectedExecutionOrder.gudang_released_at ? formatIndonesianDateTime(selectedExecutionOrder.gudang_released_at) : 'Belum Diturunkan'}</strong>
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                                    <span className="text-slate-500 text-[10px] block font-bold">Diturunkan Gudang:</span>
+                                    <strong className="text-slate-800 font-bold block text-xs">{selectedExecutionOrder.gudang_released_at ? formatIndonesianDateTime(selectedExecutionOrder.gudang_released_at) : 'Belum Diturunkan'}</strong>
                                 </div>
-                                <div className="bg-slate-950/90 p-3 rounded-2xl border border-emerald-500/20 space-y-1">
-                                    <span className="text-slate-500 text-[10px] block">✅ Selesai Eksekusi:</span>
-                                    <strong className="text-emerald-400 font-bold block text-xs">{selectedExecutionOrder.execution_completed_at ? formatIndonesianDateTime(selectedExecutionOrder.execution_completed_at) : 'Sedang Eksekusi'}</strong>
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                                    <span className="text-slate-500 text-[10px] block font-bold">Selesai Eksekusi:</span>
+                                    <strong className="text-[#70b03c] font-bold block text-xs">{selectedExecutionOrder.execution_completed_at ? formatIndonesianDateTime(selectedExecutionOrder.execution_completed_at) : 'Sedang Eksekusi'}</strong>
                                 </div>
                             </div>
                         </div>
 
                         {/* BANNER NOTIFIKASI ORDERAN REPLACEMENT / GANTI KACA CACAT DARI ADMIN GUDANG */}
                         {selectedExecutionOrder.complaint_status === 're_cut_needed' && (
-                            <div className="bg-rose-950/80 border-2 border-rose-500/80 rounded-2xl p-4 space-y-2.5 shadow-xl shadow-rose-950/40 animate-pulse">
-                                <div className="flex items-center justify-between border-b border-rose-500/40 pb-2">
-                                    <span className="font-extrabold text-xs text-rose-300 flex items-center gap-2">
-                                        <span className="text-base">🚨</span>
+                            <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 space-y-2.5 shadow-xs">
+                                <div className="flex items-center justify-between border-b border-rose-200 pb-2">
+                                    <span className="font-extrabold text-xs text-rose-800 flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-rose-600" />
                                         <span>PERINTAH GANTI BARANG KACA CACAT (ORDERAN ULANG DARI GUDANG)</span>
                                     </span>
-                                    <span className="bg-rose-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase">
+                                    <span className="bg-rose-600 text-white font-black text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase">
                                         Instruksi Gudang
                                     </span>
                                 </div>
-                                <div className="text-xs text-slate-300 space-y-1.5 font-mono">
-                                    <p className="text-rose-200 text-xs">
-                                        Divisi <strong>{selectedExecutionOrder.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''}</strong> melaporkan kendala: <strong className="text-rose-400">{selectedExecutionOrder.complaint_data?.reason || 'Kaca Baret / Cacat'}</strong>
+                                <div className="text-xs text-slate-800 space-y-1.5 font-mono">
+                                    <p className="text-rose-900 text-xs">
+                                        Divisi <strong>{selectedExecutionOrder.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''}</strong> melaporkan kendala: <strong className="text-rose-700">{selectedExecutionOrder.complaint_data?.reason || 'Kaca Baret / Cacat'}</strong>
                                     </p>
                                     {selectedExecutionOrder.complaint_data?.notes && (
-                                        <p className="text-[11px] text-amber-200 italic bg-slate-950 p-2 rounded-xl border border-slate-800">
+                                        <p className="text-[11px] text-slate-700 italic bg-white p-2 rounded-xl border border-rose-200">
                                             Catatan: "{selectedExecutionOrder.complaint_data.notes}"
                                         </p>
                                     )}
 
                                     {Array.isArray(selectedExecutionOrder.complaint_data?.defective_items) && selectedExecutionOrder.complaint_data.defective_items.length > 0 && (
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-rose-500/40 space-y-1.5 text-[11px] mt-1">
-                                            <span className="font-bold text-rose-300 block">🔍 Item Kaca Pengganti Yang Harus Dipotong Ulang:</span>
+                                        <div className="bg-white p-3 rounded-xl border border-rose-200 space-y-1.5 text-[11px] mt-1 shadow-xs">
+                                            <span className="font-bold text-rose-800 flex items-center gap-1.5">
+                                                <Search className="w-3.5 h-3.5 text-rose-600" />
+                                                <span>Item Kaca Pengganti Yang Harus Dipotong Ulang:</span>
+                                            </span>
                                             <div className="space-y-1">
                                                 {selectedExecutionOrder.complaint_data.defective_items.map((def, i) => (
-                                                    <div key={i} className="text-slate-200 flex justify-between items-center bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                                                    <div key={i} className="text-slate-800 flex justify-between items-center bg-rose-50/50 p-2 rounded-lg border border-rose-200">
                                                         <span>#{def.item_index + 1}. <strong>{def.glass_type}</strong> ({def.width} × {def.height} cm, {def.thickness}mm)</span>
-                                                        <strong className="text-rose-400 font-extrabold bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30">⚠️ {def.qty_defective} Lembar Ganti</strong>
+                                                        <strong className="text-rose-700 font-extrabold bg-rose-100 px-2 py-0.5 rounded border border-rose-200 flex items-center gap-1">
+                                                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                                            <span>{def.qty_defective} Lembar Ganti</span>
+                                                        </strong>
                                                     </div>
                                                 ))}
                                             </div>
@@ -774,75 +815,79 @@ export default function DivisionExecutionModal({
                         {/* REKOMENDASI ALOKASI KACA SISA RAK (DARI ADMIN TOKO) */}
                         {selectedExecutionOrder.used_scrap_rak && selectedExecutionOrder.used_scrap_rak !== '-' && selectedExecutionOrder.used_scrap_rak.trim() !== '' && (
                             selectedExecutionOrder.used_scrap_rak.startsWith('❌') ? (
-                                <div className="bg-rose-950/80 border-2 border-rose-500/80 rounded-2xl p-4 space-y-2 shadow-xl shadow-rose-950/30">
-                                    <div className="flex items-center justify-between gap-2 border-b border-rose-500/30 pb-2">
-                                        <div className="flex items-center gap-2 font-black text-xs text-rose-300 uppercase tracking-wider">
-                                            <span className="text-base">🚨</span>
+                                <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-4 space-y-2 shadow-xs">
+                                    <div className="flex items-center justify-between gap-2 border-b border-rose-200 pb-2">
+                                        <div className="flex items-center gap-2 font-extrabold text-xs text-rose-800 uppercase tracking-wider">
+                                            <AlertTriangle className="w-4 h-4 text-rose-600" />
                                             <span>STATUS REKOMENDASI KACA SISA: DITOLAK DIVISI HT</span>
                                         </div>
-                                        <span className="bg-rose-500 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                        <span className="bg-rose-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
                                             Penolakan Di-Log Ke System
                                         </span>
                                     </div>
-                                    <div className="text-xs font-mono font-extrabold text-rose-200 bg-slate-950 p-3 rounded-xl border border-rose-500/40 leading-relaxed">
+                                    <div className="text-xs font-mono font-extrabold text-rose-900 bg-white p-3 rounded-xl border border-rose-200 leading-relaxed shadow-xs">
                                         {selectedExecutionOrder.used_scrap_rak}
                                     </div>
-                                    <p className="text-[10px] text-rose-300/90 font-mono">
-                                        ℹ️ Divisi Potong (HT) wajib memotong dari bahan kaca lembaran baru di bawah karena rekomendasi kaca sisa telah ditolak (baret/cacat/ukuran kurang).
+                                    <p className="text-[10px] text-rose-700 font-mono flex items-center gap-1">
+                                        <Info className="w-3 h-3 text-rose-600" />
+                                        <span>Divisi Potong (HT) wajib memotong dari bahan kaca lembaran baru di bawah karena rekomendasi kaca sisa telah ditolak (baret/cacat/ukuran kurang).</span>
                                     </p>
                                 </div>
                             ) : selectedExecutionOrder.used_scrap_rak.startsWith('✅') ? (
-                                <div className="bg-emerald-950/80 border-2 border-emerald-500/80 rounded-2xl p-4 space-y-2 shadow-xl shadow-emerald-950/30">
-                                    <div className="flex items-center justify-between gap-2 border-b border-emerald-500/30 pb-2">
-                                        <div className="flex items-center gap-2 font-black text-xs text-emerald-300 uppercase tracking-wider">
-                                            <span className="text-base">✅</span>
+                                <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4 space-y-2 shadow-xs">
+                                    <div className="flex items-center justify-between gap-2 border-b border-emerald-200 pb-2">
+                                        <div className="flex items-center gap-2 font-extrabold text-xs text-emerald-800 uppercase tracking-wider">
+                                            <CheckCircle2 className="w-4 h-4 text-[#70b03c]" />
                                             <span>REKOMENDASI KACA SISA: TERPAKAI UNTUK ORDERAN INI</span>
                                         </div>
-                                        <span className="bg-emerald-500 text-slate-950 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                        <span className="bg-[#70b03c] text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
                                             Stok Sisa Di-Update
                                         </span>
                                     </div>
-                                    <div className="text-xs font-mono font-extrabold text-emerald-200 bg-slate-950 p-3 rounded-xl border border-emerald-500/40 leading-relaxed">
+                                    <div className="text-xs font-mono font-extrabold text-emerald-900 bg-white p-3 rounded-xl border border-emerald-200 leading-relaxed shadow-xs">
                                         {selectedExecutionOrder.used_scrap_rak}
                                     </div>
                                 </div>
                             ) : (
-                                <div className="bg-gradient-to-r from-amber-950/90 via-amber-900/60 to-slate-950 border-2 border-amber-500/60 rounded-2xl p-4 space-y-3 shadow-xl shadow-amber-950/30">
-                                    <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2">
-                                        <div className="flex items-center gap-2 font-black text-xs text-amber-300 uppercase tracking-wider">
-                                            <span className="text-base">🧩</span>
+                                <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 space-y-3 shadow-xs">
+                                    <div className="flex items-center justify-between gap-2 border-b border-amber-200 pb-2">
+                                        <div className="flex items-center gap-2 font-extrabold text-xs text-amber-900 uppercase tracking-wider">
+                                            <Layers className="w-4 h-4 text-amber-600" />
                                             <span>REKOMENDASI / ALOKASI KACA SISA RAK DARI TOKO</span>
                                         </div>
-                                        <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                        <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
                                             Konfirmasi Pemakaian
                                         </span>
                                     </div>
-                                    <div className="text-xs sm:text-sm font-mono font-extrabold text-amber-200 bg-slate-950 p-3 rounded-xl border border-amber-500/40 leading-relaxed shadow-inner">
+                                    <div className="text-xs sm:text-sm font-mono font-extrabold text-amber-950 bg-white p-3 rounded-xl border border-amber-200 leading-relaxed shadow-xs">
                                         {selectedExecutionOrder.used_scrap_rak}
                                     </div>
 
-                                    {/* DUA BUTTON ACTION UTAMA KHUSUS DIVISI POTONG (HT): [ ✅ DIPAKAI ] & [ ❌ DITOLAK ] */}
+                                    {/* DUA BUTTON ACTION UTAMA KHUSUS DIVISI POTONG (HT): [ DIPAKAI ] & [ DITOLAK ] */}
                                     {(selectedExecutionOrder.current_division === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-500/20">
-                                            <p className="text-[10px] text-amber-300/90 font-mono flex-1 min-w-[180px]">
-                                                💡 Periksa fisik kaca di rak storage. Klik <strong>Dipakai</strong> jika kaca sesuai, atau <strong>Ditolak</strong> jika baret/ukuran tidak sesuai.
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-200">
+                                            <p className="text-[10px] text-amber-900 font-mono flex-1 min-w-[180px] flex items-center gap-1">
+                                                <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                                <span>Periksa fisik kaca di rak storage. Klik <strong>Dipakai</strong> jika kaca sesuai, atau <strong>Ditolak</strong> jika baret/ukuran tidak sesuai.</span>
                                             </p>
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     type="button"
                                                     disabled={isSubmittingUseScrap}
                                                     onClick={handleUseScrapSubmit}
-                                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-2 rounded-xl text-xs transition border border-emerald-400/50 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-950/50 disabled:opacity-50"
+                                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-extrabold px-4 py-2 rounded-xl text-xs transition border border-[#5f9733] flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
                                                 >
-                                                    <span>{isSubmittingUseScrap ? '⏳ Processing...' : '✅ Dipakai'}</span>
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    <span>{isSubmittingUseScrap ? 'Processing...' : 'Dipakai'}</span>
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowRejectModal(true)}
-                                                    className="bg-rose-600 hover:bg-rose-500 text-white font-black px-4 py-2 rounded-xl text-xs transition border border-rose-400/50 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-950/50"
+                                                    className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs transition border border-rose-700 flex items-center gap-1.5 cursor-pointer shadow-xs"
                                                 >
-                                                    <span>❌ Ditolak</span>
+                                                    <X className="w-4 h-4" />
+                                                    <span>Ditolak</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -854,10 +899,11 @@ export default function DivisionExecutionModal({
                         {/* RINCIAN ITEM SPESIFIKASI KACA DETAIL & TOMBOL [+ SISA POTONG] */}
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                                <h4 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                                    <span>📋 Detail Spesifikasi Item Kaca:</span>
+                                <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-[#1b68b0]" />
+                                    <span>Detail Spesifikasi Item Kaca:</span>
                                 </h4>
-                                <span className="text-[11px] text-slate-400 font-mono">Gunakan penanda angka untuk mencatat lembar terpotong</span>
+                                <span className="text-[11px] text-slate-500 font-mono">Gunakan penanda angka untuk mencatat lembar terpotong</span>
                             </div>
 
                             <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -871,36 +917,37 @@ export default function DivisionExecutionModal({
                                         qty: 1,
                                         processes: selectedExecutionOrder.processes || ['HT']
                                     }]).map((it, idx) => (
-                                    <div key={idx} className="bg-slate-950 p-4 rounded-2xl border border-slate-800/90 hover:border-cyan-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition shadow-md">
+                                    <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 hover:border-[#1b68b0]/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition shadow-xs text-slate-800">
                                         {/* Rincian Spesifikasi Kaca (Sebelah Kiri) */}
                                         <div className="space-y-1.5 flex-1 min-w-0">
-                                            <div className="font-extrabold text-cyan-300 text-sm flex flex-wrap items-center gap-2">
+                                            <div className="font-extrabold text-[#1b68b0] text-sm flex flex-wrap items-center gap-2">
                                                 <span>Item #{idx + 1}: {it.glass_type}</span>
-                                                <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold">Qty: {it.qty || 1} Pcs</span>
+                                                <span className="text-xs bg-[#70b03c]/15 text-[#70b03c] border border-[#70b03c]/30 px-2.5 py-0.5 rounded-full font-mono font-bold">Qty: {it.qty || 1} Pcs</span>
                                             </div>
-                                            <div className="text-slate-300 font-mono text-xs flex flex-wrap items-center gap-2">
-                                                <span>Ukuran: <strong className="text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{it.length_cm} cm × {it.width_cm} cm</strong></span>
-                                                <span>Tebal: <strong className="text-amber-300">{it.thickness_mm} mm</strong></span>
+                                            <div className="text-slate-700 font-mono text-xs flex flex-wrap items-center gap-2">
+                                                <span>Ukuran: <strong className="text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 font-bold">{it.length_cm} cm × {it.width_cm} cm</strong></span>
+                                                <span>Tebal: <strong className="text-amber-800 font-bold">{it.thickness_mm} mm</strong></span>
                                             </div>
                                             {Array.isArray(it.processes) && (
-                                                <div className="text-xs text-slate-400 pt-0.5">
-                                                    Proses Divisi: <span className="text-cyan-200 font-mono font-bold">{it.processes.join(', ')}</span>
+                                                <div className="text-xs text-slate-500 pt-0.5">
+                                                    Proses Divisi: <span className="text-[#1b68b0] font-mono font-bold">{it.processes.join(', ')}</span>
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* PENANDA STEPPER LEMBAR TERPOTONG (Sebelah Kanan) */}
                                         {selectedExecutionOrder.current_division === 'divisi_ht' && (
-                                            <div className="w-full md:w-auto md:min-w-[180px] space-y-1.5 md:border-l md:border-slate-800/80 md:pl-4 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800/80 shrink-0">
+                                            <div className="w-full md:w-auto md:min-w-[180px] space-y-1.5 md:border-l md:border-slate-200 md:pl-4 pt-2 md:pt-0 border-t md:border-t-0 border-slate-200 shrink-0">
                                                 <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
-                                                    <span className="text-slate-400 font-bold flex items-center gap-1.5">
-                                                        <span>✂️ Potong (HT):</span>
+                                                    <span className="text-slate-600 font-bold flex items-center gap-1.5">
+                                                        <Scissors className="w-3.5 h-3.5 text-slate-500" />
+                                                        <span>Potong (HT):</span>
                                                         <span className={`font-extrabold font-sans px-2 py-0.5 rounded border text-[10px] ${
                                                             getCutCount(idx) === (it.qty || 1)
-                                                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                                                 : getCutCount(idx) > 0
-                                                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                                                : 'bg-slate-900 text-slate-400 border-slate-800'
+                                                                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                                                : 'bg-white text-slate-600 border-slate-200'
                                                         }`}>
                                                             {getCutCount(idx) === (it.qty || 1) ? '✓ Selesai' : `${getCutCount(idx)} / ${it.qty || 1}`}
                                                         </span>
@@ -909,7 +956,7 @@ export default function DivisionExecutionModal({
                                                         <button
                                                             type="button"
                                                             onClick={() => updateCutCount(idx, it.qty || 1, it.qty || 1)}
-                                                            className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-semibold cursor-pointer shrink-0"
+                                                            className="text-[10px] text-[#1b68b0] hover:underline font-bold cursor-pointer shrink-0"
                                                             title="Tandai semua terpotong"
                                                         >
                                                             ✓ Max
@@ -918,7 +965,7 @@ export default function DivisionExecutionModal({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => updateCutCount(idx, 0, it.qty || 1)}
-                                                                className="text-[10px] text-rose-400 hover:text-rose-300 underline font-semibold cursor-pointer shrink-0"
+                                                                className="text-[10px] text-rose-600 hover:underline font-bold cursor-pointer shrink-0"
                                                                 title="Reset hitungan ke 0"
                                                             >
                                                                 ↺ Reset
@@ -928,12 +975,12 @@ export default function DivisionExecutionModal({
                                                 </div>
 
                                                 {/* STEPPER COUNTER CONTROL (1 KOTAK ANGKA + TOMBOL - / +) */}
-                                                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1.5 rounded-xl shadow-inner">
+                                                <div className="flex items-center gap-1.5 bg-white border border-slate-200 p-1.5 rounded-xl shadow-xs">
                                                     <button
                                                         type="button"
                                                         onClick={() => updateCutCount(idx, getCutCount(idx) - 1, it.qty || 1)}
                                                         disabled={getCutCount(idx) <= 0}
-                                                        className="w-8 h-8 bg-slate-950 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-base transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                                        className="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-200 text-base transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                                                         title="Kurangi 1 lembar"
                                                     >
                                                         -
@@ -946,7 +993,7 @@ export default function DivisionExecutionModal({
                                                             max={it.qty || 1}
                                                             value={getCutCount(idx)}
                                                             onChange={(e) => updateCutCount(idx, e.target.value, it.qty || 1)}
-                                                            className="w-full bg-slate-950 text-center font-mono font-black text-sm text-amber-300 border border-amber-500/40 rounded-lg px-1.5 py-1 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                                            className="w-full bg-slate-50 text-center font-mono font-black text-sm text-[#1b68b0] border border-slate-200 rounded-lg px-1.5 py-1 focus:border-[#1b68b0] focus:bg-white focus:outline-none"
                                                         />
                                                     </div>
 
@@ -954,7 +1001,7 @@ export default function DivisionExecutionModal({
                                                         type="button"
                                                         onClick={() => updateCutCount(idx, getCutCount(idx) + 1, it.qty || 1)}
                                                         disabled={getCutCount(idx) >= (it.qty || 1)}
-                                                        className="w-8 h-8 bg-slate-950 hover:bg-emerald-500/20 hover:text-emerald-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-base transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                                        className="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-200 text-base transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                                                         title="Tambah 1 lembar"
                                                     >
                                                         +
@@ -969,20 +1016,21 @@ export default function DivisionExecutionModal({
 
                         {/* PENCATATAN PEMAKAIAN KACA LEMBARAN BARU & INPUT SISA POTONG (KHUSUS DIVISI POTONG / HT / GUDANG) */}
                         {(selectedExecutionOrder.current_division === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/30 space-y-3 relative z-10 shadow-lg">
+                            <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3 relative z-10 shadow-xs text-slate-800">
                                 {/* SUB-TAB NAVIGASI MODUL BARENG: PEMAKAIAN BAHAN vs SISA POTONG */}
-                                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2.5">
+                                <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2.5">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <button
                                             type="button"
                                             onClick={() => setRawSectionTab('raw')}
                                             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                                                 rawSectionTab === 'raw'
-                                                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-extrabold'
-                                                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                                    ? 'bg-[#1b68b0] text-white shadow-xs font-extrabold'
+                                                    : 'bg-white text-slate-600 hover:text-slate-800 border border-slate-200'
                                             }`}
                                         >
-                                            <span>📄 1. Pemakaian Kaca Lembaran Baru</span>
+                                            <FileText className="w-3.5 h-3.5" />
+                                            <span>1. Pemakaian Kaca Lembaran Baru</span>
                                         </button>
 
                                         <button
@@ -990,39 +1038,44 @@ export default function DivisionExecutionModal({
                                             onClick={() => setRawSectionTab('scrap')}
                                             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                                                 rawSectionTab === 'scrap'
-                                                    ? 'bg-orange-500 text-slate-950 shadow-md shadow-orange-500/20 font-extrabold'
-                                                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                                    ? 'bg-[#70b03c] text-white shadow-xs font-extrabold'
+                                                    : 'bg-white text-slate-600 hover:text-slate-800 border border-slate-200'
                                             }`}
                                         >
-                                            <span>🧩 2. Simpan Kaca Sisa Potong (Scrap ke Rak)</span>
+                                            <Scissors className="w-3.5 h-3.5" />
+                                            <span>2. Simpan Kaca Sisa Potong (Scrap ke Rak)</span>
                                         </button>
                                     </div>
 
-                                    <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+                                    <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
                                         {rawSectionTab === 'raw' ? 'Potong stok master lembaran baru' : 'Simpan sisa potong layak pakai ke rak'}
                                     </span>
                                 </div>
 
                                 {selectedExecutionOrder.used_scrap_rak && selectedExecutionOrder.used_scrap_rak !== '-' && selectedExecutionOrder.used_scrap_rak.trim() !== '' && (
-                                    <div className="bg-amber-950/60 border border-amber-500/40 rounded-xl p-2 text-xs font-mono text-amber-300 flex items-center justify-between gap-2">
-                                        <span>🧩 Rekomendasi Scrap Toko: <strong>{selectedExecutionOrder.used_scrap_rak}</strong></span>
-                                        <span className="text-[10px] text-amber-400/80 font-sans shrink-0">(Kurangi catat lembar baru jika pakai scrap)</span>
+                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs font-mono text-amber-900 flex items-center justify-between gap-2 shadow-xs">
+                                        <span className="flex items-center gap-1.5">
+                                            <Layers className="w-3.5 h-3.5 text-amber-600" />
+                                            <span>Rekomendasi Scrap Toko: <strong>{selectedExecutionOrder.used_scrap_rak}</strong></span>
+                                        </span>
+                                        <span className="text-[10px] text-amber-700 font-sans shrink-0">(Kurangi catat lembar baru jika pakai scrap)</span>
                                     </div>
                                 )}
 
                                 {/* FORM 1: CATAT PEMAKAIAN KACA LEMBARAN BARU */}
                                 {rawSectionTab === 'raw' && (
-                                    <form onSubmit={handleRecordRawMaterial} className="space-y-3.5 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                                    <form onSubmit={handleRecordRawMaterial} className="space-y-3.5 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                                         {/* PILIH BAHAN KACA (OTOMATIS TERPILIH SESUAI ORDER SPO) */}
                                         <div className="space-y-2">
                                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
-                                                    <span>📄 Bahan Kaca Lembaran Orderan Ini:</span>
-                                                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold">
+                                                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                                                    <FileText className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                    <span>Bahan Kaca Lembaran Orderan Ini:</span>
+                                                    <span className="bg-[#70b03c]/15 text-[#70b03c] border border-[#70b03c]/30 text-[9px] px-2 py-0.5 rounded-full font-sans font-bold">
                                                         ✓ Otomatis Terpilih Sesuai Order
                                                     </span>
                                                 </label>
-                                                <span className="text-[10px] text-slate-400 font-mono">
+                                                <span className="text-[10px] text-slate-500 font-mono">
                                                     Pilih item order di atas jika ada lebih dari 1 jenis kaca
                                                 </span>
                                             </div>
@@ -1039,19 +1092,20 @@ export default function DivisionExecutionModal({
                                                             onClick={() => setRawGlassType(gt.glass_type)}
                                                             className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border ${
                                                                 isSelected
-                                                                    ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-md shadow-amber-500/20 font-black'
-                                                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                                                    ? 'bg-[#1b68b0] text-white border-[#15528c] shadow-xs font-black'
+                                                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                                                             }`}
                                                         >
-                                                            <span>✨ {gt.glass_type}</span>
+                                                            <Sparkles className="w-3.5 h-3.5" />
+                                                            <span>{gt.glass_type}</span>
                                                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-sans font-bold ${
-                                                                isSelected ? 'bg-slate-950/30 text-slate-950' : 'bg-slate-900 text-amber-300 border border-amber-500/30'
+                                                                isSelected ? 'bg-white/20 text-white' : 'bg-white text-slate-700 border border-slate-200'
                                                             }`}>
                                                                 Total: {gt.totalQty} Pcs ({gt.itemCount} Ukuran)
                                                             </span>
                                                             {typedQty !== undefined && typedQty !== null && typedQty !== '' && (
-                                                                <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md shadow-sm ${
-                                                                    isSelected ? 'bg-slate-950 text-amber-300' : 'bg-cyan-500 text-slate-950'
+                                                                <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md shadow-xs ${
+                                                                    isSelected ? 'bg-white text-[#1b68b0]' : 'bg-[#1b68b0] text-white'
                                                                 }`}>
                                                                     {typedQty} Lembar
                                                                 </span>
@@ -1063,19 +1117,20 @@ export default function DivisionExecutionModal({
                                         </div>
 
                                         {/* INPUT JUMLAH LEMBAR DIPAKAI (DIRECT INPUT + STEPPER) */}
-                                        <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                                        <div className="pt-2 border-t border-slate-200 space-y-2">
                                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
-                                                    <span>📊 Input Jumlah Lembar Kaca Bahan Yang Dipakai ({rawGlassType}):</span>
+                                                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                                                    <Box className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                    <span>Input Jumlah Lembar Kaca Bahan Yang Dipakai ({rawGlassType}):</span>
                                                 </label>
-                                                <span className="text-[10px] text-amber-300 font-mono font-bold">
+                                                <span className="text-[10px] text-amber-800 font-mono font-bold">
                                                     💡 Masukkan angka pemakaian khusus bahan ini (sekian lembar)
                                                 </span>
                                             </div>
 
                                             <div className="flex flex-wrap items-center gap-3">
                                                 {/* STEP CONTROLS (- / +) & INPUT NUMBER FIELD */}
-                                                <div className="flex items-center gap-2 bg-slate-950 border border-amber-500/40 p-1.5 rounded-xl shadow-inner">
+                                                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 p-1.5 rounded-xl shadow-xs">
                                                     <button
                                                         type="button"
                                                         onClick={() => {
@@ -1083,7 +1138,7 @@ export default function DivisionExecutionModal({
                                                             updateRawSheetsForType(cur - 1);
                                                         }}
                                                         disabled={(parseInt(getRawSheetsForType()) || 0) <= (currentStockItem?.qty === 0 ? 0 : 1)}
-                                                        className="w-8 h-8 bg-slate-900 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-200 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                         title="Kurangi 1 Lembar"
                                                     >
                                                         -
@@ -1101,10 +1156,10 @@ export default function DivisionExecutionModal({
                                                                     updateRawSheetsForType(1);
                                                                 }
                                                             }}
-                                                            className="w-16 bg-transparent text-center text-sm font-mono font-black text-amber-300 focus:outline-none"
+                                                            className="w-16 bg-white text-center text-sm font-mono font-black text-[#1b68b0] border border-slate-200 rounded-lg py-1 focus:outline-none focus:border-[#1b68b0]"
                                                             placeholder="1"
                                                         />
-                                                        <span className="text-xs font-mono text-slate-400 font-bold">Lembar</span>
+                                                        <span className="text-xs font-mono text-slate-500 font-bold">Lembar</span>
                                                     </div>
                                                     <button
                                                         type="button"
@@ -1113,7 +1168,7 @@ export default function DivisionExecutionModal({
                                                             updateRawSheetsForType(cur + 1);
                                                         }}
                                                         disabled={currentStockItem ? (parseInt(getRawSheetsForType()) || 0) >= currentStockItem.qty : false}
-                                                        className="w-8 h-8 bg-slate-900 hover:bg-amber-500/20 hover:text-amber-300 text-slate-200 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-800 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-200 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                         title={currentStockItem && (parseInt(getRawSheetsForType()) || 0) >= currentStockItem.qty ? `Stok Maksimal Terpenuhi (${currentStockItem.qty} Lembar)` : "Tambah 1 Lembar"}
                                                     >
                                                         +
@@ -1124,13 +1179,13 @@ export default function DivisionExecutionModal({
                                                 <button
                                                     type="submit"
                                                     disabled={isSubmittingRaw || (currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty)}
-                                                    className={`ml-auto font-black px-5 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1.5 h-[42px] ${
+                                                    className={`ml-auto font-extrabold px-5 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 h-[42px] ${
                                                         currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty
-                                                            ? 'bg-rose-950 text-rose-300 border border-rose-500/60 cursor-not-allowed opacity-90'
-                                                            : 'bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 shadow-amber-500/20 cursor-pointer disabled:opacity-50'
+                                                            ? 'bg-rose-100 text-rose-800 border border-rose-300 cursor-not-allowed opacity-90'
+                                                            : 'bg-[#70b03c] hover:bg-[#5f9733] text-white border border-[#5f9733] cursor-pointer disabled:opacity-50'
                                                     }`}
                                                 >
-                                                    <span>{currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty ? '⛔' : '📉'}</span>
+                                                    <Plus className="w-4 h-4" />
                                                     <span>
                                                         {isSubmittingRaw
                                                             ? 'Menyimpan...'
@@ -1147,29 +1202,31 @@ export default function DivisionExecutionModal({
                                         {currentStockItem ? (
                                             <div className={`text-[11px] border rounded-xl p-3 font-mono flex flex-wrap items-center justify-between gap-2.5 ${
                                                 currentStockItem.qty - (parseInt(rawSheetsUsed) || 0) >= 0
-                                                    ? 'bg-slate-900 border-cyan-500/30 text-slate-200'
-                                                    : 'bg-rose-950/90 border-2 border-rose-500 text-rose-200 shadow-xl shadow-rose-950/60 animate-pulse'
+                                                    ? 'bg-white border-slate-200 text-slate-800 shadow-xs'
+                                                    : 'bg-rose-50 border-2 border-rose-300 text-rose-800 shadow-xs'
                                             }`}>
                                                 <span className="flex items-center gap-1.5">
-                                                    <span>📦 Stok Master Gudang:</span>
-                                                    <strong className="text-cyan-300 font-extrabold">{currentStockItem.name}</strong>
-                                                    <span className="bg-slate-950 px-2 py-0.5 rounded text-cyan-400 border border-slate-800 font-bold">
+                                                    <Box className="w-3.5 h-3.5 text-slate-400" />
+                                                    <span>Stok Master Gudang:</span>
+                                                    <strong className="text-[#1b68b0] font-extrabold">{currentStockItem.name}</strong>
+                                                    <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 border border-slate-200 font-bold">
                                                         Sisa {currentStockItem.qty} {currentStockItem.unit}
                                                     </span>
                                                 </span>
                                                 <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${
                                                     currentStockItem.qty - (parseInt(rawSheetsUsed) || 0) >= 0
-                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                                        : 'bg-rose-600 text-white border border-rose-400 uppercase tracking-wide'
+                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                        : 'bg-rose-600 text-white border border-rose-700 uppercase tracking-wide'
                                                 }`}>
                                                     {currentStockItem.qty - (parseInt(rawSheetsUsed) || 0) >= 0
                                                         ? `Sisa Stok Setelah Dipotong: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 0)} ${currentStockItem.unit}`
-                                                        : `🚨 STOK TIDAK CUKUP! Stok (${currentStockItem.qty} Lembar) < Pemakaian (${parseInt(rawSheetsUsed) || 0} Lembar)`}
+                                                        : `STOK TIDAK CUKUP! Stok (${currentStockItem.qty} Lembar) < Pemakaian (${parseInt(rawSheetsUsed) || 0} Lembar)`}
                                                 </span>
                                             </div>
                                         ) : (
-                                            <div className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-xl font-mono flex items-center gap-2">
-                                                <span>⚠️ Kategori/Bahan kaca <strong>"{rawGlassType}"</strong> tidak ditemukan stok masternya di Katalog Gudang.</span>
+                                            <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-xl font-mono flex items-center gap-2">
+                                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                                <span>Kategori/Bahan kaca <strong>"{rawGlassType}"</strong> tidak ditemukan stok masternya di Katalog Gudang.</span>
                                             </div>
                                         )}
                                     </form>
@@ -1178,15 +1235,15 @@ export default function DivisionExecutionModal({
                                  {/* FORM 2: SIMPAN KACA SISA POTONG (SCRAP KE RAK) */}
                                 {rawSectionTab === 'scrap' && (
                                     <div className="space-y-3.5 animate-in fade-in duration-200">
-                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-orange-500/30 flex flex-wrap items-center justify-between gap-2">
+                                        <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 shadow-xs">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-base">🧩</span>
+                                                <Scissors className="w-4 h-4 text-[#70b03c]" />
                                                 <div>
-                                                    <h4 className="text-xs font-bold text-orange-300">Form Input Kaca Sisa Potong Per Jenis Kaca (Order SPO Ini)</h4>
-                                                    <p className="text-[10px] text-slate-400 font-mono">Terdapat {uniqueGlassTypes.length} jenis kaca dalam orderan ini. Input ukuran sisa potongan masing-masing di bawah:</p>
+                                                    <h4 className="text-xs font-bold text-slate-800">Form Input Kaca Sisa Potong Per Jenis Kaca (Order SPO Ini)</h4>
+                                                    <p className="text-[10px] text-slate-500 font-mono">Terdapat {uniqueGlassTypes.length} jenis kaca dalam orderan ini. Input ukuran sisa potongan masing-masing di bawah:</p>
                                                 </div>
                                             </div>
-                                            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                            <span className="text-[10px] text-emerald-800 font-mono bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300 font-bold">
                                                 Status: Layak Pakai
                                             </span>
                                         </div>
@@ -1202,21 +1259,21 @@ export default function DivisionExecutionModal({
                                                     <form
                                                         key={'scr_form_gt_' + idx}
                                                         onSubmit={(e) => handleSaveScrapForType(e, gt.glass_type)}
-                                                        className="bg-slate-900/80 p-3.5 rounded-xl border border-orange-500/30 space-y-3 shadow-md"
+                                                        className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-3 shadow-xs text-slate-800"
                                                     >
-                                                        <div className="text-xs font-bold text-orange-400 flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 gap-2">
+                                                        <div className="text-xs font-bold text-slate-800 flex flex-wrap items-center justify-between border-b border-slate-200 pb-2 gap-2">
                                                             <span className="flex items-center gap-2 font-mono">
-                                                                <span className="bg-orange-500 text-slate-950 px-2 py-0.5 rounded text-[10px] font-black">Jenis Kaca #{idx + 1}</span>
-                                                                <strong className="text-slate-100 text-xs">✨ {gt.glass_type}</strong>
+                                                                <span className="bg-[#1b68b0] text-white px-2 py-0.5 rounded text-[10px] font-black">Jenis Kaca #{idx + 1}</span>
+                                                                <strong className="text-slate-800 text-xs">{gt.glass_type}</strong>
                                                             </span>
-                                                            <span className="text-[10px] text-amber-300 font-mono bg-slate-950 px-2.5 py-0.5 rounded border border-slate-800">
+                                                            <span className="text-[10px] text-slate-700 font-mono bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
                                                                 Total Order SPO: {gt.totalQty} Pcs ({gt.itemCount} Ukuran)
                                                             </span>
                                                         </div>
 
                                                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                                                             <div className="space-y-1">
-                                                                <label className="text-[11px] font-bold text-slate-300 block">Panjang Sisa (cm):</label>
+                                                                <label className="text-[11px] font-bold text-slate-700 block">Panjang Sisa (cm):</label>
                                                                 <input
                                                                     type="number"
                                                                     step="0.1"
@@ -1225,12 +1282,12 @@ export default function DivisionExecutionModal({
                                                                     placeholder="cth: 120"
                                                                     value={lenVal}
                                                                     onChange={(e) => updateScrapFormField(gt.glass_type, 'length_cm', e.target.value)}
-                                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] font-mono font-bold text-center"
                                                                 />
                                                             </div>
 
                                                             <div className="space-y-1">
-                                                                <label className="text-[11px] font-bold text-slate-300 block">Lebar Sisa (cm):</label>
+                                                                <label className="text-[11px] font-bold text-slate-700 block">Lebar Sisa (cm):</label>
                                                                 <input
                                                                     type="number"
                                                                     step="0.1"
@@ -1239,16 +1296,16 @@ export default function DivisionExecutionModal({
                                                                     placeholder="cth: 45"
                                                                     value={widVal}
                                                                     onChange={(e) => updateScrapFormField(gt.glass_type, 'width_cm', e.target.value)}
-                                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] font-mono font-bold text-center"
                                                                 />
                                                             </div>
 
                                                             <div className="space-y-1">
-                                                                <label className="text-[11px] font-bold text-slate-300 block">Pilih Lokasi Rak Storage Sisa:</label>
+                                                                <label className="text-[11px] font-bold text-slate-700 block">Pilih Lokasi Rak Storage Sisa:</label>
                                                                 <select
                                                                     value={rakVal}
                                                                     onChange={(e) => updateScrapFormField(gt.glass_type, 'rak_location', e.target.value)}
-                                                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] font-mono font-bold cursor-pointer"
                                                                 >
                                                                     <option value="Rak A01">Rak A01 (Kaca Polos / Float)</option>
                                                                     <option value="Rak A02">Rak A02 (Kaca Cermin / Mirror)</option>
@@ -1262,9 +1319,9 @@ export default function DivisionExecutionModal({
                                                                 <button
                                                                     type="submit"
                                                                     disabled={submittingScrapType === gt.glass_type}
-                                                                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shadow-lg shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
+                                                                    className="w-full bg-[#70b03c] hover:bg-[#5f9733] text-white font-extrabold px-4 py-2 rounded-xl text-xs transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 h-[38px]"
                                                                 >
-                                                                    <span>🧩</span>
+                                                                    <Scissors className="w-3.5 h-3.5" />
                                                                     <span>{submittingScrapType === gt.glass_type ? 'Menyimpan...' : `+ Simpan Sisa ${gt.glass_type}`}</span>
                                                                 </button>
                                                             </div>
@@ -1276,19 +1333,22 @@ export default function DivisionExecutionModal({
 
                                         {/* OPTIONAL EXPANDABLE FALLBACK UNTUK KACA NON-SPO */}
                                         <div className="pt-1">
-                                            <details className="bg-slate-900/60 rounded-xl border border-slate-800 p-3 group">
-                                                <summary className="text-xs font-bold text-slate-400 cursor-pointer hover:text-slate-200 flex items-center justify-between font-mono">
-                                                    <span>➕ Input Sisa Potong Jenis Kaca Lain (Di luar Order SPO)</span>
+                                            <details className="bg-white rounded-xl border border-slate-200 p-3 group shadow-xs">
+                                                <summary className="text-xs font-bold text-slate-700 cursor-pointer hover:text-slate-900 flex items-center justify-between font-mono">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Plus className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                        <span>Input Sisa Potong Jenis Kaca Lain (Di luar Order SPO)</span>
+                                                    </span>
                                                     <span className="text-[10px] text-slate-500 group-open:rotate-180 transition-transform">▼</span>
                                                 </summary>
-                                                <form onSubmit={handleSaveEmbeddedScrap} className="mt-3 pt-3 border-t border-slate-800 space-y-3">
+                                                <form onSubmit={handleSaveEmbeddedScrap} className="mt-3 pt-3 border-t border-slate-200 space-y-3">
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                                         <div className="sm:col-span-2 space-y-1">
-                                                            <label className="text-[11px] font-bold text-slate-300 block">Pilih Kaca dari Katalog Gudang:</label>
+                                                            <label className="text-[11px] font-bold text-slate-700 block">Pilih Kaca dari Katalog Gudang:</label>
                                                             <select
                                                                 value={embeddedScrapForm.glass_type}
                                                                 onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, glass_type: e.target.value })}
-                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] font-mono font-bold cursor-pointer"
                                                             >
                                                                 {sheetGlasses.map((g) => (
                                                                     <option key={'scr_sheet_extra_' + g.id} value={g.name}>
@@ -1298,7 +1358,7 @@ export default function DivisionExecutionModal({
                                                             </select>
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <label className="text-[11px] font-bold text-slate-300 block">Panjang (cm):</label>
+                                                            <label className="text-[11px] font-bold text-slate-700 block">Panjang (cm):</label>
                                                             <input
                                                                 type="number"
                                                                 step="0.1"
@@ -1307,11 +1367,11 @@ export default function DivisionExecutionModal({
                                                                 placeholder="cth: 120"
                                                                 value={embeddedScrapForm.length_cm}
                                                                 onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, length_cm: e.target.value })}
-                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] font-mono font-bold text-center"
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <label className="text-[11px] font-bold text-slate-300 block">Lebar (cm):</label>
+                                                            <label className="text-[11px] font-bold text-slate-700 block">Lebar (cm):</label>
                                                             <input
                                                                 type="number"
                                                                 step="0.1"
@@ -1320,17 +1380,17 @@ export default function DivisionExecutionModal({
                                                                 placeholder="cth: 45"
                                                                 value={embeddedScrapForm.width_cm}
                                                                 onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, width_cm: e.target.value })}
-                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold text-center"
+                                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] font-mono font-bold text-center"
                                                             />
                                                         </div>
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                                                         <div className="sm:col-span-2 space-y-1">
-                                                            <label className="text-[11px] font-bold text-slate-300 block">Pilih Lokasi Rak Storage Sisa:</label>
+                                                            <label className="text-[11px] font-bold text-slate-700 block">Pilih Lokasi Rak Storage Sisa:</label>
                                                             <select
                                                                 value={embeddedScrapForm.rak_location}
                                                                 onChange={(e) => setEmbeddedScrapForm({ ...embeddedScrapForm, rak_location: e.target.value })}
-                                                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-orange-400 font-mono font-bold cursor-pointer"
+                                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] font-mono font-bold cursor-pointer"
                                                             >
                                                                 <option value="Rak A01">Rak A01 (Kaca Polos / Float)</option>
                                                                 <option value="Rak A02">Rak A02 (Kaca Cermin / Mirror)</option>
@@ -1343,9 +1403,10 @@ export default function DivisionExecutionModal({
                                                             <button
                                                                 type="submit"
                                                                 disabled={isSubmittingEmbeddedScrap}
-                                                                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5 h-[38px]"
+                                                                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-200 cursor-pointer flex items-center justify-center gap-1.5 h-[38px]"
                                                             >
-                                                                <span>+ Simpan Kaca Sisa Ekstra</span>
+                                                                <Plus className="w-3.5 h-3.5" />
+                                                                <span>Simpan Kaca Sisa Ekstra</span>
                                                             </button>
                                                         </div>
                                                     </div>
@@ -1354,12 +1415,13 @@ export default function DivisionExecutionModal({
                                         </div>
 
                                         {/* PENGINGAT UKURAN TERINPUT AGAR TIDAK DOUBLE ENTRY */}
-                                        <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl space-y-2 shadow-inner">
-                                            <div className="flex flex-wrap items-center justify-between text-xs font-extrabold text-orange-300 border-b border-slate-800 pb-1.5 gap-2">
+                                        <div className="bg-white border border-slate-200 p-3.5 rounded-xl space-y-2 shadow-xs">
+                                            <div className="flex flex-wrap items-center justify-between text-xs font-extrabold text-slate-800 border-b border-slate-200 pb-1.5 gap-2">
                                                 <span className="flex items-center gap-1.5 font-mono">
-                                                    <span>📌 Ukuran Kaca Sisa Potong Tersimpan ({recentSavedScraps.length}):</span>
+                                                    <Tag className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                    <span>Ukuran Kaca Sisa Potong Tersimpan ({recentSavedScraps.length}):</span>
                                                 </span>
-                                                <span className="text-[10px] text-slate-400 font-mono italic">
+                                                <span className="text-[10px] text-slate-500 font-mono italic">
                                                     💡 Pengingat agar tidak terinput 2 kali
                                                 </span>
                                             </div>
@@ -1369,30 +1431,29 @@ export default function DivisionExecutionModal({
                                                     {recentSavedScraps.map((sc, scIdx) => {
                                                         const isEditing = editingScrapId === sc.id;
                                                         return (
-                                                            <div key={'sc_saved_' + (sc.id || scIdx)} className="bg-slate-950 hover:bg-slate-900/90 border border-slate-800 hover:border-slate-700 p-2.5 rounded-xl text-xs font-mono shadow-sm transition-all animate-in fade-in">
+                                                            <div key={'sc_saved_' + (sc.id || scIdx)} className="bg-slate-50 hover:bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-mono shadow-xs transition-all animate-in fade-in text-slate-800">
                                                                 {!isEditing ? (
                                                                     <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5">
                                                                         {/* LEFT: INFORMATION BADGES */}
                                                                         <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
-                                                                            <span className="bg-orange-500/15 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-lg text-[10px] font-bold shrink-0">
-                                                                                🧩 {sc.rak_location}
+                                                                            <span className="bg-[#70b03c]/15 text-[#70b03c] border border-[#70b03c]/30 px-2 py-0.5 rounded-lg text-[10px] font-bold shrink-0">
+                                                                                {sc.rak_location}
                                                                             </span>
 
-                                                                            <strong className="text-slate-100 text-xs truncate max-w-[200px]" title={sc.glass_type}>
+                                                                            <strong className="text-slate-800 text-xs truncate max-w-[200px]" title={sc.glass_type}>
                                                                                 {sc.glass_type}
                                                                             </strong>
 
-                                                                            <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-lg font-black text-xs shrink-0 flex items-center gap-1">
-                                                                                <span>📐</span>
+                                                                            <span className="bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 px-2.5 py-0.5 rounded-lg font-extrabold text-xs shrink-0 flex items-center gap-1">
                                                                                 <span>{sc.length_cm} × {sc.width_cm} cm</span>
                                                                             </span>
 
-                                                                            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-sans font-semibold shrink-0">
+                                                                            <span className="text-[10px] text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full font-sans font-semibold shrink-0">
                                                                                 ✓ Diinput {sc.created_at}
                                                                             </span>
 
                                                                             {sc.is_edited && (
-                                                                                <span className="text-[9px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded font-sans shrink-0">
+                                                                                <span className="text-[9px] text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded font-sans shrink-0">
                                                                                     Edited
                                                                                 </span>
                                                                             )}
@@ -1403,10 +1464,11 @@ export default function DivisionExecutionModal({
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => handleStartEditScrap(sc)}
-                                                                                className="bg-slate-900 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/40 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                                className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                                                                                 title="Koreksi/Edit ukuran"
                                                                             >
-                                                                                <span>✏️ Edit</span>
+                                                                                <Edit3 className="w-3 h-3 text-[#1b68b0]" />
+                                                                                <span>Edit</span>
                                                                             </button>
                                                                             <button
                                                                                 type="button"
@@ -1415,47 +1477,48 @@ export default function DivisionExecutionModal({
                                                                                         setRecentSavedScraps(prev => prev.filter(i => i.id !== sc.id));
                                                                                     }
                                                                                 }}
-                                                                                className="bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/40 px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                                className="bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                                                                                 title="Hapus dari daftar pengingat"
                                                                             >
-                                                                                <span>🗑️ Hapus</span>
+                                                                                <Trash2 className="w-3 h-3 text-rose-600" />
+                                                                                <span>Hapus</span>
                                                                             </button>
                                                                         </div>
                                                                     </div>
                                                                 ) : (
                                                                     /* FORM INLINE EDIT UKURAN KACA SISA POTONG */
-                                                                    <div className="bg-slate-900 border-2 border-cyan-500/60 p-3 rounded-lg space-y-2.5 animate-in fade-in">
-                                                                        <div className="flex justify-between items-center text-cyan-300 font-bold border-b border-slate-800 pb-1 text-[11px]">
-                                                                            <span>✏️ Form Koreksi/Edit Ukuran Sisa Potong ({sc.glass_type})</span>
-                                                                            <span className="text-[10px] text-amber-300 font-mono">💡 Perbaiki salah ketik dimensi</span>
+                                                                    <div className="bg-white border-2 border-[#1b68b0] p-3 rounded-lg space-y-2.5 animate-in fade-in">
+                                                                        <div className="flex justify-between items-center text-[#1b68b0] font-bold border-b border-slate-200 pb-1 text-[11px]">
+                                                                            <span>Form Koreksi/Edit Ukuran Sisa Potong ({sc.glass_type})</span>
+                                                                            <span className="text-[10px] text-amber-800 font-mono">💡 Perbaiki salah ketik dimensi</span>
                                                                         </div>
                                                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                                                             <div>
-                                                                                <label className="text-[10px] text-slate-400 block font-sans font-bold">Panjang Sisa (cm):</label>
+                                                                                <label className="text-[10px] text-slate-600 block font-sans font-bold">Panjang Sisa (cm):</label>
                                                                                 <input
                                                                                     type="number"
                                                                                     step="0.1"
                                                                                     value={inlineEditForm.length_cm}
                                                                                     onChange={(e) => setInlineEditForm({ ...inlineEditForm, length_cm: e.target.value })}
-                                                                                    className="w-full bg-slate-950 border border-cyan-500/50 rounded-lg px-2.5 py-1 text-xs text-white font-mono font-bold text-center focus:border-cyan-300"
+                                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 font-mono font-bold text-center focus:border-[#1b68b0] focus:bg-white"
                                                                                 />
                                                                             </div>
                                                                             <div>
-                                                                                <label className="text-[10px] text-slate-400 block font-sans font-bold">Lebar Sisa (cm):</label>
+                                                                                <label className="text-[10px] text-slate-600 block font-sans font-bold">Lebar Sisa (cm):</label>
                                                                                 <input
                                                                                     type="number"
                                                                                     step="0.1"
                                                                                     value={inlineEditForm.width_cm}
                                                                                     onChange={(e) => setInlineEditForm({ ...inlineEditForm, width_cm: e.target.value })}
-                                                                                    className="w-full bg-slate-950 border border-cyan-500/50 rounded-lg px-2.5 py-1 text-xs text-white font-mono font-bold text-center focus:border-cyan-300"
+                                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 font-mono font-bold text-center focus:border-[#1b68b0] focus:bg-white"
                                                                                 />
                                                                             </div>
                                                                             <div>
-                                                                                <label className="text-[10px] text-slate-400 block font-sans font-bold">Lokasi Rak Storage:</label>
+                                                                                <label className="text-[10px] text-slate-600 block font-sans font-bold">Lokasi Rak Storage:</label>
                                                                                 <select
                                                                                     value={inlineEditForm.rak_location}
                                                                                     onChange={(e) => setInlineEditForm({ ...inlineEditForm, rak_location: e.target.value })}
-                                                                                    className="w-full bg-slate-950 border border-cyan-500/50 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:border-cyan-300 cursor-pointer"
+                                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                                                                                 >
                                                                                     <option value="Rak A01">Rak A01 (Kaca Polos / Float)</option>
                                                                                     <option value="Rak A02">Rak A02 (Kaca Cermin / Mirror)</option>
@@ -1469,16 +1532,16 @@ export default function DivisionExecutionModal({
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => setEditingScrapId(null)}
-                                                                                className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                                                                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
                                                                             >
-                                                                                ✕ Batal
+                                                                                Batal
                                                                             </button>
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => handleSaveInlineEditScrap(sc)}
-                                                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 px-4 py-1 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer"
+                                                                                className="bg-[#70b03c] hover:bg-[#5f9733] text-white px-4 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer"
                                                                             >
-                                                                                <span>💾 Simpan Perubahan</span>
+                                                                                <span>Simpan Perubahan</span>
                                                                             </button>
                                                                         </div>
                                                                     </div>
@@ -1488,7 +1551,7 @@ export default function DivisionExecutionModal({
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="text-[11px] text-slate-400 font-mono italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 text-center">
+                                                <div className="text-[11px] text-slate-500 font-mono italic bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-center">
                                                     Belum ada ukuran sisa potong yang diinput pada sesi ini. Masukkan ukuran (Panjang × Lebar) di atas lalu klik simpan.
                                                 </div>
                                             )}
@@ -1498,18 +1561,18 @@ export default function DivisionExecutionModal({
 
                                 {/* RIWAYAT PENCATATAN PEMAKAIAN BAHAN UNTUK SPO INI */}
                                 {Array.isArray(selectedExecutionOrder.raw_materials_used) && selectedExecutionOrder.raw_materials_used.length > 0 && (
-                                    <div className="pt-2 border-t border-slate-900 space-y-1.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                    <div className="pt-2 border-t border-slate-200 space-y-1.5">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                                             Riwayat Bahan Kaca Lembaran Terpakai ({selectedExecutionOrder.raw_materials_used.length}x Input):
                                         </span>
                                         <div className="flex flex-wrap gap-2">
                                             {selectedExecutionOrder.raw_materials_used.map((rm, rmIdx) => (
-                                                <div key={rmIdx} className="bg-slate-900 border border-amber-500/20 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 font-mono">
-                                                    <span className="text-amber-400 font-bold">📄 {rm.glass_type}</span>
-                                                    <span className="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded text-[10px] font-black">
+                                                <div key={rmIdx} className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 font-mono shadow-xs text-slate-800">
+                                                    <span className="text-[#1b68b0] font-bold">📄 {rm.glass_type}</span>
+                                                    <span className="bg-[#70b03c]/15 text-[#70b03c] px-2 py-0.5 rounded text-[10px] font-black">
                                                         {rm.sheets_used} Lembar
                                                     </span>
-                                                    <span className="text-[10px] text-slate-400">({rm.recorded_by})</span>
+                                                    <span className="text-[10px] text-slate-500">({rm.recorded_by})</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -1520,20 +1583,21 @@ export default function DivisionExecutionModal({
 
                         {/* KETERANGAN & POTONGAN RAK */}
                         {selectedExecutionOrder.description && (
-                            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs text-slate-300 italic flex items-center gap-2">
-                                <span>📝 Catatan Order:</span>
-                                <strong>{selectedExecutionOrder.description}</strong>
+                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-700 italic flex items-center gap-2 shadow-xs">
+                                <FileText className="w-4 h-4 text-[#1b68b0] shrink-0" />
+                                <span>Catatan Order:</span>
+                                <strong className="text-slate-900 font-semibold">{selectedExecutionOrder.description}</strong>
                             </div>
                         )}
 
                         {/* ACTION FOOTER MODAL BAR */}
-                        <div className="pt-4 border-t border-slate-800 flex flex-wrap justify-between items-center gap-4 relative z-10">
+                        <div className="pt-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-4 relative z-10">
                             <button 
                                 type="button" 
                                 onClick={() => onClose()}
-                                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition border border-slate-700"
+                                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition border border-slate-200 cursor-pointer"
                             >
-                                ✕ Tutup Modal
+                                Tutup Modal
                             </button>
 
                             <div className="flex flex-wrap items-center gap-2">
@@ -1547,12 +1611,13 @@ export default function DivisionExecutionModal({
                                         return (
                                             <div className="flex items-center gap-2">
                                                 {selectedExecutionOrder.is_revised && (
-                                                    <span className="text-xs font-black text-amber-300 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-500/40 font-mono">
+                                                    <span className="text-xs font-black text-amber-800 bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-300 font-mono">
                                                         🏆 SELESAI & SUDAH DIREVISI
                                                     </span>
                                                 )}
-                                                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/30 flex items-center gap-1.5 shadow-sm font-mono">
-                                                    <span>✅ Order Selesai Dikerjakan</span>
+                                                <span className="text-xs font-bold text-[#70b03c] bg-[#70b03c]/10 px-4 py-2 rounded-xl border border-[#70b03c]/30 flex items-center gap-1.5 shadow-xs font-mono">
+                                                    <CheckCircle2 className="w-4 h-4 text-[#70b03c]" />
+                                                    <span>Order Selesai Dikerjakan</span>
                                                 </span>
                                             </div>
                                         );
@@ -1560,8 +1625,9 @@ export default function DivisionExecutionModal({
 
                                     if (selectedExecutionOrder.complaint_status === 'pending_gudang') {
                                         return (
-                                            <span className="text-xs font-bold text-amber-300 bg-amber-500/20 px-4 py-2 rounded-xl border border-amber-500/40 flex items-center gap-1.5 font-mono shadow-sm">
-                                                <span>⏳ MENUNGGU DECISION ADMIN GUDANG (TERKUNCI)</span>
+                                            <span className="text-xs font-bold text-amber-800 bg-amber-100 px-4 py-2 rounded-xl border border-amber-300 flex items-center gap-1.5 font-mono shadow-xs">
+                                                <Clock className="w-4 h-4 text-amber-600" />
+                                                <span>MENUNGGU DECISION ADMIN GUDANG (TERKUNCI)</span>
                                             </span>
                                         );
                                     }
@@ -1574,68 +1640,47 @@ export default function DivisionExecutionModal({
                                                     onAcknowledgeRevision(selectedExecutionOrder.id);
                                                     onClose();
                                                 }}
-                                                className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer"
+                                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                                             >
-                                                🔄 Terima & Eksekusi Revisi SPO
+                                                <RotateCcw className="w-4 h-4" />
+                                                <span>Terima & Eksekusi Revisi SPO</span>
                                             </button>
                                         );
                                     }
 
                                     return (
                                         <>
-                                            {/* BUTTON LAPORKAN KACA CACAT / BARET UNTUK DIVISI SELAIN HT */}
-                                            {selectedExecutionOrder.current_division !== 'divisi_ht' && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onOpenComplaintModal(selectedExecutionOrder)}
-                                                    className="bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500 hover:to-amber-500 text-rose-300 hover:text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-rose-500/40 whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-rose-500/10 cursor-pointer"
-                                                >
-                                                    <span>⚠️ Laporkan Kaca Cacat / Baret</span>
-                                                </button>
-                                            )}
+                                            {/* BUTTON LAPORKAN KACA CACAT / BARET */}
+                                            <button
+                                                type="button"
+                                                onClick={() => onOpenComplaintModal && onOpenComplaintModal(selectedExecutionOrder)}
+                                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold px-4 py-2.5 rounded-xl text-xs transition border border-rose-200 whitespace-nowrap flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                            >
+                                                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                                                <span>Laporkan Kaca Cacat / Baret</span>
+                                            </button>
 
-                                            {(() => {
-                                                const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
-                                                const reqCodes = ['HT'];
-                                                const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
-                                                if (Array.isArray(selectedExecutionOrder.processes)) selectedExecutionOrder.processes.forEach(addC);
-                                                if (Array.isArray(selectedExecutionOrder.items)) {
-                                                    selectedExecutionOrder.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
-                                                }
-                                                reqCodes.sort((a, b) => fixedSeq.indexOf(a) - fixedSeq.indexOf(b));
-                                                const curKey = (selectedExecutionOrder.current_division || '').replace('divisi_', '').toUpperCase();
-                                                const curIdx = reqCodes.indexOf(curKey);
-                                                let defaultNext = 'QC_Ready';
-                                                if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
-                                                    const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
-                                                    defaultNext = map[reqCodes[curIdx + 1]] || 'QC_Ready';
-                                                }
-
-                                                return (
-                                                    <select 
-                                                        id={`exec_modal_next_div_${selectedExecutionOrder.id}`}
-                                                        defaultValue={defaultNext}
-                                                        className="bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-cyan-400 font-mono shadow-inner cursor-pointer"
-                                                    >
-                                                        <option value="QC_Ready">✅ Selesai & Lolos QC (Siap Kirim)</option>
-                                                        <option value="divisi_ht">✂️ Teruskan ke Divisi Potong (HT & Bor)</option>
-                                                        <option value="divisi_gm">✨ Teruskan ke Divisi GM (Gosok Mesin)</option>
-                                                        <option value="divisi_bv">💎 Teruskan ke Divisi BV (Beveling)</option>
-                                                        <option value="divisi_etsa">🎨 Teruskan ke Divisi Etsa (Sandblast Blur)</option>
-                                                    </select>
-                                                );
-                                            })()}
+                                            <select 
+                                                value={selectedNextDiv}
+                                                onChange={(e) => setSelectedNextDiv(e.target.value)}
+                                                className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-[#1b68b0] focus:bg-white font-mono shadow-xs cursor-pointer"
+                                            >
+                                                <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
+                                                <option value="divisi_ht">Teruskan ke Divisi Potong (HT & Bor)</option>
+                                                <option value="divisi_gm">Teruskan ke Divisi GM (Gosok Mesin)</option>
+                                                <option value="divisi_bv">Teruskan ke Divisi BV (Beveling)</option>
+                                                <option value="divisi_etsa">Teruskan ke Divisi Etsa (Sandblast Blur)</option>
+                                            </select>
 
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    const sel = document.getElementById(`exec_modal_next_div_${selectedExecutionOrder.id}`);
-                                                    const nextVal = sel ? sel.value : 'QC_Ready';
-                                                    onFinishJobSubmit(selectedExecutionOrder.id, nextVal);
+                                                    onFinishJobSubmit(selectedExecutionOrder.id, selectedNextDiv);
                                                 }}
-                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xl shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
+                                                className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
                                             >
-                                                <span>✅ Selesai & Teruskan Pekerjaan</span>
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                <span>Selesai & Teruskan Pekerjaan</span>
                                             </button>
                                         </>
                                     );

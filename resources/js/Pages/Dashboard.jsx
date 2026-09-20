@@ -398,23 +398,17 @@ export default function Dashboard({
     const handleOpenComplaintModal = (order) => {
         setSelectedExecutionOrder(order);
 
-        const itemsList = Array.isArray(order.items) && order.items.length > 0
+        const rawItems = Array.isArray(order.items) && order.items.length > 0
             ? order.items
-            : [{
-                glass_type: order.glass_type || 'Kaca Standard',
-                width: order.width || 0,
-                height: order.height || 0,
-                thickness: order.thickness || 5,
-                quantity: order.quantity || 1,
-            }];
+            : [order];
 
-        const initialDefectives = itemsList.map((item, idx) => ({
+        const initialDefectives = rawItems.map((item, idx) => ({
             item_index: idx,
-            glass_type: item.glass_type || 'Kaca Standard',
-            width: item.width || 0,
-            height: item.height || 0,
-            thickness: item.thickness || 5,
-            quantity: item.quantity || 1,
+            glass_type: item.glass_type || order.glass_type || 'Kaca Standard',
+            width: item.width_cm ?? item.width ?? order.width_cm ?? order.width ?? 0,
+            height: item.length_cm ?? item.height ?? item.length ?? order.length_cm ?? order.height ?? 0,
+            thickness: item.thickness_mm ?? item.thickness ?? order.thickness_mm ?? order.thickness ?? 5,
+            quantity: item.qty ?? item.quantity ?? order.qty ?? order.quantity ?? 1,
             qty_defective: 0,
         }));
 
@@ -4419,6 +4413,43 @@ export default function Dashboard({
                 financeTransactionsList={financeTransactionsList}
                 ordersList={initialOrders}
                 currentUserName={userName}
+            />
+
+            {/* MODAL EKSEKUSI & DETAIL LENGKAP DIVISI OPERASIONAL */}
+            <DivisionExecutionModal
+                show={showExecutionModal}
+                onClose={() => {
+                    setShowExecutionModal(false);
+                    setSelectedExecutionOrder(null);
+                }}
+                selectedExecutionOrder={selectedExecutionOrder}
+                roleTitles={roleTitles}
+                userRole={userRole}
+                productionSubTab={productionSubTab}
+                isDivisionWorker={isDivisionWorker}
+                onAcknowledgeRevision={handleAcknowledgeRevision}
+                onOpenComplaintModal={handleOpenComplaintModal}
+                onOpenScrapPopup={handleOpenScrapPopup}
+                onFinishJobSubmit={handleFinishJobSubmit}
+                formatIndonesianDate={formatIndonesianDate}
+                formatIndonesianDateTime={formatIndonesianDateTime}
+                onOpenSketchLightbox={handleOpenSketchLightbox}
+                sheetGlasses={sheetGlasses}
+                scrapGlasses={scrapGlasses}
+                onRecordRawMaterialSuccess={handleRecordRawMaterialSuccess}
+                onOpenStickerModal={handleOpenStickerModal}
+            />
+
+            {/* MODAL LAPOR KACA CACAT / BARET */}
+            <ComplaintModal
+                show={showComplaintModal}
+                onClose={() => setShowComplaintModal(false)}
+                selectedExecutionOrder={selectedExecutionOrder}
+                userRole={userRole}
+                form={complaintForm}
+                setForm={setComplaintForm}
+                onSubmit={handleSubmitComplaint}
+                onPhotoChange={handleComplaintPhotoChange}
             />
 
             {/* GLOBAL SKETCH LIGHTBOX MODAL */}
