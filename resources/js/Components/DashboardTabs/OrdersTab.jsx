@@ -157,7 +157,7 @@ export default function OrdersTab({
             </div>
 
             {/* ACTION HEADER & DATA TABLE - FULL CLEAN WHITE ENTERPRISE CARD */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+            <div key={activeOrderCard} className="animate-subtab-content bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
                 {/* TABLE TOOLBAR */}
                 <div className="bg-slate-50/80 border-b border-slate-200 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
                     <div className="flex items-center gap-2.5">

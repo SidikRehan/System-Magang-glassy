@@ -7,6 +7,7 @@ import {
     ShieldCheck, Sparkles, Send, Clock, Camera
 } from 'lucide-react';
 import { isDriverMatch } from '@/Utils/dashboardHelpers';
+import AssignVehicleModal from '@/Components/Modals/AssignVehicleModal';
 
 export default function DeliveriesTab({
     userRole,
@@ -31,6 +32,43 @@ export default function DeliveriesTab({
     const [dispatchDriverInput, setDispatchDriverInput] = useState('Pak Budi (Supir Utama DC)');
     const [dispatchVehicleInput, setDispatchVehicleInput] = useState('Engkel Box (D 8472 AB)');
     const [dispatchNotesInput, setDispatchNotesInput] = useState('');
+
+    const [showAssignVehicleModal, setShowAssignVehicleModal] = useState(false);
+    const [selectedAssignOrder, setSelectedAssignOrder] = useState(null);
+    const [assignDriver, setAssignDriver] = useState('Pak Budi (Supir Utama DC)');
+    const [assignVehicle, setAssignVehicle] = useState('Engkel Box (D 8472 AB)');
+    const [assignNotes, setAssignNotes] = useState('');
+    const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
+
+    const handleOpenAssignVehicleModal = (order) => {
+        setSelectedAssignOrder(order);
+        if (order.assigned_driver) setAssignDriver(order.assigned_driver);
+        if (order.assigned_vehicle) setAssignVehicle(order.assigned_vehicle);
+        setAssignNotes(order.delivery_notes || '');
+        setShowAssignVehicleModal(true);
+    };
+
+    const handleSingleAssignSubmit = (e) => {
+        e.preventDefault();
+        if (!selectedAssignOrder) return;
+        setIsSubmittingVehicle(true);
+
+        router.post('/orders/batch-delivery', {
+            order_ids: [selectedAssignOrder.id],
+            driver_name: assignDriver,
+            vehicle_plate: assignVehicle,
+            notes: assignNotes
+        }, {
+            onSuccess: () => {
+                setShowAssignVehicleModal(false);
+                setSelectedAssignOrder(null);
+                setAssignNotes('');
+            },
+            onFinish: () => {
+                setIsSubmittingVehicle(false);
+            }
+        });
+    };
 
     const toggleSelectOrderForBatch = (orderId) => {
         setSelectedBatchOrderIds(prev =>
@@ -608,14 +646,14 @@ export default function DeliveriesTab({
                         })()}
                     </div>
 
-                    {/* TABEL PILIHAN SPO & ALAMAT PENGIRIMAN */}
+                    {/* TABEL PILIHAN SPO & ALAMAT PENGIRIMAN DENGAN FORM PENUGASAN MOBIL TERPADU */}
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
                         <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
                             <div>
                                 <h3 className="text-sm font-black text-[#242222]">
-                                    Daftar Order SPO Siap Kirim & Pilihan Alamat Tujuan
+                                    Daftar Order SPO Siap Kirim & Form Penugasan Mobil Armada
                                 </h3>
-                                <p className="text-xs text-slate-500 font-medium">Centang kotak pada sebelah kiri nomor SPO untuk memilih beberapa alamat sekaligus yang akan dikirim armada.</p>
+                                <p className="text-xs text-slate-500 font-medium">Tugaskan mobil per order pada kolom Supir & Mobil atau centang beberapa order untuk penugasan sekaligus (batch).</p>
                             </div>
                             <button
                                 type="button"
@@ -632,6 +670,75 @@ export default function DeliveriesTab({
                                     </>
                                 )}
                             </button>
+                        </div>
+
+                        {/* FORM PENUGASAN MOBIL ARMADA BATCH (DALAM CONTAINER TABEL) */}
+                        <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
+                                <div className="flex items-center gap-2">
+                                    <Truck className="w-4 h-4 text-[#1b68b0]" />
+                                    <h4 className="text-xs font-bold text-[#242222]">Form Penugasan Mobil Armada (Batch / Multi-Order)</h4>
+                                </div>
+                                <span className="text-[11px] bg-blue-50 text-[#1b68b0] px-2.5 py-0.5 rounded-full border border-blue-200 font-bold">
+                                    {selectedBatchOrderIds.length} Order SPO Terpilih
+                                </span>
+                            </div>
+
+                            <form onSubmit={handleAssignBatchDeliverySubmit} className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                                <div>
+                                    <label className="text-slate-700 block mb-1 font-bold">Supir / Driver Armada:</label>
+                                    <select
+                                        value={dispatchDriverInput}
+                                        onChange={e => setDispatchDriverInput(e.target.value)}
+                                        className="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
+                                    >
+                                        <option value="Pak Budi (Supir Utama DC)">Pak Budi (Supir Utama DC)</option>
+                                        <option value="Pak Mulyadi (Driver Engkel)">Pak Mulyadi (Driver Engkel)</option>
+                                        <option value="Pak Asep (Driver L300)">Pak Asep (Driver Pick Up)</option>
+                                        <option value="Pak Hendra (Driver Subcon)">Pak Hendra (Driver Subcon)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-slate-700 block mb-1 font-bold">Jenis & No. Plat Mobil:</label>
+                                    <select
+                                        value={dispatchVehicleInput}
+                                        onChange={e => setDispatchVehicleInput(e.target.value)}
+                                        className="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
+                                    >
+                                        <option value="Engkel Box (D 8472 AB)">Engkel Box (D 8472 AB)</option>
+                                        <option value="Pick Up L300 (D 8192 XY)">Pick Up L300 (D 8192 XY)</option>
+                                        <option value="Truck Engkel Long (D 8011 GH)">Truck Engkel Long (D 8011 GH)</option>
+                                        <option value="Armada Subcon (B 9920 FK)">Armada Subcon (B 9920 FK)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-slate-700 block mb-1 font-bold">Catatan Rute / Instruksi Supir:</label>
+                                    <input
+                                        type="text"
+                                        value={dispatchNotesInput}
+                                        onChange={e => setDispatchNotesInput(e.target.value)}
+                                        placeholder="cth: Kirim sebelum jam 12 siang..."
+                                        className="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-800 focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0]"
+                                    />
+                                </div>
+
+                                <div className="flex flex-col justify-end">
+                                    <button
+                                        type="submit"
+                                        disabled={selectedBatchOrderIds.length === 0}
+                                        className={`w-full font-bold px-3 py-2 rounded-xl text-xs shadow-xs flex items-center justify-center gap-1.5 transition ${
+                                            selectedBatchOrderIds.length > 0
+                                                ? 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer'
+                                                : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                                        }`}
+                                    >
+                                        <Send className="w-3.5 h-3.5" />
+                                        <span>Tugaskan Mobil ({selectedBatchOrderIds.length})</span>
+                                    </button>
+                                </div>
+                            </form>
                         </div>
 
                         <div className="overflow-x-auto border border-slate-200 rounded-xl">
@@ -720,18 +827,36 @@ export default function DeliveriesTab({
 
                                                     <td className="p-3">
                                                         {ord.assigned_driver ? (
-                                                            <>
+                                                            <div className="space-y-1">
                                                                 <div className="font-bold text-[#242222] text-xs">
                                                                     {ord.assigned_driver}
                                                                 </div>
-                                                                <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                                                <div className="text-[11px] text-slate-500 font-medium">
                                                                     {ord.assigned_vehicle}
                                                                 </div>
-                                                            </>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenAssignVehicleModal(ord)}
+                                                                    className="text-[10px] text-[#1b68b0] hover:underline font-bold flex items-center gap-1 mt-0.5 cursor-pointer"
+                                                                >
+                                                                    <Truck className="w-3 h-3" /> Ubah Mobil
+                                                                </button>
+                                                            </div>
                                                         ) : (
-                                                            <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-bold inline-block">
-                                                                Belum Ditugaskan
-                                                            </span>
+                                                            <div className="space-y-1.5">
+                                                                <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-bold inline-block">
+                                                                    Belum Ditugaskan
+                                                                </span>
+                                                                <div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenAssignVehicleModal(ord)}
+                                                                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                                                                    >
+                                                                        <Truck className="w-3 h-3" /> Tugaskan Mobil
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </td>
 
@@ -758,6 +883,21 @@ export default function DeliveriesTab({
                             </table>
                         </div>
                     </div>
+
+                    {/* MODAL PENUGASAN MOBIL PER SPO ORDER */}
+                    <AssignVehicleModal
+                        show={showAssignVehicleModal}
+                        onClose={() => setShowAssignVehicleModal(false)}
+                        order={selectedAssignOrder}
+                        driver={assignDriver}
+                        setDriver={setAssignDriver}
+                        vehicle={assignVehicle}
+                        setVehicle={setAssignVehicle}
+                        notes={assignNotes}
+                        setNotes={setAssignNotes}
+                        handleSubmit={handleSingleAssignSubmit}
+                        isSubmitting={isSubmittingVehicle}
+                    />
                 </>
             )}
         </div>

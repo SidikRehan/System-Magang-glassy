@@ -22,13 +22,17 @@ import {
     CheckCircle2,
     Package,
     RotateCcw,
-    Bell
+    Bell,
+    Loader2
 } from 'lucide-react';
+import SearchableSelect from '@/Components/SearchableSelect';
 
 export default function EditDraftOrderModal({
     show,
     onClose,
     handleCloseEditModal,
+    isSubmittingOrder = false,
+    submittingAction = null,
     editingOrder,
     orderForm,
     setOrderForm,
@@ -82,6 +86,38 @@ export default function EditDraftOrderModal({
         if (num < 0.01) return num.toFixed(4);
         if (num < 0.1) return num.toFixed(3);
         return num.toFixed(2);
+    };
+
+    const [attemptedSubmit, setAttemptedSubmit] = React.useState(false);
+    const [shakeKey, setShakeKey] = React.useState(0);
+
+    // Form Validation Checks
+    const isCustomerNameValid = Boolean(orderForm.customer_name && orderForm.customer_name.trim().length > 0);
+    const isCustomerPhoneValid = Boolean(orderForm.customer_phone && orderForm.customer_phone.trim().length > 0);
+    const isCustomerAddressValid = Boolean(orderForm.customer_address && orderForm.customer_address.trim().length > 0);
+    const isDescriptionValid = Boolean(orderForm.description && orderForm.description.trim().length > 0);
+    const isOrderDateValid = Boolean(orderForm.order_date && String(orderForm.order_date).trim().length > 0);
+
+    const isItemsValid = Boolean(
+        calcItems && 
+        calcItems.length > 0 && 
+        calcItems.every(item => 
+            Boolean(item.glass_type && String(item.glass_type).trim().length > 0) &&
+            (parseFloat(item.length_cm) || 0) > 0 &&
+            (parseFloat(item.width_cm) || 0) > 0 &&
+            (parseInt(item.qty) || 0) > 0
+        )
+    );
+
+    const isPriorityValid = orderForm.priority_status !== 'Prioritas' || (parseFloat(orderForm.priority_fee) || 0) > 0;
+
+    const isFormValid = isCustomerNameValid && isCustomerPhoneValid && isCustomerAddressValid && isDescriptionValid && isOrderDateValid && isItemsValid && isPriorityValid;
+
+    const getFieldClass = (isValid, baseClass = "w-full bg-white border rounded-xl p-2.5 text-slate-800 shadow-xs transition") => {
+        if (!isValid && attemptedSubmit) {
+            return `${baseClass} border-rose-500 bg-rose-50/70 ring-2 ring-rose-500/30 text-rose-900 animate-shake form-invalid-input`;
+        }
+        return `${baseClass} border-slate-200 focus:border-[#1b68b0]`;
     };
 
     return (
@@ -169,7 +205,7 @@ export default function EditDraftOrderModal({
                                     required 
                                     value={orderForm.customer_name} 
                                     onChange={e => setOrderForm('customer_name', sanitizeCustomerName(e.target.value))} 
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] font-medium shadow-xs" 
+                                    className={getFieldClass(isCustomerNameValid, "w-full bg-white border rounded-xl p-2.5 text-slate-800 font-medium shadow-xs transition")} 
                                     placeholder="cth: Budi Karunia" 
                                 />
                                 <span className="text-[10px] text-slate-400 block mt-1">*Hanya huruf & spasi (angka/simbol otomatis difilter)</span>
@@ -182,7 +218,7 @@ export default function EditDraftOrderModal({
                                     required 
                                     value={orderForm.customer_phone} 
                                     onChange={e => setOrderForm('customer_phone', sanitizeCustomerPhone(e.target.value))} 
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] font-mono shadow-xs" 
+                                    className={getFieldClass(isCustomerPhoneValid, "w-full bg-white border rounded-xl p-2.5 text-slate-800 font-mono shadow-xs transition")} 
                                     placeholder="cth: 081234567890" 
                                 />
                                 <span className="text-[10px] text-slate-400 block mt-1">*Hanya digit angka nomor hp</span>
@@ -195,7 +231,7 @@ export default function EditDraftOrderModal({
                                 rows="2" 
                                 value={orderForm.customer_address} 
                                 onChange={e => setOrderForm('customer_address', e.target.value)} 
-                                className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] shadow-xs" 
+                                className={getFieldClass(isCustomerAddressValid, "w-full bg-white border rounded-xl p-2.5 text-slate-800 shadow-xs transition")} 
                                 placeholder="Alamat lengkap lokasi pengantaran kaca..." 
                             />
                         </div>
@@ -261,18 +297,15 @@ export default function EditDraftOrderModal({
                                                             {grp.items.length} Variasi Ukuran
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
+                                                     <div className="flex items-center gap-2 flex-1">
                                                         <label className="text-slate-600 text-xs font-semibold whitespace-nowrap">Jenis Kaca Dasar:</label>
-                                                        <select 
-                                                            value={grp.glass_type} 
-                                                            onChange={e => handleGroupGlassTypeChange(grp.group_id, e.target.value)} 
-                                                            className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-bold text-xs focus:border-[#1b68b0] shadow-xs cursor-pointer"
-                                                        >
-                                                            <option value="">-- Pilih Jenis Kaca Dasar --</option>
-                                                            {getDynamicGlassTypes(sheetGlasses).map((gt, typeIdx) => (
-                                                                <option key={typeIdx} value={gt}>{gt}</option>
-                                                            ))}
-                                                        </select>
+                                                        <SearchableSelect
+                                                            value={grp.glass_type}
+                                                            onChange={val => handleGroupGlassTypeChange(grp.group_id, val)}
+                                                            options={getDynamicGlassTypes(sheetGlasses)}
+                                                            placeholder="-- Ketik atau Cari Jenis Kaca Dasar --"
+                                                            invalid={attemptedSubmit && (!grp.glass_type || grp.glass_type.trim().length === 0)}
+                                                        />
                                                     </div>
                                                 </div>
 
@@ -341,9 +374,10 @@ export default function EditDraftOrderModal({
                                                                     inputMode="decimal"
                                                                     required 
                                                                     placeholder="cth: 24,3 atau 150"
-                                                                    value={item.length_cm} 
+                                                                    value={item.length_cm ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'length_cm', e.target.value)} 
-                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-mono text-xs focus:border-[#1b68b0] focus:bg-white" 
+                                                                    onFocus={e => e.target.select()}
+                                                                    className={getFieldClass((parseFloat(item.length_cm) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
                                                                 />
                                                             </div>
                                                             <div>
@@ -353,20 +387,23 @@ export default function EditDraftOrderModal({
                                                                     inputMode="decimal"
                                                                     required 
                                                                     placeholder="cth: 160,5 atau 120"
-                                                                    value={item.width_cm} 
+                                                                    value={item.width_cm ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'width_cm', e.target.value)} 
-                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-mono text-xs focus:border-[#1b68b0] focus:bg-white" 
+                                                                    onFocus={e => e.target.select()}
+                                                                    className={getFieldClass((parseFloat(item.width_cm) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
                                                                 />
                                                             </div>
                                                             <div>
                                                                 <label className="text-slate-600 block mb-1 text-[11px] font-semibold">Jumlah (Qty):</label>
                                                                 <input 
-                                                                    type="number" 
+                                                                    type="text" 
+                                                                    inputMode="numeric"
                                                                     min="0" 
                                                                     required 
-                                                                    value={item.qty} 
+                                                                    value={item.qty ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'qty', e.target.value)} 
-                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 font-mono font-bold text-xs focus:border-[#1b68b0] focus:bg-white" 
+                                                                    onFocus={e => e.target.select()}
+                                                                    className={getFieldClass((parseInt(item.qty) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono font-bold text-xs focus:bg-white")} 
                                                                 />
                                                             </div>
                                                         </div>
@@ -559,10 +596,11 @@ export default function EditDraftOrderModal({
                                                                     Lebar Bevel (cm): <span className="text-[10px] text-slate-500 font-mono">(Biaya: Keliling × Rp 15.000 + Lebar cm × Rp 10.000)</span>
                                                                 </label>
                                                                 <input 
-                                                                    type="number" 
-                                                                    step="0.5" 
-                                                                    value={item.bevel_width_cm || 1} 
+                                                                    type="text" 
+                                                                    inputMode="decimal"
+                                                                    value={item.bevel_width_cm ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
+                                                                    onFocus={e => e.target.select()}
                                                                     className="w-36 bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
                                                                 />
                                                             </div>
@@ -613,30 +651,33 @@ export default function EditDraftOrderModal({
                                                                                 <div>
                                                                                     <span className="text-[10px] text-slate-500 block mb-0.5">Panjang Lubang (cm):</span>
                                                                                     <input 
-                                                                                        type="number" 
-                                                                                        step="any"
-                                                                                        value={hSpec.hole_length_cm !== undefined ? hSpec.hole_length_cm : 2} 
+                                                                                        type="text" 
+                                                                                        inputMode="decimal"
+                                                                                        value={hSpec.hole_length_cm ?? ''} 
                                                                                         onChange={e => handleHoleSpecChange(idx, hIdx, 'hole_length_cm', e.target.value)} 
+                                                                                        onFocus={e => e.target.select()}
                                                                                         className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
                                                                                     />
                                                                                 </div>
                                                                                 <div>
                                                                                     <span className="text-[10px] text-slate-500 block mb-0.5">Lebar Lubang (cm):</span>
                                                                                     <input 
-                                                                                        type="number" 
-                                                                                        step="any"
-                                                                                        value={hSpec.hole_width_cm !== undefined ? hSpec.hole_width_cm : 2} 
+                                                                                        type="text" 
+                                                                                        inputMode="decimal"
+                                                                                        value={hSpec.hole_width_cm ?? ''} 
                                                                                         onChange={e => handleHoleSpecChange(idx, hIdx, 'hole_width_cm', e.target.value)} 
+                                                                                        onFocus={e => e.target.select()}
                                                                                         className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
                                                                                         />
                                                                                 </div>
                                                                                 <div>
                                                                                     <span className="text-[10px] text-slate-500 block mb-0.5">Jumlah Lubang (Qty):</span>
                                                                                     <input 
-                                                                                        type="number" 
-                                                                                        min="1"
-                                                                                        value={hSpec.hole_qty !== undefined ? hSpec.hole_qty : 1} 
+                                                                                        type="text" 
+                                                                                        inputMode="numeric"
+                                                                                        value={hSpec.hole_qty ?? ''} 
                                                                                         onChange={e => handleHoleSpecChange(idx, hIdx, 'hole_qty', e.target.value)} 
+                                                                                        onFocus={e => e.target.select()}
                                                                                         className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
                                                                                     />
                                                                                 </div>
@@ -657,9 +698,11 @@ export default function EditDraftOrderModal({
                                                                     <div>
                                                                         <span className="text-[10px] text-slate-500 block mb-0.5">Panjang (cm):</span>
                                                                         <input 
-                                                                            type="number" 
-                                                                            value={item.etsa_length_cm !== undefined ? item.etsa_length_cm : (item.length_cm || '')} 
+                                                                            type="text" 
+                                                                            inputMode="decimal"
+                                                                            value={item.etsa_length_cm ?? ''} 
                                                                             onChange={e => handleItemChange(idx, 'etsa_length_cm', e.target.value)} 
+                                                                            onFocus={e => e.target.select()}
                                                                             className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
                                                                             placeholder={item.length_cm}
                                                                         />
@@ -667,9 +710,11 @@ export default function EditDraftOrderModal({
                                                                     <div>
                                                                         <span className="text-[10px] text-slate-500 block mb-0.5">Lebar (cm):</span>
                                                                         <input 
-                                                                            type="number" 
-                                                                            value={item.etsa_width_cm !== undefined ? item.etsa_width_cm : (item.width_cm || '')} 
+                                                                            type="text" 
+                                                                            inputMode="decimal"
+                                                                            value={item.etsa_width_cm ?? ''} 
                                                                             onChange={e => handleItemChange(idx, 'etsa_width_cm', e.target.value)} 
+                                                                            onFocus={e => e.target.select()}
                                                                             className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
                                                                             placeholder={item.width_cm}
                                                                         />
@@ -677,9 +722,11 @@ export default function EditDraftOrderModal({
                                                                     <div>
                                                                         <span className="text-[10px] text-slate-500 block mb-0.5">Jumlah Area (Pcs):</span>
                                                                         <input 
-                                                                            type="number" 
-                                                                            value={item.etsa_qty || 1} 
+                                                                            type="text" 
+                                                                            inputMode="numeric"
+                                                                            value={item.etsa_qty ?? ''} 
                                                                             onChange={e => handleItemChange(idx, 'etsa_qty', e.target.value)} 
+                                                                            onFocus={e => e.target.select()}
                                                                             className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
                                                                         />
                                                                     </div>
@@ -786,10 +833,11 @@ export default function EditDraftOrderModal({
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-[10px] text-slate-500">Jumlah:</span>
                                                     <input
-                                                        type="number"
-                                                        min="1"
-                                                        value={accQty}
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={accQty ?? ''}
                                                         onChange={e => handleAccessoryQtyChange(accIdx, e.target.value)}
+                                                        onFocus={e => e.target.select()}
                                                         className="w-16 bg-slate-50 border border-slate-200 rounded-lg p-1 text-center text-xs font-mono font-bold text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                                                     />
                                                     <span className="text-[10px] text-slate-500">{accUnit}</span>
@@ -830,7 +878,7 @@ export default function EditDraftOrderModal({
                                 rows="3" 
                                 value={orderForm.description} 
                                 onChange={e => setOrderForm('description', e.target.value)} 
-                                className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] text-xs shadow-xs" 
+                                className={getFieldClass(isDescriptionValid, "w-full bg-white border rounded-xl p-2.5 text-slate-800 text-xs shadow-xs transition")} 
                                 placeholder="Penjelasan mengenai pengerjaan kaca (cth: iya di coak di proyek, celah 2mm, instruksi khusus)... (Wajib diisi, jika tidak ada ketik '-')" 
                             />
                         </div>
@@ -891,7 +939,8 @@ export default function EditDraftOrderModal({
                                         inputMode="numeric"
                                         value={formatRupiahInput(orderForm.priority_fee)} 
                                         onChange={e => setOrderForm('priority_fee', parseRupiahInput(e.target.value))} 
-                                        className="w-full bg-white border border-amber-300 rounded-xl p-2.5 text-amber-800 font-bold font-mono focus:border-amber-500 shadow-xs" 
+                                        onFocus={e => e.target.select()}
+                                        className={getFieldClass(isPriorityValid, "w-full bg-white border rounded-xl p-2.5 text-amber-800 font-bold font-mono shadow-xs transition")} 
                                         placeholder="cth: 150.000 atau 200.000" 
                                     />
                                     <span className="text-[10px] text-amber-700 block mt-1">*Admin isi manual</span>
@@ -942,9 +991,10 @@ export default function EditDraftOrderModal({
                                     value={formatRupiahInput(orderForm.custom_paid_amount)} 
                                     onChange={e => {
                                         const num = parseRupiahInput(e.target.value);
-                                        const pct = calcTotalPrice > 0 ? Math.round((num / calcTotalPrice) * 100) : 50;
+                                        const pct = calcTotalPrice > 0 ? Math.round((Number(num || 0) / calcTotalPrice) * 100) : 50;
                                         setOrderForm(d => ({ ...d, custom_paid_amount: num, dp_percent: pct }));
                                     }} 
+                                    onFocus={e => e.target.select()}
                                     className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-emerald-700 font-mono font-bold text-sm focus:border-[#1b68b0] shadow-xs" 
                                     placeholder="cth: 500.000 atau 1.000.000" 
                                 />
@@ -1149,6 +1199,7 @@ export default function EditDraftOrderModal({
                                     inputMode="numeric"
                                     value={formatRupiahInput(orderForm.custom_fee)} 
                                     onChange={e => setOrderForm('custom_fee', parseRupiahInput(e.target.value))} 
+                                    onFocus={e => e.target.select()}
                                     className="w-36 bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-slate-800 font-mono font-bold text-xs text-right focus:border-[#1b68b0] focus:bg-white" 
                                     placeholder="0" 
                                 />
@@ -1166,6 +1217,25 @@ export default function EditDraftOrderModal({
                         </div>
                     </div>
 
+                    {/* WARNING BANNER BILA BELUM LENGKAP */}
+                    {!isFormValid && (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 text-xs space-y-1.5 shadow-xs">
+                            <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                <span>Lengkapi Field Wajib Sebelum Menerbitkan Orderan:</span>
+                            </div>
+                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-amber-800/90 pl-5 list-disc font-medium">
+                                {!isCustomerNameValid && <li>Nama Customer belum diisi</li>}
+                                {!isCustomerPhoneValid && <li>Nomor Telepon / WA belum diisi</li>}
+                                {!isCustomerAddressValid && <li>Alamat Pengiriman belum diisi</li>}
+                                {!isDescriptionValid && <li>Catatan Order / Penjelasan Kaca belum diisi</li>}
+                                {!isOrderDateValid && <li>Tanggal Order belum diisi</li>}
+                                {!isItemsValid && <li>Item Kaca belum lengkap (Jenis Kaca, Panjang, Lebar, Qty)</li>}
+                                {!isPriorityValid && <li>Nominal Fee Prioritas wajib diisi (&gt; 0)</li>}
+                            </ul>
+                        </div>
+                    )}
+
                     {/* MODAL ACTIONS */}
                     <div className="flex flex-wrap justify-end gap-2.5 pt-3 border-t border-slate-200">
                         <button 
@@ -1178,29 +1248,105 @@ export default function EditDraftOrderModal({
                         {editingOrder.status === 'pengerjaan' ? (
                             <button 
                                 type="button" 
-                                onClick={(e) => handleUpdateOrderSubmit(e, 'pengerjaan')} 
-                                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 font-bold text-white rounded-xl text-xs flex items-center gap-2 shadow-xs transition cursor-pointer"
+                                disabled={isSubmittingOrder}
+                                onClick={(e) => {
+                                    if (isSubmittingOrder) return;
+                                    setAttemptedSubmit(true);
+                                    setShakeKey(prev => prev + 1);
+                                    if (!isFormValid) {
+                                        setTimeout(() => {
+                                            const firstInvalid = document.querySelector('.form-invalid-input');
+                                            if (firstInvalid) {
+                                                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                firstInvalid.focus();
+                                            }
+                                        }, 50);
+                                        return;
+                                    }
+                                    handleUpdateOrderSubmit(e, 'pengerjaan');
+                                }} 
+                                className={`px-5 py-2.5 font-bold text-white rounded-xl text-xs flex items-center gap-2 shadow-xs transition ${
+                                    isSubmittingOrder ? 'opacity-70 cursor-not-allowed bg-amber-500' :
+                                    isFormValid 
+                                        ? 'bg-amber-500 hover:bg-amber-600 cursor-pointer' 
+                                        : 'bg-rose-600 hover:bg-rose-700 cursor-pointer'
+                                }`}
                             >
-                                <RotateCcw className="w-3.5 h-3.5" />
-                                <span>Simpan Revisi & Kirim Peringatan Divisi</span>
+                                {isSubmittingOrder && submittingAction === 'pengerjaan' ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                )}
+                                <span>{isSubmittingOrder && submittingAction === 'pengerjaan' ? 'Memproses Revisi...' : 'Simpan Revisi & Kirim Peringatan Divisi'}</span>
                             </button>
                         ) : (
                             <>
                                 <button 
                                     type="button" 
-                                    onClick={(e) => handleUpdateOrderSubmit(e, 'draft')} 
-                                    className="px-4 py-2 bg-[#1b68b0] hover:bg-[#15528c] font-bold text-white rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                                    disabled={isSubmittingOrder}
+                                    onClick={(e) => {
+                                        if (isSubmittingOrder) return;
+                                        setAttemptedSubmit(true);
+                                        setShakeKey(prev => prev + 1);
+                                        if (!isCustomerNameValid) {
+                                            setTimeout(() => {
+                                                const firstInvalid = document.querySelector('.form-invalid-input');
+                                                if (firstInvalid) {
+                                                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    firstInvalid.focus();
+                                                }
+                                            }, 50);
+                                            return;
+                                        }
+                                        handleUpdateOrderSubmit(e, 'draft');
+                                    }} 
+                                    className={`px-4 py-2 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition ${
+                                        isSubmittingOrder ? 'opacity-70 cursor-not-allowed bg-[#1b68b0] text-white' :
+                                        isCustomerNameValid 
+                                            ? 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer' 
+                                            : 'bg-slate-100 border border-slate-200 text-slate-500 cursor-pointer'
+                                    }`}
                                 >
-                                    <FileText className="w-3.5 h-3.5" />
-                                    <span>Simpan Perubahan Draf</span>
+                                    {isSubmittingOrder && submittingAction === 'draft' ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                                    ) : (
+                                        <FileText className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>{isSubmittingOrder && submittingAction === 'draft' ? 'Memproses Perubahan...' : 'Simpan Perubahan Draf'}</span>
                                 </button>
                                 <button 
                                     type="button" 
-                                    onClick={(e) => handleUpdateOrderSubmit(e, 'pengerjaan')} 
-                                    className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] font-bold text-white rounded-xl text-xs flex items-center gap-2 shadow-xs transition cursor-pointer"
+                                    disabled={isSubmittingOrder}
+                                    onClick={(e) => {
+                                        if (isSubmittingOrder) return;
+                                        setAttemptedSubmit(true);
+                                        setShakeKey(prev => prev + 1);
+                                        if (!isFormValid) {
+                                            setTimeout(() => {
+                                                const firstInvalid = document.querySelector('.form-invalid-input');
+                                                if (firstInvalid) {
+                                                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    firstInvalid.focus();
+                                                }
+                                            }, 50);
+                                            return;
+                                        }
+                                        handleUpdateOrderSubmit(e, 'pengerjaan');
+                                    }} 
+                                    title={!isFormValid ? "Mohon lengkapi seluruh field wajib (field kosong akan geter, berwarna merah & otomatis diarahkan)" : "Deal & Terbit Orderan"}
+                                    className={`px-5 py-2.5 font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition ${
+                                        isSubmittingOrder ? 'opacity-70 cursor-not-allowed bg-[#70b03c] text-white' :
+                                        isFormValid 
+                                            ? 'bg-[#70b03c] hover:bg-[#5f9733] text-white cursor-pointer' 
+                                            : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
+                                    }`}
                                 >
-                                    <span>Deal & Terbit Order ({orderForm.payment_option === 'lunas' ? 'Lunas' : `DP ${orderForm.dp_percent || 50}%`})</span>
-                                    <ArrowRight className="w-3.5 h-3.5" />
+                                    <span>{isSubmittingOrder && submittingAction === 'pengerjaan' ? 'Memproses Order...' : `Deal & Terbit Order (${orderForm.payment_option === 'lunas' ? 'Lunas' : `DP ${orderForm.dp_percent || 50}%`})`}</span>
+                                    {isSubmittingOrder && submittingAction === 'pengerjaan' ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                                    ) : (
+                                        <ArrowRight className="w-3.5 h-3.5" />
+                                    )}
                                 </button>
                             </>
                         )}

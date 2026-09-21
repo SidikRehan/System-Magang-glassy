@@ -91,9 +91,10 @@ export default function ScrapTab({
                 </div>
             </div>
 
-            {stockSubTab === 'lembaran' ? (
-                <div className="space-y-6">
-                    {/* 4 FILTER CARDS AT THE TOP */}
+            <div key={stockSubTab} className="animate-subtab-content">
+                {stockSubTab === 'lembaran' ? (
+                    <div className="space-y-6">
+                        {/* 4 FILTER CARDS AT THE TOP */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {[
                             { key: 'all', label: 'Semua Stok Bahan', count: sheetGlasses.length, icon: Boxes, color: 'text-[#1b68b0]' },
@@ -433,6 +434,7 @@ export default function ScrapTab({
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

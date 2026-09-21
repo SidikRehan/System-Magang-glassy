@@ -168,6 +168,7 @@ export default function ToolsTab({
             </div>
 
             {/* SUBTAB CONTENT 1: KATALOG ALAT */}
+            <div key={toolSubTab} className="animate-subtab-content">
             {toolSubTab === 'katalog' ? (
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
                     <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-100 pb-3">
@@ -569,6 +570,7 @@ export default function ToolsTab({
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

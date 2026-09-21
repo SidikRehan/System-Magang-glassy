@@ -189,6 +189,8 @@ export default function Dashboard({
     const [activeOrderCard, setActiveOrderCard] = useState(userRole === 'admin_gudang' || userRole.startsWith('divisi_') || userRole === 'driver' ? 'pengerjaan' : 'draft');
     const [searchTerm, setSearchTerm] = useState('');
     const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+    const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+    const [submittingAction, setSubmittingAction] = useState(null);
     const [showScrapModal, setShowScrapModal] = useState(false);
     const [showWaybillModal, setShowWaybillModal] = useState(false);
     const [selectedWaybillOrder, setSelectedWaybillOrder] = useState(null);
@@ -2454,9 +2456,9 @@ export default function Dashboard({
     };
 
     const parseRupiahInput = (val) => {
-        if (val === null || val === undefined || val === '') return 0;
+        if (val === null || val === undefined || val === '') return '';
         const digits = String(val).replace(/\D/g, '');
-        return parseFloat(digits) || 0;
+        return digits !== '' ? parseFloat(digits) : '';
     };
 
     const sanitizeCustomerName = (val) => {
@@ -3078,6 +3080,8 @@ export default function Dashboard({
 
     const handleCreateOrder = (e, targetStatus = 'pengerjaan') => {
         e.preventDefault();
+        setIsSubmittingOrder(true);
+        setSubmittingAction(targetStatus);
         router.post(route('orders.store'), {
             ...orderForm,
             items: calcItems,
@@ -3097,6 +3101,10 @@ export default function Dashboard({
                 setShowNewOrderModal(false);
                 setSketchPreview(null);
                 resetOrder();
+            },
+            onFinish: () => {
+                setIsSubmittingOrder(false);
+                setSubmittingAction(null);
             }
         });
     };
@@ -3171,6 +3179,8 @@ export default function Dashboard({
         if (!editingOrder) return;
 
         const finalStatus = targetStatus || orderForm.status;
+        setIsSubmittingOrder(true);
+        setSubmittingAction(finalStatus);
 
         router.post(route('orders.update', editingOrder.id), {
             ...orderForm,
@@ -3193,6 +3203,10 @@ export default function Dashboard({
                 setEditingOrder(null);
                 setSketchPreview(null);
                 resetOrder();
+            },
+            onFinish: () => {
+                setIsSubmittingOrder(false);
+                setSubmittingAction(null);
             }
         });
     };
@@ -3673,19 +3687,19 @@ export default function Dashboard({
                 <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 shrink-0 h-[calc(100vh-65px)]">
                     <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
                         {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <BarChart3 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Dashboard</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
-                            <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengiriman</span>
                                 </div>
@@ -3696,7 +3710,7 @@ export default function Dashboard({
                         )}
 
                         {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('production')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'production' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('production')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'production' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Sliders className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Disposisi</span>
                                 </div>
@@ -3718,7 +3732,7 @@ export default function Dashboard({
                         )}
 
                         {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Kaca</span>
                                 </div>
@@ -3732,13 +3746,13 @@ export default function Dashboard({
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Supplier</span>
                             </button>
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Plug className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Aksesoris</span>
                                 </div>
@@ -3752,7 +3766,7 @@ export default function Dashboard({
                         )}
 
                         {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Gudang</span>
                                 </div>
@@ -3766,13 +3780,13 @@ export default function Dashboard({
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat</span>
                             </button>
                         )}
 
                         {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
-                            <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Users className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Karyawan</span>
                                 </div>
@@ -3783,7 +3797,7 @@ export default function Dashboard({
                         )}
 
                         {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/25 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                            <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
                             </button>
                         )}
@@ -3819,250 +3833,251 @@ export default function Dashboard({
 
                 {/* CONTENT MAIN */}
                 <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto bg-[#F8FAFC] text-[#242222]">
+                    <div key={activeTab} className="animate-tab-content">
+                        {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
+                        {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            <DashboardOverviewTab
+                                userRole={userRole}
+                                userName={userName}
+                                canViewPricing={canViewPricing}
+                                setActiveTab={setActiveTab}
+                                metrics={metrics}
+                                initialOrders={initialOrders}
+                                donutSlices={donutSlices}
+                            />
+                        )}
 
-                    {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
-                    {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                        <DashboardOverviewTab
-                            userRole={userRole}
-                            userName={userName}
-                            canViewPricing={canViewPricing}
-                            setActiveTab={setActiveTab}
-                            metrics={metrics}
-                            initialOrders={initialOrders}
-                            donutSlices={donutSlices}
-                        />
-                    )}
+                        {/* TAB 2: ORDERAN SINGLE ROUTE */}
+                        {activeTab === 'orders' && (
+                            <OrdersTab
+                                userRole={userRole}
+                                canViewPricing={canViewPricing}
+                                initialOrders={initialOrders}
+                                filteredOrders={filteredOrders}
+                                activeOrderCard={activeOrderCard}
+                                setActiveOrderCard={setActiveOrderCard}
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                setActiveTab={setActiveTab}
+                                handleOpenNewOrderModal={handleOpenNewOrderModal}
+                                handleOpenEditModal={handleOpenEditModal}
+                                handleOpenPromoteModal={handleOpenPromoteModal}
+                                handleOpenDispatchModal={handleOpenDispatchModal}
+                                handleOpenStickerModal={handleOpenStickerModal}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
+                                setSelectedWaybillOrder={setSelectedWaybillOrder}
+                                setShowWaybillModal={setShowWaybillModal}
+                                handleCompleteDelivery={handleCompleteDelivery}
+                            />
+                        )}
 
-                    {/* TAB 2: ORDERAN SINGLE ROUTE */}
-                    {activeTab === 'orders' && (
-                        <OrdersTab
-                            userRole={userRole}
-                            canViewPricing={canViewPricing}
-                            initialOrders={initialOrders}
-                            filteredOrders={filteredOrders}
-                            activeOrderCard={activeOrderCard}
-                            setActiveOrderCard={setActiveOrderCard}
-                            searchTerm={searchTerm}
-                            setSearchTerm={setSearchTerm}
-                            setActiveTab={setActiveTab}
-                            handleOpenNewOrderModal={handleOpenNewOrderModal}
-                            handleOpenEditModal={handleOpenEditModal}
-                            handleOpenPromoteModal={handleOpenPromoteModal}
-                            handleOpenDispatchModal={handleOpenDispatchModal}
-                            handleOpenStickerModal={handleOpenStickerModal}
-                            handleOpenSketchLightbox={handleOpenSketchLightbox}
-                            setSelectedWaybillOrder={setSelectedWaybillOrder}
-                            setShowWaybillModal={setShowWaybillModal}
-                            handleCompleteDelivery={handleCompleteDelivery}
-                        />
-                    )}
+                        {/* TAB 3: WORKSTATION DIVISI & DISPOSISI */}
+                        {activeTab === 'production' && (
+                            <ProductionTab
+                                userRole={userRole}
+                                isDivisionWorker={isDivisionWorker}
+                                productionSubTab={productionSubTab}
+                                setProductionSubTab={setProductionSubTab}
+                                initialOrders={initialOrders}
+                                initialScrap={initialScrap}
+                                setActiveTab={setActiveTab}
+                                setSelectedComplaintOrder={setSelectedComplaintOrder}
+                                setShowGudangDecisionModal={setShowGudangDecisionModal}
+                                handleOpenDispatchModal={handleOpenDispatchModal}
+                                handleOpenStickerModal={handleOpenStickerModal}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
+                                handleOpenDetailModal={handleOpenDetailModal}
+                                handleOpenComplaintModal={handleOpenComplaintModal}
+                                handleAcknowledgeRevision={handleAcknowledgeRevision}
+                                handleStartJob={handleStartJob}
+                                handleFinishJobSubmit={handleFinishJobSubmit}
+                                activeWorkingOrderId={activeWorkingOrderId}
+                                setActiveWorkingOrderId={setActiveWorkingOrderId}
+                                activeCardNextDiv={activeCardNextDiv}
+                                setActiveCardNextDiv={setActiveCardNextDiv}
+                                setShowRekapModal={setShowRekapModal}
+                                statTimeRange={statTimeRange}
+                                setStatTimeRange={setStatTimeRange}
+                                statFilterType={statFilterType}
+                                setStatFilterType={setStatFilterType}
+                            />
+                        )}
 
-                    {/* TAB 3: WORKSTATION DIVISI & DISPOSISI */}
-                    {activeTab === 'production' && (
-                        <ProductionTab
-                            userRole={userRole}
-                            isDivisionWorker={isDivisionWorker}
-                            productionSubTab={productionSubTab}
-                            setProductionSubTab={setProductionSubTab}
-                            initialOrders={initialOrders}
-                            initialScrap={initialScrap}
-                            setActiveTab={setActiveTab}
-                            setSelectedComplaintOrder={setSelectedComplaintOrder}
-                            setShowGudangDecisionModal={setShowGudangDecisionModal}
-                            handleOpenDispatchModal={handleOpenDispatchModal}
-                            handleOpenStickerModal={handleOpenStickerModal}
-                            handleOpenSketchLightbox={handleOpenSketchLightbox}
-                            handleOpenDetailModal={handleOpenDetailModal}
-                            handleOpenComplaintModal={handleOpenComplaintModal}
-                            handleAcknowledgeRevision={handleAcknowledgeRevision}
-                            handleStartJob={handleStartJob}
-                            handleFinishJobSubmit={handleFinishJobSubmit}
-                            activeWorkingOrderId={activeWorkingOrderId}
-                            setActiveWorkingOrderId={setActiveWorkingOrderId}
-                            activeCardNextDiv={activeCardNextDiv}
-                            setActiveCardNextDiv={setActiveCardNextDiv}
-                            setShowRekapModal={setShowRekapModal}
-                            statTimeRange={statTimeRange}
-                            setStatTimeRange={setStatTimeRange}
-                            statFilterType={statFilterType}
-                            setStatFilterType={setStatFilterType}
-                        />
-                    )}
+                        {/* TAB 4: MANAJEMEN STOK (BAHAN KACA LEMBARAN BARU & SISA) */}
+                        {activeTab === 'scrap' && (
+                            <ScrapTab
+                                userRole={userRole}
+                                canViewPricing={canViewPricing}
+                                stockSubTab={stockSubTab}
+                                setStockSubTab={setStockSubTab}
+                                sheetGlasses={sheetGlasses}
+                                initialScrap={initialScrap}
+                                activeStockCard={activeStockCard}
+                                setActiveStockCard={setActiveStockCard}
+                                stockSearchTerm={stockSearchTerm}
+                                setStockSearchTerm={setStockSearchTerm}
+                                showTableSupplierInfo={showTableSupplierInfo}
+                                setShowTableSupplierInfo={setShowTableSupplierInfo}
+                                showTablePricingInfo={showTablePricingInfo}
+                                setShowTablePricingInfo={setShowTablePricingInfo}
+                                filteredSheetGlasses={filteredSheetGlasses}
+                                setShowAddStockModal={setShowAddStockModal}
+                                handleOpenSupplierWaModal={handleOpenSupplierWaModal}
+                                handleOpenRestockModal={handleOpenRestockModal}
+                                handleOpenEditStockModal={handleOpenEditStockModal}
+                                handleRequestRestockStatus={handleRequestRestockStatus}
+                                setShowScrapModal={setShowScrapModal}
+                                handleDeleteStockItem={handleDeleteStockItem}
+                            />
+                        )}
 
-                    {/* TAB 4: MANAJEMEN STOK (BAHAN KACA LEMBARAN BARU & SISA) */}
-                    {activeTab === 'scrap' && (
-                        <ScrapTab
-                            userRole={userRole}
-                            canViewPricing={canViewPricing}
-                            stockSubTab={stockSubTab}
-                            setStockSubTab={setStockSubTab}
-                            sheetGlasses={sheetGlasses}
-                            initialScrap={initialScrap}
-                            activeStockCard={activeStockCard}
-                            setActiveStockCard={setActiveStockCard}
-                            stockSearchTerm={stockSearchTerm}
-                            setStockSearchTerm={setStockSearchTerm}
-                            showTableSupplierInfo={showTableSupplierInfo}
-                            setShowTableSupplierInfo={setShowTableSupplierInfo}
-                            showTablePricingInfo={showTablePricingInfo}
-                            setShowTablePricingInfo={setShowTablePricingInfo}
-                            filteredSheetGlasses={filteredSheetGlasses}
-                            setShowAddStockModal={setShowAddStockModal}
-                            handleOpenSupplierWaModal={handleOpenSupplierWaModal}
-                            handleOpenRestockModal={handleOpenRestockModal}
-                            handleOpenEditStockModal={handleOpenEditStockModal}
-                            handleRequestRestockStatus={handleRequestRestockStatus}
-                            setShowScrapModal={setShowScrapModal}
-                            handleDeleteStockItem={handleDeleteStockItem}
-                        />
-                    )}
+                        {/* TAB 5: PENGIRIMAN & SURAT JALAN MULTI-ALAMAT / PENGIRIMAN SAYA */}
+                        {activeTab === 'deliveries' && (
+                            <DeliveriesTab
+                                userRole={userRole}
+                                userName={userName}
+                                auth={auth}
+                                initialOrders={initialOrders}
+                                initialDeliveries={initialDeliveries}
+                                financeTransactionsList={financeTransactionsList}
+                                handleOpenCodModal={handleOpenCodModal}
+                                setShowDriverClaimModal={setShowDriverClaimModal}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
+                                setSelectedBatchWaybillTrip={setSelectedBatchWaybillTrip}
+                                setShowBatchWaybillModal={setShowBatchWaybillModal}
+                                setSelectedTripDataForModal={setSelectedTripDataForModal}
+                                setShowMultiAddressModal={setShowMultiAddressModal}
+                                setSelectedBarangKeluarData={setSelectedBarangKeluarData}
+                                setShowBarangKeluarModal={setShowBarangKeluarModal}
+                                setSelectedWaybillOrder={setSelectedWaybillOrder}
+                                setShowWaybillModal={setShowWaybillModal}
+                            />
+                        )}
 
-                    {/* TAB 5: PENGIRIMAN & SURAT JALAN MULTI-ALAMAT / PENGIRIMAN SAYA */}
-                    {activeTab === 'deliveries' && (
-                        <DeliveriesTab
-                            userRole={userRole}
-                            userName={userName}
-                            auth={auth}
-                            initialOrders={initialOrders}
-                            initialDeliveries={initialDeliveries}
-                            financeTransactionsList={financeTransactionsList}
-                            handleOpenCodModal={handleOpenCodModal}
-                            setShowDriverClaimModal={setShowDriverClaimModal}
-                            handleOpenSketchLightbox={handleOpenSketchLightbox}
-                            setSelectedBatchWaybillTrip={setSelectedBatchWaybillTrip}
-                            setShowBatchWaybillModal={setShowBatchWaybillModal}
-                            setSelectedTripDataForModal={setSelectedTripDataForModal}
-                            setShowMultiAddressModal={setShowMultiAddressModal}
-                            setSelectedBarangKeluarData={setSelectedBarangKeluarData}
-                            setShowBarangKeluarModal={setShowBarangKeluarModal}
-                            setSelectedWaybillOrder={setSelectedWaybillOrder}
-                            setShowWaybillModal={setShowWaybillModal}
-                        />
-                    )}
+                        {/* TAB 6: FINANCE & LABA RUGI KOMPREHENSIF (EXECUTIVE COMMAND CENTER) */}
+                        {activeTab === 'finance' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            <FinanceTab
+                                userRole={userRole}
+                                metrics={metrics}
+                                financeTransactionsList={financeTransactionsList}
+                                financeSearchTerm={financeSearchTerm}
+                                setFinanceSearchTerm={setFinanceSearchTerm}
+                                financeCategoryFilter={financeCategoryFilter}
+                                setFinanceCategoryFilter={setFinanceCategoryFilter}
+                                financeSubTab={financeSubTab}
+                                setFinanceSubTab={setFinanceSubTab}
+                                scrapGlasses={scrapGlasses}
+                                handleOpenPrintModal={handleOpenPrintModal}
+                                handleOpenFinanceModal={handleOpenFinanceModal}
+                                handleRejectClaim={handleRejectClaim}
+                                handleApproveClaim={handleApproveClaim}
+                                handleDrilldownOpex={handleDrilldownOpex}
+                                handleDeleteFinanceTransaction={handleDeleteFinanceTransaction}
+                            />
+                        )}
 
-                    {/* TAB 6: FINANCE & LABA RUGI KOMPREHENSIF (EXECUTIVE COMMAND CENTER) */}
-                    {activeTab === 'finance' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                        <FinanceTab
-                            userRole={userRole}
-                            metrics={metrics}
-                            financeTransactionsList={financeTransactionsList}
-                            financeSearchTerm={financeSearchTerm}
-                            setFinanceSearchTerm={setFinanceSearchTerm}
-                            financeCategoryFilter={financeCategoryFilter}
-                            setFinanceCategoryFilter={setFinanceCategoryFilter}
-                            financeSubTab={financeSubTab}
-                            setFinanceSubTab={setFinanceSubTab}
-                            scrapGlasses={scrapGlasses}
-                            handleOpenPrintModal={handleOpenPrintModal}
-                            handleOpenFinanceModal={handleOpenFinanceModal}
-                            handleRejectClaim={handleRejectClaim}
-                            handleApproveClaim={handleApproveClaim}
-                            handleDrilldownOpex={handleDrilldownOpex}
-                            handleDeleteFinanceTransaction={handleDeleteFinanceTransaction}
-                        />
-                    )}
+                        {/* TAB 7: DATA SUPPLIER & MITRA */}
+                        {activeTab === 'suppliers' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                            <SuppliersTab
+                                userRole={userRole}
+                                suppliersList={suppliersList}
+                                sheetGlasses={sheetGlasses}
+                                supplierSearchTerm={supplierSearchTerm}
+                                setSupplierSearchTerm={setSupplierSearchTerm}
+                                setShowAddSupplierModal={setShowAddSupplierModal}
+                                handleOpenEditSupplierModal={handleOpenEditSupplierModal}
+                                handleDeleteSupplier={handleDeleteSupplier}
+                            />
+                        )}
 
-                    {/* TAB 7: DATA SUPPLIER & MITRA */}
-                    {activeTab === 'suppliers' && (userRole === 'admin_toko' || userRole === 'owner') && (
-                        <SuppliersTab
-                            userRole={userRole}
-                            suppliersList={suppliersList}
-                            sheetGlasses={sheetGlasses}
-                            supplierSearchTerm={supplierSearchTerm}
-                            setSupplierSearchTerm={setSupplierSearchTerm}
-                            setShowAddSupplierModal={setShowAddSupplierModal}
-                            handleOpenEditSupplierModal={handleOpenEditSupplierModal}
-                            handleDeleteSupplier={handleDeleteSupplier}
-                        />
-                    )}
+                        {/* TAB 8: STOK AKSESORIS (KHUSUS ADMIN TOKO & OWNER) */}
+                        {activeTab === 'accessories' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                            <AccessoriesTab
+                                userRole={userRole}
+                                canViewPricing={canViewPricing}
+                                accessoriesList={accessoriesList}
+                                accSearchTerm={accSearchTerm}
+                                setAccSearchTerm={setAccSearchTerm}
+                                setShowAddAccModal={setShowAddAccModal}
+                                setSelectedAccItem={setSelectedAccItem}
+                                setAccRestockQty={setAccRestockQty}
+                                setShowRestockAccModal={setShowRestockAccModal}
+                                handleRequestAccRestockStatus={handleRequestAccRestockStatus}
+                                handleOpenEditAccModal={handleOpenEditAccModal}
+                                handleDeleteAcc={handleDeleteAcc}
+                            />
+                        )}
 
-                    {/* TAB 8: STOK AKSESORIS (KHUSUS ADMIN TOKO & OWNER) */}
-                    {activeTab === 'accessories' && (userRole === 'admin_toko' || userRole === 'owner') && (
-                        <AccessoriesTab
-                            userRole={userRole}
-                            canViewPricing={canViewPricing}
-                            accessoriesList={accessoriesList}
-                            accSearchTerm={accSearchTerm}
-                            setAccSearchTerm={setAccSearchTerm}
-                            setShowAddAccModal={setShowAddAccModal}
-                            setSelectedAccItem={setSelectedAccItem}
-                            setAccRestockQty={setAccRestockQty}
-                            setShowRestockAccModal={setShowRestockAccModal}
-                            handleRequestAccRestockStatus={handleRequestAccRestockStatus}
-                            handleOpenEditAccModal={handleOpenEditAccModal}
-                            handleDeleteAcc={handleDeleteAcc}
-                        />
-                    )}
+                        {/* TAB: PERLENGKAPAN GUDANG (BARANG HABIS PAKAI OPERASIONAL) */}
+                        {activeTab === 'supplies' && (
+                            <WarehouseSuppliesTab
+                                userRole={userRole}
+                                warehouseSuppliesList={warehouseSuppliesList}
+                                supplyRestockRequests={supplyRestockRequests}
+                                supplyUsageLogs={supplyUsageLogs}
+                                supplySubTab={supplySubTab}
+                                setSupplySubTab={setSupplySubTab}
+                                supplySearchTerm={supplySearchTerm}
+                                setSupplySearchTerm={setSupplySearchTerm}
+                                handleOpenRequestRestockModal={handleOpenRequestRestockModal}
+                                setShowAddSupplyModal={setShowAddSupplyModal}
+                                setShowUseSupplyModal={setShowUseSupplyModal}
+                                handleApproveRestockRequest={handleApproveRestockRequest}
+                                handleCompleteRestockRequest={handleCompleteRestockRequest}
+                            />
+                        )}
 
-                    {/* TAB: PERLENGKAPAN GUDANG (BARANG HABIS PAKAI OPERASIONAL) */}
-                    {activeTab === 'supplies' && (
-                        <WarehouseSuppliesTab
-                            userRole={userRole}
-                            warehouseSuppliesList={warehouseSuppliesList}
-                            supplyRestockRequests={supplyRestockRequests}
-                            supplyUsageLogs={supplyUsageLogs}
-                            supplySubTab={supplySubTab}
-                            setSupplySubTab={setSupplySubTab}
-                            supplySearchTerm={supplySearchTerm}
-                            setSupplySearchTerm={setSupplySearchTerm}
-                            handleOpenRequestRestockModal={handleOpenRequestRestockModal}
-                            setShowAddSupplyModal={setShowAddSupplyModal}
-                            setShowUseSupplyModal={setShowUseSupplyModal}
-                            handleApproveRestockRequest={handleApproveRestockRequest}
-                            handleCompleteRestockRequest={handleCompleteRestockRequest}
-                        />
-                    )}
+                        {/* TAB: ALAT PENUNJANG & PEMINJAMAN TEKNISI */}
+                        {activeTab === 'tools' && (
+                            <ToolsTab
+                                userRole={userRole}
+                                userName={userName}
+                                toolsList={toolsList}
+                                toolBorrowings={toolBorrowings}
+                                toolSubTab={toolSubTab}
+                                setToolSubTab={setToolSubTab}
+                                toolSearchTerm={toolSearchTerm}
+                                setToolSearchTerm={setToolSearchTerm}
+                                repairFilterTab={repairFilterTab}
+                                setRepairFilterTab={setRepairFilterTab}
+                                setShowAddToolModal={setShowAddToolModal}
+                                setShowBorrowToolModal={setShowBorrowToolModal}
+                                setBorrowToolForm={setBorrowToolForm}
+                                handleOpenEditToolModal={handleOpenEditToolModal}
+                                handleOpenReturnModal={handleOpenReturnModal}
+                                handleStartRepair={handleStartRepair}
+                                handleOpenCompleteRepairModal={handleOpenCompleteRepairModal}
+                            />
+                        )}
 
-                    {/* TAB: ALAT PENUNJANG & PEMINJAMAN TEKNISI */}
-                    {activeTab === 'tools' && (
-                        <ToolsTab
-                            userRole={userRole}
-                            userName={userName}
-                            toolsList={toolsList}
-                            toolBorrowings={toolBorrowings}
-                            toolSubTab={toolSubTab}
-                            setToolSubTab={setToolSubTab}
-                            toolSearchTerm={toolSearchTerm}
-                            setToolSearchTerm={setToolSearchTerm}
-                            repairFilterTab={repairFilterTab}
-                            setRepairFilterTab={setRepairFilterTab}
-                            setShowAddToolModal={setShowAddToolModal}
-                            setShowBorrowToolModal={setShowBorrowToolModal}
-                            setBorrowToolForm={setBorrowToolForm}
-                            handleOpenEditToolModal={handleOpenEditToolModal}
-                            handleOpenReturnModal={handleOpenReturnModal}
-                            handleStartRepair={handleStartRepair}
-                            handleOpenCompleteRepairModal={handleOpenCompleteRepairModal}
-                        />
-                    )}
-
-                    {/* TAB: PENGELOLAAN KARYAWAN & AKUN STAFF (KHUSUS HRD, FINANCE & OWNER) */}
-                    {activeTab === 'employees' && (userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
-                        <EmployeesTab
-                            userRole={userRole}
-                            auth={auth}
-                            employeesList={employeesList}
-                            activityLogsList={activityLogsList}
-                            employeeSubTab={employeeSubTab}
-                            setEmployeeSubTab={setEmployeeSubTab}
-                            employeeSearchTerm={employeeSearchTerm}
-                            setEmployeeSearchTerm={setEmployeeSearchTerm}
-                            employeeRoleFilter={employeeRoleFilter}
-                            setEmployeeRoleFilter={setEmployeeRoleFilter}
-                            setSelectedEmployeeForEdit={setSelectedEmployeeForEdit}
-                            setShowEmployeeModal={setShowEmployeeModal}
-                            handleDeleteEmployee={handleDeleteEmployee}
-                        />
-                    )}
-
+                        {/* TAB: PENGELOLAAN KARYAWAN & AKUN STAFF (KHUSUS HRD, FINANCE & OWNER) */}
+                        {activeTab === 'employees' && (userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
+                            <EmployeesTab
+                                userRole={userRole}
+                                auth={auth}
+                                employeesList={employeesList}
+                                activityLogsList={activityLogsList}
+                                employeeSubTab={employeeSubTab}
+                                setEmployeeSubTab={setEmployeeSubTab}
+                                employeeSearchTerm={employeeSearchTerm}
+                                setEmployeeSearchTerm={setEmployeeSearchTerm}
+                                employeeRoleFilter={employeeRoleFilter}
+                                setEmployeeRoleFilter={setEmployeeRoleFilter}
+                                setSelectedEmployeeForEdit={setSelectedEmployeeForEdit}
+                                setShowEmployeeModal={setShowEmployeeModal}
+                                handleDeleteEmployee={handleDeleteEmployee}
+                            />
+                        )}
+                    </div>
                 </main>
             </div>
 
             {/* MODAL 1: ORDER BARU (ADMIN TOKO - 12 POINT SPEC) */}
-            {/* MODAL 1: ORDER BARU (ADMIN TOKO - 12 POINT SPEC) */}
             <NewOrderModal
                 show={showNewOrderModal}
                 onClose={() => setShowNewOrderModal(false)}
+                isSubmittingOrder={isSubmittingOrder}
+                submittingAction={submittingAction}
                 orderForm={orderForm}
                 setOrderForm={setOrderForm}
                 formatIndonesianDate={formatIndonesianDate}
@@ -4112,6 +4127,8 @@ export default function Dashboard({
                 show={showEditOrderModal}
                 onClose={handleCloseEditModal}
                 handleCloseEditModal={handleCloseEditModal}
+                isSubmittingOrder={isSubmittingOrder}
+                submittingAction={submittingAction}
                 editingOrder={editingOrder}
                 orderForm={orderForm}
                 setOrderForm={setOrderForm}

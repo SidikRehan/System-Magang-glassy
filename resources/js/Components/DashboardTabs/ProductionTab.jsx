@@ -169,6 +169,7 @@ export default function ProductionTab({
                 </div>
             )}
 
+            <div key={productionSubTab} className="animate-subtab-content space-y-6">
             {/* EFFICIENCY & SCRAP CALLOUT FOR DIVISION WORKERS */}
             {isDivisionWorker && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap justify-between items-center text-xs gap-3">
@@ -1173,6 +1174,7 @@ export default function ProductionTab({
                         );
                     })()}
                 </div>
+            </div>
             </div>
         </div>
     );
