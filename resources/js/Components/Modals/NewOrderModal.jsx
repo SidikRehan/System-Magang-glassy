@@ -100,7 +100,8 @@ export default function NewOrderModal({
             Boolean(item.glass_type && String(item.glass_type).trim().length > 0) &&
             (parseFloat(item.length_cm) || 0) > 0 &&
             (parseFloat(item.width_cm) || 0) > 0 &&
-            (parseInt(item.qty) || 0) > 0
+            (parseInt(item.qty) || 0) > 0 &&
+            !item.isExceeded
         )
     );
 
@@ -117,7 +118,26 @@ export default function NewOrderModal({
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col my-auto text-slate-800">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col my-auto text-slate-800 relative overflow-hidden">
+                {/* LOADING BLUR OVERLAY FOR SMOOTH SUBMISSION */}
+                {isSubmittingOrder && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                        <div className="bg-white p-6 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-3.5 max-w-xs animate-in zoom-in-95 duration-200">
+                            <div className="w-14 h-14 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                <Loader2 className="w-7 h-7 animate-spin text-[#1b68b0]" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-[#242222] text-sm">
+                                    {submittingAction === 'draft' ? 'Memproses Simpan Draf Order...' : 'Menerbitkan SPO Orderan Baru...'}
+                                </h4>
+                                <p className="text-xs text-slate-500 font-mono mt-1 leading-relaxed">
+                                    Mohon tunggu sebentar, sistem sedang memvalidasi dan menyimpan pesanan ke database.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* MODAL HEADER */}
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
                     <div>
@@ -266,6 +286,7 @@ export default function NewOrderModal({
                                                             value={grp.glass_type}
                                                             onChange={val => handleGroupGlassTypeChange(grp.group_id, val)}
                                                             options={getDynamicGlassTypes(sheetGlasses)}
+                                                            sheetGlasses={sheetGlasses}
                                                             placeholder="-- Ketik atau Cari Jenis Kaca Dasar --"
                                                             invalid={attemptedSubmit && (!grp.glass_type || grp.glass_type.trim().length === 0)}
                                                         />
@@ -340,7 +361,7 @@ export default function NewOrderModal({
                                                                     value={item.length_cm ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'length_cm', e.target.value)} 
                                                                     onFocus={e => e.target.select()}
-                                                                    className={getFieldClass((parseFloat(item.length_cm) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
+                                                                    className={getFieldClass((parseFloat(item.length_cm) || 0) > 0 && !item.isExceeded, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
                                                                 />
                                                             </div>
                                                             <div>
@@ -353,7 +374,7 @@ export default function NewOrderModal({
                                                                     value={item.width_cm ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'width_cm', e.target.value)} 
                                                                     onFocus={e => e.target.select()}
-                                                                    className={getFieldClass((parseFloat(item.width_cm) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
+                                                                    className={getFieldClass((parseFloat(item.width_cm) || 0) > 0 && !item.isExceeded, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
                                                                 />
                                                             </div>
                                                             <div>
@@ -370,6 +391,19 @@ export default function NewOrderModal({
                                                                 />
                                                             </div>
                                                         </div>
+
+                                                        {/* WARNING MELEBIHI UKURAN KACA LEMBARAN */}
+                                                        {item.isExceeded && (
+                                                            <div className="p-3 rounded-2xl border bg-rose-50 border-rose-200 text-rose-800 text-xs space-y-1 shadow-xs animate-in fade-in duration-150">
+                                                                <div className="font-bold flex items-center gap-1.5 text-rose-700">
+                                                                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                                                                    <span>Ukuran Input Melebihi Lembaran Kaca yang Tersedia!</span>
+                                                                </div>
+                                                                <p className="text-[11px] text-slate-600 leading-relaxed pl-5.5">
+                                                                    Ukuran potongan <strong>{item.length_cm} x {item.width_cm} cm</strong> melebihi batas maksimal lembaran stok <strong>{item.glass_type || 'Kaca'}</strong> di gudang (Maksimal Lembaran: <strong>{item.maxSheetDim} x {item.minSheetDim} cm</strong>). Ukuran pesanan potongan kaca tidak boleh melebihi lembaran utuh.
+                                                                </p>
+                                                            </div>
+                                                        )}
 
                                                         {/* SCRAP RECOMMENDATION BANNER */}
                                                         {(() => {

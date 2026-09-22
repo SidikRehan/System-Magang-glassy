@@ -105,13 +105,27 @@ export default function EditDraftOrderModal({
             Boolean(item.glass_type && String(item.glass_type).trim().length > 0) &&
             (parseFloat(item.length_cm) || 0) > 0 &&
             (parseFloat(item.width_cm) || 0) > 0 &&
-            (parseInt(item.qty) || 0) > 0
+            (parseInt(item.qty) || 0) > 0 &&
+            !item.isExceeded
         )
     );
 
     const isPriorityValid = orderForm.priority_status !== 'Prioritas' || (parseFloat(orderForm.priority_fee) || 0) > 0;
 
-    const isFormValid = isCustomerNameValid && isCustomerPhoneValid && isCustomerAddressValid && isDescriptionValid && isOrderDateValid && isItemsValid && isPriorityValid;
+    // Catatan revisi wajib diisi jika orderan sedang direvisi (status pengerjaan)
+    const isRevisionNotesValid = Boolean(
+        editingOrder?.status !== 'pengerjaan' || 
+        (orderForm.revision_notes && String(orderForm.revision_notes).trim().length > 0)
+    );
+
+    const isFormValid = isCustomerNameValid && 
+        isCustomerPhoneValid && 
+        isCustomerAddressValid && 
+        isDescriptionValid && 
+        isOrderDateValid && 
+        isItemsValid && 
+        isPriorityValid && 
+        isRevisionNotesValid;
 
     const getFieldClass = (isValid, baseClass = "w-full bg-white border rounded-xl p-2.5 text-slate-800 shadow-xs transition") => {
         if (!isValid && attemptedSubmit) {
@@ -122,7 +136,26 @@ export default function EditDraftOrderModal({
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col my-auto text-slate-800">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col my-auto text-slate-800 relative overflow-hidden">
+                {/* LOADING BLUR OVERLAY FOR SMOOTH SUBMISSION */}
+                {isSubmittingOrder && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                        <div className="bg-white p-6 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-3.5 max-w-xs animate-in zoom-in-95 duration-200">
+                            <div className="w-14 h-14 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                <Loader2 className="w-7 h-7 animate-spin text-[#1b68b0]" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-[#242222] text-sm">
+                                    Memperbarui SPO Orderan...
+                                </h4>
+                                <p className="text-xs text-slate-500 font-mono mt-1 leading-relaxed">
+                                    Mohon tunggu sebentar, sistem sedang memproses revisi dan memperbarui data.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* MODAL HEADER */}
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
                     <div>
@@ -170,23 +203,45 @@ export default function EditDraftOrderModal({
                 <form className="space-y-4 text-xs overflow-y-auto pr-1 flex-1">
                     {/* CATATAN REVISI JIKA EDITING ORDER */}
                     {editingOrder && (
-                        <div className="bg-amber-50/70 p-4 sm:p-5 rounded-2xl border border-amber-200 space-y-2 shadow-xs">
-                            <h4 className="font-bold text-amber-900 text-xs flex items-center gap-2 border-b border-amber-200 pb-2">
-                                <Bell className="w-4 h-4 text-amber-600" />
-                                <span>Catatan / Alasan Perubahan Revisi (Untuk Divisi Produksi & Gudang)</span>
+                        <div className={`p-4 sm:p-5 rounded-2xl border space-y-2 shadow-xs transition ${
+                            !isRevisionNotesValid && attemptedSubmit
+                                ? 'bg-rose-50/90 border-rose-300 ring-2 ring-rose-500/20'
+                                : 'bg-amber-50/70 border-amber-200'
+                        }`}>
+                            <h4 className="font-bold text-amber-900 text-xs flex items-center justify-between border-b border-amber-200/80 pb-2">
+                                <span className="flex items-center gap-2">
+                                    <Bell className="w-4 h-4 text-amber-600" />
+                                    <span>Catatan / Alasan Perubahan Revisi (Untuk Divisi Produksi & Gudang)</span>
+                                </span>
+                                {editingOrder.status === 'pengerjaan' && (
+                                    <span className="text-[10px] bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full font-bold border border-rose-200 shadow-2xs">
+                                        *Wajib Diisi
+                                    </span>
+                                )}
                             </h4>
                             <div>
-                                <label className="text-slate-700 block mb-1 font-semibold">Catatan Alasan Perubahan Revisi (misal: konsumen ganti ukuran kaca / ganti jenis kaca):</label>
+                                <label className="text-slate-700 block mb-1 font-semibold flex items-center justify-between">
+                                    <span>Catatan Alasan Perubahan Revisi (misal: konsumen ganti ukuran kaca / ganti jenis kaca):</span>
+                                    {editingOrder.status === 'pengerjaan' && <span className="text-rose-600 font-extrabold text-[11px]">* Wajib Diisi</span>}
+                                </label>
                                 <textarea 
+                                    key={`revision_notes_${shakeKey}`}
                                     rows="2" 
-                                    placeholder="Contoh: Konsumen minta ubah ukuran kaca dari 100x50 cm ke 100x60 cm. (Isi jika ada revisian dari konsumen)"
+                                    placeholder="Contoh: Konsumen minta ubah ukuran kaca dari 100x50 cm ke 100x60 cm. (Field ini wajib diisi)"
                                     value={orderForm.revision_notes || ''} 
                                     onChange={e => setOrderForm('revision_notes', e.target.value)} 
-                                    className="w-full bg-white border border-amber-300 rounded-xl p-2.5 text-slate-800 text-xs focus:border-amber-500 font-medium shadow-xs"
+                                    className={getFieldClass(isRevisionNotesValid, "w-full bg-white border border-amber-300 rounded-xl p-2.5 text-slate-800 text-xs focus:border-amber-500 font-medium shadow-xs")}
                                 />
-                                <span className="text-[10px] text-amber-800 block mt-1">
-                                    *Catatan revisi ini khusus untuk mencatat alasan perubahan dari konsumen dan akan dikirimkan ke Admin Gudang & Divisi Produksi.
-                                </span>
+                                {!isRevisionNotesValid && attemptedSubmit ? (
+                                    <div className="flex items-center gap-1.5 mt-1.5 text-rose-600 text-xs font-bold animate-pulse">
+                                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                                        <span>Harus diisi field ini! (Catatan revisi wajib diisi untuk menginfokan divisi produksi & gudang)</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-[10px] text-amber-800 block mt-1">
+                                        *Catatan revisi ini khusus untuk mencatat alasan perubahan dari konsumen dan akan dikirimkan ke Admin Gudang & Divisi Produksi.
+                                    </span>
+                                )}
                             </div>
                         </div>
                     )}
@@ -303,6 +358,7 @@ export default function EditDraftOrderModal({
                                                             value={grp.glass_type}
                                                             onChange={val => handleGroupGlassTypeChange(grp.group_id, val)}
                                                             options={getDynamicGlassTypes(sheetGlasses)}
+                                                            sheetGlasses={sheetGlasses}
                                                             placeholder="-- Ketik atau Cari Jenis Kaca Dasar --"
                                                             invalid={attemptedSubmit && (!grp.glass_type || grp.glass_type.trim().length === 0)}
                                                         />
@@ -377,7 +433,7 @@ export default function EditDraftOrderModal({
                                                                     value={item.length_cm ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'length_cm', e.target.value)} 
                                                                     onFocus={e => e.target.select()}
-                                                                    className={getFieldClass((parseFloat(item.length_cm) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
+                                                                    className={getFieldClass((parseFloat(item.length_cm) || 0) > 0 && !item.isExceeded, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
                                                                 />
                                                             </div>
                                                             <div>
@@ -390,7 +446,7 @@ export default function EditDraftOrderModal({
                                                                     value={item.width_cm ?? ''} 
                                                                     onChange={e => handleItemChange(idx, 'width_cm', e.target.value)} 
                                                                     onFocus={e => e.target.select()}
-                                                                    className={getFieldClass((parseFloat(item.width_cm) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
+                                                                    className={getFieldClass((parseFloat(item.width_cm) || 0) > 0 && !item.isExceeded, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono text-xs focus:bg-white")} 
                                                                 />
                                                             </div>
                                                             <div>
@@ -407,6 +463,19 @@ export default function EditDraftOrderModal({
                                                                 />
                                                             </div>
                                                         </div>
+
+                                                        {/* WARNING MELEBIHI UKURAN KACA LEMBARAN */}
+                                                        {item.isExceeded && (
+                                                            <div className="p-3 rounded-2xl border bg-rose-50 border-rose-200 text-rose-800 text-xs space-y-1 shadow-xs animate-in fade-in duration-150">
+                                                                <div className="font-bold flex items-center gap-1.5 text-rose-700">
+                                                                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                                                                    <span>Ukuran Input Melebihi Lembaran Kaca yang Tersedia!</span>
+                                                                </div>
+                                                                <p className="text-[11px] text-slate-600 leading-relaxed pl-5.5">
+                                                                    Ukuran potongan <strong>{item.length_cm} x {item.width_cm} cm</strong> melebihi batas maksimal lembaran stok <strong>{item.glass_type || 'Kaca'}</strong> di gudang (Maksimal Lembaran: <strong>{item.maxSheetDim} x {item.minSheetDim} cm</strong>). Ukuran pesanan potongan kaca tidak boleh melebihi lembaran utuh.
+                                                                </p>
+                                                            </div>
+                                                        )}
 
                                                         {/* SCRAP RECOMMENDATION BANNER */}
                                                         {(() => {
@@ -1232,6 +1301,7 @@ export default function EditDraftOrderModal({
                                 {!isOrderDateValid && <li>Tanggal Order belum diisi</li>}
                                 {!isItemsValid && <li>Item Kaca belum lengkap (Jenis Kaca, Panjang, Lebar, Qty)</li>}
                                 {!isPriorityValid && <li>Nominal Fee Prioritas wajib diisi (&gt; 0)</li>}
+                                {!isRevisionNotesValid && <li>Catatan Alasan Perubahan Revisi wajib diisi</li>}
                             </ul>
                         </div>
                     )}

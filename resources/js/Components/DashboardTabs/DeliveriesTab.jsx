@@ -4,10 +4,11 @@ import {
     Truck, User, Calendar, MapPin, ClipboardList, 
     Printer, Fuel, CreditCard, CheckSquare, XSquare, 
     Plus, AlertCircle, FileText, CheckCircle2, Phone, 
-    ShieldCheck, Sparkles, Send, Clock, Camera
+    ShieldCheck, Sparkles, Send, Clock, Camera, Edit3
 } from 'lucide-react';
 import { isDriverMatch } from '@/Utils/dashboardHelpers';
 import AssignVehicleModal from '@/Components/Modals/AssignVehicleModal';
+import EditTripModal from '@/Components/Modals/EditTripModal';
 
 export default function DeliveriesTab({
     userRole,
@@ -70,6 +71,46 @@ export default function DeliveriesTab({
         });
     };
 
+    const [showEditTripModal, setShowEditTripModal] = useState(false);
+    const [editingTripData, setEditingTripData] = useState(null);
+    const [editTripDriver, setEditTripDriver] = useState('Pak Budi (Supir Utama DC)');
+    const [editTripVehicle, setEditTripVehicle] = useState('Engkel Box (D 8472 AB)');
+    const [editTripNotes, setEditTripNotes] = useState('');
+    const [isSubmittingEditTrip, setIsSubmittingEditTrip] = useState(false);
+
+    const handleOpenEditTripModal = (trip) => {
+        setEditingTripData(trip);
+        setEditTripDriver(trip.driver_name || 'Pak Budi (Supir Utama DC)');
+        setEditTripVehicle(trip.vehicle_plate || 'Engkel Box (D 8472 AB)');
+        const firstOrderNotes = trip.orders?.[0]?.delivery_notes || trip.deliveries?.[0]?.notes || '';
+        setEditTripNotes(firstOrderNotes);
+        setShowEditTripModal(true);
+    };
+
+    const handleEditTripSubmit = (e) => {
+        e.preventDefault();
+        if (!editingTripData) return;
+        setIsSubmittingEditTrip(true);
+
+        const orderIds = editingTripData.orders ? editingTripData.orders.map(o => o.id) : [];
+
+        router.post('/orders/batch-delivery', {
+            order_ids: orderIds,
+            driver_name: editTripDriver,
+            vehicle_plate: editTripVehicle,
+            notes: editTripNotes,
+            trip_code: editingTripData.trip_code
+        }, {
+            onSuccess: () => {
+                setShowEditTripModal(false);
+                setEditingTripData(null);
+            },
+            onFinish: () => {
+                setIsSubmittingEditTrip(false);
+            }
+        });
+    };
+
     const toggleSelectOrderForBatch = (orderId) => {
         setSelectedBatchOrderIds(prev =>
             prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
@@ -77,12 +118,13 @@ export default function DeliveriesTab({
     };
 
     const toggleSelectAllReadyOrders = () => {
-        const readyOrders = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan');
-        const readyIds = readyOrders.map(o => o.id);
-        if (selectedBatchOrderIds.length === readyIds.length) {
+        const unassignedOrders = initialOrders.filter(o => (o.status === 'pengiriman' || o.status === 'pengerjaan') && !o.assigned_driver);
+        const targetOrders = unassignedOrders.length > 0 ? unassignedOrders : initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan');
+        const targetIds = targetOrders.map(o => o.id);
+        if (selectedBatchOrderIds.length === targetIds.length) {
             setSelectedBatchOrderIds([]);
         } else {
-            setSelectedBatchOrderIds(readyIds);
+            setSelectedBatchOrderIds(targetIds);
         }
     };
 
@@ -227,6 +269,13 @@ export default function DeliveriesTab({
                                                     </p>
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5 justify-end">
+                                                    <button
+                                                        onClick={() => handleOpenEditTripModal(trip)}
+                                                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                        title="Edit Penugasan Supir & Mobil Trip Ini"
+                                                    >
+                                                        <Edit3 className="w-3.5 h-3.5 text-amber-600" /> Edit Trip
+                                                    </button>
                                                     <button
                                                         onClick={() => {
                                                             setSelectedBatchWaybillTrip(trip);
@@ -414,81 +463,6 @@ export default function DeliveriesTab({
             ) : (
                 /* NON-DRIVER ADMIN & WMS VIEW (ADMIN TOKO / GUDANG / OWNER / FINANCE) */
                 <>
-                    {/* PANEL ATAS: PENUGASAN MULTI-ALAMAT ARMADA */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
-                        <div className="flex flex-wrap justify-between items-center border-b border-slate-100 pb-3 gap-2">
-                            <div className="flex items-center gap-2">
-                                <ClipboardList className="w-5 h-5 text-[#1b68b0]" />
-                                <h3 className="text-sm font-black text-[#242222]">
-                                    Form Penugasan Rute Mobil Multi-Alamat (WMS Logistics)
-                                </h3>
-                            </div>
-                            <span className="text-xs bg-blue-50 text-[#1b68b0] px-3 py-1 rounded-full border border-blue-200 font-bold">
-                                {selectedBatchOrderIds.length} Alamat Dipilih
-                            </span>
-                        </div>
-
-                        <form onSubmit={handleAssignBatchDeliverySubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-                            {/* 1. PILIH SUPIR / DRIVER */}
-                            <div>
-                                <label className="text-slate-700 block mb-1.5 font-bold">1. Supir / Driver Armada:</label>
-                                <select
-                                    value={dispatchDriverInput}
-                                    onChange={e => setDispatchDriverInput(e.target.value)}
-                                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
-                                >
-                                    <option value="Pak Budi (Supir Utama DC)">Pak Budi (Supir Utama DC)</option>
-                                    <option value="Pak Mulyadi (Driver Engkel)">Pak Mulyadi (Driver Engkel)</option>
-                                    <option value="Pak Asep (Driver L300)">Pak Asep (Driver Pick Up)</option>
-                                    <option value="Pak Hendra (Driver Subcon)">Pak Hendra (Driver Subcon)</option>
-                                </select>
-                            </div>
-
-                            {/* 2. PILIH KENDARAAN & PLAT */}
-                            <div>
-                                <label className="text-slate-700 block mb-1.5 font-bold">2. Jenis & No. Plat Mobil:</label>
-                                <select
-                                    value={dispatchVehicleInput}
-                                    onChange={e => setDispatchVehicleInput(e.target.value)}
-                                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
-                                >
-                                    <option value="Engkel Box (D 8472 AB)">Engkel Box (D 8472 AB)</option>
-                                    <option value="Pick Up L300 (D 8192 XY)">Pick Up L300 (D 8192 XY)</option>
-                                    <option value="Truck Engkel Long (D 8011 GH)">Truck Engkel Long (D 8011 GH)</option>
-                                    <option value="Armada Subcon (B 9920 FK)">Armada Subcon (B 9920 FK)</option>
-                                </select>
-                            </div>
-
-                            {/* 3. CATATAN INTRO PENGIRIMAN */}
-                            <div>
-                                <label className="text-slate-700 block mb-1.5 font-bold">3. Catatan Rute / Instruksi Supir:</label>
-                                <input
-                                    type="text"
-                                    value={dispatchNotesInput}
-                                    onChange={e => setDispatchNotesInput(e.target.value)}
-                                    placeholder="Contoh: Dahulukan Alamat Antapani sebelum jam 12..."
-                                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0]"
-                                />
-                            </div>
-
-                            {/* 4. SUBMIT BATCH ASSIGNMENT */}
-                            <div className="flex flex-col justify-end">
-                                <button
-                                    type="submit"
-                                    disabled={selectedBatchOrderIds.length === 0}
-                                    className={`w-full font-bold px-4 py-2.5 rounded-xl text-xs shadow-xs flex items-center justify-center gap-2 transition ${
-                                        selectedBatchOrderIds.length > 0
-                                            ? 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer'
-                                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                                    }`}
-                                >
-                                    <Send className="w-3.5 h-3.5" />
-                                    <span>Tugaskan Mobil ({selectedBatchOrderIds.length} Alamat)</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
                     {/* SECTION DAFTAR TRIP MOBIL AKTIF & RUTE MANIFEST MULTI-STOP */}
                     <div className="space-y-4">
                         <div className="flex flex-wrap justify-between items-center gap-2">
@@ -568,6 +542,13 @@ export default function DeliveriesTab({
                                                     </p>
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5 justify-end">
+                                                    <button
+                                                        onClick={() => handleOpenEditTripModal(trip)}
+                                                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                        title="Edit Penugasan Supir & Mobil Trip Ini"
+                                                    >
+                                                        <Edit3 className="w-3.5 h-3.5 text-amber-600" /> Edit Trip
+                                                    </button>
                                                     <button
                                                         onClick={() => {
                                                             setSelectedBatchWaybillTrip(trip);
@@ -757,9 +738,9 @@ export default function DeliveriesTab({
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-xs">
                                     {(() => {
-                                        const tableOrders = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan' || o.status === 'selesai');
+                                        const allReadyOrders = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan' || o.status === 'selesai');
 
-                                        if (tableOrders.length === 0) {
+                                        if (allReadyOrders.length === 0) {
                                             return (
                                                 <tr>
                                                     <td colSpan="8" className="p-8 text-center text-slate-400 italic">
@@ -769,7 +750,10 @@ export default function DeliveriesTab({
                                             );
                                         }
 
-                                        return tableOrders.map(ord => {
+                                        const unassignedOrders = allReadyOrders.filter(o => !o.assigned_driver && !o.assigned_vehicle);
+                                        const assignedOrders = allReadyOrders.filter(o => o.assigned_driver || o.assigned_vehicle);
+
+                                        const renderOrderRow = (ord) => {
                                             const isSelected = selectedBatchOrderIds.includes(ord.id);
                                             const itemsList = Array.isArray(ord.items) && ord.items.length > 0
                                                 ? ord.items
@@ -877,7 +861,51 @@ export default function DeliveriesTab({
                                                     </td>
                                                 </tr>
                                             );
-                                        });
+                                        };
+
+                                        return (
+                                            <>
+                                                {/* SEKSI 1: ORDER SPO BELUM DITUGASKAN (PALING ATAS) */}
+                                                {unassignedOrders.length > 0 && (
+                                                    <>
+                                                        <tr className="bg-amber-100/80 border-y-2 border-amber-300">
+                                                            <td colSpan="8" className="p-2.5 px-4 font-black text-amber-900 text-xs">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="flex items-center gap-2">
+                                                                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                                                        <span>ORDER SPO BELUM DITUGASKAN MOBIL ARMADA ({unassignedOrders.length} SPO SIAP DITUGASKAN)</span>
+                                                                    </span>
+                                                                    <span className="text-[10px] bg-white text-amber-800 font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
+                                                                        Prioritas Penugasan (Paling Atas)
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        {unassignedOrders.map(renderOrderRow)}
+                                                    </>
+                                                )}
+
+                                                {/* SEKSI 2: ORDER SPO SUDAH DITUGASKAN (PALING BAWAH) */}
+                                                {assignedOrders.length > 0 && (
+                                                    <>
+                                                        <tr className="bg-slate-100/90 border-y-2 border-slate-300">
+                                                            <td colSpan="8" className="p-2.5 px-4 font-black text-slate-700 text-xs">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="flex items-center gap-2">
+                                                                        <CheckCircle2 className="w-4 h-4 text-[#70b03c] shrink-0" />
+                                                                        <span>ORDER SPO SUDAH DITUGASKAN & PUNYA MOBIL ARMADA ({assignedOrders.length} SPO AKTIF TRIP)</span>
+                                                                    </span>
+                                                                    <span className="text-[10px] bg-white text-slate-600 font-extrabold px-2.5 py-0.5 rounded-full border border-slate-300 shadow-2xs">
+                                                                        Telah Ditugaskan (Di Bawah)
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        {assignedOrders.map(renderOrderRow)}
+                                                    </>
+                                                )}
+                                            </>
+                                        );
                                     })()}
                                 </tbody>
                             </table>
@@ -897,6 +925,21 @@ export default function DeliveriesTab({
                         setNotes={setAssignNotes}
                         handleSubmit={handleSingleAssignSubmit}
                         isSubmitting={isSubmittingVehicle}
+                    />
+
+                    {/* MODAL EDIT PENUGASAN TRIP ARMADA MOBIL */}
+                    <EditTripModal
+                        show={showEditTripModal}
+                        onClose={() => setShowEditTripModal(false)}
+                        trip={editingTripData}
+                        driver={editTripDriver}
+                        setDriver={setEditTripDriver}
+                        vehicle={editTripVehicle}
+                        setVehicle={setEditTripVehicle}
+                        notes={editTripNotes}
+                        setNotes={setEditTripNotes}
+                        handleSubmit={handleEditTripSubmit}
+                        isSubmitting={isSubmittingEditTrip}
                     />
                 </>
             )}

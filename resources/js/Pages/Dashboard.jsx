@@ -590,6 +590,7 @@ export default function Dashboard({
         rate_etsa: 50000,
         qty: 0,
         unit: 'Lembar',
+        image: null,
         supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
         supplier_phone: '6281234567890',
         supplier_pic: 'Pak Gunawan'
@@ -611,6 +612,8 @@ export default function Dashboard({
         rate_etsa: 50000,
         qty: 0,
         unit: 'Lembar',
+        image: null,
+        image_path: null,
         supplier_name: '',
         supplier_phone: '',
         supplier_pic: ''
@@ -1699,12 +1702,14 @@ export default function Dashboard({
             rate_etsa: rateEtsa,
             qty: qty,
             unit: 'Lembar',
+            image: newStockForm.image,
             supplier_name: newStockForm.supplier_name,
             supplier_phone: newStockForm.supplier_phone,
             supplier_pic: newStockForm.supplier_pic
         };
 
         router.post(route('inventory.sheet_glasses.store'), payload, {
+            forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
                 setShowAddStockModal(false);
@@ -1724,6 +1729,7 @@ export default function Dashboard({
                     rate_etsa: 50000,
                     qty: 0,
                     unit: 'Lembar',
+                    image: null,
                     supplier_name: 'PT Asahimas Flat Glass Tbk (Divisi Cermin)',
                     supplier_phone: '6281234567890',
                     supplier_pic: 'Pak Gunawan'
@@ -1775,6 +1781,8 @@ export default function Dashboard({
             rate_etsa: item.rate_etsa ?? 50000,
             qty: item.qty ?? 0,
             unit: item.unit || 'Lembar',
+            image: null,
+            image_path: item.image_path || null,
             supplier_name: item.supplier_name || '',
             supplier_phone: item.supplier_phone || '',
             supplier_pic: item.supplier_pic || ''
@@ -1814,12 +1822,14 @@ export default function Dashboard({
             rate_etsa: rateEtsa,
             qty: qty,
             unit: 'Lembar',
+            image: editStockForm.image,
             supplier_name: editStockForm.supplier_name,
             supplier_phone: editStockForm.supplier_phone,
             supplier_pic: editStockForm.supplier_pic
         };
 
         router.post(route('inventory.sheet_glasses.update', editStockForm.id), payload, {
+            forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
                 setShowEditStockModal(false);
@@ -2950,6 +2960,25 @@ export default function Dashboard({
             (g.id && it.glass_id && g.id === it.glass_id)
         );
 
+        // 1b. Hitung batas ukuran lembaran utuh yang tersedia (Orientasi Fleksibel: PxL atau LxP)
+        let sheetLen = 244;
+        let sheetWid = 183;
+        if (matchedGlass && parseFloat(matchedGlass.length_cm) > 0 && parseFloat(matchedGlass.width_cm) > 0) {
+            sheetLen = parseFloat(matchedGlass.length_cm);
+            sheetWid = parseFloat(matchedGlass.width_cm);
+        } else if (sheetGlasses && sheetGlasses.length > 0) {
+            sheetLen = Math.max(...sheetGlasses.map(g => parseFloat(g.length_cm) || 183), 244);
+            sheetWid = Math.max(...sheetGlasses.map(g => parseFloat(g.width_cm) || 244), 305);
+        }
+
+        const maxSheetDim = Math.max(sheetLen, sheetWid);
+        const minSheetDim = Math.min(sheetLen, sheetWid);
+
+        const itemMaxDim = Math.max(l, w);
+        const itemMinDim = Math.min(l, w);
+
+        const isExceeded = (l > 0 || w > 0) && (itemMaxDim > maxSheetDim || itemMinDim > minSheetDim);
+
         // 2. Tentukan harga per m2 berdasarkan master katalog
         let pricePerM2 = 380000;
         if (matchedGlass && matchedGlass.sell_price > 0) {
@@ -2968,9 +2997,9 @@ export default function Dashboard({
         const rateBV = matchedGlass?.rate_bv ? parseFloat(matchedGlass.rate_bv) : 15000;
         const rateEtsa = matchedGlass?.rate_etsa ? parseFloat(matchedGlass.rate_etsa) : 50000;
 
-        // 4. Hitung harga bahan kaca proporsional (minimum handling charge Rp 10.000 untuk potongan kecil)
+        // 4. Hitung harga bahan kaca murni proporsional luas area m2
         const rawBasePrice = Math.round(areaM2 * pricePerM2);
-        const baseGlassPrice = (l > 0 && w > 0) ? Math.max(10000, rawBasePrice) * q : 0;
+        const baseGlassPrice = (l > 0 && w > 0) ? rawBasePrice * q : 0;
 
         const feeGM = procs.includes('GM') ? Math.round(perimeterM * rateGM) * q : 0;
         const feeHT = procs.includes('HT') ? Math.round(perimeterM * rateHT) * q : 0;
@@ -3010,6 +3039,11 @@ export default function Dashboard({
 
         return {
             ...it,
+            isExceeded,
+            maxSheetDim,
+            minSheetDim,
+            sheetLen,
+            sheetWid,
             price_per_m2: pricePerM2,
             rate_gm: rateGM,
             rate_ht: rateHT,

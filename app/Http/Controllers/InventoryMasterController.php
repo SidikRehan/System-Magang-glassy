@@ -39,6 +39,7 @@ class InventoryMasterController extends Controller
             'supplier_name' => 'nullable|string|max:255',
             'supplier_phone' => 'nullable|string|max:50',
             'supplier_pic' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $itemCode = 'BRG-' . str_pad(SheetGlass::count() + 1, 3, '0', STR_PAD_LEFT);
@@ -46,9 +47,15 @@ class InventoryMasterController extends Controller
         $qty = (int) $validated['qty'];
         $status = $qty > 10 ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
 
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('glasses', 'public');
+        }
+
         SheetGlass::create([
             'item_code' => $itemCode,
             'name' => $validated['name'],
+            'image_path' => $imagePath,
             'category' => $validated['category'],
             'length_cm' => $validated['length_cm'],
             'width_cm' => $validated['width_cm'],
@@ -93,14 +100,21 @@ class InventoryMasterController extends Controller
             'supplier_name' => 'nullable|string|max:255',
             'supplier_phone' => 'nullable|string|max:50',
             'supplier_pic' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $size = "{$validated['length_cm']} x {$validated['width_cm']} cm";
         $qty = (int) $validated['qty'];
         $status = $qty > 10 ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
 
+        $imagePath = $glass->image_path;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('glasses', 'public');
+        }
+
         $glass->update([
             'name' => $validated['name'],
+            'image_path' => $imagePath,
             'category' => $validated['category'],
             'length_cm' => $validated['length_cm'],
             'width_cm' => $validated['width_cm'],
@@ -223,15 +237,22 @@ class InventoryMasterController extends Controller
             'sell_price' => 'required|numeric|min:0',
             'qty' => 'required|integer|min:0',
             'unit' => 'nullable|string|max:50',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $accCode = 'ACC-' . str_pad(Accessory::count() + 1, 3, '0', STR_PAD_LEFT);
         $qty = (int) $validated['qty'];
         $status = $qty > 20 ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
 
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('accessories', 'public');
+        }
+
         Accessory::create([
             'acc_code' => $accCode,
             'name' => $validated['name'],
+            'image_path' => $imagePath,
             'buy_price' => $validated['buy_price'] ?? 0,
             'sell_price' => $validated['sell_price'],
             'qty' => $qty,
@@ -252,13 +273,20 @@ class InventoryMasterController extends Controller
             'sell_price' => 'required|numeric|min:0',
             'qty' => 'required|integer|min:0',
             'unit' => 'nullable|string|max:50',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $qty = (int) $validated['qty'];
         $status = $qty > 20 ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
 
+        $imagePath = $acc->image_path;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('accessories', 'public');
+        }
+
         $acc->update([
             'name' => $validated['name'],
+            'image_path' => $imagePath,
             'buy_price' => $validated['buy_price'] ?? $acc->buy_price,
             'sell_price' => $validated['sell_price'],
             'qty' => $qty,

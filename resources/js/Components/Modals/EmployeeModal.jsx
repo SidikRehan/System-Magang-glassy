@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
-import { UserPlus, Edit3, User, Mail, Shield, Lock, X, Save } from 'lucide-react';
+import { UserPlus, Edit3, User, Mail, Shield, Lock, X, Save, Loader2 } from 'lucide-react';
 
 export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, roleTitles = {}, userRole = 'hrd' }) {
     const isEdit = Boolean(employeeToEdit && employeeToEdit.id);
@@ -52,7 +52,23 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-800">
+            <div className="bg-white border border-slate-200 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-800 relative">
+                {/* LOADING OVERLAY SHIELD */}
+                {processing && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                        <div className="bg-white p-5 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-3 max-w-xs animate-in zoom-in-95 duration-200">
+                            <div className="w-12 h-12 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                <Loader2 className="w-6 h-6 animate-spin text-[#1b68b0]" />
+                            </div>
+                            <div>
+                                <strong className="block text-xs font-bold text-slate-800">
+                                    {isEdit ? 'Memperbarui Akun Karyawan...' : 'Membuat Akun Karyawan Baru...'}
+                                </strong>
+                                <span className="text-[11px] text-slate-500 font-mono">Mohon tunggu sebentar</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* MODAL HEADER */}
                 <div className="p-5 border-b border-slate-200 flex justify-between items-center">
                     <div className="flex items-center gap-3">
@@ -177,7 +193,11 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, 
                             disabled={processing}
                             className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2 rounded-xl shadow-xs text-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                            <Save className="w-4 h-4" />
+                            {processing ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            ) : (
+                                <Save className="w-4 h-4" />
+                            )}
                             <span>{processing ? 'Menyimpan...' : (isEdit ? 'Simpan Perubahan' : 'Buat Akun Karyawan')}</span>
                         </button>
                     </div>

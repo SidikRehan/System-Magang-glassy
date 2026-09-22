@@ -5,6 +5,7 @@ export default function SearchableSelect({
     value = '',
     onChange = () => {},
     options = [],
+    sheetGlasses = [],
     placeholder = '-- Ketik atau Cari Jenis Kaca Dasar --',
     invalid = false,
     className = ''
@@ -20,6 +21,18 @@ export default function SearchableSelect({
             setSearchTerm(value || '');
         }
     }, [value, isOpen]);
+
+    // Helper to find image thumbnail for glass item
+    const getItemImage = (optText) => {
+        if (!sheetGlasses || !Array.isArray(sheetGlasses)) return null;
+        const found = sheetGlasses.find(g => g.name === optText || g.glass_type === optText);
+        if (found && found.image_path) {
+            return found.image_path.startsWith('http') || found.image_path.startsWith('/') 
+                ? found.image_path 
+                : `/storage/${found.image_path}`;
+        }
+        return null;
+    };
 
     // Filter options based on search term
     const filteredOptions = options.filter(opt =>
@@ -129,18 +142,28 @@ export default function SearchableSelect({
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((opt, idx) => {
                             const isSelected = opt === value;
+                            const imgUrl = getItemImage(opt);
                             return (
                                 <button
                                     key={idx}
                                     type="button"
                                     onClick={() => handleSelectOption(opt)}
-                                    className={`w-full text-left px-3.5 py-2 text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                                    className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
                                         isSelected
                                             ? 'bg-blue-50 text-[#1b68b0] font-extrabold border-l-4 border-l-[#1b68b0]'
                                             : 'text-slate-700 hover:bg-slate-50 hover:text-[#1b68b0]'
                                     }`}
                                 >
-                                    <span>{opt}</span>
+                                    <div className="flex items-center gap-2.5">
+                                        {imgUrl ? (
+                                            <img src={imgUrl} alt={opt} className="w-7 h-7 rounded-lg object-cover border border-slate-200 shrink-0" />
+                                        ) : (
+                                            <div className="w-7 h-7 rounded-lg bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0] shrink-0">
+                                                <Layers className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        <span>{opt}</span>
+                                    </div>
                                     {isSelected && <Check className="w-4 h-4 text-[#1b68b0]" />}
                                 </button>
                             );

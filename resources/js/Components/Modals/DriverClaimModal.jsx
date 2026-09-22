@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { Fuel, X, Check, Camera, Calendar, Truck, FileText, Send, Trash2 } from 'lucide-react';
+import { Fuel, X, Check, Camera, Calendar, Truck, FileText, Send, Trash2, Loader2 } from 'lucide-react';
 
 export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver', defaultPlate = 'B 9482 SYP (Truk Engkel)' }) {
     if (!isOpen) return null;
@@ -40,13 +40,15 @@ export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver',
         setFormattedAmount(raw ? Number(raw).toLocaleString('id-ID') : '');
     };
 
-    const handlePhotosChange = (e) => {
-        const files = Array.from(e.target.files);
+    const handlePhotoAdd = (e) => {
+        const files = Array.from(e.target.files || []);
         if (files.length > 0) {
             const combinedPhotos = [...photos, ...files];
-            const combinedPreviews = combinedPhotos.map(file => URL.createObjectURL(file));
             setPhotos(combinedPhotos);
-            setPhotoPreviews(combinedPreviews);
+
+            const newPreviews = files.map(file => URL.createObjectURL(file));
+            setPhotoPreviews(prev => [...prev, ...newPreviews]);
+
             setData('receipt_photos', combinedPhotos);
         }
     };
@@ -73,30 +75,36 @@ export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver',
 
         setSelectedCategories(updated);
 
-        const combinedCategory = updated.join(', ');
-
-        const shortLabels = updated.map(cId => {
-            const found = availableCategories.find(a => a.id === cId);
-            return found ? found.short : cId;
+        const categoryTitles = updated.map(c => {
+            const match = availableCategories.find(ac => ac.id === c);
+            return match ? match.short : c;
         });
-        const autoTitle = `Klaim ${shortLabels.join(' + ')} (${userName})`;
 
-        setData(d => ({
-            ...d,
-            category: combinedCategory,
-            title: autoTitle,
+        const mainCategory = updated[0] || 'BBM Armada';
+        const titleText = `Klaim ${categoryTitles.join(' + ')} (${userName})`;
+
+        setData(prev => ({
+            ...prev,
+            category: mainCategory,
+            title: titleText,
         }));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!data.amount || parseFloat(data.amount) <= 0) {
+            alert('Mohon masukkan nominal klaim biaya armada!');
+            return;
+        }
+
         post(route('finance.transactions.store'), {
             forceFormData: true,
+            preserveScroll: true,
             onSuccess: () => {
                 reset();
-                setFormattedAmount('');
                 setPhotos([]);
                 setPhotoPreviews([]);
+                setFormattedAmount('');
                 setSelectedCategories(['BBM Armada']);
                 onClose();
             }
@@ -105,7 +113,21 @@ export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver',
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh] text-slate-800">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh] text-slate-800 relative">
+                {/* LOADING OVERLAY SHIELD */}
+                {processing && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                        <div className="bg-white p-5 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-3 max-w-xs animate-in zoom-in-95 duration-200">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                                <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+                            </div>
+                            <div>
+                                <strong className="block text-xs font-bold text-slate-800">Mengirimkan Klaim Armada...</strong>
+                                <span className="text-[11px] text-slate-500 font-mono">Mohon tunggu sebentar</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* HEADER */}
                 <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -348,7 +370,11 @@ export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver',
                             disabled={processing}
                             className="px-5 py-2.5 text-xs font-bold text-white bg-[#70b03c] hover:bg-[#5f9733] rounded-xl transition shadow-xs disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                         >
-                            <Send className="w-4 h-4" />
+                            {processing ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            ) : (
+                                <Send className="w-4 h-4" />
+                            )}
                             <span>{processing ? 'Mengirimkan...' : 'Ajukan Klaim ke Akuntan'}</span>
                         </button>
                     </div>

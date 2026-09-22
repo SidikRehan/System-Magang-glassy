@@ -1,5 +1,5 @@
-import React from 'react';
-import { Edit3, X, Building2, Sliders, Check, Ruler } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Edit3, X, Building2, Sliders, Check, Ruler, Loader2, Camera } from 'lucide-react';
 
 export default function EditStockModal({
     show,
@@ -11,7 +11,33 @@ export default function EditStockModal({
     formatNumberDots,
     parseNumberDots
 }) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [imagePreview, setImagePreview] = useState(null);
+
+    useEffect(() => {
+        if (!show) {
+            setIsSubmitting(false);
+        } else {
+            if (editStockForm.image_path) {
+                const url = editStockForm.image_path.startsWith('http') || editStockForm.image_path.startsWith('/')
+                    ? editStockForm.image_path
+                    : `/storage/${editStockForm.image_path}`;
+                setImagePreview(url);
+            } else {
+                setImagePreview(null);
+            }
+        }
+    }, [show, editStockForm.image_path]);
+
     if (!show) return null;
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setEditStockForm(prev => ({ ...prev, image: file }));
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
 
     const l = parseFloat(editStockForm.length_cm) || 0;
     const w = parseFloat(editStockForm.width_cm) || 0;
@@ -21,9 +47,36 @@ export default function EditStockModal({
         ? Math.round(sellPrice * parseFloat(areaM2)) 
         : 0;
 
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            if (handleEditStockSubmit) {
+                await handleEditStockSubmit(e);
+            }
+        } catch (err) {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800 relative">
+                {/* LOADING OVERLAY SHIELD */}
+                {isSubmitting && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                        <div className="bg-white p-5 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-3 max-w-xs animate-in zoom-in-95 duration-200">
+                            <div className="w-12 h-12 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
+                                <Loader2 className="w-6 h-6 animate-spin text-[#1b68b0]" />
+                            </div>
+                            <div>
+                                <strong className="block text-xs font-bold text-slate-800">Memperbarui Data Kaca...</strong>
+                                <span className="text-[11px] text-slate-500 font-mono">Mohon tunggu sebentar</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Header */}
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
                     <div className="flex items-center gap-2.5">
@@ -46,7 +99,30 @@ export default function EditStockModal({
                     </button>
                 </div>
 
-                <form onSubmit={handleEditStockSubmit} className="space-y-4 text-xs">
+                <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+                    {/* Foto Kaca */}
+                    <div>
+                        <label className="text-[#242222] block mb-1 font-semibold">Foto / Contoh Gambar Kaca:</label>
+                        <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            {imagePreview ? (
+                                <img 
+                                    src={imagePreview} 
+                                    alt="Preview" 
+                                    className="w-12 h-12 rounded-xl object-cover border border-slate-300 shadow-2xs shrink-0" 
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center justify-center text-slate-400 shrink-0">
+                                    <Camera className="w-5 h-5" />
+                                </div>
+                            )}
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleImageChange}
+                                className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#1b68b0]/10 file:text-[#1b68b0] hover:file:bg-[#1b68b0]/20 cursor-pointer"
+                            />
+                        </div>
+                    </div>
                     {/* Kode & Kategori */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -348,10 +424,15 @@ export default function EditStockModal({
                         </button>
                         <button
                             type="submit"
-                            className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer"
+                            disabled={isSubmitting}
+                            className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer disabled:opacity-50"
                         >
-                            <Check className="w-4 h-4" />
-                            <span>Simpan Perubahan</span>
+                            {isSubmitting ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            ) : (
+                                <Check className="w-4 h-4" />
+                            )}
+                            <span>{isSubmitting ? 'Memperbarui...' : 'Simpan Perubahan'}</span>
                         </button>
                     </div>
                 </form>

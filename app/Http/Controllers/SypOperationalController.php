@@ -126,6 +126,10 @@ class SypOperationalController extends Controller
         $subtotal = 0;
 
         if (is_array($rawItems) && count($rawItems) > 0) {
+            $dimensionErr = $this->validateItemGlassDimensions($rawItems);
+            if ($dimensionErr) {
+                return redirect()->back()->withErrors(['message' => $dimensionErr]);
+            }
             foreach ($rawItems as $it) {
                 $calc = $this->calculateItemPricing($it);
                 $subtotal += $calc['subtotal'];
@@ -272,6 +276,10 @@ class SypOperationalController extends Controller
         $subtotal = 0;
 
         if (is_array($rawItems) && count($rawItems) > 0) {
+            $dimensionErr = $this->validateItemGlassDimensions($rawItems);
+            if ($dimensionErr) {
+                return redirect()->back()->withErrors(['message' => $dimensionErr]);
+            }
             foreach ($rawItems as $it) {
                 $calc = $this->calculateItemPricing($it);
                 $subtotal += $calc['subtotal'];
@@ -324,6 +332,12 @@ class SypOperationalController extends Controller
         $targetStatus = $request->input('status', $order->status);
         $isPromoted = ($order->status === 'draft' && $targetStatus === 'pengerjaan');
         $isRevisionUpdate = ($order->status === 'pengerjaan' && !$isPromoted);
+
+        if ($isRevisionUpdate && empty(trim($validated['revision_notes'] ?? ''))) {
+            return redirect()->back()->withErrors([
+                'revision_notes' => 'Catatan / alasan revisi wajib diisi untuk menginfokan divisi produksi & gudang.'
+            ]);
+        }
 
         $paymentOption = $request->input('payment_option', 'dp');
         $dpPercent = (float)$request->input('dp_percent', 50);
@@ -1188,8 +1202,8 @@ class SypOperationalController extends Controller
             else $pricePerM2 = 380000;
         }
         $rawBasePrice = round($areaM2 * $pricePerM2);
-        // Minimum handling charge Rp 10.000 untuk potongan kaca kecil
-        $baseGlassPrice = max(10000, $rawBasePrice) * $q;
+        // Harga dasar kaca murni proporsional luas area m2
+        $baseGlassPrice = $rawBasePrice * $q;
 
         // 3. Biaya GM, HT, BV, Etsa dengan tarif kustom per jenis kaca (dengan fallback default)
         $rateGM = (float)($it['rate_gm'] ?? 10000);
@@ -1657,6 +1671,48 @@ class SypOperationalController extends Controller
         ]);
 
         return redirect()->back()->with('message', 'Transaksi keuangan #' . $code . ' berhasil dihapus.');
+    }
+
+    /**
+     * Helper validation to prevent order glass cut sizes from exceeding stock sheet glass dimensions
+     */
+    private function validateItemGlassDimensions(array $items)
+    {
+        foreach ($items as $it) {
+            $l = (float)($it['length_cm'] ?? 0);
+            $w = (float)($it['width_cm'] ?? 0);
+            $glassType = trim($it['glass_type'] ?? '');
+
+            if ($l <= 0 || $w <= 0) continue;
+
+            $matchedSheet = null;
+            if (!empty($glassType)) {
+                $matchedSheet = SheetGlass::where('name', $glassType)
+                    ->orWhere('name', 'like', '%' . $glassType . '%')
+                    ->first();
+            }
+
+            if ($matchedSheet && (float)$matchedSheet->length_cm > 0 && (float)$matchedSheet->width_cm > 0) {
+                $sheetLen = (float)$matchedSheet->length_cm;
+                $sheetWid = (float)$matchedSheet->width_cm;
+            } else {
+                $maxLen = (float)SheetGlass::max('length_cm');
+                $maxWid = (float)SheetGlass::max('width_cm');
+                $sheetLen = $maxLen > 0 ? $maxLen : 366.0;
+                $sheetWid = $maxWid > 0 ? $maxWid : 244.0;
+            }
+
+            $maxDim = max($sheetLen, $sheetWid);
+            $minDim = min($sheetLen, $sheetWid);
+
+            $itemMax = max($l, $w);
+            $itemMin = min($l, $w);
+
+            if ($itemMax > $maxDim || $itemMin > $minDim) {
+                return "Ukuran potongan kaca {$l} x {$w} cm pada item '{$glassType}' melebihi batas lembaran kaca yang tersedia di gudang (Maksimal Lembaran: {$maxDim} x {$minDim} cm)!";
+            }
+        }
+        return null;
     }
 }
 

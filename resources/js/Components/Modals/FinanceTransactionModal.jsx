@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { CreditCard, Wallet, X, FileText, CheckCircle2, Save, Package, Wrench, Zap } from 'lucide-react';
+import { CreditCard, Wallet, X, FileText, CheckCircle2, Save, Package, Wrench, Zap, Loader2 } from 'lucide-react';
 
 export default function FinanceTransactionModal({
     isOpen,
@@ -53,7 +53,7 @@ export default function FinanceTransactionModal({
                 setFormattedAmount('');
             }
         }
-    }, [isOpen, prefillType, prefillData]);
+    }, [isOpen, prefillData, prefillType]);
 
     const getCategoriesForType = (t) => {
         switch (t) {
@@ -84,11 +84,7 @@ export default function FinanceTransactionModal({
     const handleAmountChange = (e) => {
         const raw = e.target.value.replace(/[^0-9]/g, '');
         setData('amount', raw);
-        if (raw) {
-            setFormattedAmount(Number(raw).toLocaleString('id-ID'));
-        } else {
-            setFormattedAmount('');
-        }
+        setFormattedAmount(raw ? Number(raw).toLocaleString('id-ID') : '');
     };
 
     const handleSubmit = (e) => {
@@ -106,7 +102,21 @@ export default function FinanceTransactionModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800">
+            <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800 relative">
+                {/* LOADING OVERLAY SHIELD */}
+                {processing && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                        <div className="bg-white p-5 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-3 max-w-xs animate-in zoom-in-95 duration-200">
+                            <div className="w-12 h-12 rounded-2xl bg-[#70b03c]/10 flex items-center justify-center text-[#70b03c]">
+                                <Loader2 className="w-6 h-6 animate-spin text-[#70b03c]" />
+                            </div>
+                            <div>
+                                <strong className="block text-xs font-bold text-slate-800">Menyimpan Transaksi Keuangan...</strong>
+                                <span className="text-[11px] text-slate-500 font-mono">Mohon tunggu sebentar, membukukan jurnal</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* MODAL HEADER */}
                 <div className="p-5 border-b border-slate-200 flex justify-between items-center">
                     <div className="flex items-center gap-3">
@@ -327,7 +337,11 @@ export default function FinanceTransactionModal({
                             disabled={processing}
                             className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold rounded-xl shadow-xs flex items-center gap-2 transition cursor-pointer text-xs disabled:opacity-50"
                         >
-                            <Save className="w-4 h-4" />
+                            {processing ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            ) : (
+                                <Save className="w-4 h-4" />
+                            )}
                             <span>{processing ? 'Menyimpan...' : 'Simpan Transaksi Keuangan'}</span>
                         </button>
                     </div>

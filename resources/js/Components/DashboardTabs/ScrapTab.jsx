@@ -228,12 +228,29 @@ export default function ScrapTab({
                                                     </div>
                                                 </td>
                                                 <td className="p-3 font-bold text-[#242222]">
-                                                    <div>{item.name}</div>
-                                                    {showTableSupplierInfo && (
-                                                        <div className="text-[11px] text-[#70b03c] font-medium mt-0.5">
-                                                            Supplier: <span className="text-slate-700">{item.supplier_name}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        {item.image_path ? (
+                                                            <img 
+                                                                src={item.image_path.startsWith('http') || item.image_path.startsWith('/') ? item.image_path : `/storage/${item.image_path}`} 
+                                                                alt={item.name} 
+                                                                className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0 bg-slate-50"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-[#1b68b0] flex items-center justify-center shrink-0 font-bold shadow-2xs">
+                                                                <Boxes className="w-5 h-5 text-[#1b68b0]" />
+                                                            </div>
+                                                        )}
+                                                        <div className="min-w-0">
+                                                            <div className="font-extrabold text-[#242222] text-xs leading-snug truncate">
+                                                                {item.name}
+                                                            </div>
+                                                            {showTableSupplierInfo && (
+                                                                <div className="text-[11px] text-[#70b03c] font-medium mt-0.5">
+                                                                    Supplier: <span className="text-slate-700">{item.supplier_name || '-'}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </td>
                                                 <td className="p-3">
                                                     <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-2 py-0.5 rounded text-[11px] font-semibold">

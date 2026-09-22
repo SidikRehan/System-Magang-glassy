@@ -429,8 +429,8 @@ class OrderController extends Controller
             else $pricePerM2 = 380000;
         }
         $rawBasePrice = round($areaM2 * $pricePerM2);
-        // Minimum handling charge Rp 10.000 untuk potongan kaca kecil
-        $baseGlassPrice = max(10000, $rawBasePrice) * $q;
+        // Harga dasar kaca murni proporsional luas area m2
+        $baseGlassPrice = $rawBasePrice * $q;
 
         // 3. Biaya GM, HT, BV, Etsa dengan tarif kustom per jenis kaca (dengan fallback default)
         $rateGM = (float)($it['rate_gm'] ?? 10000);

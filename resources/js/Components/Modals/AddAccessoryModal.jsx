@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plug, X, Check } from 'lucide-react';
+import { Plug, X, Check, Camera } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 export default function AddAccessoryModal({
@@ -14,9 +14,19 @@ export default function AddAccessoryModal({
         buy_price: '',
         sell_price: '',
         qty: 0,
-        unit: 'Pcs'
+        unit: 'Pcs',
+        image: null
     });
+    const [imagePreview, setImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setForm(prev => ({ ...prev, image: file }));
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -27,6 +37,7 @@ export default function AddAccessoryModal({
 
         setIsSubmitting(true);
         router.post(route('inventory.accessories.store'), form, {
+            forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -63,6 +74,29 @@ export default function AddAccessoryModal({
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+                    <div>
+                        <label className="text-slate-700 block mb-1 font-semibold">Foto / Contoh Gambar Aksesoris:</label>
+                        <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            {imagePreview ? (
+                                <img 
+                                    src={imagePreview} 
+                                    alt="Preview" 
+                                    className="w-12 h-12 rounded-xl object-cover border border-slate-300 shadow-2xs shrink-0" 
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center justify-center text-slate-400 shrink-0">
+                                    <Camera className="w-5 h-5" />
+                                </div>
+                            )}
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleImageChange}
+                                className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#1b68b0]/10 file:text-[#1b68b0] hover:file:bg-[#1b68b0]/20 cursor-pointer"
+                            />
+                        </div>
+                    </div>
+
                     <div>
                         <label className="text-slate-700 block mb-1 font-semibold">Nama Aksesoris Kaca Baru:*</label>
                         <input
