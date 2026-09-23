@@ -35,56 +35,68 @@ class SypOperationalController extends Controller
      */
     public function dashboard()
     {
-        $otherRevenue = (float) FinanceTransaction::where('approval_status', 'approved')->where('type', 'pemasukan_lain')->sum('amount');
-        $totalRevenue = (float) Order::sum('total_price') + $otherRevenue;
-        $paidRevenue = (float) Order::sum('paid_amount') + $otherRevenue;
-        $pendingCOD = (float) (Order::where('payment_status', '!=', 'Lunas')->sum('total_price') - Order::where('payment_status', '!=', 'Lunas')->sum('paid_amount'));
-        if ($pendingCOD <= 0) {
-            $pendingCOD = (float) Order::where('payment_status', '!=', 'Lunas')->sum('total_price');
-        }
+        return Inertia::render('Dashboard', [
+            // ── Props yang sering berubah: dibungkus closure agar partial reload
+            //    hanya mengevaluasi query yang diminta oleh klien. ─────────────
+            'orders'              => fn() => Order::orderBy('id', 'desc')->get(),
+            'metrics'             => fn() => $this->computeDashboardMetrics(),
 
-        $cogsPurchases = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['pembelian_bahan', 'pembelian_aksesoris'])->sum('amount');
-        $opexExpenses = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['biaya_operasional', 'pembelian_alat'])->sum('amount');
-        $totalExpenses = $cogsPurchases + $opexExpenses;
-        $grossProfit = $totalRevenue - $cogsPurchases;
-        $netProfit = $totalRevenue - $totalExpenses;
-        $netMarginPct = $totalRevenue > 0 ? round(($netProfit / $totalRevenue) * 100, 1) : 0;
-        $grossMarginPct = $totalRevenue > 0 ? round(($grossProfit / $totalRevenue) * 100, 1) : 0;
-        $scrapGlassLoss = (float) ScrapGlass::where('status', 'Layak Pakai')->count() * 125000;
+            // ── Props data pendukung: lazy — hanya di-load saat diminta ───────
+            'scrapGlasses'        => Inertia::optional(fn() => ScrapGlass::latest()->get()),
+            'deliveries'          => Inertia::optional(fn() => Delivery::with('order')->latest()->get()),
+            'users'               => Inertia::optional(fn() => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get()),
+            'activityLogs'        => Inertia::optional(fn() => ActivityLog::latest()->take(100)->get()),
+            'financeTransactions' => Inertia::optional(fn() => FinanceTransaction::with(['user', 'approver'])->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get()),
+            'sheetGlasses'        => Inertia::optional(fn() => SheetGlass::orderBy('id', 'desc')->get()),
+            'suppliers'           => Inertia::optional(fn() => Supplier::orderBy('id', 'desc')->get()),
+            'accessories'         => Inertia::optional(fn() => Accessory::orderBy('id', 'desc')->get()),
+            'tools'               => Inertia::optional(fn() => Tool::with(['borrows' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get()),
+            'supplies'            => Inertia::optional(fn() => Supply::with(['usages' => fn($q) => $q->latest(), 'restocks' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get()),
+        ]);
+    }
+
+    /**
+     * Hitung semua metrik dashboard dalam satu metode terpusat.
+     * Dipanggil via closure sehingga hanya berjalan saat prop 'metrics' diminta.
+     */
+    private function computeDashboardMetrics(): array
+    {
+        $otherRevenue       = (float) FinanceTransaction::where('approval_status', 'approved')->where('type', 'pemasukan_lain')->sum('amount');
+        $totalRevenue       = (float) Order::sum('total_price') + $otherRevenue;
+        $paidRevenue        = (float) Order::sum('paid_amount') + $otherRevenue;
+        $pendingCODTotal    = (float) Order::where('payment_status', '!=', 'Lunas')->sum('total_price');
+        $pendingCODPaid     = (float) Order::where('payment_status', '!=', 'Lunas')->sum('paid_amount');
+        $pendingCOD         = ($pendingCODTotal - $pendingCODPaid) > 0
+                                ? ($pendingCODTotal - $pendingCODPaid)
+                                : $pendingCODTotal;
+
+        $cogsPurchases      = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['pembelian_bahan', 'pembelian_aksesoris'])->sum('amount');
+        $opexExpenses       = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['biaya_operasional', 'pembelian_alat'])->sum('amount');
+        $totalExpenses      = $cogsPurchases + $opexExpenses;
+        $grossProfit        = $totalRevenue - $cogsPurchases;
+        $netProfit          = $totalRevenue - $totalExpenses;
+        $scrapGlassLoss     = (float) ScrapGlass::where('status', 'Layak Pakai')->count() * 125000;
         $pendingApprovalCount = FinanceTransaction::where('approval_status', 'pending')->count();
 
-        return Inertia::render('Dashboard', [
-            'orders' => Order::orderBy('id', 'desc')->get(),
-            'scrapGlasses' => ScrapGlass::latest()->get(),
-            'deliveries' => Delivery::with('order')->latest()->get(),
-            'users' => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get(),
-            'activityLogs' => ActivityLog::latest()->take(100)->get(),
-            'financeTransactions' => FinanceTransaction::with(['user', 'approver'])->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get(),
-            'sheetGlasses' => SheetGlass::orderBy('id', 'desc')->get(),
-            'suppliers' => Supplier::orderBy('id', 'desc')->get(),
-            'accessories' => Accessory::orderBy('id', 'desc')->get(),
-            'tools' => Tool::with(['borrows' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get(),
-            'supplies' => Supply::with(['usages' => fn($q) => $q->latest(), 'restocks' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get(),
-            'metrics' => [
-                'totalOrders' => Order::count(),
-                'inProcess' => Order::where('status', 'pengerjaan')->count(),
-                'readyShip' => Order::where('status', 'pengiriman')->count(),
-                'scrapCount' => ScrapGlass::count(),
-                'scrapGlassLoss' => $scrapGlassLoss,
-                'pendingApprovalCount' => $pendingApprovalCount,
-                'totalRevenue' => $totalRevenue,
-                'otherRevenue' => $otherRevenue,
-                'paidRevenue' => $paidRevenue,
-                'pendingCOD' => $pendingCOD,
-                'cogsPurchases' => $cogsPurchases,
-                'opexExpenses' => $opexExpenses,
-                'totalExpenses' => $totalExpenses,
-                'grossProfit' => $grossProfit,
-                'netProfit' => $netProfit,
-                'grossMarginPct' => $grossMarginPct,
-                'netMarginPct' => $netMarginPct,
-            ]
-        ]);
+        return [
+            'totalOrders'          => Order::count(),
+            'inProcess'            => Order::where('status', 'pengerjaan')->count(),
+            'readyShip'            => Order::where('status', 'pengiriman')->count(),
+            'scrapCount'           => ScrapGlass::count(),
+            'scrapGlassLoss'       => $scrapGlassLoss,
+            'pendingApprovalCount' => $pendingApprovalCount,
+            'totalRevenue'         => $totalRevenue,
+            'otherRevenue'         => $otherRevenue,
+            'paidRevenue'          => $paidRevenue,
+            'pendingCOD'           => $pendingCOD,
+            'cogsPurchases'        => $cogsPurchases,
+            'opexExpenses'         => $opexExpenses,
+            'totalExpenses'        => $totalExpenses,
+            'grossProfit'          => $grossProfit,
+            'netProfit'            => $netProfit,
+            'grossMarginPct'       => $totalRevenue > 0 ? round(($grossProfit / $totalRevenue) * 100, 1) : 0,
+            'netMarginPct'         => $totalRevenue > 0 ? round(($netProfit  / $totalRevenue) * 100, 1) : 0,
+        ];
     }
 
     /**
@@ -626,6 +638,45 @@ class SypOperationalController extends Controller
     }
 
     /**
+     * Check if an order has completely finished execution through all required divisions
+     */
+    protected function isOrderExecutionFinished(Order $order): bool
+    {
+        if ($order->status === 'selesai') {
+            return true;
+        }
+
+        if ($order->status === 'draft') {
+            return false;
+        }
+
+        // Active production and internal prep divisions mean it is still being worked on
+        $workingDivisions = ['admin_toko', 'admin_gudang', 'divisi_ht', 'divisi_gm', 'divisi_bv', 'divisi_etsa'];
+        if (in_array($order->current_division, $workingDivisions)) {
+            return false;
+        }
+
+        if ($order->status === 'pengerjaan') {
+            return false;
+        }
+
+        // Check division_progress array
+        $progress = (array) ($order->division_progress ?? []);
+        if (!empty($progress)) {
+            foreach ($progress as $divCode => $status) {
+                if ($status === 'N/A') {
+                    continue;
+                }
+                if ($status !== 'Selesai') {
+                    return false;
+                }
+            }
+        }
+
+        return $order->status === 'pengiriman' || in_array($order->current_division, ['QC_Ready', 'pengiriman']);
+    }
+
+    /**
      * Assign Batch Multi-Address Delivery to Vehicle and Driver
      */
     public function assignBatchDelivery(Request $request)
@@ -644,6 +695,20 @@ class SypOperationalController extends Controller
         $notes = $validated['notes'] ?? null;
 
         $orders = Order::whereIn('id', $validated['order_ids'])->get();
+
+        // Strict Validation: Ensure all selected orders have completely finished execution through the last division
+        $unreadyOrders = [];
+        foreach ($orders as $order) {
+            if (!$this->isOrderExecutionFinished($order)) {
+                $unreadyOrders[] = 'SPO #' . ($order->spo_number ?? $order->id);
+            }
+        }
+
+        if (!empty($unreadyOrders)) {
+            return redirect()->back()->withErrors([
+                'message' => '⚠️ Gagal Mengatur Pengiriman: Order ' . implode(', ', $unreadyOrders) . ' belum selesai dieksekusi oleh divisi terakhir!'
+            ])->with('error', '⚠️ Gagal Mengatur Pengiriman: Order ' . implode(', ', $unreadyOrders) . ' belum selesai dieksekusi oleh divisi terakhir!');
+        }
 
         foreach ($orders as $index => $order) {
             $stopOrder = $index + 1;

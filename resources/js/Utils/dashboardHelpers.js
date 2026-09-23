@@ -204,3 +204,36 @@ export const checkOrderDivisi = (o, divKey) => {
     const p = o.division_progress || {};
     return p[code] === 'Selesai' || p[code] === 'Sedang Dikerjakan';
 };
+
+export const isOrderExecutionFinished = (o) => {
+    if (!o) return false;
+    if (o.status === 'selesai') return true;
+    if (o.status === 'draft') return false;
+
+    // Working divisions that mean order is still actively in workstation production or internal prep
+    const workingDivisions = ['admin_toko', 'admin_gudang', 'divisi_ht', 'divisi_gm', 'divisi_bv', 'divisi_etsa'];
+    if (workingDivisions.includes(o.current_division)) {
+        return false;
+    }
+
+    if (o.status === 'pengerjaan') {
+        return false;
+    }
+
+    const progress = o.division_progress || {};
+    const relevantDivs = getOrderRelevantDivisions(o);
+    if (relevantDivs.length > 0) {
+        const allDone = relevantDivs.every(div => progress[div.code] === 'Selesai');
+        if (!allDone) return false;
+    } else {
+        const keys = Object.keys(progress);
+        for (const k of keys) {
+            if (progress[k] !== 'N/A' && progress[k] !== 'Selesai') {
+                return false;
+            }
+        }
+    }
+
+    return o.status === 'pengiriman' || o.current_division === 'QC_Ready' || o.current_division === 'pengiriman';
+};
+

@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { router } from '@inertiajs/react';
 import { 
     Truck, User, Calendar, MapPin, ClipboardList, 
     Printer, Fuel, CreditCard, CheckSquare, XSquare, 
     Plus, AlertCircle, FileText, CheckCircle2, Phone, 
-    ShieldCheck, Sparkles, Send, Clock, Camera, Edit3
+    ShieldCheck, Sparkles, Send, Clock, Camera, Edit3,
+    Search, Lock, X, Layers, Filter, Check
 } from 'lucide-react';
-import { isDriverMatch } from '@/Utils/dashboardHelpers';
+import { isDriverMatch, isOrderExecutionFinished, getOrderRelevantDivisions } from '@/Utils/dashboardHelpers';
 import AssignVehicleModal from '@/Components/Modals/AssignVehicleModal';
 import EditTripModal from '@/Components/Modals/EditTripModal';
 
@@ -34,6 +35,9 @@ export default function DeliveriesTab({
     const [dispatchVehicleInput, setDispatchVehicleInput] = useState('Engkel Box (D 8472 AB)');
     const [dispatchNotesInput, setDispatchNotesInput] = useState('');
 
+    const [deliverySearchQuery, setDeliverySearchQuery] = useState('');
+    const [deliveryFilterTab, setDeliveryFilterTab] = useState('all'); // 'all', 'unassigned', 'assigned', 'in_production'
+
     const [showAssignVehicleModal, setShowAssignVehicleModal] = useState(false);
     const [selectedAssignOrder, setSelectedAssignOrder] = useState(null);
     const [assignDriver, setAssignDriver] = useState('Pak Budi (Supir Utama DC)');
@@ -41,7 +45,62 @@ export default function DeliveriesTab({
     const [assignNotes, setAssignNotes] = useState('');
     const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
 
+    // Categorize orders based on division execution completion
+    const finishedOrders = useMemo(() => {
+        return initialOrders.filter(o => isOrderExecutionFinished(o));
+    }, [initialOrders]);
+
+    const unassignedOrders = useMemo(() => {
+        return finishedOrders.filter(o => !o.assigned_driver && !o.assigned_vehicle);
+    }, [finishedOrders]);
+
+    const assignedOrders = useMemo(() => {
+        return finishedOrders.filter(o => o.assigned_driver || o.assigned_vehicle);
+    }, [finishedOrders]);
+
+    const inProductionOrders = useMemo(() => {
+        return initialOrders.filter(o => !isOrderExecutionFinished(o) && o.status !== 'draft');
+    }, [initialOrders]);
+
+    // Active base list for the current filter tab
+    const baseOrdersList = useMemo(() => {
+        if (deliveryFilterTab === 'unassigned') return unassignedOrders;
+        if (deliveryFilterTab === 'assigned') return assignedOrders;
+        if (deliveryFilterTab === 'in_production') return inProductionOrders;
+        return finishedOrders; // 'all'
+    }, [deliveryFilterTab, finishedOrders, unassignedOrders, assignedOrders, inProductionOrders]);
+
+    // Apply real-time search query
+    const filteredOrders = useMemo(() => {
+        if (!deliverySearchQuery.trim()) return baseOrdersList;
+        const q = deliverySearchQuery.toLowerCase().trim();
+        return baseOrdersList.filter(o => {
+            const matchBasic = (
+                (o.spo_number && o.spo_number.toLowerCase().includes(q)) ||
+                (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
+                (o.customer_phone && o.customer_phone.toLowerCase().includes(q)) ||
+                (o.customer_address && o.customer_address.toLowerCase().includes(q)) ||
+                (o.assigned_driver && o.assigned_driver.toLowerCase().includes(q)) ||
+                (o.assigned_vehicle && o.assigned_vehicle.toLowerCase().includes(q)) ||
+                (o.trip_code && o.trip_code.toLowerCase().includes(q))
+            );
+            if (matchBasic) return true;
+
+            if (Array.isArray(o.items)) {
+                return o.items.some(it =>
+                    (it.glass_type && it.glass_type.toLowerCase().includes(q)) ||
+                    (it.description && it.description.toLowerCase().includes(q))
+                );
+            }
+            return false;
+        });
+    }, [baseOrdersList, deliverySearchQuery]);
+
     const handleOpenAssignVehicleModal = (order) => {
+        if (!isOrderExecutionFinished(order)) {
+            alert(`⚠️ Orderan SPO #${order.spo_number} belum selesai dieksekusi oleh divisi terakhir! Silakan tunggu sampai proses produksi selesai (Lolos QC).`);
+            return;
+        }
         setSelectedAssignOrder(order);
         if (order.assigned_driver) setAssignDriver(order.assigned_driver);
         if (order.assigned_vehicle) setAssignVehicle(order.assigned_vehicle);
@@ -52,6 +111,10 @@ export default function DeliveriesTab({
     const handleSingleAssignSubmit = (e) => {
         e.preventDefault();
         if (!selectedAssignOrder) return;
+        if (!isOrderExecutionFinished(selectedAssignOrder)) {
+            alert(`⚠️ Orderan SPO #${selectedAssignOrder.spo_number} belum selesai dieksekusi oleh divisi terakhir!`);
+            return;
+        }
         setIsSubmittingVehicle(true);
 
         router.post('/orders/batch-delivery', {
@@ -112,15 +175,26 @@ export default function DeliveriesTab({
     };
 
     const toggleSelectOrderForBatch = (orderId) => {
+        const order = initialOrders.find(o => o.id === orderId);
+        if (order && !isOrderExecutionFinished(order)) {
+            alert(`⚠️ Orderan SPO #${order.spo_number} belum selesai dieksekusi oleh divisi terakhir dan belum dapat dijadwalkan pengirimannya.`);
+            return;
+        }
         setSelectedBatchOrderIds(prev =>
             prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
         );
     };
 
     const toggleSelectAllReadyOrders = () => {
-        const unassignedOrders = initialOrders.filter(o => (o.status === 'pengiriman' || o.status === 'pengerjaan') && !o.assigned_driver);
-        const targetOrders = unassignedOrders.length > 0 ? unassignedOrders : initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan');
+        const selectableOrders = filteredOrders.filter(o => isOrderExecutionFinished(o));
+        if (selectableOrders.length === 0) return;
+
+        const unassignedSelectable = selectableOrders.filter(o => !o.assigned_driver);
+        const targetOrders = (deliveryFilterTab === 'unassigned' || (unassignedSelectable.length > 0 && selectedBatchOrderIds.length !== unassignedSelectable.length))
+            ? unassignedSelectable
+            : selectableOrders;
         const targetIds = targetOrders.map(o => o.id);
+
         if (selectedBatchOrderIds.length === targetIds.length) {
             setSelectedBatchOrderIds([]);
         } else {
@@ -132,6 +206,12 @@ export default function DeliveriesTab({
         e.preventDefault();
         if (selectedBatchOrderIds.length === 0) {
             alert('Silakan pilih (centang) minimal 1 SPO / Alamat pengiriman terlebih dahulu!');
+            return;
+        }
+
+        const unreadyOrders = initialOrders.filter(o => selectedBatchOrderIds.includes(o.id) && !isOrderExecutionFinished(o));
+        if (unreadyOrders.length > 0) {
+            alert('⚠️ Gagal: Orderan ' + unreadyOrders.map(o => '#' + o.spo_number).join(', ') + ' belum selesai dieksekusi sampai divisi terakhir! Hilangkan centang pada orderan tersebut.');
             return;
         }
 
@@ -180,8 +260,8 @@ export default function DeliveriesTab({
                     <span className="text-slate-600">Order Siap / Kirim:</span>
                     <span className="bg-blue-50 text-[#1b68b0] px-2 py-0.5 rounded-full font-mono font-black border border-blue-200">
                         {userRole === 'driver'
-                            ? initialOrders.filter(o => isDriverMatch(o.assigned_driver || o.driver_name, userName) && (o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan')).length
-                            : initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.status === 'pengerjaan').length} SPO
+                            ? initialOrders.filter(o => isDriverMatch(o.assigned_driver || o.driver_name, userName) && (o.status === 'pengiriman' || o.status === 'selesai')).length
+                            : finishedOrders.length} SPO
                     </span>
                 </div>
             </div>
@@ -629,28 +709,126 @@ export default function DeliveriesTab({
 
                     {/* TABEL PILIHAN SPO & ALAMAT PENGIRIMAN DENGAN FORM PENUGASAN MOBIL TERPADU */}
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
-                        <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
+                        {/* HEADER TABEL & PENCARIAN */}
+                        <div className="flex flex-wrap justify-between items-start gap-4 border-b border-slate-100 pb-4">
                             <div>
-                                <h3 className="text-sm font-black text-[#242222]">
-                                    Daftar Order SPO Siap Kirim & Form Penugasan Mobil Armada
+                                <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
+                                    <Truck className="w-5 h-5 text-[#1b68b0]" />
+                                    <span>Tabel Pengiriman Armada & Alokasi Supir</span>
                                 </h3>
-                                <p className="text-xs text-slate-500 font-medium">Tugaskan mobil per order pada kolom Supir & Mobil atau centang beberapa order untuk penugasan sekaligus (batch).</p>
+                                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                    Kelola penugasan supir dan mobil armada untuk orderan yang telah selesai dieksekusi oleh divisi pabrik (Lolos QC).
+                                </p>
                             </div>
+
                             <button
                                 type="button"
                                 onClick={toggleSelectAllReadyOrders}
-                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shadow-2xs flex items-center gap-1.5"
+                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs flex items-center gap-1.5 shrink-0"
                             >
                                 {selectedBatchOrderIds.length > 0 ? (
                                     <>
-                                        <XSquare className="w-3.5 h-3.5 text-rose-500" /> Batal Pilih Semua
+                                        <XSquare className="w-4 h-4 text-rose-500" /> Batal Pilih Semua
                                     </>
                                 ) : (
                                     <>
-                                        <CheckSquare className="w-3.5 h-3.5 text-[#1b68b0]" /> Pilih Semua Order
+                                        <CheckSquare className="w-4 h-4 text-[#1b68b0]" /> Pilih Semua Order
                                     </>
                                 )}
                             </button>
+                        </div>
+
+                        {/* CONTROLS: FILTER TABS & SEARCH INPUT */}
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-50/70 border border-slate-200 p-3 rounded-2xl">
+                            {/* FILTER PILLS */}
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                <button
+                                    type="button"
+                                    onClick={() => setDeliveryFilterTab('all')}
+                                    className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                        deliveryFilterTab === 'all'
+                                            ? 'bg-white text-[#1b68b0] border border-slate-200 shadow-xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                    }`}
+                                >
+                                    <Layers className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                    <span>Semua Siap Kirim</span>
+                                    <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 text-[10px] font-mono font-black px-1.5 py-0.2 rounded-full">
+                                        {finishedOrders.length}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setDeliveryFilterTab('unassigned')}
+                                    className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                        deliveryFilterTab === 'unassigned'
+                                            ? 'bg-white text-amber-800 border border-amber-200 shadow-xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                    }`}
+                                >
+                                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>Belum Dapat Supir</span>
+                                    <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-mono font-black px-1.5 py-0.2 rounded-full">
+                                        {unassignedOrders.length}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setDeliveryFilterTab('assigned')}
+                                    className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                        deliveryFilterTab === 'assigned'
+                                            ? 'bg-white text-emerald-800 border border-emerald-200 shadow-xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                    }`}
+                                >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-[#70b03c]" />
+                                    <span>Sudah Dapat Supir</span>
+                                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-mono font-black px-1.5 py-0.2 rounded-full">
+                                        {assignedOrders.length}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setDeliveryFilterTab('in_production')}
+                                    className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                        deliveryFilterTab === 'in_production'
+                                            ? 'bg-white text-slate-800 border border-slate-300 shadow-xs'
+                                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+                                    }`}
+                                    title="Orderan yang masih dalam pengerjaan divisi pabrik (belum siap kirim)"
+                                >
+                                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Sedang Dikerjakan Divisi</span>
+                                    <span className="bg-slate-200 text-slate-700 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full">
+                                        {inProductionOrders.length}
+                                    </span>
+                                </button>
+                            </div>
+
+                            {/* SEARCH INPUT */}
+                            <div className="relative w-full lg:w-72">
+                                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={deliverySearchQuery}
+                                    onChange={e => setDeliverySearchQuery(e.target.value)}
+                                    placeholder="Cari SPO, customer, supir..."
+                                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-1.5 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15"
+                                />
+                                {deliverySearchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeliverySearchQuery('')}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer"
+                                        title="Hapus pencarian"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* FORM PENUGASAN MOBIL ARMADA BATCH (DALAM CONTAINER TABEL) */}
@@ -722,15 +900,17 @@ export default function DeliveriesTab({
                             </form>
                         </div>
 
+                        {/* TABEL DATA PENGIRIMAN */}
                         <div className="overflow-x-auto border border-slate-200 rounded-xl">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50/80 text-slate-500 uppercase text-[11px] font-bold border-b border-slate-200">
+                                <thead className="bg-slate-50/80 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
                                     <tr>
                                         <th className="p-3 w-10 text-center">Pilih</th>
                                         <th className="p-3">Nomor SPO</th>
                                         <th className="p-3">Customer & Telp</th>
                                         <th className="p-3">Alamat Tujuan Pengiriman</th>
                                         <th className="p-3">Spesifikasi Barang Kaca</th>
+                                        <th className="p-3">Tahapan Divisi (QC)</th>
                                         <th className="p-3">Supir & Mobil</th>
                                         <th className="p-3">Status Pembayaran</th>
                                         <th className="p-3 text-center">Dokumen</th>
@@ -738,22 +918,32 @@ export default function DeliveriesTab({
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-xs">
                                     {(() => {
-                                        const allReadyOrders = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'pengerjaan' || o.status === 'selesai');
-
-                                        if (allReadyOrders.length === 0) {
+                                        if (filteredOrders.length === 0) {
                                             return (
                                                 <tr>
-                                                    <td colSpan="8" className="p-8 text-center text-slate-400 italic">
-                                                        Belum ada order SPO yang siap kirim.
+                                                    <td colSpan="9" className="p-8 text-center text-slate-400 space-y-2">
+                                                        <Search className="w-8 h-8 text-slate-300 mx-auto" />
+                                                        <p className="font-semibold text-slate-600">
+                                                            {deliverySearchQuery
+                                                                ? `Tidak ditemukan order yang cocok dengan kata kunci "${deliverySearchQuery}".`
+                                                                : 'Belum ada data order pada kategori ini.'}
+                                                        </p>
+                                                        {deliverySearchQuery && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setDeliverySearchQuery('')}
+                                                                className="text-xs text-[#1b68b0] hover:underline font-bold cursor-pointer"
+                                                            >
+                                                                Reset Pencarian
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
                                         }
 
-                                        const unassignedOrders = allReadyOrders.filter(o => !o.assigned_driver && !o.assigned_vehicle);
-                                        const assignedOrders = allReadyOrders.filter(o => o.assigned_driver || o.assigned_vehicle);
-
                                         const renderOrderRow = (ord) => {
+                                            const isReady = isOrderExecutionFinished(ord);
                                             const isSelected = selectedBatchOrderIds.includes(ord.id);
                                             const itemsList = Array.isArray(ord.items) && ord.items.length > 0
                                                 ? ord.items
@@ -766,32 +956,62 @@ export default function DeliveriesTab({
                                                 }];
 
                                             const isLunas = ord.payment_status === 'Lunas';
+                                            const relevantDivs = getOrderRelevantDivisions(ord);
+                                            const divProgress = ord.division_progress || {};
 
                                             return (
-                                                <tr key={ord.id} className={`transition ${isSelected ? 'bg-blue-50/60 border-l-4 border-l-[#1b68b0]' : 'hover:bg-slate-50/70'}`}>
+                                                <tr
+                                                    key={ord.id}
+                                                    className={`transition ${
+                                                        isSelected 
+                                                            ? 'bg-blue-50/60 border-l-4 border-l-[#1b68b0]' 
+                                                            : !isReady 
+                                                                ? 'bg-slate-50/50 hover:bg-slate-50/80 opacity-90' 
+                                                                : 'hover:bg-slate-50/70'
+                                                    }`}
+                                                >
                                                     <td className="p-3 text-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
-                                                            onChange={() => toggleSelectOrderForBatch(ord.id)}
-                                                            className="w-4 h-4 rounded text-[#1b68b0] focus:ring-[#1b68b0] border-slate-300 cursor-pointer"
-                                                        />
+                                                        {isReady ? (
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => toggleSelectOrderForBatch(ord.id)}
+                                                                className="w-4 h-4 rounded text-[#1b68b0] focus:ring-[#1b68b0] border-slate-300 cursor-pointer"
+                                                            />
+                                                        ) : (
+                                                            <input
+                                                                type="checkbox"
+                                                                disabled
+                                                                checked={false}
+                                                                className="w-4 h-4 rounded text-slate-300 bg-slate-100 border-slate-300 cursor-not-allowed opacity-50"
+                                                                title="Order belum selesai dieksekusi oleh divisi terakhir"
+                                                            />
+                                                        )}
                                                     </td>
 
                                                     <td className="p-3">
-                                                        <div className="font-extrabold text-[#1b68b0] font-mono text-xs">
-                                                            {ord.spo_number}
+                                                        <div className="font-extrabold text-[#1b68b0] font-mono text-xs flex items-center gap-1.5">
+                                                            <span>{ord.spo_number}</span>
+                                                            {ord.priority_status === 'Prioritas' && (
+                                                                <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[9px] font-black px-1.5 py-0.2 rounded">
+                                                                    PRIORITAS
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        {ord.trip_code && (
+                                                        {ord.trip_code ? (
                                                             <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                                                                Trip: {ord.trip_code}
+                                                                Trip: <strong className="text-slate-700">{ord.trip_code}</strong>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                                                Belum Ada Trip
                                                             </div>
                                                         )}
                                                     </td>
 
                                                     <td className="p-3">
                                                         <div className="font-bold text-[#242222]">{ord.customer_name}</div>
-                                                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">{ord.customer_phone}</div>
+                                                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">{ord.customer_phone || '-'}</div>
                                                     </td>
 
                                                     <td className="p-3 max-w-xs">
@@ -809,37 +1029,86 @@ export default function DeliveriesTab({
                                                         ))}
                                                     </td>
 
-                                                    <td className="p-3">
-                                                        {ord.assigned_driver ? (
-                                                            <div className="space-y-1">
-                                                                <div className="font-bold text-[#242222] text-xs">
-                                                                    {ord.assigned_driver}
-                                                                </div>
-                                                                <div className="text-[11px] text-slate-500 font-medium">
-                                                                    {ord.assigned_vehicle}
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleOpenAssignVehicleModal(ord)}
-                                                                    className="text-[10px] text-[#1b68b0] hover:underline font-bold flex items-center gap-1 mt-0.5 cursor-pointer"
-                                                                >
-                                                                    <Truck className="w-3 h-3" /> Ubah Mobil
-                                                                </button>
+                                                    {/* TAHAPAN DIVISI & STATUS QC */}
+                                                    <td className="p-3 space-y-1.5 min-w-[130px]">
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {relevantDivs.map(div => {
+                                                                const st = divProgress[div.code] || 'Belum';
+                                                                const isDone = st === 'Selesai';
+                                                                const isWorking = st === 'Sedang Dikerjakan';
+                                                                return (
+                                                                    <span
+                                                                        key={div.code}
+                                                                        title={`${div.name}: ${st}`}
+                                                                        className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                                                                            isDone
+                                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                                : isWorking
+                                                                                    ? 'bg-blue-50 text-[#1b68b0] border-blue-200 animate-pulse'
+                                                                                    : 'bg-slate-100 text-slate-500 border-slate-200'
+                                                                        }`}
+                                                                    >
+                                                                        {div.code}: {isDone ? '✓' : isWorking ? '...' : '-'}
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        {isReady ? (
+                                                            <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                                                                <CheckCircle2 className="w-3.5 h-3.5 text-[#70b03c] shrink-0" />
+                                                                <span>Lolos QC & Siap Kirim</span>
                                                             </div>
                                                         ) : (
-                                                            <div className="space-y-1.5">
-                                                                <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-bold inline-block">
-                                                                    Belum Ditugaskan
-                                                                </span>
-                                                                <div>
+                                                            <div className="flex items-center gap-1 text-[11px] font-bold text-amber-700">
+                                                                <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                                                <span>Sedang di {ord.current_division ? ord.current_division.replace('divisi_', '').toUpperCase() : 'Divisi'}</span>
+                                                            </div>
+                                                        )}
+                                                    </td>
+
+                                                    <td className="p-3">
+                                                        {isReady ? (
+                                                            ord.assigned_driver ? (
+                                                                <div className="space-y-1">
+                                                                    <div className="font-bold text-[#242222] text-xs">
+                                                                        {ord.assigned_driver}
+                                                                    </div>
+                                                                    <div className="text-[11px] text-slate-500 font-medium">
+                                                                        {ord.assigned_vehicle}
+                                                                    </div>
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleOpenAssignVehicleModal(ord)}
-                                                                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                                                                        className="text-[10px] text-[#1b68b0] hover:underline font-bold flex items-center gap-1 mt-0.5 cursor-pointer"
                                                                     >
-                                                                        <Truck className="w-3 h-3" /> Tugaskan Mobil
+                                                                        <Truck className="w-3 h-3" /> Ubah Mobil
                                                                     </button>
                                                                 </div>
+                                                            ) : (
+                                                                <div className="space-y-1.5">
+                                                                    <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-bold inline-block">
+                                                                        Belum Ditugaskan
+                                                                    </span>
+                                                                    <div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleOpenAssignVehicleModal(ord)}
+                                                                            className="bg-[#1b68b0] hover:bg-[#15528c] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                                                                        >
+                                                                            <Truck className="w-3 h-3" /> Tugaskan Mobil
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        ) : (
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-1 text-slate-500 bg-slate-100 border border-slate-200 px-2 py-1 rounded-lg text-[10px] font-bold">
+                                                                    <Lock className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                    <span>Terkunci (Belum Selesai Divisi)</span>
+                                                                </div>
+                                                                <p className="text-[10px] text-slate-400 italic">
+                                                                    Tunggu QC Divisi Terakhir
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </td>
@@ -851,59 +1120,129 @@ export default function DeliveriesTab({
                                                     </td>
 
                                                     <td className="p-3 text-center">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
-                                                            className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 px-2.5 py-1 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <Printer className="w-3.5 h-3.5" /> Cetak SJ
-                                                        </button>
+                                                        {isReady ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
+                                                                className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 px-2.5 py-1 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5" /> Cetak SJ
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                disabled
+                                                                className="bg-slate-100 text-slate-400 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 cursor-not-allowed opacity-60"
+                                                                title="Surat Jalan hanya dapat dicetak setelah lolos QC divisi terakhir"
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5" /> Cetak SJ
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
                                         };
 
+                                        // If 'all' filter is active and not searching, show clear grouped sections
+                                        if (deliveryFilterTab === 'all' && !deliverySearchQuery.trim()) {
+                                            const readyUnassigned = filteredOrders.filter(o => !o.assigned_driver && !o.assigned_vehicle);
+                                            const readyAssigned = filteredOrders.filter(o => o.assigned_driver || o.assigned_vehicle);
+
+                                            return (
+                                                <>
+                                                    {readyUnassigned.length > 0 && (
+                                                        <>
+                                                            <tr className="bg-amber-100/80 border-y-2 border-amber-300">
+                                                                <td colSpan="9" className="p-2.5 px-4 font-black text-amber-900 text-xs">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="flex items-center gap-2">
+                                                                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                                                            <span>ORDER SPO BELUM DITUGASKAN MOBIL ARMADA ({readyUnassigned.length} SPO SIAP DITUGASKAN)</span>
+                                                                        </span>
+                                                                        <span className="text-[10px] bg-white text-amber-800 font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
+                                                                            Prioritas Penugasan (Paling Atas)
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            {readyUnassigned.map(renderOrderRow)}
+                                                        </>
+                                                    )}
+
+                                                    {readyAssigned.length > 0 && (
+                                                        <>
+                                                            <tr className="bg-slate-100/90 border-y-2 border-slate-300">
+                                                                <td colSpan="9" className="p-2.5 px-4 font-black text-slate-700 text-xs">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="flex items-center gap-2">
+                                                                            <CheckCircle2 className="w-4 h-4 text-[#70b03c] shrink-0" />
+                                                                            <span>ORDER SPO SUDAH DITUGASKAN & PUNYA MOBIL ARMADA ({readyAssigned.length} SPO AKTIF TRIP)</span>
+                                                                        </span>
+                                                                        <span className="text-[10px] bg-white text-slate-600 font-extrabold px-2.5 py-0.5 rounded-full border border-slate-300 shadow-2xs">
+                                                                            Telah Ditugaskan
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            {readyAssigned.map(renderOrderRow)}
+                                                        </>
+                                                    )}
+                                                </>
+                                            );
+                                        }
+
+                                        // For specific filter tabs or active search:
                                         return (
                                             <>
-                                                {/* SEKSI 1: ORDER SPO BELUM DITUGASKAN (PALING ATAS) */}
-                                                {unassignedOrders.length > 0 && (
-                                                    <>
-                                                        <tr className="bg-amber-100/80 border-y-2 border-amber-300">
-                                                            <td colSpan="8" className="p-2.5 px-4 font-black text-amber-900 text-xs">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="flex items-center gap-2">
-                                                                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                                                                        <span>ORDER SPO BELUM DITUGASKAN MOBIL ARMADA ({unassignedOrders.length} SPO SIAP DITUGASKAN)</span>
-                                                                    </span>
-                                                                    <span className="text-[10px] bg-white text-amber-800 font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
-                                                                        Prioritas Penugasan (Paling Atas)
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        {unassignedOrders.map(renderOrderRow)}
-                                                    </>
+                                                {deliveryFilterTab === 'unassigned' && (
+                                                    <tr className="bg-amber-100/80 border-y-2 border-amber-300">
+                                                        <td colSpan="9" className="p-2.5 px-4 font-black text-amber-900 text-xs">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="flex items-center gap-2">
+                                                                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                                                    <span>DAFTAR ORDER SELESAI BELUM MENDAPATKAN SUPIR ({filteredOrders.length} SPO)</span>
+                                                                </span>
+                                                                <span className="text-[10px] bg-white text-amber-800 font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 shadow-2xs">
+                                                                    Perlu Dialokasikan
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                 )}
 
-                                                {/* SEKSI 2: ORDER SPO SUDAH DITUGASKAN (PALING BAWAH) */}
-                                                {assignedOrders.length > 0 && (
-                                                    <>
-                                                        <tr className="bg-slate-100/90 border-y-2 border-slate-300">
-                                                            <td colSpan="8" className="p-2.5 px-4 font-black text-slate-700 text-xs">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="flex items-center gap-2">
-                                                                        <CheckCircle2 className="w-4 h-4 text-[#70b03c] shrink-0" />
-                                                                        <span>ORDER SPO SUDAH DITUGASKAN & PUNYA MOBIL ARMADA ({assignedOrders.length} SPO AKTIF TRIP)</span>
-                                                                    </span>
-                                                                    <span className="text-[10px] bg-white text-slate-600 font-extrabold px-2.5 py-0.5 rounded-full border border-slate-300 shadow-2xs">
-                                                                        Telah Ditugaskan (Di Bawah)
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        {assignedOrders.map(renderOrderRow)}
-                                                    </>
+                                                {deliveryFilterTab === 'assigned' && (
+                                                    <tr className="bg-emerald-100/70 border-y-2 border-emerald-300">
+                                                        <td colSpan="9" className="p-2.5 px-4 font-black text-emerald-900 text-xs">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="flex items-center gap-2">
+                                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                                    <span>DAFTAR ORDER SELESAI SUDAH MENDAPATKAN SUPIR ({filteredOrders.length} SPO)</span>
+                                                                </span>
+                                                                <span className="text-[10px] bg-white text-emerald-800 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300 shadow-2xs">
+                                                                    Aktif Pengiriman
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                 )}
+
+                                                {deliveryFilterTab === 'in_production' && (
+                                                    <tr className="bg-slate-100/90 border-y-2 border-slate-300">
+                                                        <td colSpan="9" className="p-2.5 px-4 font-black text-slate-700 text-xs">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="flex items-center gap-2">
+                                                                    <Clock className="w-4 h-4 text-slate-500 shrink-0" />
+                                                                    <span>ORDER MASIH AKTIF DALAM PENGERJAAN DIVISI PABRIK ({filteredOrders.length} SPO — BELUM BISA DIKIRIM)</span>
+                                                                </span>
+                                                                <span className="text-[10px] bg-white text-slate-600 font-extrabold px-2.5 py-0.5 rounded-full border border-slate-300 shadow-2xs">
+                                                                    Terkunci dari Pengiriman
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+
+                                                {filteredOrders.map(renderOrderRow)}
                                             </>
                                         );
                                     })()}
