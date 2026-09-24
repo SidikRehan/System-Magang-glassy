@@ -261,7 +261,7 @@ export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver',
                             accept="image/*"
                             multiple
                             required={photos.length === 0}
-                            onChange={handlePhotosChange}
+                            onChange={handlePhotoAdd}
                             className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-slate-600 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#1b68b0]/10 file:text-[#1b68b0] hover:file:bg-[#1b68b0]/20 cursor-pointer"
                         />
                         {errors.receipt_photos && <p className="text-xs text-rose-500 mt-1">{errors.receipt_photos}</p>}

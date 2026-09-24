@@ -32,7 +32,10 @@ class OrderController extends Controller
             'deadline_date' => 'nullable|date',
             'used_scrap_rak' => 'nullable|string',
             'status' => 'nullable|string|in:draft,pengerjaan',
+            'is_company_use' => 'nullable|boolean',
         ]);
+
+        $isCompanyUse = (bool)$request->input('is_company_use', false);
 
         $targetStatus = $validated['status'] ?? 'pengerjaan';
         $isDraft = ($targetStatus === 'draft');
@@ -47,7 +50,7 @@ class OrderController extends Controller
 
         if (is_array($rawItems) && count($rawItems) > 0) {
             foreach ($rawItems as $it) {
-                $calc = $this->calculateItemPricing($it);
+                $calc = $this->calculateItemPricing($it, $isCompanyUse);
                 $subtotal += $calc['subtotal'];
                 $items[] = $calc;
             }
@@ -60,7 +63,7 @@ class OrderController extends Controller
                 'qty' => 1,
                 'processes' => $validated['processes'] ?? ['HT']
             ];
-            $calc = $this->calculateItemPricing($defaultIt);
+            $calc = $this->calculateItemPricing($defaultIt, $isCompanyUse);
             $subtotal = $calc['subtotal'];
             $items[] = $calc;
         }
@@ -145,6 +148,7 @@ class OrderController extends Controller
             'gudang_released_at' => $isDraft ? null : now(),
             'division_progress' => $this->buildDivisionProgress($items, $validated['processes'] ?? []),
             'used_scrap_rak' => !empty(trim($validated['used_scrap_rak'] ?? '')) ? $validated['used_scrap_rak'] : '-',
+            'is_company_use' => $isCompanyUse,
         ]);
 
         $message = $isDraft 
@@ -185,7 +189,12 @@ class OrderController extends Controller
             'payment_option' => 'nullable|string',
             'dp_percent' => 'nullable|numeric',
             'custom_paid_amount' => 'nullable|numeric',
+            'is_company_use' => 'nullable|boolean',
         ]);
+
+        $isCompanyUse = $request->has('is_company_use') 
+            ? (bool)$request->input('is_company_use') 
+            : (bool)($order->is_company_use ?? false);
 
         $rawItems = $request->input('items');
         $items = [];
@@ -193,7 +202,7 @@ class OrderController extends Controller
 
         if (is_array($rawItems) && count($rawItems) > 0) {
             foreach ($rawItems as $it) {
-                $calc = $this->calculateItemPricing($it);
+                $calc = $this->calculateItemPricing($it, $isCompanyUse);
                 $subtotal += $calc['subtotal'];
                 $items[] = $calc;
             }
@@ -206,7 +215,7 @@ class OrderController extends Controller
                 'qty' => 1,
                 'processes' => $validated['processes'] ?? ['HT']
             ];
-            $calc = $this->calculateItemPricing($defaultIt);
+            $calc = $this->calculateItemPricing($defaultIt, $isCompanyUse);
             $subtotal = $calc['subtotal'];
             $items[] = $calc;
         }
@@ -266,6 +275,7 @@ class OrderController extends Controller
         $order->priority_fee = $priorityFee;
         $order->custom_fee = $customFee;
         $order->total_price = $totalPrice;
+        $order->is_company_use = $isCompanyUse;
 
         if ($isRevisionUpdate) {
             $order->is_revised = true;
@@ -396,7 +406,7 @@ class OrderController extends Controller
     /**
      * Calculate Item Glass & Process Option Pricing
      */
-    private function calculateItemPricing(array $it): array
+    private function calculateItemPricing(array $it, bool $isCompanyUse = false): array
     {
         $lRaw = str_replace(',', '.', (string)($it['length_cm'] ?? 100));
         $wRaw = str_replace(',', '.', (string)($it['width_cm'] ?? 100));
@@ -429,8 +439,8 @@ class OrderController extends Controller
             else $pricePerM2 = 380000;
         }
         $rawBasePrice = round($areaM2 * $pricePerM2);
-        // Harga dasar kaca murni proporsional luas area m2
-        $baseGlassPrice = $rawBasePrice * $q;
+        // Harga dasar kaca murni proporsional luas area m2 (0 jika Orderan Kosong / Dipakai Perusahaan)
+        $baseGlassPrice = $isCompanyUse ? 0 : ($rawBasePrice * $q);
 
         // 3. Biaya GM, HT, BV, Etsa dengan tarif kustom per jenis kaca (dengan fallback default)
         $rateGM = (float)($it['rate_gm'] ?? 10000);
@@ -495,7 +505,15 @@ class OrderController extends Controller
             $feeEtsa = max(($rateEtsa / 2) * $q, $feeEtsa);
         }
 
-        // Total Item Subtotal
+        // Total Item Subtotal (0 jika Orderan Kosong / Dipakai Perusahaan)
+        if ($isCompanyUse) {
+            $feeGM = 0;
+            $feeHT = 0;
+            $feeBV = 0;
+            $feeBor = 0;
+            $feeEtsa = 0;
+        }
+
         $itemSubtotal = $baseGlassPrice + $feeGM + $feeHT + $feeBV + $feeBor + $feeEtsa;
 
         return [

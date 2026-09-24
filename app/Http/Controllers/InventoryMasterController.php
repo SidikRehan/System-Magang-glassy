@@ -331,6 +331,10 @@ class InventoryMasterController extends Controller
     // ==========================================
     public function storeTool(Request $request)
     {
+        if ($request->user()?->role === 'admin_toko') {
+            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Pengelolaan alat dilakukan oleh Admin Gudang.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:100',
@@ -359,6 +363,10 @@ class InventoryMasterController extends Controller
 
     public function updateTool(Request $request, $id)
     {
+        if ($request->user()?->role === 'admin_toko') {
+            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Pengelolaan alat dilakukan oleh Admin Gudang.');
+        }
+
         $tool = Tool::findOrFail($id);
 
         $validated = $request->validate([
@@ -389,6 +397,10 @@ class InventoryMasterController extends Controller
 
     public function borrowTool(Request $request, $id)
     {
+        if ($request->user()?->role === 'admin_toko') {
+            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Pencatatan peminjaman alat dilakukan oleh Admin Gudang.');
+        }
+
         $tool = Tool::findOrFail($id);
 
         $validated = $request->validate([
@@ -415,6 +427,10 @@ class InventoryMasterController extends Controller
 
     public function returnTool(Request $request, $borrowId)
     {
+        if ($request->user()?->role === 'admin_toko') {
+            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Pengembalian alat dikelola oleh Admin Gudang.');
+        }
+
         $borrow = ToolBorrow::findOrFail($borrowId);
 
         if ($borrow->status === 'Dikembalikan') {
@@ -435,6 +451,10 @@ class InventoryMasterController extends Controller
 
     public function repairTool(Request $request, $id)
     {
+        if ($request->user()?->role === 'admin_toko') {
+            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Perbaikan alat dikelola oleh Admin Gudang.');
+        }
+
         $tool = Tool::findOrFail($id);
 
         $validated = $request->validate([
@@ -450,8 +470,12 @@ class InventoryMasterController extends Controller
         return redirect()->back()->with('success', "Status kondisi {$tool->name} diperbarui menjadi {$validated['condition']}!");
     }
 
-    public function destroyTool($id)
+    public function destroyTool(Request $request, $id)
     {
+        if ($request->user()?->role === 'admin_toko') {
+            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Pengapusan alat dikelola oleh Admin Gudang.');
+        }
+
         $tool = Tool::findOrFail($id);
         $name = $tool->name;
         $tool->delete();
@@ -520,6 +544,53 @@ class InventoryMasterController extends Controller
         });
 
         return redirect()->back()->with('success', "Penggunaan {$validated['qty']} {$supply->unit} {$supply->name} berhasil dicatat!");
+    }
+
+    public function batchUseSupplies(Request $request)
+    {
+        if ($request->user()?->role === 'admin_toko') {
+            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Catat pemakaian dilakukan oleh Admin Gudang.');
+        }
+
+        $validated = $request->validate([
+            'user_name' => 'required|string|max:255',
+            'division' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
+            'items' => 'required|array|min:1',
+            'items.*.supply_id' => 'required|exists:supplies,id',
+            'items.*.qty' => 'required|integer|min:1',
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            foreach ($validated['items'] as $item) {
+                $supply = Supply::findOrFail($item['supply_id']);
+                $qtyToUse = (int) $item['qty'];
+
+                if ($qtyToUse > $supply->qty) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items' => ["Stok {$supply->name} tidak mencukupi! Sisa stok: {$supply->qty}"]
+                    ]);
+                }
+
+                SupplyUsage::create([
+                    'supply_id' => $supply->id,
+                    'user_name' => $validated['user_name'],
+                    'qty' => $qtyToUse,
+                    'division' => $validated['division'] ?? 'HT (Potong)',
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+
+                $newQty = max(0, $supply->qty - $qtyToUse);
+                $status = $newQty > $supply->min_stock ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+
+                $supply->update([
+                    'qty' => $newQty,
+                    'status' => $status,
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', "Log pemakaian " . count($validated['items']) . " item perlengkapan berhasil dicatat!");
     }
 
     public function requestRestockSupply(Request $request, $id)

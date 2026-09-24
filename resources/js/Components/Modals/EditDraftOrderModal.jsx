@@ -23,7 +23,8 @@ import {
     Package,
     RotateCcw,
     Bell,
-    Loader2
+    Loader2,
+    Building2
 } from 'lucide-react';
 import SearchableSelect from '@/Components/SearchableSelect';
 
@@ -203,7 +204,7 @@ export default function EditDraftOrderModal({
                 <form className="space-y-4 text-xs overflow-y-auto pr-1 flex-1">
                     {/* CATATAN REVISI JIKA EDITING ORDER */}
                     {editingOrder && (
-                        <div className={`p-4 sm:p-5 rounded-2xl border space-y-2 shadow-xs transition ${
+                        <div className={`p-4 sm:p-5 rounded-2xl border space-y-3 shadow-xs transition ${
                             !isRevisionNotesValid && attemptedSubmit
                                 ? 'bg-rose-50/90 border-rose-300 ring-2 ring-rose-500/20'
                                 : 'bg-amber-50/70 border-amber-200'
@@ -219,15 +220,28 @@ export default function EditDraftOrderModal({
                                     </span>
                                 )}
                             </h4>
+
+                            {/* TAMPILKAN CATATAN REVISI SEBELUMNYA SEBAGAI REFERENSI (BACA SAJA) */}
+                            {editingOrder.revision_notes && (
+                                <div className="bg-white/80 border border-amber-200 rounded-xl p-3 text-xs text-slate-800 space-y-1">
+                                    <span className="font-bold text-amber-900 text-[11px] block">
+                                        📜 Catatan Revisi Sebelumnya ({editingOrder.revision_count || 1}x Revisi):
+                                    </span>
+                                    <p className="text-slate-700 italic font-mono text-[11px] bg-amber-50/60 p-2 rounded-lg border border-amber-100/80">
+                                        "{editingOrder.revision_notes}"
+                                    </p>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="text-slate-700 block mb-1 font-semibold flex items-center justify-between">
-                                    <span>Catatan Alasan Perubahan Revisi (misal: konsumen ganti ukuran kaca / ganti jenis kaca):</span>
-                                    {editingOrder.status === 'pengerjaan' && <span className="text-rose-600 font-extrabold text-[11px]">* Wajib Diisi</span>}
+                                    <span>Catatan Alasan Perubahan Revisi Terbaru:</span>
+                                    {editingOrder.status === 'pengerjaan' && <span className="text-rose-600 font-extrabold text-[11px]">* Wajib Diisi Untuk Revisi Baru</span>}
                                 </label>
                                 <textarea 
                                     key={`revision_notes_${shakeKey}`}
                                     rows="2" 
-                                    placeholder="Contoh: Konsumen minta ubah ukuran kaca dari 100x50 cm ke 100x60 cm. (Field ini wajib diisi)"
+                                    placeholder="Masukkan catatan/alasan revisi TERBARU di sini... (Contoh: Konsumen minta ubah ukuran kaca dari 100x50 cm ke 100x60 cm)"
                                     value={orderForm.revision_notes || ''} 
                                     onChange={e => setOrderForm('revision_notes', e.target.value)} 
                                     className={getFieldClass(isRevisionNotesValid, "w-full bg-white border border-amber-300 rounded-xl p-2.5 text-slate-800 text-xs focus:border-amber-500 font-medium shadow-xs")}
@@ -235,11 +249,11 @@ export default function EditDraftOrderModal({
                                 {!isRevisionNotesValid && attemptedSubmit ? (
                                     <div className="flex items-center gap-1.5 mt-1.5 text-rose-600 text-xs font-bold animate-pulse">
                                         <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
-                                        <span>Harus diisi field ini! (Catatan revisi wajib diisi untuk menginfokan divisi produksi & gudang)</span>
+                                        <span>Harus diisi field ini! (Catatan revisi terbaru wajib diisi untuk menginfokan divisi produksi & gudang)</span>
                                     </div>
                                 ) : (
                                     <span className="text-[10px] text-amber-800 block mt-1">
-                                        *Catatan revisi ini khusus untuk mencatat alasan perubahan dari konsumen dan akan dikirimkan ke Admin Gudang & Divisi Produksi.
+                                        *Catatan revisi ini khusus untuk mencatat alasan perubahan terbaru dari konsumen dan akan dikirimkan ke Admin Gudang & Divisi Produksi.
                                     </span>
                                 )}
                             </div>
@@ -289,6 +303,38 @@ export default function EditDraftOrderModal({
                                 className={getFieldClass(isCustomerAddressValid, "w-full bg-white border rounded-xl p-2.5 text-slate-800 shadow-xs transition")} 
                                 placeholder="Alamat lengkap lokasi pengantaran kaca..." 
                             />
+                        </div>
+
+                        {/* BANNER OPTION: ORDERAN KOSONG (DIPAKAI PERUSAHAAN / FREE KACA) */}
+                        <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setOrderForm('is_company_use', !orderForm.is_company_use)}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs ${
+                                        orderForm.is_company_use
+                                            ? 'bg-[#1b68b0] text-white border border-[#15528c] shadow-md ring-2 ring-[#1b68b0]/20'
+                                            : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 hover:border-slate-400'
+                                    }`}
+                                >
+                                    <Building2 className="w-4 h-4" />
+                                    <span>Orderan Kosong</span>
+                                    {orderForm.is_company_use && (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-300 ml-0.5" />
+                                    )}
+                                </button>
+                                <span className="text-[11px] text-slate-500 italic font-sans">
+                                    {orderForm.is_company_use 
+                                        ? '✓ Aktif: Dipakai Perusahaan (Free Kaca Rp 0 & Tetap Masuk Laporan / Performance)' 
+                                        : 'Klik jika orderan untuk kebutuhan internal perusahaan (Free Kaca)'}
+                                </span>
+                            </div>
+                            {orderForm.is_company_use && (
+                                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-xs font-sans">
+                                    <Building2 className="w-3.5 h-3.5 text-amber-700" />
+                                    <span>Free Kaca (Orderan Kosong)</span>
+                                </span>
+                            )}
                         </div>
                     </div>
 
@@ -1232,12 +1278,26 @@ export default function EditDraftOrderModal({
                         <div className="space-y-1.5 text-xs font-sans">
                             <div className="flex justify-between text-slate-600">
                                 <span>Total Harga Kaca Dibeli (Bahan):</span>
-                                <strong className="font-mono text-slate-800">Rp {calcTotalGlassBasePrice.toLocaleString()}</strong>
+                                {orderForm.is_company_use ? (
+                                    <span className="font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[11px] flex items-center gap-1">
+                                        <Building2 className="w-3 h-3 text-emerald-600" />
+                                        Rp 0 (Free Kaca - Orderan Kosong)
+                                    </span>
+                                ) : (
+                                    <strong className="font-mono text-slate-800">Rp {calcTotalGlassBasePrice.toLocaleString()}</strong>
+                                )}
                             </div>
 
                             <div className="flex justify-between text-slate-600">
                                 <span>Total Biaya Eksekusi / Proses Kaca:</span>
-                                <strong className="font-mono text-[#1b68b0]">+ Rp {calcTotalProcessFees.toLocaleString()}</strong>
+                                {orderForm.is_company_use ? (
+                                    <span className="font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[11px] flex items-center gap-1">
+                                        <Building2 className="w-3 h-3 text-emerald-600" />
+                                        + Rp 0 (Free Proses - Orderan Kosong)
+                                    </span>
+                                ) : (
+                                    <strong className="font-mono text-[#1b68b0]">+ Rp {calcTotalProcessFees.toLocaleString()}</strong>
+                                )}
                             </div>
 
                             {calcTotalAccessoryFees > 0 && (

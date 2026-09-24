@@ -690,7 +690,7 @@ export default function DivisionExecutionModal({
                                 <div className="flex items-center gap-2">
                                     <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                     <span className="text-slate-500 w-28">Target Deadline:</span>
-                                    <strong className="text-[#1b68b0] font-mono font-extrabold">{selectedExecutionOrder.deadline_date || '-'}</strong>
+                                    <strong className="text-[#1b68b0] font-mono font-extrabold">{formatIndonesianDate(selectedExecutionOrder.deadline_date)}</strong>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Layers className="w-3.5 h-3.5 text-slate-400 shrink-0" />

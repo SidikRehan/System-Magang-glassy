@@ -3,7 +3,7 @@ import {
     Wrench, User, Calendar, MapPin, CheckCircle2, 
     Clock, AlertTriangle, Search, Plus, ClipboardList, 
     Check, Edit, RefreshCw, XCircle, ShieldAlert, 
-    Layers, ArrowRightLeft, PenTool
+    Layers, ArrowRightLeft, PenTool, Info
 } from 'lucide-react';
 
 export default function ToolsTab({
@@ -95,9 +95,9 @@ export default function ToolsTab({
 
             {/* BUTTON ACTION & SUBTAB TOGGLE */}
             <div className="flex flex-wrap justify-between items-center gap-4 bg-white border border-slate-200 p-3 rounded-2xl shadow-xs">
-                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                     <div className="flex flex-wrap items-center gap-2">
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                        {(userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button
                                 onClick={() => setShowAddToolModal(true)}
                                 className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
@@ -126,6 +126,12 @@ export default function ToolsTab({
                             <ClipboardList className="w-3.5 h-3.5 text-[#1b68b0]" />
                             <span>{userRole === 'driver' ? 'Pinjam Alat Supir' : 'Catat Peminjaman Alat'}</span>
                         </button>
+                    </div>
+                )}
+                {userRole === 'admin_toko' && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                        <Info className="w-4 h-4 text-[#1b68b0] shrink-0" />
+                        <span>Akses Lihat-Saja (Pencatatan & peminjaman alat khusus dikelola oleh Admin Gudang)</span>
                     </div>
                 )}
 
@@ -256,7 +262,7 @@ export default function ToolsTab({
                                                 </div>
                                             </td>
                                             <td className="p-3 text-right">
-                                                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => handleOpenEditToolModal(t)}
                                                         className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow-2xs ml-auto cursor-pointer"
@@ -346,7 +352,7 @@ export default function ToolsTab({
                                             </td>
                                             <td className="p-3 text-right">
                                                 {b.status === 'Sedang Dipinjam' ? (
-                                                    (userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                    (userRole === 'admin_gudang' || userRole === 'owner') && (
                                                         <button
                                                             onClick={() => handleOpenReturnModal(b)}
                                                             className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs ml-auto flex items-center gap-1 cursor-pointer"
@@ -359,7 +365,7 @@ export default function ToolsTab({
                                                         <span className="text-xs text-emerald-700 font-bold font-mono">
                                                             Selesai ({b.actual_return})
                                                         </span>
-                                                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                        {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                             <button
                                                                 onClick={() => handleOpenReturnModal(b)}
                                                                 className="text-[10px] text-[#1b68b0] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer"
@@ -511,7 +517,7 @@ export default function ToolsTab({
                                                 )}
                                             </td>
                                             <td className="p-3 text-right space-y-1.5">
-                                                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                     <>
                                                         {/* TAHAP 1: PERLU PERBAIKAN */}
                                                         {(!t.repair_stage || t.repair_stage === 'Perlu Perbaikan') && (t.damaged_qty || 0) > 0 && (

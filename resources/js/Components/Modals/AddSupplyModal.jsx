@@ -70,6 +70,7 @@ export default function AddSupplyModal({
                             onChange={e => setForm({ ...form, category: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                         >
+                            <option value="Sparepart & Komponen Mesin">Sparepart & Komponen Mesin (Mata Bor, Carbon Brush, V-Belt, Bearing)</option>
                             <option value="APD & Keselamatan Kerja">APD & Keselamatan Kerja (Sarung Tangan, Kacamata)</option>
                             <option value="Perkakas Tangan Habis Pakai">Perkakas Tangan Habis Pakai (Cutter, Pisau)</option>
                             <option value="Peralatan Packaging & Pengiriman">Packaging & Pengiriman (Lakban, Plastik)</option>

@@ -607,11 +607,31 @@ class SypOperationalController extends Controller
     {
         $order = Order::findOrFail($id);
 
+        $validated = $request->validate([
+            'proof_photo' => 'required|image|max:5120',
+            'recipient_name' => 'nullable|string|max:255',
+            'mark_lunas' => 'nullable|boolean',
+            'payment_status' => 'nullable|string',
+        ], [
+            'proof_photo.required' => 'Wajib melampirkan foto Surat Jalan yang telah ditandatangani penerima sebelum mengonfirmasi pengiriman terkirim!',
+            'proof_photo.image' => 'File bukti harus berupa gambar (JPG, PNG, JPEG).',
+            'proof_photo.max' => 'Ukuran foto bukti tidak boleh lebih dari 5 MB.',
+        ]);
+
+        if ($request->hasFile('proof_photo')) {
+            $path = $request->file('proof_photo')->store('delivery_proofs', 'public');
+            $order->proof_photo_path = $path;
+        }
+
+        if (!empty($validated['recipient_name'])) {
+            $order->recipient_name = $validated['recipient_name'];
+        }
+
         $order->status = 'selesai';
         $order->current_division = 'selesai';
         $order->delivered_at = $order->delivered_at ?? now();
 
-        if ($request->boolean('mark_lunas') || $request->input('payment_status') === 'Lunas') {
+        if ($request->boolean('mark_lunas') || ($validated['payment_status'] ?? '') === 'Lunas') {
             $order->payment_status = 'Lunas';
             $order->paid_amount = $order->total_price;
         }
@@ -619,7 +639,8 @@ class SypOperationalController extends Controller
         $order->save();
 
         Delivery::where('order_id', $order->id)->update([
-            'delivery_status' => 'Selesai Terkirim'
+            'delivery_status' => 'Selesai Terkirim',
+            'proof_photo_path' => $order->proof_photo_path,
         ]);
 
         return redirect()->back()->with('message', '✅ Order #' . $order->spo_number . ' Berhasil Dikonfirmasi Selesai Terkirim ke Konsumen!');

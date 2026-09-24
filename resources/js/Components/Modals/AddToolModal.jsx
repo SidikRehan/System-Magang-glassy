@@ -71,6 +71,7 @@ export default function AddToolModal({
                             onChange={e => setForm({ ...form, category: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                         >
+                            <option value="Mesin Utama Pabrik">Mesin Utama Pabrik (CNC Cutting, Bevel Machine, Washing)</option>
                             <option value="Mesin Bor & Potong">Mesin Bor & Potong (Kaca/Mesin)</option>
                             <option value="Mata Bor & Mata Potong">Mata Bor & Mata Potong Diamond</option>
                             <option value="Mesin & Alat Vakum">Mesin Suction Cup & Vakum Kaca</option>
