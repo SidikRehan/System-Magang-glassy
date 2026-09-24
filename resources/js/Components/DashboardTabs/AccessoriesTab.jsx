@@ -2,7 +2,7 @@ import React from 'react';
 import { 
     Plug, Plus, Search, RefreshCw, Send, 
     Edit, Trash2, AlertTriangle, CheckCircle2, 
-    Lock, Package, AlertCircle
+    Lock, Package, AlertCircle, ZoomIn
 } from 'lucide-react';
 
 export default function AccessoriesTab({
@@ -18,6 +18,7 @@ export default function AccessoriesTab({
     handleRequestAccRestockStatus,
     handleOpenEditAccModal,
     handleDeleteAcc,
+    handleOpenSketchLightbox = () => {},
 }) {
     if (userRole !== 'admin_toko' && userRole !== 'owner') {
         return null;
@@ -140,11 +141,20 @@ export default function AccessoriesTab({
                                     <td className="p-3 font-bold text-[#242222]">
                                         <div className="flex items-center gap-3">
                                             {acc.image_path ? (
-                                                <img 
-                                                    src={acc.image_path.startsWith('http') || acc.image_path.startsWith('/') ? acc.image_path : `/storage/${acc.image_path}`} 
-                                                    alt={acc.name} 
-                                                    className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0 bg-slate-50"
-                                                />
+                                                <div 
+                                                    className="relative group cursor-pointer shrink-0 overflow-hidden rounded-xl"
+                                                    onClick={() => handleOpenSketchLightbox(acc.image_path, `${acc.name} (${acc.acc_code || 'Aksesoris'})`)}
+                                                    title="Klik untuk memperbesar / melihat foto aksesoris"
+                                                >
+                                                    <img 
+                                                        src={acc.image_path.startsWith('http') || acc.image_path.startsWith('/') ? acc.image_path : `/storage/${acc.image_path}`} 
+                                                        alt={acc.name} 
+                                                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-2xs group-hover:opacity-85 transition group-hover:scale-105 bg-slate-50"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                                                        <ZoomIn className="w-4 h-4" />
+                                                    </div>
+                                                </div>
                                             ) : (
                                                 <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-[#1b68b0] flex items-center justify-center shrink-0 font-bold shadow-2xs">
                                                     <Plug className="w-5 h-5 text-[#1b68b0]" />

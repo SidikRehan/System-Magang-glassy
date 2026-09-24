@@ -3,7 +3,7 @@ import {
     Boxes, Plus, Search, Eye, EyeOff, RefreshCw, 
     MessageSquare, Edit, Trash2, Calendar, Scissors, 
     Layers, CheckCircle2, AlertTriangle, Clock, ShieldCheck, 
-    Lock, Check, Package, Send
+    Lock, Check, Package, Send, ZoomIn
 } from 'lucide-react';
 import { isMatchSearch } from '@/Utils/dashboardHelpers';
 
@@ -30,6 +30,7 @@ export default function ScrapTab({
     handleRequestRestockStatus,
     setShowScrapModal,
     handleDeleteStockItem,
+    handleOpenSketchLightbox = () => {},
 }) {
     // If not passed externally, calculate internally
     const filteredSheetGlasses = externalFilteredSheetGlasses || sheetGlasses.filter(g => {
@@ -230,11 +231,20 @@ export default function ScrapTab({
                                                 <td className="p-3 font-bold text-[#242222]">
                                                     <div className="flex items-center gap-3">
                                                         {item.image_path ? (
-                                                            <img 
-                                                                src={item.image_path.startsWith('http') || item.image_path.startsWith('/') ? item.image_path : `/storage/${item.image_path}`} 
-                                                                alt={item.name} 
-                                                                className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0 bg-slate-50"
-                                                            />
+                                                            <div 
+                                                                className="relative group cursor-pointer shrink-0 overflow-hidden rounded-xl"
+                                                                onClick={() => handleOpenSketchLightbox(item.image_path, `${item.name} (${item.item_code || 'Kaca'})`)}
+                                                                title="Klik untuk memperbesar / melihat foto kaca"
+                                                            >
+                                                                <img 
+                                                                    src={item.image_path.startsWith('http') || item.image_path.startsWith('/') ? item.image_path : `/storage/${item.image_path}`} 
+                                                                    alt={item.name} 
+                                                                    className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-2xs group-hover:opacity-85 transition group-hover:scale-105 bg-slate-50"
+                                                                />
+                                                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                                                                    <ZoomIn className="w-4 h-4" />
+                                                                </div>
+                                                            </div>
                                                         ) : (
                                                             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-[#1b68b0] flex items-center justify-center shrink-0 font-bold shadow-2xs">
                                                                 <Boxes className="w-5 h-5 text-[#1b68b0]" />

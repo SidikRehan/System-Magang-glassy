@@ -3,7 +3,7 @@ import {
     Wrench, User, Calendar, MapPin, CheckCircle2, 
     Clock, AlertTriangle, Search, Plus, ClipboardList, 
     Check, Edit, RefreshCw, XCircle, ShieldAlert, 
-    Layers, ArrowRightLeft, PenTool
+    Layers, ArrowRightLeft, PenTool, Info
 } from 'lucide-react';
 
 export default function ToolsTab({
@@ -24,6 +24,7 @@ export default function ToolsTab({
     handleOpenReturnModal,
     handleStartRepair,
     handleOpenCompleteRepairModal,
+    handleOpenSketchLightbox,
 }) {
     const totalReadyUnits = toolsList.reduce((sum, t) => sum + (t.available_qty || 0), 0);
     const activeBorrowingsCount = toolBorrowings.filter(b => b.status === 'Sedang Dipinjam').length;
@@ -95,9 +96,9 @@ export default function ToolsTab({
 
             {/* BUTTON ACTION & SUBTAB TOGGLE */}
             <div className="flex flex-wrap justify-between items-center gap-4 bg-white border border-slate-200 p-3 rounded-2xl shadow-xs">
-                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                     <div className="flex flex-wrap items-center gap-2">
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                        {(userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button
                                 onClick={() => setShowAddToolModal(true)}
                                 className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
@@ -126,6 +127,12 @@ export default function ToolsTab({
                             <ClipboardList className="w-3.5 h-3.5 text-[#1b68b0]" />
                             <span>{userRole === 'driver' ? 'Pinjam Alat Supir' : 'Catat Peminjaman Alat'}</span>
                         </button>
+                    </div>
+                )}
+                {userRole === 'admin_toko' && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                        <Info className="w-4 h-4 text-[#1b68b0] shrink-0" />
+                        <span>Akses Lihat-Saja (Pencatatan & peminjaman alat khusus dikelola oleh Admin Gudang)</span>
                     </div>
                 )}
 
@@ -198,6 +205,7 @@ export default function ToolsTab({
                         <table className="w-full text-left text-xs">
                             <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                 <tr>
+                                    <th className="p-3 w-16 text-center">Foto Sample</th>
                                     <th className="p-3">Kode Alat</th>
                                     <th className="p-3">Nama Alat / Mesin</th>
                                     <th className="p-3">Kategori</th>
@@ -211,13 +219,28 @@ export default function ToolsTab({
                             <tbody className="divide-y divide-slate-100">
                                 {filteredTools.length === 0 ? (
                                     <tr>
-                                        <td colSpan="8" className="p-8 text-center text-slate-400 text-xs italic">
+                                        <td colSpan="9" className="p-8 text-center text-slate-400 text-xs italic">
                                             Belum ada data alat penunjang yang cocok dengan filter / pencarian.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredTools.map(t => (
                                         <tr key={t.id} className="hover:bg-slate-50/70 transition">
+                                            <td className="p-2 text-center">
+                                                {t.image_path ? (
+                                                    <div 
+                                                        onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, 'Sample ' + t.name)}
+                                                        className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
+                                                        title="Klik untuk memperbesar foto sample mesin / alat"
+                                                    >
+                                                        <img src={'/storage/' + t.image_path} alt={t.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-xl bg-amber-50/80 border border-amber-100 flex items-center justify-center mx-auto text-amber-600 shadow-2xs">
+                                                        <Wrench className="w-5 h-5 text-amber-600" />
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="p-3 font-extrabold text-[#1b68b0] font-mono text-xs">{t.tool_code}</td>
                                             <td className="p-3 font-bold text-[#242222]">
                                                 <div className="flex items-center gap-1.5">
@@ -256,7 +279,7 @@ export default function ToolsTab({
                                                 </div>
                                             </td>
                                             <td className="p-3 text-right">
-                                                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => handleOpenEditToolModal(t)}
                                                         className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow-2xs ml-auto cursor-pointer"
@@ -346,7 +369,7 @@ export default function ToolsTab({
                                             </td>
                                             <td className="p-3 text-right">
                                                 {b.status === 'Sedang Dipinjam' ? (
-                                                    (userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                    (userRole === 'admin_gudang' || userRole === 'owner') && (
                                                         <button
                                                             onClick={() => handleOpenReturnModal(b)}
                                                             className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs ml-auto flex items-center gap-1 cursor-pointer"
@@ -359,7 +382,7 @@ export default function ToolsTab({
                                                         <span className="text-xs text-emerald-700 font-bold font-mono">
                                                             Selesai ({b.actual_return})
                                                         </span>
-                                                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                        {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                             <button
                                                                 onClick={() => handleOpenReturnModal(b)}
                                                                 className="text-[10px] text-[#1b68b0] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer"
@@ -511,7 +534,7 @@ export default function ToolsTab({
                                                 )}
                                             </td>
                                             <td className="p-3 text-right space-y-1.5">
-                                                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                     <>
                                                         {/* TAHAP 1: PERLU PERBAIKAN */}
                                                         {(!t.repair_stage || t.repair_stage === 'Perlu Perbaikan') && (t.damaged_qty || 0) > 0 && (

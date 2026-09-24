@@ -84,6 +84,8 @@ Route::middleware(['auth'])->group(function () {
 
     // 5. Supplies (Bahan Habis Pakai)
     Route::post('/inventory/supplies', [InventoryMasterController::class, 'storeSupply'])->name('inventory.supplies.store');
+    Route::post('/inventory/supplies/{id}', [InventoryMasterController::class, 'updateSupply'])->name('inventory.supplies.update');
+    Route::post('/inventory/supplies/batch-use', [InventoryMasterController::class, 'batchUseSupplies'])->name('inventory.supplies.batch_use');
     Route::post('/inventory/supplies/{id}/use', [InventoryMasterController::class, 'useSupply'])->name('inventory.supplies.use');
     Route::post('/inventory/supplies/{id}/restock-request', [InventoryMasterController::class, 'requestRestockSupply'])->name('inventory.supplies.restock_request');
     Route::post('/inventory/supplies/restocks/{restockId}/approve', [InventoryMasterController::class, 'approveRestockSupply'])->name('inventory.supplies.restock_approve');

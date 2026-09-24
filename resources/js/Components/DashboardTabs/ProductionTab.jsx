@@ -29,7 +29,8 @@ import {
     Check,
     Lock,
     Scale,
-    Maximize2
+    Maximize2,
+    Bell
 } from 'lucide-react';
 
 export default function ProductionTab({
@@ -48,6 +49,7 @@ export default function ProductionTab({
     handleOpenDetailModal,
     handleOpenComplaintModal,
     handleAcknowledgeRevision,
+    handleOpenRevisionDetailModal,
     handleStartJob,
     handleFinishJobSubmit,
     activeWorkingOrderId,
@@ -325,9 +327,14 @@ export default function ProductionTab({
                                                     <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
                                                     <span>ORDERAN TELAH DIREVISI OLEH ADMIN TOKO</span>
                                                 </span>
-                                                <span className="bg-amber-100 text-amber-900 font-mono font-bold px-2 py-0.5 rounded text-[10px] border border-amber-300">
-                                                    REVISI DISIMPAN
-                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenRevisionDetailModal ? handleOpenRevisionDetailModal(o) : handleAcknowledgeRevision(o.id)}
+                                                    className="animate-bounce bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition"
+                                                >
+                                                    <Bell className="w-4 h-4 text-white animate-pulse" />
+                                                    <span>Lihat Detail Revisi ({o.revision_count || 1}x)</span>
+                                                </button>
                                             </div>
                                             <p className="text-[11px] text-amber-700 leading-relaxed">
                                                 Admin Toko telah selesai menginput dan menyimpan revisi. Admin Gudang dapat memeriksa spesifikasi/ukuran terbaru di atas dan dapat langsung mengeklik tombol <strong>Disposisi Divisi</strong> di bawah.
@@ -341,7 +348,7 @@ export default function ProductionTab({
                                     )}
 
                                     <div className="flex justify-between items-center pt-1">
-                                        <span className="text-[11px] text-slate-500 font-mono">Deadline: {o.deadline_date || '-'}</span>
+                                        <span className="text-[11px] text-slate-500 font-mono">Deadline: {formatIndonesianDate(o.deadline_date)}</span>
                                         {o.revision_status === 'editing' ? (
                                             <button
                                                 disabled
@@ -496,7 +503,7 @@ export default function ProductionTab({
                                                 </div>
                                                 <div className="flex items-center justify-between text-amber-800 font-bold bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl">
                                                     <span className="text-[11px] flex items-center gap-1">Deadline:</span>
-                                                    <span className="text-xs">{activeOngoingOrder.deadline_date || '-'}</span>
+                                                    <span className="text-xs">{formatIndonesianDate(activeOngoingOrder.deadline_date)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -945,27 +952,31 @@ export default function ProductionTab({
                                                         </div>
                                                         <div className="text-[#242222] font-bold text-xs mt-0.5">{o.customer_name}</div>
                                                         <div className="text-[10px] text-slate-500 mt-1">Order: {formatIndonesianDate(o.order_date)}</div>
-                                                        <div className="text-[10px] text-amber-800 font-bold">Deadline: {o.deadline_date || '-'}</div>
+                                                        <div className="text-[10px] text-amber-800 font-bold">Deadline: {formatIndonesianDate(o.deadline_date)}</div>
                                                         {o.revision_status === 'pending_division' && (
-                                                            <div className="mt-1.5 bg-rose-50 border border-rose-200 rounded-xl p-2 text-rose-800 space-y-1 shadow-xs">
+                                                            <div className="mt-1.5 bg-rose-50 border-2 border-rose-300 rounded-xl p-2.5 text-rose-900 space-y-1.5 shadow-sm">
                                                                 <div className="flex justify-between items-center text-[10px] font-bold">
-                                                                    <span className="text-rose-700 flex items-center gap-1">PERINGATAN REVISI TOKO</span>
+                                                                    <span className="text-rose-700 flex items-center gap-1 font-extrabold">
+                                                                        <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
+                                                                        <span>PERINGATAN REVISI TOKO</span>
+                                                                    </span>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => handleAcknowledgeRevision(o.id)}
-                                                                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-0.5 rounded text-[10px] cursor-pointer shadow-xs"
+                                                                        onClick={() => handleOpenRevisionDetailModal ? handleOpenRevisionDetailModal(o) : handleAcknowledgeRevision(o.id)}
+                                                                        className="animate-bounce bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-3 py-1 rounded-lg text-[10px] cursor-pointer shadow-sm flex items-center gap-1"
                                                                     >
-                                                                        Terima & Eksekusi Revisi
+                                                                        <Bell className="w-3 h-3 text-white" />
+                                                                        <span>Lihat Detail Revisi</span>
                                                                     </button>
                                                                 </div>
                                                                 {Object.values(o.division_progress || {}).includes('Sedang Dikerjakan') && (
-                                                                    <div className="bg-rose-600 text-white font-bold text-[10px] p-1 rounded">
+                                                                    <div className="bg-rose-600 text-white font-bold text-[10px] p-1.5 rounded-lg text-center">
                                                                         PERINGATAN: Orderan ini SEDANG DIKERJAKAN di divisi dan ADA REVISIAN dari Admin Toko!
                                                                     </div>
                                                                 )}
                                                                 {o.revision_notes && (
-                                                                    <div className="text-[10px] text-amber-900 font-mono bg-white p-1 rounded border border-rose-200">
-                                                                        Catatan: {o.revision_notes}
+                                                                    <div className="text-[10px] text-amber-900 font-mono bg-white p-1.5 rounded-lg border border-rose-200">
+                                                                        Catatan: "{o.revision_notes}"
                                                                     </div>
                                                                 )}
                                                             </div>

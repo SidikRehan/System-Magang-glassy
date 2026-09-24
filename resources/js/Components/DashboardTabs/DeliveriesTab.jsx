@@ -5,9 +5,9 @@ import {
     Printer, Fuel, CreditCard, CheckSquare, XSquare, 
     Plus, AlertCircle, FileText, CheckCircle2, Phone, 
     ShieldCheck, Sparkles, Send, Clock, Camera, Edit3,
-    Search, Lock, X, Layers, Filter, Check
+    Search, Lock, X, Layers, Filter, Check, History
 } from 'lucide-react';
-import { isDriverMatch, isOrderExecutionFinished, getOrderRelevantDivisions } from '@/Utils/dashboardHelpers';
+import { isDriverMatch, isOrderExecutionFinished, getOrderRelevantDivisions, formatIndonesianDate, formatIndonesianDateTime } from '@/Utils/dashboardHelpers';
 import AssignVehicleModal from '@/Components/Modals/AssignVehicleModal';
 import EditTripModal from '@/Components/Modals/EditTripModal';
 
@@ -29,7 +29,10 @@ export default function DeliveriesTab({
     setShowBarangKeluarModal,
     setSelectedWaybillOrder,
     setShowWaybillModal,
+    handleCompleteDelivery,
+    handleOpenConfirmDeliveryModal,
 }) {
+    const [driverSubTab, setDriverSubTab] = useState('active'); // 'active' | 'history' | 'expenses'
     const [selectedBatchOrderIds, setSelectedBatchOrderIds] = useState([]);
     const [dispatchDriverInput, setDispatchDriverInput] = useState('Pak Budi (Supir Utama DC)');
     const [dispatchVehicleInput, setDispatchVehicleInput] = useState('Engkel Box (D 8472 AB)');
@@ -266,279 +269,485 @@ export default function DeliveriesTab({
                 </div>
             </div>
 
-            {/* DRIVER ROLE SPECIFIC VIEW (KHUSUS ROLE SUPIR: DAFTAR PENUGASAN & FORM AJUKAN BIAYA ARMADA) */}
+            {/* DRIVER ROLE SPECIFIC VIEW (KHUSUS ROLE SUPIR: DAFTAR PENUGASAN, RIWAYAT & BIAYA ARMADA) */}
             {userRole === 'driver' ? (
                 <div className="space-y-6">
-                    {/* SEKSI 1: DAFTAR PENUGASAN PENGIRIMAN */}
-                    <div className="space-y-4">
-                        <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-3">
-                            <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
-                                <Truck className="w-5 h-5 text-[#1b68b0]" />
-                                <span>Daftar Penugasan Trip & Alamat Tujuan Pengiriman</span>
-                            </h3>
-                            <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1.5">
-                                <User className="w-3.5 h-3.5" /> Akun Supir: {userName}
-                            </span>
-                        </div>
+                    {(() => {
+                        const readyAndShipped = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver);
+                        const deliveryList = initialDeliveries.length > 0 ? initialDeliveries : readyAndShipped.map(o => ({
+                            id: o.id,
+                            waybill_number: 'SJ-' + (o.spo_number || o.id),
+                            trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
+                            order: o,
+                            driver_name: o.assigned_driver || o.driver_name || '',
+                            vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
+                            waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
+                            delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman'
+                        }));
 
-                        {(() => {
-                            const readyAndShipped = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver);
-                            const deliveryList = initialDeliveries.length > 0 ? initialDeliveries : readyAndShipped.map(o => ({
-                                id: o.id,
-                                waybill_number: 'SJ-' + (o.spo_number || o.id),
-                                trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
-                                order: o,
-                                driver_name: o.assigned_driver || o.driver_name || '',
-                                vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
-                                waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
-                                delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman'
-                            }));
-
-                            const grouped = {};
-                            deliveryList.forEach(d => {
-                                const key = d.trip_code || ((d.driver_name || 'Unassigned') + '_' + (d.vehicle_plate || 'Armada'));
-                                if (!grouped[key]) {
-                                    grouped[key] = {
-                                        trip_code: d.trip_code || key,
-                                        driver_name: d.driver_name || 'Belum Ditugaskan',
-                                        vehicle_plate: d.vehicle_plate || 'Engkel Box (D 8472 AB)',
-                                        deliveries: [],
-                                        orders: []
-                                    };
-                                }
-                                grouped[key].deliveries.push(d);
-                                const ord = d.order || d;
-                                if (ord && !grouped[key].orders.find(o => o.id === ord.id)) {
-                                    grouped[key].orders.push(ord);
-                                }
-                            });
-
-                            const trips = Object.values(grouped).filter(t => isDriverMatch(t.driver_name, userName));
-
-                            if (trips.length === 0) {
-                                return (
-                                    <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 shadow-xs space-y-3">
-                                        <div className="w-12 h-12 bg-blue-50 text-[#1b68b0] rounded-2xl flex items-center justify-center mx-auto border border-blue-100">
-                                            <Truck className="w-6 h-6" />
-                                        </div>
-                                        <div className="font-extrabold text-[#242222] text-sm">Belum Ada Penugasan Pengiriman Aktif</div>
-                                        <p className="text-xs text-slate-400 max-w-md mx-auto">
-                                            Belum ada rute trip pengiriman yang dialokasikan oleh Admin Gudang / WMS untuk akun supir <strong className="text-slate-700">{userName}</strong>.
-                                        </p>
-                                    </div>
-                                );
+                        const grouped = {};
+                        deliveryList.forEach(d => {
+                            const key = d.trip_code || ((d.driver_name || 'Unassigned') + '_' + (d.vehicle_plate || 'Armada'));
+                            if (!grouped[key]) {
+                                grouped[key] = {
+                                    trip_code: d.trip_code || key,
+                                    driver_name: d.driver_name || 'Belum Ditugaskan',
+                                    vehicle_plate: d.vehicle_plate || 'Engkel Box (D 8472 AB)',
+                                    deliveries: [],
+                                    orders: []
+                                };
                             }
+                            grouped[key].deliveries.push(d);
+                            const ord = d.order || d;
+                            if (ord && !grouped[key].orders.find(o => o.id === ord.id)) {
+                                grouped[key].orders.push(ord);
+                            }
+                        });
 
-                            return (
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                    {trips.map((trip, idx) => (
-                                        <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 relative">
-                                            <div className="flex flex-wrap justify-between items-start border-b border-slate-100 pb-3 gap-2">
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="bg-blue-50 text-[#1b68b0] font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
-                                                            {trip.trip_code}
-                                                        </span>
-                                                        <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
-                                                            <User className="w-3.5 h-3.5 text-slate-500" />
-                                                            <span>{trip.driver_name}</span>
-                                                        </h4>
-                                                    </div>
-                                                    <p className="text-xs text-slate-500 mt-1">
-                                                        {trip.vehicle_plate} — <strong className="text-[#1b68b0]">{trip.orders.length} Alamat Tujuan</strong>
-                                                    </p>
+                        const allDriverTrips = Object.values(grouped).filter(t => isDriverMatch(t.driver_name, userName));
+                        const activeDriverTrips = allDriverTrips.filter(t => t.orders.some(o => o.status !== 'selesai'));
+                        const historyDriverTrips = allDriverTrips.filter(t => t.orders.some(o => o.status === 'selesai'));
+                        const myClaims = financeTransactionsList.filter(t => 
+                            t.source_role === 'driver' && 
+                            (t.user_id === auth?.user?.id || t.title?.toLowerCase().includes(userName.toLowerCase()) || t.notes?.toLowerCase().includes(userName.toLowerCase()))
+                        );
+
+                        return (
+                            <div className="space-y-5">
+                                {/* SUB-TAB NAVIGATION BUTTONS FOR DRIVER */}
+                                <div className="flex flex-wrap items-center bg-slate-100 border border-slate-200 p-1.5 rounded-2xl gap-1.5 shadow-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDriverSubTab('active')}
+                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                            driverSubTab === 'active'
+                                                ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                        }`}
+                                    >
+                                        <Truck className="w-4 h-4 text-[#1b68b0]" />
+                                        <span>Daftar Pengiriman Saya (Aktif)</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-extrabold ${
+                                            driverSubTab === 'active' ? 'bg-blue-50 text-[#1b68b0] border border-blue-200' : 'bg-slate-200 text-slate-600'
+                                        }`}>
+                                            {activeDriverTrips.length} Trip
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setDriverSubTab('history')}
+                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                            driverSubTab === 'history'
+                                                ? 'bg-white text-emerald-700 shadow-xs border border-slate-200'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                        }`}
+                                    >
+                                        <History className="w-4 h-4 text-emerald-600" />
+                                        <span>Riwayat Pengiriman Selesai</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-extrabold ${
+                                            driverSubTab === 'history' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'
+                                        }`}>
+                                            {historyDriverTrips.length} Trip
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setDriverSubTab('expenses')}
+                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                            driverSubTab === 'expenses'
+                                                ? 'bg-white text-amber-700 shadow-xs border border-slate-200'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                        }`}
+                                    >
+                                        <Fuel className="w-4 h-4 text-amber-600" />
+                                        <span>Klaim Biaya Armada Logistik</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-extrabold ${
+                                            driverSubTab === 'expenses' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-200 text-slate-600'
+                                        }`}>
+                                            {myClaims.length} Klaim
+                                        </span>
+                                    </button>
+                                </div>
+
+                                {/* SUB-TAB 1: DAFTAR PENGIRIMAN SAYA (AKTIF HARI INI) */}
+                                {driverSubTab === 'active' && (
+                                    <div className="space-y-4">
+                                        <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-3">
+                                            <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
+                                                <Truck className="w-5 h-5 text-[#1b68b0]" />
+                                                <span>Daftar Penugasan Trip & Alamat Tujuan Pengiriman (Aktif)</span>
+                                            </h3>
+                                            <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1.5">
+                                                <User className="w-3.5 h-3.5" /> Akun Supir: {userName}
+                                            </span>
+                                        </div>
+
+                                        {activeDriverTrips.length === 0 ? (
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 shadow-xs space-y-3">
+                                                <div className="w-12 h-12 bg-blue-50 text-[#1b68b0] rounded-2xl flex items-center justify-center mx-auto border border-blue-100">
+                                                    <Truck className="w-6 h-6" />
                                                 </div>
-                                                <div className="flex flex-wrap gap-1.5 justify-end">
-                                                    <button
-                                                        onClick={() => handleOpenEditTripModal(trip)}
-                                                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                                        title="Edit Penugasan Supir & Mobil Trip Ini"
-                                                    >
-                                                        <Edit3 className="w-3.5 h-3.5 text-amber-600" /> Edit Trip
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedBatchWaybillTrip(trip);
-                                                            setShowBatchWaybillModal(true);
-                                                        }}
-                                                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                                    >
-                                                        <Printer className="w-3.5 h-3.5 text-[#1b68b0]" /> Cetak Semua SJ
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedTripDataForModal(trip);
-                                                            setShowMultiAddressModal(true);
-                                                        }}
-                                                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                                    >
-                                                        <FileText className="w-3.5 h-3.5 text-cyan-600" /> Manifest Rute
-                                                    </button>
-                                                </div>
+                                                <div className="font-extrabold text-[#242222] text-sm">Belum Ada Penugasan Pengiriman Aktif Hari Ini</div>
+                                                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                                                    Belum ada rute trip pengiriman aktif yang dialokasikan oleh Admin Gudang / WMS untuk akun supir <strong className="text-slate-700">{userName}</strong>.
+                                                </p>
                                             </div>
-
-                                            {/* TIMELINE STOP DESTINATIONS */}
-                                            <div className="space-y-2 text-xs">
-                                                {trip.orders.map((ord, stopIdx) => {
-                                                    const isLunas = ord.payment_status === 'Lunas';
-                                                    const sisaCod = Math.max(0, Number(ord.total_price || 0) - Number(ord.paid_amount || 0));
-                                                    return (
-                                                        <div key={ord.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
-                                                            <div className="flex items-start gap-2.5 min-w-0">
-                                                                <span className="bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/20 text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5">
-                                                                    STOP #{stopIdx + 1}
-                                                                </span>
-                                                                <div className="min-w-0">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="font-bold text-[#242222] truncate">
-                                                                            SPO: {ord.spo_number} — {ord.customer_name}
-                                                                        </span>
-                                                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
-                                                                            {isLunas ? 'LUNAS' : `COD (Rp ${sisaCod.toLocaleString('id-ID')})`}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="text-slate-500 text-[11px] truncate mt-0.5 flex items-center gap-1">
-                                                                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                                                                        <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
-                                                                    </p>
+                                        ) : (
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                                {activeDriverTrips.map((trip, idx) => (
+                                                    <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 relative">
+                                                        <div className="flex flex-wrap justify-between items-start border-b border-slate-100 pb-3 gap-2">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="bg-blue-50 text-[#1b68b0] font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
+                                                                        {trip.trip_code}
+                                                                    </span>
+                                                                    <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
+                                                                        <User className="w-3.5 h-3.5 text-slate-500" />
+                                                                        <span>{trip.driver_name}</span>
+                                                                    </h4>
                                                                 </div>
+                                                                <p className="text-xs text-slate-500 mt-1">
+                                                                    {trip.vehicle_plate} — <strong className="text-[#1b68b0]">{trip.orders.filter(o => o.status !== 'selesai').length} Alamat Belum Selesai</strong>
+                                                                </p>
                                                             </div>
-                                                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                                                                {!isLunas && (
-                                                                    <button
-                                                                        onClick={() => handleOpenCodModal(ord)}
-                                                                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                                                        title="Setor Hasil Penagihan COD ke Kasir"
-                                                                    >
-                                                                        <CreditCard className="w-3 h-3" /> Setor COD
-                                                                    </button>
-                                                                )}
+                                                            <div className="flex flex-wrap gap-1.5 justify-end">
                                                                 <button
-                                                                    onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
-                                                                    className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                                                    title="Cetak Surat Jalan khusus Alamat Ini"
+                                                                    onClick={() => handleOpenEditTripModal(trip)}
+                                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                                    title="Edit Penugasan Supir & Mobil Trip Ini"
                                                                 >
-                                                                    <Printer className="w-3 h-3" /> SJ
+                                                                    <Edit3 className="w-3.5 h-3.5 text-amber-600" /> Edit Trip
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedBatchWaybillTrip(trip);
+                                                                        setShowBatchWaybillModal(true);
+                                                                    }}
+                                                                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                                >
+                                                                    <Printer className="w-3.5 h-3.5 text-[#1b68b0]" /> Cetak Semua SJ
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedTripDataForModal(trip);
+                                                                        setShowMultiAddressModal(true);
+                                                                    }}
+                                                                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                                >
+                                                                    <FileText className="w-3.5 h-3.5 text-cyan-600" /> Manifest Rute
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })}
+
+                                                        {/* TIMELINE STOP DESTINATIONS */}
+                                                        <div className="space-y-2 text-xs">
+                                                            {trip.orders.map((ord, stopIdx) => {
+                                                                const isLunas = ord.payment_status === 'Lunas';
+                                                                const isFinished = ord.status === 'selesai';
+                                                                const sisaCod = Math.max(0, Number(ord.total_price || 0) - Number(ord.paid_amount || 0));
+                                                                return (
+                                                                    <div key={ord.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border ${isFinished ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/80 border-slate-200'}`}>
+                                                                        <div className="flex items-start gap-2.5 min-w-0">
+                                                                            <span className={`border text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${isFinished ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-[#1b68b0]/10 text-[#1b68b0] border-[#1b68b0]/20'}`}>
+                                                                                STOP #{stopIdx + 1}
+                                                                            </span>
+                                                                            <div className="min-w-0">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="font-bold text-[#242222] truncate">
+                                                                                        SPO: {ord.spo_number} — {ord.customer_name}
+                                                                                    </span>
+                                                                                    {isFinished ? (
+                                                                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                                                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> TERKIRIM
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                                                                                            {isLunas ? 'LUNAS' : `COD (Rp ${sisaCod.toLocaleString('id-ID')})`}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <p className="text-slate-500 text-[11px] truncate mt-0.5 flex items-center gap-1">
+                                                                                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                                    <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                                                            {!isLunas && !isFinished && (
+                                                                                <button
+                                                                                    onClick={() => handleOpenCodModal(ord)}
+                                                                                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                                                                    title="Setor Hasil Penagihan COD ke Kasir"
+                                                                                >
+                                                                                    <CreditCard className="w-3 h-3" /> Setor COD
+                                                                                </button>
+                                                                            )}
+                                                                            {!isFinished && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        if (handleOpenConfirmDeliveryModal) {
+                                                                                            handleOpenConfirmDeliveryModal(ord);
+                                                                                        } else if (handleCompleteDelivery) {
+                                                                                            handleCompleteDelivery(ord.id);
+                                                                                        } else {
+                                                                                            router.post(`/orders/${ord.id}/complete-delivery`);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-xs flex items-center gap-1 cursor-pointer"
+                                                                                    title="Upload foto Surat Jalan bertanda tangan penerima & konfirmasi terkirim"
+                                                                                >
+                                                                                    <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Terkirim
+                                                                                </button>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
+                                                                                className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                                title="Cetak Surat Jalan khusus Alamat Ini"
+                                                                            >
+                                                                                <Printer className="w-3 h-3" /> SJ
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* SUB-TAB 2: RIWAYAT PENGIRIMAN SELESAI */}
+                                {driverSubTab === 'history' && (
+                                    <div className="space-y-4">
+                                        <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-3">
+                                            <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
+                                                <History className="w-5 h-5 text-emerald-600" />
+                                                <span>Riwayat Pengiriman Selesai ({historyDriverTrips.length} Trip)</span>
+                                            </h3>
+                                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1.5">
+                                                <ShieldCheck className="w-3.5 h-3.5" /> Histori Supir: {userName}
+                                            </span>
                                         </div>
-                                    ))}
-                                </div>
-                            );
-                        })()}
-                    </div>
 
-                    {/* SEKSI 2: FORM & RIWAYAT AJUKAN BIAYA ARMADA (BBM, TOL, PARKIR, RETRIBUSI) */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-                        <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-100 pb-3">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
-                                    <Fuel className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-extrabold text-[#242222] flex items-center gap-2">
-                                        Form & Riwayat Ajukan Biaya Armada Logistik
-                                    </h3>
-                                    <p className="text-xs text-slate-500">
-                                        Pengajuan klaim penggantian BBM Solar, E-Toll, parkir, dan darurat armada ({userName}).
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setShowDriverClaimModal(true)}
-                                className="px-4 py-2 bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span>Ajukan Biaya Armada Baru</span>
-                            </button>
-                        </div>
-
-                        {/* RIWAYAT PENGAJUAN KLAIM BIAYA ARMADA */}
-                        {(() => {
-                            const myClaims = financeTransactionsList.filter(t => 
-                                t.source_role === 'driver' && 
-                                (t.user_id === auth?.user?.id || t.title?.toLowerCase().includes(userName.toLowerCase()) || t.notes?.toLowerCase().includes(userName.toLowerCase()))
-                            );
-
-                            if (myClaims.length === 0) {
-                                return (
-                                    <div className="bg-slate-50/60 border border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs space-y-2">
-                                        <Fuel className="w-8 h-8 text-slate-300 mx-auto" />
-                                        <p className="font-semibold text-slate-600">Belum Ada Riwayat Pengajuan Biaya Armada</p>
-                                        <p>Klik tombol <strong className="text-[#70b03c]">"Ajukan Biaya Armada Baru"</strong> di atas untuk mengajukan klaim BBM Solar atau E-Toll.</p>
-                                    </div>
-                                );
-                            }
-
-                            return (
-                                <div className="space-y-3 text-xs">
-                                    <div className="flex justify-between items-center text-slate-500 font-bold px-1">
-                                        <span>Daftar Pengajuan Klaim Saya ({myClaims.length})</span>
-                                        <span>Total: <strong className="text-[#242222] font-mono">Rp {myClaims.reduce((acc, c) => acc + Number(c.amount || 0), 0).toLocaleString('id-ID')}</strong></span>
-                                    </div>
-                                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-                                        {myClaims.map(clm => (
-                                            <div key={clm.id} className="p-3.5 hover:bg-slate-50/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                                <div className="space-y-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-[#242222] text-xs">{clm.title}</span>
-                                                        <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
-                                                            {clm.category || 'Biaya Armada'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-[11px] text-slate-500 font-mono flex flex-wrap items-center gap-2">
-                                                        <span className="text-[#1b68b0] font-black text-xs">Rp {Number(clm.amount || 0).toLocaleString('id-ID')}</span>
-                                                        <span>• Armada: {clm.vehicle_plate || 'Engkel Box'}</span>
-                                                        <span>• Tgl: {clm.transaction_date}</span>
-                                                    </div>
-                                                    {clm.receipt_photo_path && (() => {
-                                                        const pList = getPhotoList(clm.receipt_photo_path);
-                                                        if (pList.length === 0) return null;
-                                                        return (
-                                                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                                                {pList.map((p, pIdx) => (
-                                                                    <button
-                                                                        key={pIdx}
-                                                                        type="button"
-                                                                        onClick={() => handleOpenSketchLightbox(p, `Struk Nota #${clm.transaction_code} (${pIdx + 1}/${pList.length})`)}
-                                                                        className="text-[10px] bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-lg font-mono font-bold flex items-center gap-1 cursor-pointer"
-                                                                    >
-                                                                        <Camera className="w-3 h-3 text-[#1b68b0]" />
-                                                                        <span>Foto Struk #{pIdx + 1}</span>
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        );
-                                                    })()}
+                                        {historyDriverTrips.length === 0 ? (
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 shadow-xs space-y-3">
+                                                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto border border-emerald-100">
+                                                    <History className="w-6 h-6" />
                                                 </div>
-                                                <div className="shrink-0 self-end sm:self-center">
-                                                    {clm.approval_status === 'pending' && (
-                                                        <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1">
-                                                            <Clock className="w-3.5 h-3.5" /> Menunggu Verifikasi
-                                                        </span>
-                                                    )}
-                                                    {clm.approval_status === 'approved' && (
-                                                        <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
-                                                            <CheckCircle2 className="w-3.5 h-3.5" /> Disetujui Finance
-                                                        </span>
-                                                    )}
-                                                    {clm.approval_status === 'rejected' && (
-                                                        <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
-                                                            ✕ Ditolak
-                                                        </span>
-                                                    )}
+                                                <div className="font-extrabold text-[#242222] text-sm">Belum Ada Riwayat Pengiriman Selesai</div>
+                                                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                                                    Daftar trip pengiriman yang telah selesai dikonfirmasi terkirim akan muncul di sini.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                                {historyDriverTrips.map((trip, idx) => (
+                                                    <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 relative">
+                                                        <div className="flex flex-wrap justify-between items-start border-b border-slate-100 pb-3 gap-2">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="bg-emerald-50 text-emerald-800 font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-emerald-200">
+                                                                        {trip.trip_code}
+                                                                    </span>
+                                                                    <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
+                                                                        <User className="w-3.5 h-3.5 text-slate-500" />
+                                                                        <span>{trip.driver_name}</span>
+                                                                    </h4>
+                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> SELESAI TERKIRIM
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-slate-500 mt-1">
+                                                                    {trip.vehicle_plate} — <strong className="text-emerald-700">{trip.orders.filter(o => o.status === 'selesai').length} Alamat Selesai</strong>
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-1.5 justify-end">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedBatchWaybillTrip(trip);
+                                                                        setShowBatchWaybillModal(true);
+                                                                    }}
+                                                                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                                >
+                                                                    <Printer className="w-3.5 h-3.5 text-[#1b68b0]" /> Surat Jalan
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedTripDataForModal(trip);
+                                                                        setShowMultiAddressModal(true);
+                                                                    }}
+                                                                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                                >
+                                                                    <FileText className="w-3.5 h-3.5 text-cyan-600" /> Manifest
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* TIMELINE STOP DESTINATIONS */}
+                                                        <div className="space-y-2 text-xs">
+                                                            {trip.orders.filter(o => o.status === 'selesai').map((ord, stopIdx) => {
+                                                                return (
+                                                                    <div key={ord.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-emerald-50/40 p-3 rounded-xl border border-emerald-200/80">
+                                                                        <div className="flex items-start gap-2.5 min-w-0">
+                                                                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5">
+                                                                                STOP #{stopIdx + 1}
+                                                                            </span>
+                                                                            <div className="min-w-0">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="font-bold text-[#242222] truncate">
+                                                                                        SPO: {ord.spo_number} — {ord.customer_name}
+                                                                                    </span>
+                                                                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Lunas & Terkirim
+                                                                                    </span>
+                                                                                </div>
+                                                                                <p className="text-slate-500 text-[11px] truncate mt-0.5 flex items-center gap-1">
+                                                                                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                                    <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
+                                                                                </p>
+                                                                                {ord.delivered_at && (
+                                                                                    <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                                                                                        Terkirim pada: {formatIndonesianDateTime(ord.delivered_at)}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                                                            {ord.proof_photo_path && handleOpenSketchLightbox && (
+                                                                                <button
+                                                                                    onClick={() => handleOpenSketchLightbox('/storage/' + ord.proof_photo_path, 'Bukti Surat Jalan Ttd - SPO #' + (ord.spo_number || ord.id))}
+                                                                                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                                    title="Lihat Foto Surat Jalan Tanda Tangan Penerima"
+                                                                                >
+                                                                                    <Camera className="w-3.5 h-3.5 text-emerald-600" /> Bukti SJ
+                                                                                </button>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
+                                                                                className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                                title="Lihat / Cetak Surat Jalan"
+                                                                            >
+                                                                                <Printer className="w-3 h-3" /> Lihat SJ
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* SUB-TAB 3: KLAIM BIAYA ARMADA LOGISTIK */}
+                                {driverSubTab === 'expenses' && (
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                                        <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-100 pb-3">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
+                                                    <Fuel className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-extrabold text-[#242222] flex items-center gap-2">
+                                                        Form & Riwayat Ajukan Biaya Armada Logistik
+                                                    </h3>
+                                                    <p className="text-xs text-slate-500">
+                                                        Pengajuan klaim penggantian BBM Solar, E-Toll, parkir, dan darurat armada ({userName}).
+                                                    </p>
                                                 </div>
                                             </div>
-                                        ))}
+                                            <button
+                                                onClick={() => setShowDriverClaimModal(true)}
+                                                className="px-4 py-2 bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                <span>Ajukan Biaya Armada Baru</span>
+                                            </button>
+                                        </div>
+
+                                        {/* RIWAYAT PENGAJUAN KLAIM BIAYA ARMADA */}
+                                        {myClaims.length === 0 ? (
+                                            <div className="bg-slate-50/60 border border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs space-y-2">
+                                                <Fuel className="w-8 h-8 text-slate-300 mx-auto" />
+                                                <p className="font-semibold text-slate-600">Belum Ada Riwayat Pengajuan Biaya Armada</p>
+                                                <p>Klik tombol <strong className="text-[#70b03c]">"Ajukan Biaya Armada Baru"</strong> di atas untuk mengajukan klaim BBM Solar atau E-Toll.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 text-xs">
+                                                <div className="flex justify-between items-center text-slate-500 font-bold px-1">
+                                                    <span>Daftar Pengajuan Klaim Saya ({myClaims.length})</span>
+                                                    <span>Total: <strong className="text-[#242222] font-mono">Rp {myClaims.reduce((acc, c) => acc + Number(c.amount || 0), 0).toLocaleString('id-ID')}</strong></span>
+                                                </div>
+                                                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                                                    {myClaims.map(clm => (
+                                                        <div key={clm.id} className="p-3.5 hover:bg-slate-50/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                            <div className="space-y-1 min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold text-[#242222] text-xs">{clm.title}</span>
+                                                                    <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
+                                                                        {clm.category || 'Biaya Armada'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-[11px] text-slate-500 font-mono flex flex-wrap items-center gap-2">
+                                                                    <span className="text-[#1b68b0] font-black text-xs">Rp {Number(clm.amount || 0).toLocaleString('id-ID')}</span>
+                                                                    <span>• Armada: {clm.vehicle_plate || 'Engkel Box'}</span>
+                                                                    <span>• Tgl: {clm.transaction_date}</span>
+                                                                </div>
+                                                                {clm.receipt_photo_path && (() => {
+                                                                    const pList = getPhotoList(clm.receipt_photo_path);
+                                                                    if (pList.length === 0) return null;
+                                                                    return (
+                                                                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                                            {pList.map((p, pIdx) => (
+                                                                                <button
+                                                                                    key={pIdx}
+                                                                                    type="button"
+                                                                                    onClick={() => handleOpenSketchLightbox(p, `Struk Nota #${clm.transaction_code} (${pIdx + 1}/${pList.length})`)}
+                                                                                    className="text-[10px] bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-lg font-mono font-bold flex items-center gap-1 cursor-pointer"
+                                                                                >
+                                                                                    <Camera className="w-3 h-3 text-[#1b68b0]" />
+                                                                                    <span>Foto Struk #{pIdx + 1}</span>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                            <div className="shrink-0 self-end sm:self-center">
+                                                                {clm.approval_status === 'pending' && (
+                                                                    <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1">
+                                                                        <Clock className="w-3.5 h-3.5" /> Menunggu Verifikasi
+                                                                    </span>
+                                                                )}
+                                                                {clm.approval_status === 'approved' && (
+                                                                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Disetujui Finance
+                                                                    </span>
+                                                                )}
+                                                                {clm.approval_status === 'rejected' && (
+                                                                    <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
+                                                                        ✕ Ditolak
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            );
-                        })()}
-                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             ) : (
                 /* NON-DRIVER ADMIN & WMS VIEW (ADMIN TOKO / GUDANG / OWNER / FINANCE) */

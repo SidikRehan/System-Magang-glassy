@@ -16,7 +16,8 @@ export const roleTitles = {
 
 export const formatIndonesianDate = (dateStr) => {
     if (!dateStr) return '-';
-    const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`);
+    const cleanDateStr = typeof dateStr === 'string' ? dateStr.split('T')[0] : dateStr;
+    const d = new Date(`${cleanDateStr}T00:00:00`);
     if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleDateString('id-ID', {
         weekday: 'long',

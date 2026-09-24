@@ -22,6 +22,7 @@ import CandlestickChart from '@/Components/Charts/CandlestickChart';
 import FinanceTransactionModal from '@/Components/Modals/FinanceTransactionModal';
 import DriverClaimModal from '@/Components/Modals/DriverClaimModal';
 import CodSettlementModal from '@/Components/Modals/CodSettlementModal';
+import ConfirmDeliveryModal from '@/Components/Modals/ConfirmDeliveryModal';
 import PrintFinancialReportModal from '@/Components/Modals/PrintFinancialReportModal';
 import GlassStickerModal from '@/Components/Modals/GlassStickerModal';
 import DashboardOverviewTab from '@/Components/DashboardTabs/DashboardOverviewTab';
@@ -56,6 +57,7 @@ import CompleteRepairModal from '@/Components/Modals/CompleteRepairModal';
 import PromoteOrderModal from '@/Components/Modals/PromoteOrderModal';
 import SalesRekapModal from '@/Components/Modals/SalesRekapModal';
 import ScrollToTopButton from '@/Components/ScrollToTopButton';
+import RevisionDetailModal from '@/Components/Modals/RevisionDetailModal';
 
 
 export default function Dashboard({ 
@@ -105,10 +107,18 @@ export default function Dashboard({
         setFinanceSubTab('ledger');
     };
 
-    // Role Integration State: Driver Claims & COD Handover
+    // Role Integration State: Driver Claims & COD Handover & Delivery Confirmation
     const [showDriverClaimModal, setShowDriverClaimModal] = useState(false);
     const [showCodSettlementModal, setShowCodSettlementModal] = useState(false);
     const [selectedCodOrder, setSelectedCodOrder] = useState(null);
+
+    const [showConfirmDeliveryModal, setShowConfirmDeliveryModal] = useState(false);
+    const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
+
+    const handleOpenConfirmDeliveryModal = (order) => {
+        setSelectedDeliveryOrder(order);
+        setShowConfirmDeliveryModal(true);
+    };
 
     useEffect(() => {
         setFinanceTransactionsList(initialFinanceTransactions);
@@ -162,7 +172,8 @@ export default function Dashboard({
 
     const formatIndonesianDate = (dateStr) => {
         if (!dateStr) return '-';
-        const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`);
+        const cleanDateStr = typeof dateStr === 'string' ? dateStr.split('T')[0] : dateStr;
+        const d = new Date(`${cleanDateStr}T00:00:00`);
         if (isNaN(d.getTime())) return dateStr;
         return d.toLocaleDateString('id-ID', {
             weekday: 'long',
@@ -1073,54 +1084,45 @@ export default function Dashboard({
         });
     };
 
-    const handleUseSupplySubmit = (e) => {
-        e.preventDefault();
-        if (!useSupplyForm.supply_id || !useSupplyForm.taker_name) {
-            alert('Pilih barang perlengkapan dan isi nama pengambil!');
-            return;
+    const handleUseSupplySubmit = (payload) => {
+        if (!payload || !payload.taker_name || !payload.items || payload.items.length === 0) return;
+
+        let updatedSupplies = [...warehouseSuppliesList];
+        let newLogs = [];
+
+        for (const item of payload.items) {
+            const supplyObj = updatedSupplies.find(s => s.id === parseInt(item.supply_id));
+            const qtyToUse = parseInt(item.used_qty) || 1;
+
+            if (!supplyObj || qtyToUse > supplyObj.stock_qty) continue;
+
+            updatedSupplies = updatedSupplies.map(s => {
+                if (s.id === supplyObj.id) {
+                    const newQty = s.stock_qty - qtyToUse;
+                    let newStatus = 'Aman';
+                    if (newQty <= 0) newStatus = 'Habis';
+                    else if (newQty <= s.min_stock) newStatus = 'Menipis';
+                    return { ...s, stock_qty: newQty, status: newStatus };
+                }
+                return s;
+            });
+
+            newLogs.push({
+                id: Date.now() + Math.random(),
+                item_code: supplyObj.item_code,
+                item_name: supplyObj.name,
+                used_qty: qtyToUse,
+                unit: supplyObj.unit,
+                user_division: payload.user_division || 'Divisi Potong (HT)',
+                taker_name: payload.taker_name,
+                usage_date: new Date().toISOString().split('T')[0],
+                notes: payload.notes || 'Pemakaian operasional gudang/divisi'
+            });
         }
 
-        const supplyObj = warehouseSuppliesList.find(s => s.id === parseInt(useSupplyForm.supply_id));
-        const qtyToUse = parseInt(useSupplyForm.used_qty) || 1;
-
-        if (!supplyObj || qtyToUse > supplyObj.stock_qty) {
-            alert(`Stok "${supplyObj ? supplyObj.name : 'Perlengkapan'}" tidak mencukupi! Sisa stok saat ini: ${supplyObj ? supplyObj.stock_qty : 0} ${supplyObj ? supplyObj.unit : ''}.`);
-            return;
-        }
-
-        setWarehouseSuppliesList(prev => prev.map(s => {
-            if (s.id === supplyObj.id) {
-                const newQty = s.stock_qty - qtyToUse;
-                let newStatus = 'Aman';
-                if (newQty <= 0) newStatus = 'Habis';
-                else if (newQty <= s.min_stock) newStatus = 'Menipis';
-                return { ...s, stock_qty: newQty, status: newStatus };
-            }
-            return s;
-        }));
-
-        const newLog = {
-            id: Date.now(),
-            item_code: supplyObj.item_code,
-            item_name: supplyObj.name,
-            used_qty: qtyToUse,
-            unit: supplyObj.unit,
-            user_division: useSupplyForm.user_division,
-            taker_name: useSupplyForm.taker_name,
-            usage_date: useSupplyForm.usage_date || new Date().toISOString().split('T')[0],
-            notes: useSupplyForm.notes || 'Pemakaian operasional gudang/divisi'
-        };
-
-        setSupplyUsageLogs(prev => [newLog, ...prev]);
+        setWarehouseSuppliesList(updatedSupplies);
+        setSupplyUsageLogs(prev => [...newLogs, ...prev]);
         setShowUseSupplyModal(false);
-        setUseSupplyForm({
-            supply_id: '',
-            used_qty: 1,
-            user_division: 'Divisi Potong (HT)',
-            taker_name: '',
-            usage_date: new Date().toISOString().split('T')[0],
-            notes: ''
-        });
     };
 
     // Warehouse Supply Restock Requests to Admin Toko State
@@ -2412,14 +2414,14 @@ export default function Dashboard({
     });
 
     // Multi Item Actions
-    const handleOpenNewOrderModal = () => {
+    const handleOpenNewOrderModal = (isCompanyUse = false) => {
         resetOrder();
         setSketchPreview(null);
         setOrderForm({
             order_date: new Date().toISOString().split('T')[0],
-            customer_name: '',
-            customer_phone: '',
-            customer_address: '',
+            customer_name: isCompanyUse ? 'Penggunaan Internal Perusahaan' : '',
+            customer_phone: isCompanyUse ? '-' : '',
+            customer_address: isCompanyUse ? 'Internal Pabrik / Kantor UTB' : '',
             items: [
                 {
                     id: Date.now(),
@@ -2433,7 +2435,7 @@ export default function Dashboard({
                 }
             ],
             accessories: [],
-            description: '',
+            description: isCompanyUse ? 'Orderan internal kebutuhan perusahaan' : '',
             sketch_photo: null,
             priority_status: 'Biasa',
             priority_fee: 0,
@@ -2443,6 +2445,7 @@ export default function Dashboard({
             custom_paid_amount: '',
             deadline_date: '',
             used_scrap_rak: '',
+            is_company_use: Boolean(isCompanyUse),
             status: 'pengerjaan'
         });
         setShowNewOrderModal(true);
@@ -2999,15 +3002,15 @@ export default function Dashboard({
         const rateBV = matchedGlass?.rate_bv ? parseFloat(matchedGlass.rate_bv) : 15000;
         const rateEtsa = matchedGlass?.rate_etsa ? parseFloat(matchedGlass.rate_etsa) : 50000;
 
-        // 4. Hitung harga bahan kaca murni proporsional luas area m2
+        // 4. Hitung harga bahan kaca murni proporsional luas area m2 (0 jika Orderan Kosong / Dipakai Perusahaan)
         const rawBasePrice = Math.round(areaM2 * pricePerM2);
-        const baseGlassPrice = (l > 0 && w > 0) ? rawBasePrice * q : 0;
+        const baseGlassPrice = orderForm.is_company_use ? 0 : ((l > 0 && w > 0) ? rawBasePrice * q : 0);
 
-        const feeGM = procs.includes('GM') ? Math.round(perimeterM * rateGM) * q : 0;
-        const feeHT = procs.includes('HT') ? Math.round(perimeterM * rateHT) * q : 0;
+        let feeGM = procs.includes('GM') ? Math.round(perimeterM * rateGM) * q : 0;
+        let feeHT = procs.includes('HT') ? Math.round(perimeterM * rateHT) * q : 0;
 
         const bevelWidthCm = parseDim(it.bevel_width_cm) || 1;
-        const feeBV = procs.includes('BV') ? Math.round((perimeterM * rateBV) + (bevelWidthCm * 10000)) * q : 0;
+        let feeBV = procs.includes('BV') ? Math.round((perimeterM * rateBV) + (bevelWidthCm * 10000)) * q : 0;
 
         let feeBor = 0;
         let holeRuasCm = 0;
@@ -3035,6 +3038,15 @@ export default function Dashboard({
             etsaAreaM2 = (etsaL * etsaW) / 10000;
             feeEtsa = Math.round(etsaAreaM2 * etsaQ * rateEtsa) * q;
             feeEtsa = Math.max((rateEtsa / 2) * q, feeEtsa);
+        }
+
+        // Biaya proses eksekusi otomatis 0 untuk Orderan Kosong (Dipakai Perusahaan)
+        if (orderForm.is_company_use) {
+            feeGM = 0;
+            feeHT = 0;
+            feeBV = 0;
+            feeBor = 0;
+            feeEtsa = 0;
         }
 
         const subtotal = baseGlassPrice + feeGM + feeHT + feeBV + feeBor + feeEtsa;
@@ -3195,7 +3207,7 @@ export default function Dashboard({
             items: itemsList,
             accessories: Array.isArray(order.accessories) ? order.accessories : [],
             description: order.description || '',
-            revision_notes: order.revision_notes || '',
+            revision_notes: '',
             sketch_photo: null,
             priority_status: order.priority_status || 'Biasa',
             priority_fee: order.priority_fee || 0,
@@ -3203,8 +3215,9 @@ export default function Dashboard({
             payment_option: isLunas ? 'lunas' : 'dp',
             dp_percent: initialDpPercent,
             custom_paid_amount: order.paid_amount || '',
-            deadline_date: order.deadline_date || '',
+            deadline_date: order.deadline_date ? String(order.deadline_date).split('T')[0] : '',
             used_scrap_rak: order.used_scrap_rak || '',
+            is_company_use: Boolean(order.is_company_use),
             status: order.status || 'draft'
         });
         setSketchPreview(order.sketch_photo_path ? '/storage/' + order.sketch_photo_path : null);
@@ -3286,6 +3299,14 @@ export default function Dashboard({
         if (promotePaymentOption === 'lunas') return total;
         if (promotePaymentOption === 'custom') return parseFloat(promoteCustomPaidAmount) || 0;
         return Math.round((total * promoteDpPercent) / 100);
+    };
+
+    const [showRevisionDetailModal, setShowRevisionDetailModal] = useState(false);
+    const [selectedRevisionOrder, setSelectedRevisionOrder] = useState(null);
+
+    const handleOpenRevisionDetailModal = (order) => {
+        setSelectedRevisionOrder(order);
+        setShowRevisionDetailModal(true);
     };
 
     const handleAcknowledgeRevision = (orderId) => {
@@ -3914,6 +3935,8 @@ export default function Dashboard({
                                 setSelectedWaybillOrder={setSelectedWaybillOrder}
                                 setShowWaybillModal={setShowWaybillModal}
                                 handleCompleteDelivery={handleCompleteDelivery}
+                                handleOpenRevisionDetailModal={handleOpenRevisionDetailModal}
+                                handleAcknowledgeRevision={handleAcknowledgeRevision}
                             />
                         )}
 
@@ -3935,6 +3958,7 @@ export default function Dashboard({
                                 handleOpenDetailModal={handleOpenDetailModal}
                                 handleOpenComplaintModal={handleOpenComplaintModal}
                                 handleAcknowledgeRevision={handleAcknowledgeRevision}
+                                handleOpenRevisionDetailModal={handleOpenRevisionDetailModal}
                                 handleStartJob={handleStartJob}
                                 handleFinishJobSubmit={handleFinishJobSubmit}
                                 activeWorkingOrderId={activeWorkingOrderId}
@@ -3974,6 +3998,7 @@ export default function Dashboard({
                                 handleRequestRestockStatus={handleRequestRestockStatus}
                                 setShowScrapModal={setShowScrapModal}
                                 handleDeleteStockItem={handleDeleteStockItem}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
@@ -3997,6 +4022,8 @@ export default function Dashboard({
                                 setShowBarangKeluarModal={setShowBarangKeluarModal}
                                 setSelectedWaybillOrder={setSelectedWaybillOrder}
                                 setShowWaybillModal={setShowWaybillModal}
+                                handleCompleteDelivery={handleCompleteDelivery}
+                                handleOpenConfirmDeliveryModal={handleOpenConfirmDeliveryModal}
                             />
                         )}
 
@@ -4051,6 +4078,7 @@ export default function Dashboard({
                                 handleRequestAccRestockStatus={handleRequestAccRestockStatus}
                                 handleOpenEditAccModal={handleOpenEditAccModal}
                                 handleDeleteAcc={handleDeleteAcc}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
@@ -4070,6 +4098,7 @@ export default function Dashboard({
                                 setShowUseSupplyModal={setShowUseSupplyModal}
                                 handleApproveRestockRequest={handleApproveRestockRequest}
                                 handleCompleteRestockRequest={handleCompleteRestockRequest}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
@@ -4093,6 +4122,7 @@ export default function Dashboard({
                                 handleOpenReturnModal={handleOpenReturnModal}
                                 handleStartRepair={handleStartRepair}
                                 handleOpenCompleteRepairModal={handleOpenCompleteRepairModal}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
@@ -4332,6 +4362,7 @@ export default function Dashboard({
                 show={showUseSupplyModal}
                 onClose={() => setShowUseSupplyModal(false)}
                 suppliesList={warehouseSuppliesList}
+                onSubmit={handleUseSupplySubmit}
             />
 
             {/* MODAL PENGAJUAN RESTOK PERLENGKAPAN GUDANG KE ADMIN TOKO */}
@@ -4339,6 +4370,18 @@ export default function Dashboard({
                 show={showRequestRestockModal}
                 onClose={() => setShowRequestRestockModal(false)}
                 suppliesList={warehouseSuppliesList}
+            />
+
+            {/* MODAL DETAIL REVISI ADMIN TOKO (BACA & KONFIRMASI) */}
+            <RevisionDetailModal
+                show={showRevisionDetailModal}
+                onClose={() => { setShowRevisionDetailModal(false); setSelectedRevisionOrder(null); }}
+                order={selectedRevisionOrder}
+                onAcknowledge={(orderId) => {
+                    handleAcknowledgeRevision(orderId);
+                    setShowRevisionDetailModal(false);
+                    setSelectedRevisionOrder(null);
+                }}
             />
 
             {/* MODAL TAMBAH ALAT PENUNJANG BARU */}
@@ -4466,6 +4509,13 @@ export default function Dashboard({
                 onClose={() => { setShowCodSettlementModal(false); setSelectedCodOrder(null); }}
                 order={selectedCodOrder}
                 driverName={userName}
+            />
+
+            {/* MODAL KONFIRMASI TERKIRIM & UPLOAD BUKTI SURAT JALAN TANDA TANGAN */}
+            <ConfirmDeliveryModal
+                isOpen={showConfirmDeliveryModal}
+                onClose={() => { setShowConfirmDeliveryModal(false); setSelectedDeliveryOrder(null); }}
+                order={selectedDeliveryOrder}
             />
 
             {/* MODAL CETAK RESMI LAPORAN KEUANGAN PERUSAHAAN (PDF / PRINTER) */}

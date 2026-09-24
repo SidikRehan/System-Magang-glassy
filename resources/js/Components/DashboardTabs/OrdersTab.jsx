@@ -3,7 +3,8 @@ import { formatIndonesianDate, formatIndonesianDateTime, roleTitles } from '@/Ut
 import { 
     FileText, Sliders, Truck, CreditCard, CheckCircle2, 
     Clock, Plus, Search, Calendar, Edit3, RefreshCw, 
-    Printer, Tag, Send, Eye, AlertCircle, MapPin, Lock 
+    Printer, Tag, Send, Eye, AlertCircle, MapPin, Lock,
+    Building2, Bell
 } from 'lucide-react';
 
 export default function OrdersTab({
@@ -25,6 +26,8 @@ export default function OrdersTab({
     setSelectedWaybillOrder,
     setShowWaybillModal,
     handleCompleteDelivery,
+    handleOpenRevisionDetailModal,
+    handleAcknowledgeRevision,
 }) {
     const renderProgressTracker = (o) => {
         const procs = Array.isArray(o.processes) && o.processes.length > 0 ? o.processes : ['HT'];
@@ -100,14 +103,25 @@ export default function OrdersTab({
                     </p>
                 </div>
 
-                {/* CREATE ORDER BUTTON POSITIONED ON THE RIGHT (SAAS STANDARD) */}
+                {/* CREATE ORDER BUTTONS POSITIONED ON THE RIGHT (SAAS STANDARD) */}
                 {(userRole === 'admin_toko' || userRole === 'owner') && (
-                    <button
-                        onClick={handleOpenNewOrderModal}
-                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-4 py-2.5 rounded-xl shadow-md shadow-[#1b68b0]/20 text-xs flex items-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer shrink-0"
-                    >
-                        <Plus className="w-4 h-4" /> Orderan Baru
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => handleOpenNewOrderModal(true)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-4 py-2.5 rounded-xl shadow-md shadow-amber-600/20 text-xs flex items-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer"
+                            title="Buat Orderan Bebas Biaya Kaca khusus Kebutuhan Internal Perusahaan"
+                        >
+                            <Building2 className="w-4 h-4" /> Orderan Kosong
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleOpenNewOrderModal(false)}
+                            className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-extrabold px-4 py-2.5 rounded-xl shadow-md shadow-[#1b68b0]/20 text-xs flex items-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer"
+                        >
+                            <Plus className="w-4 h-4" /> Orderan Baru
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -251,6 +265,12 @@ export default function OrdersTab({
                                         <td className="p-3.5 align-top">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <span className="font-mono font-black text-sm text-[#1b68b0]">{o.spo_number}</span>
+                                                {o.is_company_use && (
+                                                    <span className="text-[10px] bg-amber-100 text-amber-900 font-extrabold px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 font-mono shadow-2xs" title="Orderan Kosong (Dipakai Perusahaan / Free Kaca)">
+                                                        <Building2 className="w-3 h-3 text-amber-700" />
+                                                        <span>Orderan Kosong</span>
+                                                    </span>
+                                                )}
                                                 {o.is_revised && (
                                                     <span className="text-[10px] bg-amber-50 text-amber-700 font-extrabold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 font-mono shadow-2xs" title="Orderan ini memiliki riwayat revisi">
                                                         <AlertCircle className="w-3 h-3 text-amber-600" />
@@ -490,17 +510,22 @@ export default function OrdersTab({
                                                         </button>
                                                     ) : (
                                                         <div className="flex flex-wrap items-center gap-2">
+                                                            {o.revision_status === 'pending_gudang' && (
+                                                                <button
+                                                                    onClick={() => handleOpenRevisionDetailModal ? handleOpenRevisionDetailModal(o) : (handleAcknowledgeRevision && handleAcknowledgeRevision(o.id))}
+                                                                    className="animate-bounce bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 shadow-md cursor-pointer"
+                                                                    title="Ada revisi baru dari Admin Toko! Klik untuk melihat detail & konfirmasi"
+                                                                >
+                                                                    <Bell className="w-3.5 h-3.5 text-white animate-pulse" />
+                                                                    <span>REVISI BARU TOKO</span>
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleOpenDispatchModal(o)}
                                                                 className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3 py-1.5 rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
                                                             >
                                                                 <Send className="w-3.5 h-3.5" />
                                                                 <span>Kirim Divisi</span>
-                                                                {o.revision_status === 'pending_gudang' && (
-                                                                    <span className="text-[10px] bg-amber-400 text-slate-950 px-1 rounded font-mono font-black">
-                                                                        Revisi
-                                                                    </span>
-                                                                )}
                                                             </button>
                                                             <button
                                                                 onClick={() => handleOpenStickerModal(o)}

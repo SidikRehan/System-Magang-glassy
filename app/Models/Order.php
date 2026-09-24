@@ -52,6 +52,9 @@ class Order extends Model
         'complaint_status',
         'complaint_data',
         'raw_materials_used',
+        'is_company_use',
+        'proof_photo_path',
+        'recipient_name',
     ];
 
     protected $casts = [
@@ -69,6 +72,7 @@ class Order extends Model
         'complaint_data' => 'array',
         'raw_materials_used' => 'array',
         'is_revised' => 'boolean',
+        'is_company_use' => 'boolean',
         'revision_count' => 'integer',
         'deadline_date' => 'date',
         'length_cm' => 'float',
