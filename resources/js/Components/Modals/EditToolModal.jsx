@@ -18,6 +18,8 @@ export default function EditToolModal({
         location: '',
         notes: ''
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -30,8 +32,18 @@ export default function EditToolModal({
                 location: tool.location || '',
                 notes: tool.notes || ''
             });
+            setImageFile(null);
+            setImagePreview(tool.image_path ? '/storage/' + tool.image_path : null);
         }
     }, [tool]);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -41,7 +53,18 @@ export default function EditToolModal({
         }
 
         setIsSubmitting(true);
-        router.post(route('inventory.tools.update', tool.id), form, {
+        const formData = new FormData();
+        formData.append('name', form.name);
+        formData.append('category', form.category);
+        formData.append('total_qty', form.total_qty);
+        formData.append('condition', form.condition);
+        formData.append('location', form.location || '');
+        formData.append('notes', form.notes || '');
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        router.post(route('inventory.tools.update', tool.id), formData, {
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -103,6 +126,21 @@ export default function EditToolModal({
                             onChange={e => setForm({ ...form, name: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                         />
+                    </div>
+
+                    <div>
+                        <label className="text-slate-700 font-semibold block mb-1">Update Foto Contoh Alat / Mesin Penunjang:</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 text-xs focus:border-[#1b68b0] cursor-pointer"
+                        />
+                        {imagePreview && (
+                            <div className="mt-2 relative w-24 h-24 border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

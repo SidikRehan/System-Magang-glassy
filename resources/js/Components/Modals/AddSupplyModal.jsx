@@ -16,17 +16,37 @@ export default function AddSupplyModal({
         min_stock: 5,
         unit: 'Pcs'
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.name) {
-            alert('Masukkan nama perlengkapan!');
+            alert('Masukkan nama perlengkapan / sparepart!');
             return;
         }
 
         setIsSubmitting(true);
-        router.post(route('inventory.supplies.store'), form, {
+        const formData = new FormData();
+        formData.append('name', form.name);
+        formData.append('category', form.category);
+        formData.append('qty', form.qty);
+        formData.append('min_stock', form.min_stock);
+        formData.append('unit', form.unit);
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        router.post(route('inventory.supplies.store'), formData, {
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -90,6 +110,21 @@ export default function AddSupplyModal({
                             required
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:bg-white"
                         />
+                    </div>
+
+                    <div>
+                        <label className="text-slate-700 block mb-1 font-semibold">Foto Contoh Sparepart / Barang (Opsional):</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 text-xs focus:border-[#1b68b0] cursor-pointer"
+                        />
+                        {imagePreview && (
+                            <div className="mt-2 relative w-24 h-24 border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">

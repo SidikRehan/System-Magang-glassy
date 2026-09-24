@@ -24,6 +24,7 @@ export default function ToolsTab({
     handleOpenReturnModal,
     handleStartRepair,
     handleOpenCompleteRepairModal,
+    handleOpenSketchLightbox,
 }) {
     const totalReadyUnits = toolsList.reduce((sum, t) => sum + (t.available_qty || 0), 0);
     const activeBorrowingsCount = toolBorrowings.filter(b => b.status === 'Sedang Dipinjam').length;
@@ -204,6 +205,7 @@ export default function ToolsTab({
                         <table className="w-full text-left text-xs">
                             <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                 <tr>
+                                    <th className="p-3 w-16 text-center">Foto Sample</th>
                                     <th className="p-3">Kode Alat</th>
                                     <th className="p-3">Nama Alat / Mesin</th>
                                     <th className="p-3">Kategori</th>
@@ -217,13 +219,28 @@ export default function ToolsTab({
                             <tbody className="divide-y divide-slate-100">
                                 {filteredTools.length === 0 ? (
                                     <tr>
-                                        <td colSpan="8" className="p-8 text-center text-slate-400 text-xs italic">
+                                        <td colSpan="9" className="p-8 text-center text-slate-400 text-xs italic">
                                             Belum ada data alat penunjang yang cocok dengan filter / pencarian.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredTools.map(t => (
                                         <tr key={t.id} className="hover:bg-slate-50/70 transition">
+                                            <td className="p-2 text-center">
+                                                {t.image_path ? (
+                                                    <div 
+                                                        onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, 'Sample ' + t.name)}
+                                                        className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
+                                                        title="Klik untuk memperbesar foto sample mesin / alat"
+                                                    >
+                                                        <img src={'/storage/' + t.image_path} alt={t.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-xl bg-amber-50/80 border border-amber-100 flex items-center justify-center mx-auto text-amber-600 shadow-2xs">
+                                                        <Wrench className="w-5 h-5 text-amber-600" />
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="p-3 font-extrabold text-[#1b68b0] font-mono text-xs">{t.tool_code}</td>
                                             <td className="p-3 font-bold text-[#242222]">
                                                 <div className="flex items-center gap-1.5">

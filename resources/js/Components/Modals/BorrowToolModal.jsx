@@ -89,6 +89,28 @@ export default function BorrowToolModal({
                         </select>
                     </div>
 
+                    {(() => {
+                        const selectedToolObj = toolsList.find(t => t.id === parseInt(toolId));
+                        if (!selectedToolObj) return null;
+                        return (
+                            <div className="flex items-center gap-3 bg-blue-50/70 border border-blue-200 p-2.5 rounded-xl">
+                                {selectedToolObj.image_path ? (
+                                    <img src={'/storage/' + selectedToolObj.image_path} alt={selectedToolObj.name} className="w-12 h-12 rounded-lg object-cover border border-blue-200 shrink-0 bg-white" />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-lg bg-white border border-blue-200 flex items-center justify-center shrink-0 text-[#1b68b0]">
+                                        <Layers className="w-6 h-6 text-[#1b68b0]" />
+                                    </div>
+                                )}
+                                <div className="text-xs min-w-0">
+                                    <span className="font-extrabold text-[#242222] block truncate">{selectedToolObj.name}</span>
+                                    <span className="text-slate-500 font-mono text-[11px] block truncate">
+                                        Kategori: {selectedToolObj.category} | Lokasi: {selectedToolObj.location}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-slate-700 block mb-1 font-semibold">Jumlah Unit Dipinjam:*</label>

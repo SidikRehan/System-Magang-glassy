@@ -19,6 +19,7 @@ export default function WarehouseSuppliesTab({
     setShowUseSupplyModal,
     handleApproveRestockRequest,
     handleCompleteRestockRequest,
+    handleOpenSketchLightbox,
 }) {
     const needingRestockSupplies = warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length;
     const activeRestockRequests = supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length;
@@ -186,8 +187,9 @@ export default function WarehouseSuppliesTab({
                         <table className="w-full text-left text-xs">
                             <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                 <tr>
+                                    <th className="p-3 w-16 text-center">Foto Sample</th>
                                     <th className="p-3">Kode</th>
-                                    <th className="p-3">Nama Perlengkapan Operasional</th>
+                                    <th className="p-3">Nama Perlengkapan / Sparepart</th>
                                     <th className="p-3">Kategori</th>
                                     <th className="p-3 text-center">Stok</th>
                                     <th className="p-3">Lokasi Simpan</th>
@@ -198,6 +200,21 @@ export default function WarehouseSuppliesTab({
                             <tbody className="divide-y divide-slate-100">
                                 {filteredSupplies.map(s => (
                                     <tr key={s.id} className="hover:bg-slate-50/70 transition">
+                                        <td className="p-2 text-center">
+                                            {s.image_path ? (
+                                                <div 
+                                                    onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + s.image_path, 'Sample ' + s.name)}
+                                                    className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
+                                                    title="Klik untuk memperbesar foto sample sparepart"
+                                                >
+                                                    <img src={'/storage/' + s.image_path} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-xl bg-blue-50/80 border border-blue-100 flex items-center justify-center mx-auto text-[#1b68b0] shadow-2xs">
+                                                    <Package className="w-5 h-5 text-[#1b68b0]" />
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="p-3 font-mono text-[#1b68b0] font-bold">{s.item_code}</td>
                                         <td className="p-3 font-bold text-[#242222]">{s.name}</td>
                                         <td className="p-3 text-slate-500">{s.category}</td>
@@ -225,7 +242,7 @@ export default function WarehouseSuppliesTab({
                                 ))}
                                 {filteredSupplies.length === 0 && (
                                     <tr>
-                                        <td colSpan="7" className="p-8 text-center text-slate-400 text-xs italic">
+                                        <td colSpan="8" className="p-8 text-center text-slate-400 text-xs italic">
                                             Tidak ada perlengkapan yang sesuai dengan pencarian.
                                         </td>
                                     </tr>

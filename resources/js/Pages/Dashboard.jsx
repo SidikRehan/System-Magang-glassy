@@ -4086,6 +4086,7 @@ export default function Dashboard({
                                 setShowUseSupplyModal={setShowUseSupplyModal}
                                 handleApproveRestockRequest={handleApproveRestockRequest}
                                 handleCompleteRestockRequest={handleCompleteRestockRequest}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
@@ -4109,6 +4110,7 @@ export default function Dashboard({
                                 handleOpenReturnModal={handleOpenReturnModal}
                                 handleStartRepair={handleStartRepair}
                                 handleOpenCompleteRepairModal={handleOpenCompleteRepairModal}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
