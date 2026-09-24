@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import { 
     BarChart3, FileText, Truck, Sliders, Boxes, Building2, 
@@ -56,6 +56,7 @@ import EditToolModal from '@/Components/Modals/EditToolModal';
 import CompleteRepairModal from '@/Components/Modals/CompleteRepairModal';
 import PromoteOrderModal from '@/Components/Modals/PromoteOrderModal';
 import SalesRekapModal from '@/Components/Modals/SalesRekapModal';
+import ScrollToTopButton from '@/Components/ScrollToTopButton';
 import RevisionDetailModal from '@/Components/Modals/RevisionDetailModal';
 
 
@@ -84,6 +85,7 @@ export default function Dashboard({
     // Finance & Accounting State (Owner, Akuntan, Admin Toko, Driver, Gudang)
     const [financeTransactionsList, setFinanceTransactionsList] = useState(initialFinanceTransactions);
     const [showFinanceModal, setShowFinanceModal] = useState(false);
+    const mainContentRef = useRef(null);
     const [financeModalPrefill, setFinanceModalPrefill] = useState('biaya_operasional');
     const [financeModalPrefillData, setFinanceModalPrefillData] = useState(null);
     const [financeSubTab, setFinanceSubTab] = useState('pnl');
@@ -3128,6 +3130,10 @@ export default function Dashboard({
         e.preventDefault();
         setIsSubmittingOrder(true);
         setSubmittingAction(targetStatus);
+
+        // Cek apakah ada file foto yang di-upload
+        const hasSketchFile = orderForm.sketch_photo instanceof File;
+
         router.post(route('orders.store'), {
             ...orderForm,
             items: calcItems,
@@ -3142,7 +3148,13 @@ export default function Dashboard({
             total_price: calcTotalPrice,
             status: targetStatus
         }, {
-            forceFormData: true,
+            // forceFormData hanya aktif saat ada file gambar; kalau tidak ada,
+            // kirim sebagai JSON biasa (lebih ringan di parsing sisi server).
+            forceFormData: hasSketchFile,
+            preserveScroll: true,
+            // Partial reload: hanya refresh data order & metrik setelah simpan.
+            // Props berat (tools, supplies, deliveries, dll) dilewati sepenuhnya.
+            only: ['orders', 'metrics'],
             onSuccess: () => {
                 setShowNewOrderModal(false);
                 setSketchPreview(null);
@@ -3887,7 +3899,7 @@ export default function Dashboard({
                 </aside>
 
                 {/* CONTENT MAIN */}
-                <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto bg-[#F8FAFC] text-[#242222]">
+                <main ref={mainContentRef} className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto bg-[#F8FAFC] text-[#242222]">
                     <div key={activeTab} className="animate-tab-content">
                         {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
                         {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
@@ -4134,6 +4146,7 @@ export default function Dashboard({
                         )}
                     </div>
                 </main>
+                <ScrollToTopButton targetRef={mainContentRef} />
             </div>
 
             {/* MODAL 1: ORDER BARU (ADMIN TOKO - 12 POINT SPEC) */}
