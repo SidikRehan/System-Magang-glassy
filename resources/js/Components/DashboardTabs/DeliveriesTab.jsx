@@ -1164,23 +1164,24 @@ export default function DeliveriesTab({
                                             </div>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {WAREHOUSE_EQUIPMENT_PRESETS.map((preset, idx) => {
-                                                    const isAdded = dispatchNotesInput.includes(preset);
+                                                    const notesStr = typeof dispatchNotesInput === 'string' ? dispatchNotesInput : '';
+                                                    const isAdded = notesStr.includes(preset);
                                                     return (
                                                         <button
                                                             key={idx}
                                                             type="button"
                                                             onClick={() => {
                                                                 if (isAdded) {
-                                                                    const updated = dispatchNotesInput
+                                                                    const updated = notesStr
                                                                         .split(/,\s*/)
                                                                         .filter(item => item !== preset && item !== `Perlu Bawa Gudang: ${preset}`)
                                                                         .join(', ');
                                                                     setDispatchNotesInput(updated);
                                                                 } else {
-                                                                    if (!dispatchNotesInput || dispatchNotesInput.trim() === '') {
+                                                                    if (!notesStr || notesStr.trim() === '') {
                                                                         setDispatchNotesInput(`Perlu Bawa Gudang: ${preset}`);
                                                                     } else {
-                                                                        setDispatchNotesInput(`${dispatchNotesInput}, ${preset}`);
+                                                                        setDispatchNotesInput(`${notesStr}, ${preset}`);
                                                                     }
                                                                 }
                                                             }}
