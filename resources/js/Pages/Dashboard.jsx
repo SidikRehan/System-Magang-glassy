@@ -3573,7 +3573,10 @@ export default function Dashboard({
                         onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'orders' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
-                        <FileText className="w-3.5 h-3.5" /> Orderan
+                        <FileText className="w-3.5 h-3.5" /> <span>Orderan</span>
+                        {Number(metrics.draftOrdersCount || 0) > 0 && (
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        )}
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
@@ -3645,7 +3648,10 @@ export default function Dashboard({
                         onClick={() => setActiveTab('finance')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'finance' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
-                        <CreditCard className="w-3.5 h-3.5" /> Finance
+                        <CreditCard className="w-3.5 h-3.5" /> <span>Finance</span>
+                        {Number(metrics.pendingApprovalCount || 0) > 0 && (
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                        )}
                     </button>
                 )}
             </div>
@@ -3674,8 +3680,15 @@ export default function Dashboard({
                             )}
 
                             {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
+                                <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
+                                    </div>
+                                    {Number(metrics.draftOrdersCount || 0) > 0 && (
+                                        <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
+                                            {metrics.draftOrdersCount} draf
+                                        </span>
+                                    )}
                                 </button>
                             )}
 
@@ -3746,8 +3759,16 @@ export default function Dashboard({
                             )}
 
                             {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                                <button onClick={() => { setActiveTab('finance'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
+                                <button onClick={() => { setActiveTab('finance'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
+                                    </div>
+                                    {Number(metrics.pendingApprovalCount || 0) > 0 && (
+                                        <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                            {metrics.pendingApprovalCount}
+                                        </span>
+                                    )}
                                 </button>
                             )}
                         </nav>
@@ -3790,8 +3811,15 @@ export default function Dashboard({
                         )}
 
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
+                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                                <div className="flex items-center gap-3">
+                                    <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
+                                </div>
+                                {Number(metrics.draftOrdersCount || 0) > 0 && (
+                                    <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
+                                        {metrics.draftOrdersCount} draf
+                                    </span>
+                                )}
                             </button>
                         )}
 
@@ -3894,8 +3922,16 @@ export default function Dashboard({
                         )}
 
                         {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
+                            <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                                <div className="flex items-center gap-3">
+                                    <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
+                                </div>
+                                {Number(metrics.pendingApprovalCount || 0) > 0 && (
+                                    <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                        {metrics.pendingApprovalCount}
+                                    </span>
+                                )}
                             </button>
                         )}
                     </nav>
