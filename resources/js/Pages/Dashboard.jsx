@@ -1178,6 +1178,7 @@ export default function Dashboard({
     ]);
 
     const [showRequestRestockModal, setShowRequestRestockModal] = useState(false);
+    const [selectedRequestRestockSupply, setSelectedRequestRestockSupply] = useState(null);
     const [requestRestockForm, setRequestRestockForm] = useState({
         supply_id: '',
         request_qty: 10,
@@ -1186,12 +1187,13 @@ export default function Dashboard({
     });
 
     const handleOpenRequestRestockModal = (supplyItem = null) => {
+        setSelectedRequestRestockSupply(supplyItem);
         if (supplyItem) {
             setRequestRestockForm({
                 supply_id: supplyItem.id,
-                request_qty: Math.max(10, supplyItem.min_stock * 2),
+                request_qty: Math.max(10, (supplyItem.min_stock || 5) * 2),
                 priority: supplyItem.status === 'Habis' ? 'Mendesak / Stok Habis' : 'Mendesak / Stok Menipis',
-                notes: `Stok sisa ${supplyItem.stock_qty} ${supplyItem.unit} (lokasi: ${supplyItem.location}). Mohon restok ke Admin Toko.`
+                notes: `Stok sisa ${supplyItem.stock_qty || supplyItem.qty || 0} ${supplyItem.unit} (lokasi: ${supplyItem.location}). Mohon restok ke Admin Toko.`
             });
         } else {
             setRequestRestockForm({
@@ -4292,6 +4294,7 @@ export default function Dashboard({
                 show={showRestockModal}
                 onClose={() => { setShowRestockModal(false); setSelectedStockItem(null); }}
                 selectedStockItem={selectedStockItem}
+                sheetGlasses={sheetGlasses}
             />
 
             {/* MODAL TAMBAH JENIS BARANG STOK BARU */}
@@ -4394,8 +4397,9 @@ export default function Dashboard({
             {/* MODAL PENGAJUAN RESTOK PERLENGKAPAN GUDANG KE ADMIN TOKO */}
             <RequestRestockSupplyModal
                 show={showRequestRestockModal}
-                onClose={() => setShowRequestRestockModal(false)}
+                onClose={() => { setShowRequestRestockModal(false); setSelectedRequestRestockSupply(null); }}
                 suppliesList={warehouseSuppliesList}
+                prefillSupply={selectedRequestRestockSupply}
             />
 
             {/* MODAL DETAIL REVISI ADMIN TOKO (BACA & KONFIRMASI) */}

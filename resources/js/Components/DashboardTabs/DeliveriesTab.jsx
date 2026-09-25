@@ -1245,10 +1245,10 @@ export default function DeliveriesTab({
                                                         </div>
                                                     </td>
 
-                                                    <td className="p-3 space-y-1 max-w-xs">
+                                                    <td className="p-3 space-y-1 min-w-[200px] max-w-sm">
                                                         {itemsList.map((it, idx) => (
                                                             <div key={idx} className="bg-slate-50 p-1.5 rounded-lg border border-slate-200 text-xs flex justify-between gap-2">
-                                                                <span className="font-semibold text-slate-700 truncate">#{idx + 1}. {it.glass_type}</span>
+                                                                <span className="font-semibold text-slate-700 break-words">#{idx + 1}. {it.glass_type}</span>
                                                                 <span className="font-mono text-[#242222] font-bold text-[11px] shrink-0">{it.qty || 1} Pcs</span>
                                                             </div>
                                                         ))}

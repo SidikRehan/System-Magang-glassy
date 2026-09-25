@@ -130,15 +130,23 @@ export default function ScrapTab({
                         })}
                     </div>
 
-                    {/* BUTTON TAMBAH BARANG BARU */}
+                    {/* BUTTON TAMBAH BARANG & RESTOK UMUM */}
                     {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                        <div className="flex justify-start">
+                        <div className="flex flex-wrap items-center gap-2.5">
                             <button
                                 onClick={() => setShowAddStockModal(true)}
                                 className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>Tambah Jenis Barang Baru</span>
+                            </button>
+                            <button
+                                onClick={() => handleOpenRestockModal(null)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
+                                title="Restock bahan kaca lembaran baru (pilih jenis kaca dari daftar)"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                <span>Restock Kaca (Pilih Barang)</span>
                             </button>
                         </div>
                     )}
@@ -197,18 +205,18 @@ export default function ScrapTab({
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                            <table className="w-full text-left text-xs">
+                        <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-2xs">
+                            <table className="w-full text-left text-xs min-w-[1150px]">
                                 <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                     <tr>
-                                        <th className="p-3">Kode & Restock</th>
-                                        <th className="p-3">Nama Barang</th>
-                                        <th className="p-3">Jenis Kaca</th>
-                                        <th className="p-3">Ukuran Barang</th>
-                                        <th className="p-3">Harga Jual & Jasa</th>
-                                        <th className="p-3 text-center">Quantity</th>
-                                        <th className="p-3 text-center">Status</th>
-                                        <th className="p-3 text-right">Aksi</th>
+                                        <th className="p-3 whitespace-nowrap">Kode & Restock</th>
+                                        <th className="p-3 min-w-[240px] whitespace-nowrap">Nama Barang</th>
+                                        <th className="p-3 whitespace-nowrap">Jenis Kaca</th>
+                                        <th className="p-3 whitespace-nowrap">Ukuran Barang</th>
+                                        <th className="p-3 min-w-[210px] whitespace-nowrap">Harga Jual & Jasa</th>
+                                        <th className="p-3 text-center whitespace-nowrap">Quantity</th>
+                                        <th className="p-3 text-center whitespace-nowrap">Status</th>
+                                        <th className="p-3 text-right whitespace-nowrap min-w-[180px]">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -258,24 +266,24 @@ export default function ScrapTab({
                                                                 <Boxes className="w-5 h-5 text-[#1b68b0]" />
                                                             </div>
                                                         )}
-                                                        <div className="min-w-0">
-                                                            <div className="font-extrabold text-[#242222] text-xs leading-snug truncate">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="font-extrabold text-[#242222] text-xs leading-snug break-words">
                                                                 {item.name}
                                                             </div>
                                                             {showTableSupplierInfo && (
-                                                                <div className="text-[11px] text-[#70b03c] font-medium mt-0.5">
+                                                                <div className="text-[11px] text-[#70b03c] font-medium mt-0.5 break-words">
                                                                     Supplier: <span className="text-slate-700">{item.supplier_name || '-'}</span>
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="p-3">
+                                                <td className="p-3 whitespace-nowrap">
                                                     <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-2 py-0.5 rounded text-[11px] font-semibold">
                                                         {item.category}
                                                     </span>
                                                 </td>
-                                                <td className="p-3 font-mono font-bold text-slate-700">{item.size}</td>
+                                                <td className="p-3 font-mono font-bold text-slate-700 whitespace-nowrap">{item.size}</td>
                                                 <td className="p-3 text-xs">
                                                     {canViewPricing ? (
                                                         <div className="space-y-0.5 font-mono">
@@ -301,12 +309,12 @@ export default function ScrapTab({
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="p-3 text-center">
+                                                <td className="p-3 text-center whitespace-nowrap">
                                                     <span className={`font-extrabold font-mono text-xs px-2.5 py-1 rounded-lg border ${item.qty <= 5 ? 'bg-rose-50 text-rose-700 border-rose-200' : item.qty <= 10 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
                                                         {item.qty} {item.unit || 'Lembar'}
                                                     </span>
                                                 </td>
-                                                <td className="p-3 text-center">
+                                                <td className="p-3 text-center whitespace-nowrap">
                                                     {item.status === 'Aman' && (
                                                         <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -332,7 +340,7 @@ export default function ScrapTab({
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="p-3 text-right">
+                                                <td className="p-3 text-right whitespace-nowrap">
                                                     <div className="flex flex-wrap items-center justify-end gap-1.5">
                                                         {(userRole === 'admin_toko' || userRole === 'owner') && (
                                                             <>
@@ -426,15 +434,15 @@ export default function ScrapTab({
                     </div>
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-                        <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                            <table className="w-full text-left text-xs">
+                        <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-2xs">
+                            <table className="w-full text-left text-xs min-w-[750px]">
                                 <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                     <tr>
-                                        <th className="p-3">Kode Sisa</th>
-                                        <th className="p-3">Jenis Kaca</th>
-                                        <th className="p-3">Ukuran (P x L)</th>
-                                        <th className="p-3">Lokasi Rak Storage</th>
-                                        <th className="p-3 text-center">Status</th>
+                                        <th className="p-3 whitespace-nowrap">Kode Sisa</th>
+                                        <th className="p-3 whitespace-nowrap min-w-[200px]">Jenis Kaca</th>
+                                        <th className="p-3 whitespace-nowrap">Ukuran (P x L)</th>
+                                        <th className="p-3 whitespace-nowrap">Lokasi Rak Storage</th>
+                                        <th className="p-3 text-center whitespace-nowrap">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -447,15 +455,15 @@ export default function ScrapTab({
                                     ) : (
                                         initialScrap.map(s => (
                                             <tr key={s.id} className="hover:bg-slate-50/70 transition">
-                                                <td className="p-3 font-mono font-extrabold text-[#1b68b0]">{s.scrap_code}</td>
-                                                <td className="p-3 font-bold text-[#242222]">{s.glass_type}</td>
-                                                <td className="p-3 font-mono font-bold text-slate-700">{s.length_cm} x {s.width_cm} cm</td>
-                                                <td className="p-3">
+                                                <td className="p-3 font-mono font-extrabold text-[#1b68b0] whitespace-nowrap">{s.scrap_code}</td>
+                                                <td className="p-3 font-bold text-[#242222] min-w-[200px] break-words">{s.glass_type}</td>
+                                                <td className="p-3 font-mono font-bold text-slate-700 whitespace-nowrap">{s.length_cm} x {s.width_cm} cm</td>
+                                                <td className="p-3 whitespace-nowrap">
                                                     <span className="bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-purple-200">
                                                         {s.rak_location}
                                                     </span>
                                                 </td>
-                                                <td className="p-3 text-center">
+                                                <td className="p-3 text-center whitespace-nowrap">
                                                     <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
                                                         {s.status}
                                                     </span>
