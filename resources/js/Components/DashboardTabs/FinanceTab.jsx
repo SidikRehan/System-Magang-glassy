@@ -64,19 +64,21 @@ export default function FinanceTab({
     const aksesorisSum = approvedTransactions.filter(t => t.type === 'pembelian_aksesoris').reduce((a, b) => a + Number(b.amount || 0), 0);
     const alatSum = approvedTransactions.filter(t => t.type === 'pembelian_alat').reduce((a, b) => a + Number(b.amount || 0), 0);
     const listrikSum = approvedTransactions.filter(t => t.category === 'Listrik & Energi Pabrik').reduce((a, b) => a + Number(b.amount || 0), 0);
-    const bbmSum = approvedTransactions.filter(t => t.category === 'BBM & Logistik Armada').reduce((a, b) => a + Number(b.amount || 0), 0);
+    const bbmSum = approvedTransactions.filter(t => t.category === 'BBM & Logistik Armada' || t.category === 'BBM Armada').reduce((a, b) => a + Number(b.amount || 0), 0);
     const gajiSum = approvedTransactions.filter(t => t.category === 'Gaji & Upah Lembur').reduce((a, b) => a + Number(b.amount || 0), 0);
     const servisSum = approvedTransactions.filter(t => t.category === 'Perawatan Mesin').reduce((a, b) => a + Number(b.amount || 0), 0);
     const kantorSum = approvedTransactions.filter(t => t.category === 'Operasional Kantor' || t.category === 'Biaya Sewa & Pajak').reduce((a, b) => a + Number(b.amount || 0), 0);
+    const otherOpexSum = approvedTransactions.filter(t => t.type === 'biaya_operasional' && !['Listrik & Energi Pabrik', 'BBM & Logistik Armada', 'BBM Armada', 'Gaji & Upah Lembur', 'Perawatan Mesin', 'Operasional Kantor', 'Biaya Sewa & Pajak'].includes(t.category)).reduce((a, b) => a + Number(b.amount || 0), 0);
 
-    const totalCogs = bahanKacaSum + aksesorisSum;
-    const totalOpex = listrikSum + bbmSum + gajiSum + servisSum + alatSum + kantorSum;
+    const totalCogs = approvedTransactions.filter(t => t.type === 'pembelian_bahan' || t.type === 'pembelian_aksesoris').reduce((a, b) => a + Number(b.amount || 0), 0);
+    const totalOpex = approvedTransactions.filter(t => t.type === 'biaya_operasional' || t.type === 'pembelian_alat').reduce((a, b) => a + Number(b.amount || 0), 0);
     const grandTotalExpenses = totalCogs + totalOpex;
     const grossProfitVal = totalRev - totalCogs;
     const netProfitVal = totalRev - grandTotalExpenses;
     const isProfitable = netProfitVal >= 0;
     const grossMarginPct = totalRev > 0 ? ((grossProfitVal / totalRev) * 100).toFixed(1) : '0.0';
     const netMarginPct = totalRev > 0 ? ((netProfitVal / totalRev) * 100).toFixed(1) : '0.0';
+    const opexPosCount = [listrikSum, bbmSum, gajiSum, servisSum, alatSum, kantorSum, otherOpexSum].filter(s => s > 0).length;
 
     // Filter transaksi untuk tab Buku Kas
     const filteredTransactions = financeTransactionsList.filter(t => {
@@ -145,9 +147,16 @@ export default function FinanceTab({
                     <h3 className="text-xl sm:text-2xl font-black text-[#1b68b0] font-mono mt-2">
                         Rp {totalRev.toLocaleString('id-ID')}
                     </h3>
-                    <div className="text-[11px] text-slate-500 font-mono mt-2 flex items-center gap-1.5 border-t border-slate-100 pt-2">
-                        <span className="text-[#1b68b0] font-bold">{metrics.totalOrders || 0} SPO</span>
-                        <span>• Terverifikasi Kasir</span>
+                    <div className="text-[11px] text-slate-500 font-mono mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[#1b68b0] font-bold">{metrics.totalOrders || 0} SPO</span>
+                            <span>• Terverifikasi Deal</span>
+                        </div>
+                        {Number(metrics.draftOrdersCount || 0) > 0 && (
+                            <span className="text-[10px] bg-slate-100 text-slate-600 font-sans px-1.5 py-0.5 rounded border border-slate-200" title={`Draf Penawaran: Rp ${Number(metrics.draftOrdersTotal || 0).toLocaleString('id-ID')}`}>
+                                +{metrics.draftOrdersCount} Draf Nego
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -181,7 +190,7 @@ export default function FinanceTab({
                     </h3>
                     <div className="text-[11px] text-slate-500 font-mono mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
                         <span>Listrik, BBM & Gaji:</span>
-                        <span className="font-bold text-purple-800">{approvedTransactions.filter(t => t.type === 'biaya_operasional').length} Pos</span>
+                        <span className="font-bold text-purple-800">{opexPosCount} Pos</span>
                     </div>
                 </div>
 
@@ -428,7 +437,7 @@ export default function FinanceTab({
                                                     <span>3. BEBAN OPERASIONAL PABRIK & TOKO (OPEX)</span>
                                                 </span>
                                                 <span className="text-[10px] font-mono text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded font-normal">
-                                                    6 Pos Biaya Operasional
+                                                    {opexPosCount} Pos Biaya Operasional
                                                 </span>
                                             </div>
                                         </td>
@@ -493,6 +502,14 @@ export default function FinanceTab({
                                             icon: Building2,
                                             desc: 'Internet fiber optic, ATK surat jalan & kasir toko'
                                         },
+                                        ...(otherOpexSum > 0 ? [{
+                                            name: 'Beban Operasional Lainnya & Penyesuaian Kas',
+                                            sum: otherOpexSum,
+                                            category: 'semua',
+                                            budget: otherOpexSum,
+                                            icon: CreditCard,
+                                            desc: 'Biaya operasional lainnya yang tercatat di pembukuan'
+                                        }] : [])
                                     ].map((item, idx) => {
                                         const Icon = item.icon;
                                         const sharePct = totalOpex > 0 ? ((item.sum / totalOpex) * 100).toFixed(1) : '0.0';

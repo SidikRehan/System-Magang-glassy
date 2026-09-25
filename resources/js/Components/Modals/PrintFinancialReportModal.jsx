@@ -38,13 +38,14 @@ export default function PrintFinancialReportModal({
     const alatSum = alatTrx.reduce((a, b) => a + Number(b.amount || 0), 0);
     
     const listrikSum = approvedTransactions.filter(t => t.category === 'Listrik & Energi Pabrik').reduce((a, b) => a + Number(b.amount || 0), 0);
-    const bbmSum = approvedTransactions.filter(t => t.category === 'BBM & Logistik Armada').reduce((a, b) => a + Number(b.amount || 0), 0);
+    const bbmSum = approvedTransactions.filter(t => t.category === 'BBM & Logistik Armada' || t.category === 'BBM Armada').reduce((a, b) => a + Number(b.amount || 0), 0);
     const gajiSum = approvedTransactions.filter(t => t.category === 'Gaji & Upah Lembur').reduce((a, b) => a + Number(b.amount || 0), 0);
     const servisSum = approvedTransactions.filter(t => t.category === 'Perawatan Mesin').reduce((a, b) => a + Number(b.amount || 0), 0);
     const kantorSum = approvedTransactions.filter(t => t.category === 'Operasional Kantor' || t.category === 'Biaya Sewa & Pajak').reduce((a, b) => a + Number(b.amount || 0), 0);
+    const otherOpexSum = approvedTransactions.filter(t => t.type === 'biaya_operasional' && !['Listrik & Energi Pabrik', 'BBM & Logistik Armada', 'BBM Armada', 'Gaji & Upah Lembur', 'Perawatan Mesin', 'Operasional Kantor', 'Biaya Sewa & Pajak'].includes(t.category)).reduce((a, b) => a + Number(b.amount || 0), 0);
 
-    const totalCogs = bahanKacaSum + aksesorisSum;
-    const totalOpex = listrikSum + bbmSum + gajiSum + servisSum + alatSum + kantorSum;
+    const totalCogs = approvedTransactions.filter(t => t.type === 'pembelian_bahan' || t.type === 'pembelian_aksesoris').reduce((a, b) => a + Number(b.amount || 0), 0);
+    const totalOpex = approvedTransactions.filter(t => t.type === 'biaya_operasional' || t.type === 'pembelian_alat').reduce((a, b) => a + Number(b.amount || 0), 0);
     const grandTotalExpenses = totalCogs + totalOpex;
     const grossProfitVal = totalRev - totalCogs;
     const netProfitVal = totalRev - grandTotalExpenses;
@@ -282,7 +283,7 @@ export default function PrintFinancialReportModal({
                                 <div className="border border-slate-300 p-3 rounded bg-slate-50">
                                     <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Omzet Penjualan</div>
                                     <div className="font-extrabold font-mono text-slate-900 text-sm mt-1">Rp {totalRev.toLocaleString('id-ID')}</div>
-                                    <div className="text-[9px] text-slate-500 mt-0.5">{metrics.totalOrders || ordersList.length || 36} Faktur SPO</div>
+                                    <div className="text-[9px] text-slate-500 mt-0.5">{metrics.totalOrders || ordersList.length || 0} Faktur SPO (Deal)</div>
                                 </div>
                                 <div className="border border-slate-300 p-3 rounded bg-slate-50">
                                     <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">HPP Bahan & Aksesoris</div>
@@ -396,6 +397,12 @@ export default function PrintFinancialReportModal({
                                             <td className="p-1.5 pl-6 text-slate-700">• Operasional Kantor Toko, Internet Wifi, Pajak & ATK</td>
                                             <td className="p-1.5 pr-3 text-right text-slate-900 font-semibold">Rp {kantorSum.toLocaleString('id-ID')}</td>
                                         </tr>
+                                        {otherOpexSum > 0 && (
+                                            <tr className="border-b border-slate-200">
+                                                <td className="p-1.5 pl-6 text-slate-700">• Beban Operasional Lainnya & Penyesuaian Kas</td>
+                                                <td className="p-1.5 pr-3 text-right text-slate-900 font-semibold">Rp {otherOpexSum.toLocaleString('id-ID')}</td>
+                                            </tr>
+                                        )}
                                         <tr className="bg-slate-50 font-bold text-slate-950 border-b-2 border-slate-400">
                                             <td className="p-2 pl-3">TOTAL BEBAN OPERASIONAL (TOTAL OPEX)</td>
                                             <td className="p-2 pr-3 text-right text-slate-950">Rp {totalOpex.toLocaleString('id-ID')}</td>
@@ -566,6 +573,7 @@ export default function PrintFinancialReportModal({
                                             { name: 'Pemeliharaan Mesin Gosok/Bevel & Servis Armada', budget: 4000000, actual: servisSum },
                                             { name: 'Pengadaan Alat Penunjang & Perlengkapan Pabrik', budget: 8000000, actual: alatSum },
                                             { name: 'Operasional Kantor Toko, Wifi, Pajak & ATK', budget: 2500000, actual: kantorSum },
+                                            ...(otherOpexSum > 0 ? [{ name: 'Beban Operasional Lainnya & Penyesuaian Kas', budget: otherOpexSum, actual: otherOpexSum }] : [])
                                         ].map((pos, idx) => {
                                             const utilPct = pos.budget > 0 ? Math.round((pos.actual / pos.budget) * 100) : 0;
                                             const sharePct = totalOpex > 0 ? ((pos.actual / totalOpex) * 100).toFixed(1) : '0.0';
@@ -588,11 +596,13 @@ export default function PrintFinancialReportModal({
                                         })}
                                         <tr className="bg-slate-100 font-black text-slate-950 border-t-2 border-slate-900">
                                             <td className="p-2 text-left uppercase">TOTAL BEBAN OPERASIONAL (OPEX)</td>
-                                            <td className="p-2 text-right">Rp 57.500.000</td>
+                                            <td className="p-2 text-right">Rp {(57500000 + (otherOpexSum > 0 ? otherOpexSum : 0)).toLocaleString('id-ID')}</td>
                                             <td className="p-2 text-right font-black">Rp {totalOpex.toLocaleString('id-ID')}</td>
-                                            <td className="p-2 text-center font-bold">80.4%</td>
+                                            <td className="p-2 text-center font-bold">{Math.round((totalOpex / (57500000 + (otherOpexSum > 0 ? otherOpexSum : 0))) * 100)}%</td>
                                             <td className="p-2 text-center">100.0%</td>
-                                            <td className="p-2 text-center text-emerald-900 font-bold">AMAN & SEHAT</td>
+                                            <td className="p-2 text-center text-emerald-900 font-bold">
+                                                {totalOpex <= (57500000 + (otherOpexSum > 0 ? otherOpexSum : 0)) ? 'AMAN & SEHAT' : 'PERHATIAN'}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>

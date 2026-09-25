@@ -62,10 +62,11 @@ class SypOperationalController extends Controller
     private function computeDashboardMetrics(): array
     {
         $otherRevenue       = (float) FinanceTransaction::where('approval_status', 'approved')->where('type', 'pemasukan_lain')->sum('amount');
-        $totalRevenue       = (float) Order::sum('total_price') + $otherRevenue;
-        $paidRevenue        = (float) Order::sum('paid_amount') + $otherRevenue;
-        $pendingCODTotal    = (float) Order::where('payment_status', '!=', 'Lunas')->sum('total_price');
-        $pendingCODPaid     = (float) Order::where('payment_status', '!=', 'Lunas')->sum('paid_amount');
+        $activeOrders       = Order::where('status', '!=', 'draft');
+        $totalRevenue       = (float) (clone $activeOrders)->sum('total_price') + $otherRevenue;
+        $paidRevenue        = (float) (clone $activeOrders)->sum('paid_amount') + $otherRevenue;
+        $pendingCODTotal    = (float) (clone $activeOrders)->where('payment_status', '!=', 'Lunas')->sum('total_price');
+        $pendingCODPaid     = (float) (clone $activeOrders)->where('payment_status', '!=', 'Lunas')->sum('paid_amount');
         $pendingCOD         = ($pendingCODTotal - $pendingCODPaid) > 0
                                 ? ($pendingCODTotal - $pendingCODPaid)
                                 : $pendingCODTotal;
@@ -79,7 +80,10 @@ class SypOperationalController extends Controller
         $pendingApprovalCount = FinanceTransaction::where('approval_status', 'pending')->count();
 
         return [
-            'totalOrders'          => Order::count(),
+            'totalOrders'          => (clone $activeOrders)->count(),
+            'allOrdersCount'       => Order::count(),
+            'draftOrdersCount'     => Order::where('status', 'draft')->count(),
+            'draftOrdersTotal'     => (float) Order::where('status', 'draft')->sum('total_price'),
             'inProcess'            => Order::where('status', 'pengerjaan')->count(),
             'readyShip'            => Order::where('status', 'pengiriman')->count(),
             'scrapCount'           => ScrapGlass::count(),
