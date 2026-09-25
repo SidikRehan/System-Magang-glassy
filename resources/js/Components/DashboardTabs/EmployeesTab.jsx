@@ -21,7 +21,7 @@ export default function EmployeesTab({
     setShowEmployeeModal,
     handleDeleteEmployee,
 }) {
-    if (userRole !== 'hrd' && userRole !== 'admin_finance' && userRole !== 'finance' && userRole !== 'owner') {
+    if (userRole !== 'hrd' && userRole !== 'owner') {
         return null;
     }
 

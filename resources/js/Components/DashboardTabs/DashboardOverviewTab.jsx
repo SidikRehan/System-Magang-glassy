@@ -24,7 +24,7 @@ export default function DashboardOverviewTab({
 }) {
     const [hoveredDonutSegment, setHoveredDonutSegment] = useState(null);
 
-    if (userRole !== 'owner' && userRole !== 'finance' && userRole !== 'admin_finance') {
+    if (userRole !== 'owner') {
         return null;
     }
 

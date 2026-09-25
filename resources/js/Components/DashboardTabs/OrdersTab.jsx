@@ -88,7 +88,7 @@ export default function OrdersTab({
         );
     };
 
-    const canManageSalesOrFinance = userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance';
+    const canManageSalesOrFinance = userRole === 'admin_toko' || userRole === 'owner';
 
     return (
         <div className="space-y-6">
