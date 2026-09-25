@@ -621,7 +621,15 @@ export default function DeliveriesTab({
                                                                         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                                                                             {ord.proof_photo_path && handleOpenSketchLightbox && (
                                                                                 <button
-                                                                                    onClick={() => handleOpenSketchLightbox('/storage/' + ord.proof_photo_path, 'Bukti Surat Jalan Ttd - SPO #' + (ord.spo_number || ord.id))}
+                                                                                    onClick={() => handleOpenSketchLightbox('/storage/' + ord.proof_photo_path, ord.spo_number || ord.id, {
+                                                                                        type: 'delivery_proof',
+                                                                                        subtitle: `No. SPO: ${ord.spo_number || ord.id} • Penerima: ${ord.recipient_name || ord.customer_name || 'Pelanggan'}`,
+                                                                                        badge: 'Bukti Serah Terima Surat Jalan',
+                                                                                        description: `Dokumentasi foto fisik lembar surat jalan yang telah ditandatangani dan/atau distempel oleh pihak penerima/pelanggan di alamat pengantaran. Berfungsi sebagai bukti sah serah terima barang telah tuntas.`,
+                                                                                        recipientName: ord.recipient_name || ord.customer_name,
+                                                                                        customerName: ord.customer_name,
+                                                                                        deliveredAt: ord.delivered_at,
+                                                                                    })}
                                                                                     className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
                                                                                     title="Lihat Foto Surat Jalan Tanda Tangan Penerima"
                                                                                 >
@@ -710,7 +718,15 @@ export default function DeliveriesTab({
                                                                                 <button
                                                                                     key={pIdx}
                                                                                     type="button"
-                                                                                    onClick={() => handleOpenSketchLightbox(p, `Struk Nota #${clm.transaction_code} (${pIdx + 1}/${pList.length})`)}
+                                                                                    onClick={() => handleOpenSketchLightbox(p, clm.transaction_code, {
+                                                                                        type: 'receipt',
+                                                                                        subtitle: `No. Transaksi: #${clm.transaction_code} • Struk ${pIdx + 1} dari ${pList.length}`,
+                                                                                        badge: 'Struk Klaim Operasional',
+                                                                                        description: `Foto bukti fisik struk / nota kuitansi resmi (${clm.expense_category || 'Pengeluaran Driver'} - ${clm.vehicle_plate || 'Armada'}) yang dilampirkan oleh driver untuk validasi klaim kas operasional oleh tim Keuangan.`,
+                                                                                        vehiclePlate: clm.vehicle_plate,
+                                                                                        amount: clm.amount,
+                                                                                        category: clm.expense_category,
+                                                                                    })}
                                                                                     className="text-[10px] bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded-lg font-mono font-bold flex items-center gap-1 cursor-pointer"
                                                                                 >
                                                                                     <Camera className="w-3 h-3 text-[#1b68b0]" />
@@ -1229,10 +1245,10 @@ export default function DeliveriesTab({
                                                         </div>
                                                     </td>
 
-                                                    <td className="p-3 space-y-1 max-w-xs">
+                                                    <td className="p-3 space-y-1 min-w-[200px] max-w-sm">
                                                         {itemsList.map((it, idx) => (
                                                             <div key={idx} className="bg-slate-50 p-1.5 rounded-lg border border-slate-200 text-xs flex justify-between gap-2">
-                                                                <span className="font-semibold text-slate-700 truncate">#{idx + 1}. {it.glass_type}</span>
+                                                                <span className="font-semibold text-slate-700 break-words">#{idx + 1}. {it.glass_type}</span>
                                                                 <span className="font-mono text-[#242222] font-bold text-[11px] shrink-0">{it.qty || 1} Pcs</span>
                                                             </div>
                                                         ))}

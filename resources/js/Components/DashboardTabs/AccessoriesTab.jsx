@@ -143,7 +143,14 @@ export default function AccessoriesTab({
                                             {acc.image_path ? (
                                                 <div 
                                                     className="relative group cursor-pointer shrink-0 overflow-hidden rounded-xl"
-                                                    onClick={() => handleOpenSketchLightbox(acc.image_path, `${acc.name} (${acc.acc_code || 'Aksesoris'})`)}
+                                                    onClick={() => handleOpenSketchLightbox(acc.image_path, acc.name, {
+                                                        type: 'accessory',
+                                                        subtitle: `Kode Part: ${acc.acc_code || '-'} • ${acc.name}`,
+                                                        badge: 'Katalog Aksesoris & Hardware',
+                                                        description: `Foto sampel fisik aksesoris dan hardware pemasangan kaca (${acc.category || 'Fitting Kaca'}). Digunakan untuk memastikan kesesuaian tipe part, merk (${acc.brand || '-'}), dan kelengkapan set pemasangan.`,
+                                                        itemCode: acc.acc_code,
+                                                        category: acc.category,
+                                                    })}
                                                     title="Klik untuk memperbesar / melihat foto aksesoris"
                                                 >
                                                     <img 

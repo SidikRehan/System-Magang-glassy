@@ -203,9 +203,18 @@ export default function WarehouseSuppliesTab({
                                         <td className="p-2 text-center">
                                             {s.image_path ? (
                                                 <div 
-                                                    onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + s.image_path, 'Sample ' + s.name)}
+                                                    onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + s.image_path, s.name, {
+                                                        type: 'supply',
+                                                        subtitle: `Kode Barang: ${s.item_code || '-'} • ${s.name}`,
+                                                        badge: 'Bahan Pembantu Gudang',
+                                                        description: `Dokumentasi visual barang habis pakai operasional pabrik (${s.category || 'Perlengkapan'}). Digunakan untuk verifikasi stok fisik dan pengambilan barang di ${s.location || 'gudang'}.`,
+                                                        itemCode: s.item_code,
+                                                        category: s.category,
+                                                        location: s.location,
+                                                        stockQty: `${s.stock_qty} ${s.unit || 'unit'}`,
+                                                    })}
                                                     className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
-                                                    title="Klik untuk memperbesar foto sample sparepart"
+                                                    title="Klik untuk memperbesar foto sample perlengkapan"
                                                 >
                                                     <img src={'/storage/' + s.image_path} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
                                                 </div>

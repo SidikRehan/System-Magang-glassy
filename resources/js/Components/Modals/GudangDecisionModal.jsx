@@ -1,11 +1,12 @@
 import React from 'react';
-import { Scale, CheckCircle2, RotateCcw, X, AlertTriangle } from 'lucide-react';
+import { Scale, CheckCircle2, RotateCcw, X, AlertTriangle, ZoomIn } from 'lucide-react';
 
 export default function GudangDecisionModal({
     show,
     onClose,
     selectedComplaintOrder,
-    onResolveComplaint
+    onResolveComplaint,
+    onOpenSketchLightbox
 }) {
     if (!show || !selectedComplaintOrder) return null;
 
@@ -66,9 +67,27 @@ export default function GudangDecisionModal({
 
                     {selectedComplaintOrder.complaint_data?.photo_path && (
                         <div className="space-y-1 pt-1 border-t border-slate-200">
-                            <span className="text-[11px] font-bold text-slate-700">Foto Bukti Kaca Cacat:</span>
-                            <div className="rounded-xl overflow-hidden border border-slate-200 max-h-48 bg-slate-100">
-                                <img src={`/storage/${selectedComplaintOrder.complaint_data.photo_path}`} alt="Bukti Cacat Kaca" className="w-full h-full object-contain" />
+                            <span className="text-[11px] font-bold text-slate-700">Foto Bukti Kaca Cacat (Klik untuk memperbesar):</span>
+                            <div 
+                                onClick={() => onOpenSketchLightbox && onOpenSketchLightbox(
+                                    selectedComplaintOrder.complaint_data.photo_path,
+                                    selectedComplaintOrder.spo_number,
+                                    {
+                                        type: 'complaint',
+                                        subtitle: `No. SPO: ${selectedComplaintOrder.spo_number} • Divisi Pelapor: ${selectedComplaintOrder.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || '-'}`,
+                                        badge: 'Laporan Kaca Cacat / Baret',
+                                        description: `Dokumentasi visual cacat fisik atau goresan pada kaca yang dilaporkan saat proses produksi divisi ${selectedComplaintOrder.complaint_data?.reporting_division?.replace('divisi_', '').toUpperCase() || ''}. Menjadi dasar pertimbangan Admin Gudang untuk memutuskan langkah penanganan kaca.`,
+                                        customerName: selectedComplaintOrder.customer_name,
+                                    }
+                                )}
+                                className="rounded-xl overflow-hidden border border-slate-200 max-h-48 bg-slate-100 cursor-pointer group relative"
+                                title="Klik untuk memperbesar foto bukti cacat kaca"
+                            >
+                                <img src={`/storage/${selectedComplaintOrder.complaint_data.photo_path}`} alt="Bukti Cacat Kaca" className="w-full h-full object-contain group-hover:scale-105 transition duration-200" />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
+                                    <ZoomIn className="w-4 h-4" />
+                                    <span>Perbesar Foto</span>
+                                </div>
                             </div>
                         </div>
                     )}

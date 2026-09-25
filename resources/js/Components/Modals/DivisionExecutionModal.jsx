@@ -710,7 +710,13 @@ export default function DivisionExecutionModal({
                                     </h4>
                                     <button
                                         type="button"
-                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number, {
+                                            type: 'production',
+                                            subtitle: `No. SPO: ${selectedExecutionOrder.spo_number}`,
+                                            badge: 'Acuan Kerja Divisi',
+                                            description: `Acuan teknis pengerjaan fisik pola potongan, sambungan kaca, dan toleransi bevel/gosok bagi operator divisi pabrik pada SPO #${selectedExecutionOrder.spo_number} (${selectedExecutionOrder.customer_name || 'Pelanggan'}).`,
+                                            customerName: selectedExecutionOrder.customer_name,
+                                        })}
                                         className="bg-[#1b68b0]/10 hover:bg-[#1b68b0] text-[#1b68b0] hover:text-white border border-[#1b68b0]/30 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                                     >
                                         <Search className="w-3.5 h-3.5" />
@@ -719,7 +725,13 @@ export default function DivisionExecutionModal({
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div 
-                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number)}
+                                        onClick={() => onOpenSketchLightbox(selectedExecutionOrder.sketch_photo_path, selectedExecutionOrder.spo_number, {
+                                            type: 'production',
+                                            subtitle: `No. SPO: ${selectedExecutionOrder.spo_number}`,
+                                            badge: 'Acuan Kerja Divisi',
+                                            description: `Acuan teknis pengerjaan fisik pola potongan, sambungan kaca, dan toleransi bevel/gosok bagi operator divisi pabrik pada SPO #${selectedExecutionOrder.spo_number} (${selectedExecutionOrder.customer_name || 'Pelanggan'}).`,
+                                            customerName: selectedExecutionOrder.customer_name,
+                                        })}
                                         className="relative group cursor-pointer w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden border-2 border-slate-200 bg-white shrink-0 shadow-xs"
                                     >
                                         <img 
