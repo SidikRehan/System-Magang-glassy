@@ -378,17 +378,29 @@ class InventoryMasterController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:100',
+            'category' => 'nullable|string|max:100',
             'condition' => 'nullable|string|max:50',
+            'damaged_qty' => 'nullable|integer|min:0',
             'location' => 'nullable|string|max:100',
             'total_qty' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        // Hitung selisih total_qty
-        $diff = (int) $validated['total_qty'] - $tool->total_qty;
-        $newAvailable = max(0, $tool->available_qty + $diff);
+        $condition = $validated['condition'] ?? $tool->condition ?? 'Baik';
+        $totalQty = (int) $validated['total_qty'];
+
+        // Jika kondisi 'Baik', maka tidak ada unit rusak/perlu servis (damaged_qty = 0)
+        // Jika 'Perlu Servis' atau 'Rusak', ambil damaged_qty (min 1, max total_qty)
+        if ($condition === 'Baik') {
+            $damagedQty = 0;
+        } else {
+            $requestedDamaged = isset($validated['damaged_qty']) ? (int) $validated['damaged_qty'] : 1;
+            $damagedQty = min(max(1, $requestedDamaged), $totalQty);
+        }
+
+        $borrowedQty = ToolBorrow::where('tool_id', $tool->id)->where('status', 'Dipinjam')->sum('qty');
+        $newAvailable = max(0, $totalQty - $borrowedQty - $damagedQty);
 
         $imagePath = $tool->image_path;
         if ($request->hasFile('image')) {
@@ -398,10 +410,11 @@ class InventoryMasterController extends Controller
         $tool->update([
             'name' => $validated['name'],
             'image_path' => $imagePath,
-            'category' => $validated['category'],
-            'condition' => $validated['condition'] ?? $tool->condition,
+            'category' => $validated['category'] ?? $tool->category ?? 'Mesin Bor & Potong',
+            'condition' => $condition,
+            'damaged_qty' => $damagedQty,
             'location' => $validated['location'] ?? $tool->location,
-            'total_qty' => $validated['total_qty'],
+            'total_qty' => $totalQty,
             'available_qty' => $newAvailable,
             'notes' => $validated['notes'] ?? $tool->notes,
         ]);

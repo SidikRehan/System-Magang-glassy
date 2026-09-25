@@ -41,17 +41,17 @@ class SypOperationalController extends Controller
             'orders'              => fn() => Order::orderBy('id', 'desc')->get(),
             'metrics'             => fn() => $this->computeDashboardMetrics(),
 
-            // ── Props data pendukung: lazy — hanya di-load saat diminta ───────
-            'scrapGlasses'        => Inertia::optional(fn() => ScrapGlass::latest()->get()),
-            'deliveries'          => Inertia::optional(fn() => Delivery::with('order')->latest()->get()),
-            'users'               => Inertia::optional(fn() => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get()),
-            'activityLogs'        => Inertia::optional(fn() => ActivityLog::latest()->take(100)->get()),
-            'financeTransactions' => Inertia::optional(fn() => FinanceTransaction::with(['user', 'approver'])->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get()),
-            'sheetGlasses'        => Inertia::optional(fn() => SheetGlass::orderBy('id', 'desc')->get()),
-            'suppliers'           => Inertia::optional(fn() => Supplier::orderBy('id', 'desc')->get()),
-            'accessories'         => Inertia::optional(fn() => Accessory::orderBy('id', 'desc')->get()),
-            'tools'               => Inertia::optional(fn() => Tool::with(['borrows' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get()),
-            'supplies'            => Inertia::optional(fn() => Supply::with(['usages' => fn($q) => $q->latest(), 'restocks' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get()),
+            // ── Props data pendukung: dievaluasi saat initial visit dan saat diminta partial reload ───────
+            'scrapGlasses'        => fn() => ScrapGlass::latest()->get(),
+            'deliveries'          => fn() => Delivery::with('order')->latest()->get(),
+            'users'               => fn() => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get(),
+            'activityLogs'        => fn() => ActivityLog::latest()->take(100)->get(),
+            'financeTransactions' => fn() => FinanceTransaction::with(['user', 'approver'])->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get(),
+            'sheetGlasses'        => fn() => SheetGlass::orderBy('id', 'desc')->get(),
+            'suppliers'           => fn() => Supplier::orderBy('id', 'desc')->get(),
+            'accessories'         => fn() => Accessory::orderBy('id', 'desc')->get(),
+            'tools'               => fn() => Tool::with(['borrows' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get(),
+            'supplies'            => fn() => Supply::with(['usages' => fn($q) => $q->latest(), 'restocks' => fn($q) => $q->latest()])->orderBy('id', 'desc')->get(),
         ]);
     }
 

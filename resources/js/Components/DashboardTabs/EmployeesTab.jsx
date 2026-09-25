@@ -28,7 +28,10 @@ export default function EmployeesTab({
     const filteredEmployees = employeesList.filter(emp => {
         const matchSearch = (emp.name || '').toLowerCase().includes(employeeSearchTerm.toLowerCase()) || 
             (emp.email || '').toLowerCase().includes(employeeSearchTerm.toLowerCase());
-        const matchRole = employeeRoleFilter === 'semua' || emp.role === employeeRoleFilter;
+        const matchRole = employeeRoleFilter === 'semua' || 
+            emp.role === employeeRoleFilter ||
+            (employeeRoleFilter === 'admin_finance' && (emp.role === 'admin_finance' || emp.role === 'finance')) ||
+            (employeeRoleFilter === 'finance' && (emp.role === 'admin_finance' || emp.role === 'finance'));
         return matchSearch && matchRole;
     });
 
@@ -139,10 +142,79 @@ export default function EmployeesTab({
                         </div>
                     </div>
 
-                    {/* EMPLOYEES TABLE */}
-                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
+                    {/* EMPLOYEES LIST - DUAL VIEW (MOBILE CARDS & DESKTOP TABLE) */}
+                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs p-4 sm:p-5 space-y-4">
+                        {/* MOBILE CARDS FOR EMPLOYEES */}
+                        <div className="block md:hidden space-y-3">
+                            {filteredEmployees.length === 0 ? (
+                                <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50/50 rounded-xl border border-slate-200">
+                                    Tidak ditemukan data karyawan sesuai pencarian/filter.
+                                </div>
+                            ) : (
+                                filteredEmployees.map(emp => {
+                                    const roleBadgeColor = 
+                                        emp.role === 'driver' ? 'bg-cyan-50 text-cyan-700 border-cyan-200' :
+                                        (emp.role || '').startsWith('divisi_') ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                        emp.role === 'admin_gudang' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                        emp.role === 'owner' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                        'bg-blue-50 text-blue-700 border-blue-200';
+
+                                    return (
+                                        <div key={emp.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center font-black text-[#1b68b0] text-sm shrink-0">
+                                                        {(emp.name || 'U').charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-extrabold text-[#242222] text-sm leading-tight flex items-center gap-1.5 flex-wrap">
+                                                            <span>{emp.name}</span>
+                                                            {auth.user?.id === emp.id && (
+                                                                <span className="text-[10px] bg-blue-50 text-[#1b68b0] px-1.5 py-0.2 rounded border border-blue-200 font-bold">
+                                                                    (Akun Anda)
+                                                                </span>
+                                                            )}
+                                                        </h4>
+                                                        <span className="text-xs text-slate-500 font-mono block mt-0.5 truncate max-w-[200px]">{emp.email}</span>
+                                                    </div>
+                                                </div>
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${roleBadgeColor}`}>
+                                                    {roleTitles[emp.role] || emp.role}
+                                                </span>
+                                            </div>
+
+                                            <div className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                                                <span>Terdaftar:</span>
+                                                <span className="font-bold text-[#242222]">{formatIndonesianDate(emp.created_at)}</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 pt-1">
+                                                <button
+                                                    onClick={() => { setSelectedEmployeeForEdit(emp); setShowEmployeeModal(true); }}
+                                                    className="flex-1 bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                                                    title="Edit Data / Reset Password"
+                                                >
+                                                    <Edit className="w-3.5 h-3.5" /> Edit / Reset Pass
+                                                </button>
+                                                {auth.user?.id !== emp.id && (
+                                                    <button
+                                                        onClick={() => handleDeleteEmployee(emp)}
+                                                        className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+                                                        title="Hapus / Non-aktifkan Akun"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        {/* DESKTOP TABLE FOR EMPLOYEES */}
+                        <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-xl">
+                            <table className="w-full text-left text-xs min-w-[650px]">
                                 <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                     <tr>
                                         <th className="p-4">Karyawan / Staff</th>
@@ -229,8 +301,8 @@ export default function EmployeesTab({
 
             {/* SUB TAB 2: RIWAYAT AKTIVITAS ADMIN & AUDIT LOG */}
             {employeeSubTab === 'log' && (
-                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs space-y-4 p-5">
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs space-y-4 p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b border-slate-100 pb-3">
                         <div>
                             <h3 className="font-black text-[#242222] text-sm flex items-center gap-2">
                                 <FileText className="w-4 h-4 text-[#1b68b0]" />
@@ -240,20 +312,75 @@ export default function EmployeesTab({
                                 Pencatatan otomatis seluruh pembuatan akun baru, edit profil, reset password, dan penghapusan karyawan.
                             </p>
                         </div>
-                        <span className="bg-blue-50 text-[#1b68b0] text-xs font-mono font-bold px-3 py-1 rounded-full border border-blue-200">
+                        <span className="bg-blue-50 text-[#1b68b0] text-xs font-mono font-bold px-3 py-1 rounded-full border border-blue-200 w-fit">
                             Total {activityLogsList.length} Log
                         </span>
                     </div>
 
-                    <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                        <table className="w-full text-left text-xs">
+                    {/* MOBILE CARDS FOR AUDIT LOG */}
+                    <div className="block md:hidden space-y-3">
+                        {activityLogsList.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50/50 rounded-xl border border-slate-200">
+                                Belum ada catatan aktivitas admin yang terekam di sistem.
+                            </div>
+                        ) : (
+                            activityLogsList.map(log => {
+                                const badgeStyle = 
+                                    log.action_type === 'BUAT_AKUN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                    log.action_type === 'RESET_PASSWORD' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                    log.action_type === 'HAPUS_AKUN' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                    log.action_type === 'TOLAK_SCRAP' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                    log.action_type === 'EDIT_SCRAP' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                    log.action_type === 'INPUT_SCRAP' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                    log.action_type === 'CATAT_BAHAN_KACA' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-blue-50 text-blue-700 border-blue-200';
+
+                                return (
+                                    <div key={log.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-2.5 text-xs">
+                                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                                            <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${badgeStyle}`}>
+                                                {log.action_type}
+                                            </span>
+                                            <span className="text-slate-400 font-mono text-[10px]">
+                                                {formatIndonesianDateTime(log.created_at)}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center text-xs">
+                                            <div className="flex items-center gap-1.5">
+                                                <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                                                <span className="text-slate-500 font-medium">Oleh:</span>
+                                                <span className="font-extrabold text-[#242222]">{log.admin_name}</span>
+                                            </div>
+                                            {log.target_user_name && (
+                                                <div className="text-slate-600 font-bold">
+                                                    Target: <span className="text-[#1b68b0]">{log.target_user_name}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div 
+                                            className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 text-slate-700 text-xs leading-relaxed line-clamp-2 hover:line-clamp-none cursor-pointer"
+                                            title={log.description}
+                                        >
+                                            {log.description}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* DESKTOP TABLE FOR AUDIT LOG */}
+                    <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-xl">
+                        <table className="w-full text-left text-xs min-w-[700px]">
                             <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
                                 <tr>
                                     <th className="p-4">Waktu Log</th>
                                     <th className="p-4">Admin Eksekutor</th>
                                     <th className="p-4">Jenis Action</th>
                                     <th className="p-4">Target Karyawan</th>
-                                    <th className="p-4">Detail Deskripsi</th>
+                                    <th className="p-4 max-w-md">Detail Deskripsi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 font-medium">
@@ -296,8 +423,13 @@ export default function EmployeesTab({
                                                 <td className="p-4 font-bold text-slate-700">
                                                     {log.target_user_name || '-'}
                                                 </td>
-                                                <td className="p-4 text-slate-600">
-                                                    {log.description}
+                                                <td className="p-4 text-slate-600 max-w-md">
+                                                    <div 
+                                                        className="line-clamp-2 hover:line-clamp-none transition-all duration-200 cursor-pointer bg-slate-50/70 hover:bg-white p-2 rounded-lg border border-transparent hover:border-slate-200 text-xs leading-relaxed" 
+                                                        title={log.description}
+                                                    >
+                                                        {log.description}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );

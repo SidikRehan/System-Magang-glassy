@@ -719,36 +719,36 @@ export default function PrintFinancialReportModal({
                             </div>
 
                             <div className="grid grid-cols-3 gap-6 text-center">
-                                {/* KOLOM 1: AKUNTAN / KASIR */}
+                                {/* KOLOM 1: STAFF FINANCE & AKUNTANSI */}
                                 <div>
                                     <div className="text-slate-500 text-[11px] mb-1">Disiapkan Oleh:</div>
                                     <div className="font-bold text-slate-900 text-xs">Staff Finance & Akuntansi</div>
                                     <div className="h-16 flex items-center justify-center">
-                                        <div className="text-slate-400 font-mono text-[10px] italic">[ Tanda Tangan Digital ]</div>
+                                        <div className="text-slate-300 font-mono text-[10px] italic">[ Tanda Tangan ]</div>
                                     </div>
-                                    <div className="font-bold text-slate-950 border-t-2 border-slate-900 pt-1 inline-block min-w-[150px]">
-                                        Ani / Doni Saputra
+                                    <div className="font-bold text-slate-900 border-t-2 border-slate-800 pt-1 inline-block min-w-[150px] font-mono text-xs">
+                                        (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
                                     </div>
-                                    <div className="text-[10px] text-slate-500 mt-0.5">Finance & Billing Supervisor</div>
+                                    <div className="text-[10px] text-slate-500 mt-0.5">Finance & Accounting Staff</div>
                                 </div>
 
-                                {/* KOLOM 2: MANAGER OPERASIONAL */}
+                                {/* KOLOM 2: OPERASIONAL / GUDANG */}
                                 <div>
                                     <div className="text-slate-500 text-[11px] mb-1">Diperiksa Oleh:</div>
-                                    <div className="font-bold text-slate-900 text-xs">Manager Operasional & Keuangan</div>
+                                    <div className="font-bold text-slate-900 text-xs">Admin Gudang & Operasional</div>
                                     <div className="h-16 flex items-center justify-center">
-                                        <div className="text-slate-400 font-mono text-[10px] italic">[ Tanda Tangan Digital ]</div>
+                                        <div className="text-slate-300 font-mono text-[10px] italic">[ Tanda Tangan ]</div>
                                     </div>
-                                    <div className="font-bold text-slate-950 border-t-2 border-slate-900 pt-1 inline-block min-w-[150px]">
-                                        Hendra Kusuma, S.T.
+                                    <div className="font-bold text-slate-900 border-t-2 border-slate-800 pt-1 inline-block min-w-[150px] font-mono text-xs">
+                                        (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
                                     </div>
-                                    <div className="text-[10px] text-slate-500 mt-0.5">Head of Operations & Glass Plant</div>
+                                    <div className="text-[10px] text-slate-500 mt-0.5">Head of Warehouse & Operations</div>
                                 </div>
 
-                                {/* KOLOM 3: OWNER / DIREKTUR UTAMA WITH OFFICIAL STAMP */}
+                                {/* KOLOM 3: OWNER / DIREKTUR PERUSAHAAN */}
                                 <div>
                                     <div className="text-slate-500 text-[11px] mb-1">Disetujui & Disahkan:</div>
-                                    <div className="font-bold text-slate-900 text-xs">Direktur Utama (Owner)</div>
+                                    <div className="font-bold text-slate-900 text-xs">Owner & Pimpinan Perusahaan</div>
                                     <div className="h-16 flex items-center justify-center relative">
                                         {/* CIRCULAR OFFICIAL STAMP */}
                                         <div className="w-16 h-16 rounded-full border-2 border-rose-700 text-rose-700 flex flex-col items-center justify-center text-[7.5px] font-black uppercase rotate-[-10deg] tracking-tight shadow-sm bg-rose-50/20">
@@ -757,10 +757,10 @@ export default function PrintFinancialReportModal({
                                             <span>KARUNIA</span>
                                         </div>
                                     </div>
-                                    <div className="font-bold text-slate-950 border-t-2 border-slate-900 pt-1 inline-block min-w-[150px]">
-                                        Bpk. Rehan Sidik
+                                    <div className="font-bold text-slate-900 border-t-2 border-slate-800 pt-1 inline-block min-w-[150px] font-mono text-xs">
+                                        (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
                                     </div>
-                                    <div className="text-[10px] text-slate-500 mt-0.5">Owner & Direktur Utama</div>
+                                    <div className="text-[10px] text-slate-500 mt-0.5">Owner / Direktur Utama</div>
                                 </div>
                             </div>
 
