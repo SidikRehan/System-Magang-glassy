@@ -1010,7 +1010,13 @@ export default function ProductionTab({
                                                             <div className="mt-1.5">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
+                                                                    onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number, {
+                                                                        type: 'production',
+                                                                        subtitle: `No. SPO: ${o.spo_number}`,
+                                                                        badge: 'Sketsa Produksi SPK',
+                                                                        description: `Gambar acuan teknis pengerjaan pola pemotongan, posisi sambungan kaca, dan instruksi proses kerja operator divisi pabrik untuk SPO #${o.spo_number} (${o.customer_name || 'Pelanggan'}).`,
+                                                                        customerName: o.customer_name,
+                                                                    })}
                                                                     className="w-full bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 rounded-lg p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-xs cursor-pointer"
                                                                     title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
                                                                 >

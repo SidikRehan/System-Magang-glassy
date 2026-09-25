@@ -244,7 +244,7 @@ export default function OrdersTab({
                             <tr>
                                 <th className="p-3.5">No SPO</th>
                                 <th className="p-3.5">Customer</th>
-                                <th className="p-3.5">Spesifikasi Kaca</th>
+                                <th className="p-3.5 min-w-[230px]">Spesifikasi Kaca</th>
                                 <th className="p-3.5">Posisi Divisi & Tracking</th>
                                 {canViewPricing && <th className="p-3.5">Total Tagihan</th>}
                                 {canViewPricing && <th className="p-3.5">Status Bayar</th>}
@@ -334,12 +334,12 @@ export default function OrdersTab({
                                         </td>
 
                                         {/* SPESIFIKASI KACA */}
-                                        <td className="p-3.5 align-top space-y-1 max-w-xs">
+                                        <td className="p-3.5 align-top space-y-1 min-w-[230px] max-w-sm">
                                             {Array.isArray(o.items) && o.items.length > 0 ? (
                                                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                                                     {o.items.map((it, idx) => (
                                                         <div key={idx} className="bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl text-xs space-y-1 shadow-2xs">
-                                                            <div className="font-bold text-[#1b68b0] truncate" title={it.glass_type}>
+                                                            <div className="font-extrabold text-[#1b68b0] text-xs leading-snug break-words">
                                                                 #{idx + 1}. {it.glass_type}
                                                             </div>
                                                             <div className="text-xs text-[#242222] font-mono font-bold">
@@ -362,13 +362,13 @@ export default function OrdersTab({
                                                 </div>
                                             ) : (
                                                 <div className="bg-slate-50 border border-slate-200/80 p-2 rounded-xl text-xs space-y-1">
-                                                    <div className="font-bold text-[#1b68b0] truncate" title={o.glass_type}>{o.glass_type}</div>
+                                                    <div className="font-extrabold text-[#1b68b0] text-xs leading-snug break-words">{o.glass_type}</div>
                                                     <div className="text-xs text-[#242222] font-mono font-bold">
                                                         {o.length_cm} x {o.width_cm} cm | {o.thickness_mm} mm
                                                     </div>
                                                     <div className="flex flex-wrap gap-1 pt-0.5">
                                                         {Array.isArray(o.processes) && o.processes.map(p => (
-                                                            <span key={p} className="text-[9px] bg-blue-50 text-[#1b68b0] font-bold px-1.5 py-0.2 rounded border border-blue-200/80">
+                                                             <span key={p} className="text-[9px] bg-blue-50 text-[#1b68b0] font-bold px-1.5 py-0.2 rounded border border-blue-200/80">
                                                                 {p}
                                                             </span>
                                                         ))}
@@ -380,7 +380,13 @@ export default function OrdersTab({
                                                 <div className="mt-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
+                                                        onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number, {
+                                                            type: 'order',
+                                                            subtitle: `No. SPO: ${o.spo_number}`,
+                                                            badge: 'Sketsa Pesanan SPO',
+                                                            description: `Acuan gambar sketsa pola fisik, spesifikasi potongan, dan posisi sambungan kaca pesanan pelanggan #${o.spo_number} (${o.customer_name || 'Pelanggan'}). Wajib dicek oleh divisi gudang dan operasional pabrik.`,
+                                                            customerName: o.customer_name,
+                                                        })}
                                                         className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-2xs cursor-pointer"
                                                         title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
                                                     >
