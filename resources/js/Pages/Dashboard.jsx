@@ -3513,10 +3513,10 @@ export default function Dashboard({
                             <button
                                 type="button"
                                 onClick={() => handleSearchChange('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#242222] text-xs font-bold cursor-pointer"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#242222] p-0.5 rounded cursor-pointer"
                                 title="Hapus pencarian"
                             >
-                                ✕
+                                <X className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
@@ -3633,7 +3633,13 @@ export default function Dashboard({
                     <aside className="relative w-72 max-w-[80vw] bg-white border-r border-slate-200 p-4 space-y-2 overflow-y-auto z-10 flex flex-col h-full shadow-2xl">
                         <div className="flex justify-between items-center pb-2 border-b border-slate-200 mb-2">
                             <span className="font-black text-sm text-[#1b68b0] flex items-center gap-1.5">UTB NAVIGASI</span>
-                            <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-[#242222] p-1 text-sm font-bold">✕</button>
+                            <button 
+                                onClick={() => setMobileMenuOpen(false)} 
+                                className="text-slate-400 hover:text-[#242222] p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                                title="Tutup Navigasi"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <nav className="space-y-1 flex-1">
@@ -4409,6 +4415,13 @@ export default function Dashboard({
                 show={showEditToolModal}
                 onClose={() => { setShowEditToolModal(false); setSelectedToolForEdit(null); }}
                 tool={selectedToolForEdit}
+                onSuccess={(updatedToolData) => {
+                    if (!updatedToolData && selectedToolForEdit) {
+                        setToolsList(prev => prev.filter(t => t.id !== selectedToolForEdit.id));
+                    } else if (updatedToolData && selectedToolForEdit) {
+                        setToolsList(prev => prev.map(t => t.id === selectedToolForEdit.id ? { ...t, ...updatedToolData } : t));
+                    }
+                }}
             />
 
             {/* MODAL FORM DETAIL PERBAIKAN SELESAI */}

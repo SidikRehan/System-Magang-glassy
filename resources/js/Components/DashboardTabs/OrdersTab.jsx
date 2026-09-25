@@ -239,7 +239,7 @@ export default function OrdersTab({
 
                 {/* TABLE GRID */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full text-left text-sm min-w-[850px]">
                         <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase text-[11px] tracking-wider">
                             <tr>
                                 <th className="p-3.5">No SPO</th>
@@ -325,19 +325,21 @@ export default function OrdersTab({
                                                 <span className="text-slate-400 font-normal font-sans">No Phone : </span>
                                                 <span>{o.customer_phone || '-'}</span>
                                             </div>
-                                            <div className="text-slate-600 font-medium whitespace-pre-line leading-relaxed text-[11px] pt-0.5">
+                                            <div className="text-slate-600 font-medium leading-relaxed text-[11px] pt-0.5 max-w-[220px]">
                                                 <span className="text-slate-400 font-normal">Alamat : </span>
-                                                <span>{o.customer_address || '-'}</span>
+                                                <span className="line-clamp-2 hover:line-clamp-none transition-all duration-200 cursor-pointer" title={o.customer_address}>
+                                                    {o.customer_address || '-'}
+                                                </span>
                                             </div>
                                         </td>
 
                                         {/* SPESIFIKASI KACA */}
                                         <td className="p-3.5 align-top space-y-1 max-w-xs">
                                             {Array.isArray(o.items) && o.items.length > 0 ? (
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                                                     {o.items.map((it, idx) => (
                                                         <div key={idx} className="bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl text-xs space-y-1 shadow-2xs">
-                                                            <div className="font-bold text-[#1b68b0]">
+                                                            <div className="font-bold text-[#1b68b0] truncate" title={it.glass_type}>
                                                                 #{idx + 1}. {it.glass_type}
                                                             </div>
                                                             <div className="text-xs text-[#242222] font-mono font-bold">
@@ -360,7 +362,7 @@ export default function OrdersTab({
                                                 </div>
                                             ) : (
                                                 <div className="bg-slate-50 border border-slate-200/80 p-2 rounded-xl text-xs space-y-1">
-                                                    <div className="font-bold text-[#1b68b0]">{o.glass_type}</div>
+                                                    <div className="font-bold text-[#1b68b0] truncate" title={o.glass_type}>{o.glass_type}</div>
                                                     <div className="text-xs text-[#242222] font-mono font-bold">
                                                         {o.length_cm} x {o.width_cm} cm | {o.thickness_mm} mm
                                                     </div>
@@ -413,22 +415,22 @@ export default function OrdersTab({
                                             )}
 
                                             {o.description && (
-                                                <div className="mt-2 p-2 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-xs">
+                                                <div className="mt-2 p-2 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-xs max-h-24 overflow-y-auto">
                                                     <span className="font-bold flex items-center gap-1 text-amber-800 text-[11px] mb-0.5">
                                                         Catatan Order:
                                                     </span>
-                                                    <div className="text-slate-700 font-medium whitespace-pre-wrap text-[11px] leading-relaxed">
+                                                    <div className="text-slate-700 font-medium text-[11px] leading-relaxed line-clamp-2 hover:line-clamp-none cursor-pointer" title={o.description}>
                                                         {o.description}
                                                     </div>
                                                 </div>
                                             )}
 
                                             {o.revision_notes && (
-                                                <div className="mt-1.5 p-2 bg-rose-50/80 border border-rose-200 rounded-xl text-rose-900 text-xs">
+                                                <div className="mt-1.5 p-2 bg-rose-50/80 border border-rose-200 rounded-xl text-rose-900 text-xs max-h-24 overflow-y-auto">
                                                     <span className="font-bold flex items-center gap-1 text-rose-800 text-[11px] mb-0.5">
                                                         Catatan Revisi:
                                                     </span>
-                                                    <div className="text-slate-700 font-medium whitespace-pre-wrap text-[11px] leading-relaxed font-mono">
+                                                    <div className="text-slate-700 font-medium text-[11px] leading-relaxed font-mono line-clamp-2 hover:line-clamp-none cursor-pointer" title={o.revision_notes}>
                                                         {o.revision_notes}
                                                     </div>
                                                 </div>

@@ -14,6 +14,7 @@ class Tool extends Model
     protected $casts = [
         'total_qty' => 'integer',
         'available_qty' => 'integer',
+        'damaged_qty' => 'integer',
     ];
 
     public function borrows()
