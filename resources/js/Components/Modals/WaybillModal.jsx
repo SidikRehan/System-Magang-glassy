@@ -220,9 +220,17 @@ export default function WaybillModal({
                         </table>
                     </div>
 
-                    {/* CATATAN PENGIRIMAN */}
-                    <div className="text-[11px] bg-white/70 p-2.5 rounded-xl border border-slate-300 text-slate-700">
-                        <strong>Catatan Pengiriman:</strong> Barang kaca telah diperiksa dalam kondisi sempurna (tidak pecah/gurat) sebelum dimuat ke armada pengiriman. Mohon periksa kembali saat penerimaan.
+                    {/* CATATAN PENGIRIMAN & BARANG PENUNJANG GUDANG */}
+                    <div className="text-[11px] bg-white p-2.5 rounded-xl border border-slate-300 text-slate-800 space-y-1.5">
+                        <div>
+                            <strong>Catatan Pengiriman Standard:</strong> Barang kaca telah diperiksa dalam kondisi sempurna (tidak pecah/gurat) sebelum dimuat ke armada pengiriman. Mohon periksa kembali saat penerimaan.
+                        </div>
+                        {(waybillOrder.notes || waybillOrder.delivery?.notes) && (
+                            <div className="bg-amber-50 border border-amber-200 p-2 rounded-lg text-amber-900 font-medium">
+                                <strong className="text-amber-800 block">📌 Catatan Khusus & Barang Penunjang Gudang:</strong>
+                                <p className="whitespace-pre-line leading-relaxed">{waybillOrder.notes || waybillOrder.delivery?.notes}</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* TANDA TANGAN */}
