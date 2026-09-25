@@ -1,17 +1,17 @@
 import React from 'react';
 
 export const roleTitles = {
-    admin_toko: '🏪 Admin Toko',
-    admin_gudang: '🏭 Admin Gudang',
-    divisi_ht: '✂️ Divisi Potong (HT)',
-    divisi_gm: '✨ Divisi GM (Gosok)',
-    divisi_bv: '💎 Divisi BV (Bevel)',
-    divisi_etsa: '🌫️ Divisi Etsa',
-    driver: '🚚 Supir / Driver',
-    owner: '📈 Owner & Akuntan',
-    hrd: '👥 HRD & Personalia',
-    finance: '💰 Finance & Akuntansi',
-    admin_finance: '💰 Finance & Akuntansi',
+    admin_toko: 'Admin Toko & Kasir',
+    admin_gudang: 'Admin Gudang Manufaktur',
+    divisi_ht: 'Divisi Potong (HT)',
+    divisi_gm: 'Divisi GM (Gosok)',
+    divisi_bv: 'Divisi BV (Bevel)',
+    divisi_etsa: 'Divisi Etsa (Blur)',
+    driver: 'Armada Pengiriman (Driver)',
+    owner: 'Owner & Direksi Utama',
+    hrd: 'HRD & Personalia',
+    finance: 'Finance & Akuntansi',
+    admin_finance: 'Finance & Akuntansi',
 };
 
 export const formatIndonesianDate = (dateStr) => {

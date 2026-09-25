@@ -2374,7 +2374,8 @@ export default function Dashboard({
     useEffect(() => {
         if (userRole.startsWith('divisi_')) setActiveTab('production');
         else if (userRole === 'driver') setActiveTab('deliveries');
-        else if (userRole === 'owner') setActiveTab('finance');
+        else if (userRole === 'owner') setActiveTab('dashboard');
+        else if (userRole === 'finance' || userRole === 'admin_finance') setActiveTab('finance');
         else if (userRole === 'admin_gudang') setActiveTab('orders');
         else setActiveTab('orders');
     }, [userRole]);
@@ -3107,17 +3108,17 @@ export default function Dashboard({
     });
 
     const roleTitles = {
-        admin_toko: '🏪 Admin Toko',
-        admin_gudang: '🏭 Admin Gudang',
-        divisi_ht: '✂️ Divisi Potong (HT)',
-        divisi_gm: '✨ Divisi GM (Gosok)',
-        divisi_bv: '💎 Divisi BV (Bevel)',
-        divisi_etsa: '🌫️ Divisi Etsa (Blur)',
-        driver: '🚚 Supir / Driver',
-        owner: '📈 Owner & Direksi',
-        hrd: '👔 HRD (Personalia & SDM)',
-        admin_finance: '💳 Admin Finance',
-        finance: '💰 Finance & Akuntan'
+        admin_toko: 'Admin Toko & Kasir',
+        admin_gudang: 'Admin Gudang Manufaktur',
+        divisi_ht: 'Divisi Potong (HT)',
+        divisi_gm: 'Divisi GM (Gosok)',
+        divisi_bv: 'Divisi BV (Bevel)',
+        divisi_etsa: 'Divisi Etsa (Blur)',
+        driver: 'Armada Pengiriman (Driver)',
+        owner: 'Owner & Direksi Utama',
+        hrd: 'HRD (Personalia & SDM)',
+        admin_finance: 'Finance & Akuntansi',
+        finance: 'Finance & Akuntansi'
     };
 
     const sanitizeField = (val) => {
@@ -3544,7 +3545,7 @@ export default function Dashboard({
                         <BarChart3 className="w-3.5 h-3.5" /> Dashboard
                     </button>
                 )}
-                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button 
                         onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'orders' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3576,7 +3577,7 @@ export default function Dashboard({
                         <Boxes className="w-3.5 h-3.5" /> Kaca
                     </button>
                 )}
-                {(userRole === 'admin_toko' || userRole === 'owner') && (
+                {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button 
                         onClick={() => setActiveTab('suppliers')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'suppliers' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3592,7 +3593,7 @@ export default function Dashboard({
                         <Plug className="w-3.5 h-3.5" /> Aksesoris
                     </button>
                 )}
-                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                     <button 
                         onClick={() => setActiveTab('supplies')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'supplies' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3600,7 +3601,7 @@ export default function Dashboard({
                         <Archive className="w-3.5 h-3.5" /> Gudang
                     </button>
                 )}
-                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
                     <button 
                         onClick={() => setActiveTab('tools')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'tools' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3649,7 +3650,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
                                 </button>
@@ -3682,7 +3683,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'owner') && (
+                            {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('suppliers'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Supplier</span>
                                 </button>
@@ -3696,7 +3697,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                                 <button onClick={() => { setActiveTab('supplies'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Gudang</span>
@@ -3704,7 +3705,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
                                 <button onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat</span>
                                 </button>
@@ -3765,7 +3766,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
                             </button>
@@ -3818,7 +3819,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'owner') && (
+                        {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Supplier</span>
                             </button>
@@ -3838,7 +3839,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                        {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                             <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Gudang</span>
@@ -3852,7 +3853,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
                             <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat</span>
                             </button>
@@ -4056,7 +4057,7 @@ export default function Dashboard({
                         )}
 
                         {/* TAB 7: DATA SUPPLIER & MITRA */}
-                        {activeTab === 'suppliers' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                        {activeTab === 'suppliers' && (userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <SuppliersTab
                                 userRole={userRole}
                                 suppliersList={suppliersList}
@@ -4069,8 +4070,8 @@ export default function Dashboard({
                             />
                         )}
 
-                        {/* TAB 8: STOK AKSESORIS (KHUSUS ADMIN TOKO & OWNER) */}
-                        {activeTab === 'accessories' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                        {/* TAB 8: STOK AKSESORIS */}
+                        {activeTab === 'accessories' && (userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <AccessoriesTab
                                 userRole={userRole}
                                 canViewPricing={canViewPricing}
@@ -4500,7 +4501,7 @@ export default function Dashboard({
                 roleTitles={roleTitles}
             />
 
-            {/* MODAL CATAT TRANSAKSI KEUANGAN & PEMBELIAN (OWNER & AKUNTAN) */}
+            {/* MODAL CATAT TRANSAKSI KEUANGAN & PEMBELIAN (FINANCE & AKUNTANSI / OWNER) */}
             <FinanceTransactionModal
                 isOpen={showFinanceModal}
                 onClose={() => { setShowFinanceModal(false); setFinanceModalPrefillData(null); }}

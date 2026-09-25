@@ -92,7 +92,7 @@ class DatabaseSeeder extends Seeder
                 'password' => $password,
             ],
             [
-                'name' => 'Owner & Tim Akuntan',
+                'name' => 'Bapak Ir. Hendra (Owner & Direktur Utama)',
                 'email' => 'owner@sypglass.co.id',
                 'role' => 'owner',
                 'password' => $password,
@@ -104,7 +104,7 @@ class DatabaseSeeder extends Seeder
                 'password' => $password,
             ],
             [
-                'name' => 'Rini Admin Finance & Akuntansi',
+                'name' => 'Rini Safitri (Finance & Accounting)',
                 'email' => 'finance@sypglass.co.id',
                 'role' => 'finance',
                 'password' => $password,

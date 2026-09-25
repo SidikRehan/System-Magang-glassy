@@ -15,7 +15,7 @@ export default function SuppliersTab({
     handleOpenEditSupplierModal,
     handleDeleteSupplier,
 }) {
-    if (userRole !== 'admin_toko' && userRole !== 'owner') {
+    if (userRole !== 'admin_toko' && userRole !== 'owner' && userRole !== 'finance' && userRole !== 'admin_finance') {
         return null;
     }
 

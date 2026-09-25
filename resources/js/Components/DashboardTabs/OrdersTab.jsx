@@ -88,17 +88,19 @@ export default function OrdersTab({
         );
     };
 
+    const canManageSalesOrFinance = userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance';
+
     return (
         <div className="space-y-6">
             {/* PAGE HEADER: TITLE (LEFT) & CTA ACTION BUTTON (RIGHT - SAAS STANDARD) */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
                 <div>
                     <h2 className="text-2xl font-black text-[#242222]">
-                        {userRole === 'admin_toko' || userRole === 'owner' ? 'Menu Orderan & Draf' : 'Menu Orderan Pengerjaan'}
+                        {canManageSalesOrFinance ? 'Menu Orderan & Monitoring Transaksi' : 'Menu Orderan Pengerjaan'}
                     </h2>
                     <p className="text-xs text-slate-500 font-medium">
-                        {userRole === 'admin_toko' || userRole === 'owner' 
-                            ? 'Kelola orderan baru, draf negosiasi, dan disposisi pengerjaan pabrik' 
+                        {canManageSalesOrFinance 
+                            ? 'Kelola orderan aktif, status pembayaran, draf negosiasi, dan disposisi pengerjaan pabrik' 
                             : 'Kelola orderan aktif pengerjaan, pengiriman, dan disposisi divisi'}
                     </p>
                 </div>
@@ -126,14 +128,14 @@ export default function OrdersTab({
             </div>
 
             {/* DYNAMIC PIPELINE CARDS HEADER - CLEAN WHITE SAAS METRIC CARDS */}
-            <div className={`grid ${userRole === 'admin_toko' || userRole === 'owner' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-3'} gap-3.5`}>
+            <div className={`grid ${canManageSalesOrFinance ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-3'} gap-3.5`}>
                 {[
-                    ...(userRole === 'admin_toko' || userRole === 'owner' ? [
+                    ...(canManageSalesOrFinance ? [
                         { key: 'draft', label: 'Draf (Belum Deal)', count: initialOrders.filter(o => o.status === 'draft').length, Icon: FileText, accent: 'text-sky-600 bg-sky-50 border-sky-100', activeRing: 'ring-2 ring-sky-500/30 border-sky-500' }
                     ] : []),
                     { key: 'pengerjaan', label: 'Order Pengerjaan', count: initialOrders.filter(o => o.status === 'pengerjaan').length, Icon: Sliders, accent: 'text-[#1b68b0] bg-blue-50 border-blue-100', activeRing: 'ring-2 ring-[#1b68b0]/30 border-[#1b68b0]' },
                     { key: 'pengiriman', label: 'Pengiriman & Surat Jalan', count: initialOrders.filter(o => o.status === 'pengiriman').length, Icon: Truck, accent: 'text-amber-600 bg-amber-50 border-amber-100', activeRing: 'ring-2 ring-amber-500/30 border-amber-500' },
-                    ...(userRole === 'admin_toko' || userRole === 'owner' ? [
+                    ...(canManageSalesOrFinance ? [
                         { key: 'pembayaran', label: 'Pembayaran / COD', count: initialOrders.filter(o => o.payment_status !== 'Lunas').length, Icon: CreditCard, accent: 'text-yellow-600 bg-yellow-50 border-yellow-100', activeRing: 'ring-2 ring-yellow-500/30 border-yellow-500' }
                     ] : []),
                     { key: 'selesai', label: 'Selesai', count: initialOrders.filter(o => o.status === 'selesai').length, Icon: CheckCircle2, accent: 'text-[#70b03c] bg-emerald-50 border-emerald-100', activeRing: 'ring-2 ring-[#70b03c]/30 border-[#70b03c]' },

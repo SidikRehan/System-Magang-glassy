@@ -136,8 +136,8 @@ export default function EmployeesTab({
                                 <option value="admin_gudang">Admin Gudang ({employeesList.filter(u => u.role === 'admin_gudang').length})</option>
                                 <option value="admin_toko">Admin Toko ({employeesList.filter(u => u.role === 'admin_toko').length})</option>
                                 <option value="hrd">HRD Personalia ({employeesList.filter(u => u.role === 'hrd').length})</option>
-                                <option value="admin_finance">Admin Finance ({employeesList.filter(u => u.role === 'admin_finance' || u.role === 'finance').length})</option>
-                                <option value="owner">Owner ({employeesList.filter(u => u.role === 'owner').length})</option>
+                                <option value="admin_finance">Finance & Akuntansi ({employeesList.filter(u => u.role === 'admin_finance' || u.role === 'finance').length})</option>
+                                <option value="owner">Owner & Direksi ({employeesList.filter(u => u.role === 'owner').length})</option>
                             </select>
                         </div>
                     </div>

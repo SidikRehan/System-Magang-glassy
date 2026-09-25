@@ -20,7 +20,7 @@ export default function AccessoriesTab({
     handleDeleteAcc,
     handleOpenSketchLightbox = () => {},
 }) {
-    if (userRole !== 'admin_toko' && userRole !== 'owner') {
+    if (userRole !== 'admin_toko' && userRole !== 'owner' && userRole !== 'finance' && userRole !== 'admin_finance') {
         return null;
     }
 

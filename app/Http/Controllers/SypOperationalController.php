@@ -1664,10 +1664,15 @@ class SypOperationalController extends Controller
     }
 
     /**
-     * Approve Finance Transaction (Owner & Admin Toko)
+     * Approve Finance Transaction (Owner & Tim Finance)
      */
     public function approveFinanceTransaction(Request $request, $id)
     {
+        $user = auth()->user();
+        if (!$user || !in_array($user->role, ['owner', 'finance', 'admin_finance'])) {
+            return redirect()->back()->with('error', 'Hanya Owner atau Tim Finance yang memiliki wewenang untuk menyetujui transaksi pengeluaran kas.');
+        }
+
         $trx = FinanceTransaction::findOrFail($id);
         $trx->update([
             'approval_status' => 'approved',
@@ -1677,21 +1682,26 @@ class SypOperationalController extends Controller
 
         ActivityLog::create([
             'user_id' => auth()->id(),
-            'admin_name' => auth()->user()->name ?? 'Owner & Akuntan',
+            'admin_name' => auth()->user()->name ?? ($user->role === 'owner' ? 'Owner / Direksi' : 'Finance & Accounting'),
             'action_type' => 'APPROVE_KLAIM_FINANCE',
             'target_user_name' => $trx->transaction_code,
             'description' => 'Menyetujui klaim ' . $trx->transaction_code . ' (' . $trx->title . ') sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . ' untuk dibayarkan dari kas operasional.',
             'created_at' => now(),
         ]);
 
-        return redirect()->back()->with('message', '✅ Klaim biaya #' . $trx->transaction_code . ' berhasil DISETUJUI dan langsung dibukukan ke Laporan Keuangan!');
+        return redirect()->back()->with('message', 'Klaim biaya #' . $trx->transaction_code . ' berhasil DISETUJUI dan langsung dibukukan ke Laporan Keuangan!');
     }
 
     /**
-     * Reject Finance Transaction (Owner & Admin Toko)
+     * Reject Finance Transaction (Owner & Tim Finance)
      */
     public function rejectFinanceTransaction(Request $request, $id)
     {
+        $user = auth()->user();
+        if (!$user || !in_array($user->role, ['owner', 'finance', 'admin_finance'])) {
+            return redirect()->back()->with('error', 'Hanya Owner atau Tim Finance yang memiliki wewenang untuk menolak transaksi pengeluaran kas.');
+        }
+
         $trx = FinanceTransaction::findOrFail($id);
         $reason = $request->input('rejection_reason', 'Klaim ditolak oleh verifikator');
         
@@ -1702,14 +1712,14 @@ class SypOperationalController extends Controller
 
         ActivityLog::create([
             'user_id' => auth()->id(),
-            'admin_name' => auth()->user()->name ?? 'Owner & Akuntan',
+            'admin_name' => auth()->user()->name ?? ($user->role === 'owner' ? 'Owner / Direksi' : 'Finance & Accounting'),
             'action_type' => 'TOLAK_KLAIM_FINANCE',
             'target_user_name' => $trx->transaction_code,
             'description' => 'Menolak klaim ' . $trx->transaction_code . ' (' . $trx->title . '). Alasan: ' . $reason,
             'created_at' => now(),
         ]);
 
-        return redirect()->back()->with('message', '⚠️ Klaim biaya #' . $trx->transaction_code . ' telah DITOLAK.');
+        return redirect()->back()->with('message', 'Klaim biaya #' . $trx->transaction_code . ' telah DITOLAK.');
     }
 
     /**
@@ -1733,7 +1743,7 @@ class SypOperationalController extends Controller
             'created_at' => now(),
         ]);
 
-        return redirect()->back()->with('message', '🎉 Serah terima uang kas COD Order #' . $order->spo_number . ' (Rp ' . number_format($sisaCod, 0, ',', '.') . ') BERHASIL dikonfirmasi masuk ke Kas Toko!');
+        return redirect()->back()->with('message', 'Serah terima uang kas COD Order #' . $order->spo_number . ' (Rp ' . number_format($sisaCod, 0, ',', '.') . ') BERHASIL dikonfirmasi masuk ke Kas Toko!');
     }
 
     /**
@@ -1749,7 +1759,7 @@ class SypOperationalController extends Controller
 
         ActivityLog::create([
             'user_id' => auth()->id(),
-            'admin_name' => auth()->user()->name ?? 'Owner & Akuntan',
+            'admin_name' => auth()->user()->name ?? (auth()->user()?->role === 'owner' ? 'Owner / Direksi' : 'Finance & Akuntansi'),
             'action_type' => 'HAPUS_TRANSAKSI_FINANCE',
             'target_user_name' => $code,
             'description' => 'Menghapus transaksi keuangan ' . $code . ' (' . $title . ') sebesar Rp ' . number_format($amount, 0, ',', '.'),
