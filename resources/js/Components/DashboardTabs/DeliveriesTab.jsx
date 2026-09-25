@@ -830,12 +830,12 @@ export default function DeliveriesTab({
                                 }
                                 grouped[key].deliveries.push(d);
                                 const ord = d.order || d;
-                                if (ord && !grouped[key].orders.find(o => o.id === ord.id)) {
+                                if (ord && ord.id && !grouped[key].orders.find(o => o && o.id === ord.id)) {
                                     grouped[key].orders.push(ord);
                                 }
                             });
 
-                            const trips = Object.values(grouped);
+                            const trips = Object.values(grouped).filter(t => t && Array.isArray(t.orders) && t.orders.length > 0);
 
                             if (trips.length === 0) {
                                 return (
@@ -1259,6 +1259,7 @@ export default function DeliveriesTab({
                                         }
 
                                         const renderOrderRow = (ord) => {
+                                            if (!ord) return null;
                                             const isReady = isOrderExecutionFinished(ord);
                                             const isSelected = selectedBatchOrderIds.includes(ord.id);
                                             const itemsList = Array.isArray(ord.items) && ord.items.length > 0

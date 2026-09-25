@@ -3698,7 +3698,7 @@ export default function Dashboard({
                                         <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengiriman</span>
                                     </div>
                                     <span className="bg-blue-50 text-[#1b68b0] border border-blue-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                                        {initialOrders.filter(o => o.status === 'pengiriman').length}
+                                        {(initialOrders || []).filter(o => o && o.status === 'pengiriman').length}
                                     </span>
                                 </button>
                             )}
@@ -3829,7 +3829,7 @@ export default function Dashboard({
                                     <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengiriman</span>
                                 </div>
                                 <span className="bg-blue-50 text-[#1b68b0] border border-blue-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                                    {initialOrders.filter(o => o.status === 'pengiriman').length}
+                                    {(initialOrders || []).filter(o => o && o.status === 'pengiriman').length}
                                 </span>
                             </button>
                         )}
@@ -3841,7 +3841,7 @@ export default function Dashboard({
                                 </div>
                                 {(() => {
                                     if (!isDivisionWorker) return null;
-                                    const pendingRevs = initialOrders.filter(o => o.current_division === userRole && o.revision_status === 'pending_division').length;
+                                    const pendingRevs = (initialOrders || []).filter(o => o && o.current_division === userRole && o.revision_status === 'pending_division').length;
 
                                     if (pendingRevs > 0) {
                                         return (
