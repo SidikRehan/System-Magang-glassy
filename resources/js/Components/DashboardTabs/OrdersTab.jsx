@@ -380,7 +380,13 @@ export default function OrdersTab({
                                                 <div className="mt-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number)}
+                                                        onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number, {
+                                                            type: 'order',
+                                                            subtitle: `No. SPO: ${o.spo_number}`,
+                                                            badge: 'Sketsa Pesanan SPO',
+                                                            description: `Acuan gambar sketsa pola fisik, spesifikasi potongan, dan posisi sambungan kaca pesanan pelanggan #${o.spo_number} (${o.customer_name || 'Pelanggan'}). Wajib dicek oleh divisi gudang dan operasional pabrik.`,
+                                                            customerName: o.customer_name,
+                                                        })}
                                                         className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl p-1.5 flex items-center justify-between gap-2 text-xs transition shadow-2xs cursor-pointer"
                                                         title="Klik untuk memperbesar gambar sketsa pola & sambungan kaca"
                                                     >

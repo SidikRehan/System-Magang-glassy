@@ -233,7 +233,15 @@ export default function ScrapTab({
                                                         {item.image_path ? (
                                                             <div 
                                                                 className="relative group cursor-pointer shrink-0 overflow-hidden rounded-xl"
-                                                                onClick={() => handleOpenSketchLightbox(item.image_path, `${item.name} (${item.item_code || 'Kaca'})`)}
+                                                                onClick={() => handleOpenSketchLightbox(item.image_path, item.name, {
+                                                                    type: 'stock',
+                                                                    subtitle: `Kode Kaca: ${item.item_code || '-'} • ${item.name}`,
+                                                                    badge: 'Stok Kaca Lembaran',
+                                                                    description: `Dokumentasi visual lembaran bahan kaca di rak penyimpanan gudang. Digunakan untuk memeriksa ketebalan (${item.thickness_mm || '-'}mm), warna/corak kaca, dan kondisi fisik stok sebelum dipotong ke mesin potong.`,
+                                                                    itemCode: item.item_code,
+                                                                    category: item.glass_type || item.category,
+                                                                    dimensions: `${item.length_cm || '-'} x ${item.width_cm || '-'} cm (${item.thickness_mm || '-'}mm)`,
+                                                                })}
                                                                 title="Klik untuk memperbesar / melihat foto kaca"
                                                             >
                                                                 <img 

@@ -58,6 +58,7 @@ import PromoteOrderModal from '@/Components/Modals/PromoteOrderModal';
 import SalesRekapModal from '@/Components/Modals/SalesRekapModal';
 import ScrollToTopButton from '@/Components/ScrollToTopButton';
 import RevisionDetailModal from '@/Components/Modals/RevisionDetailModal';
+import ImageLightboxModal from '@/Components/Modals/ImageLightboxModal';
 
 
 export default function Dashboard({ 
@@ -389,13 +390,32 @@ export default function Dashboard({
         setShowStickerModal(true);
     };
 
-    // Sketch Lightbox Modal State
-    const [sketchLightbox, setSketchLightbox] = useState({ isOpen: false, url: '', title: '' });
+    // Sketch / Image Lightbox Modal State
+    const [sketchLightbox, setSketchLightbox] = useState({
+        isOpen: false,
+        url: '',
+        title: '',
+        type: 'order',
+        subtitle: '',
+        description: '',
+        badge: '',
+        metadata: {}
+    });
 
-    const handleOpenSketchLightbox = (path, title) => {
+    const handleOpenSketchLightbox = (path, title, options = {}) => {
         if (!path) return;
         const fullUrl = path.startsWith('http') || path.startsWith('/') ? path : `/storage/${path}`;
-        setSketchLightbox({ isOpen: true, url: fullUrl, title: title || 'Sketsa Kaca' });
+        const opts = typeof options === 'string' ? { type: options } : (options || {});
+        setSketchLightbox({
+            isOpen: true,
+            url: fullUrl,
+            title: title || 'Lampiran Gambar',
+            type: opts.type || null,
+            subtitle: opts.subtitle || null,
+            description: opts.description || null,
+            badge: opts.badge || null,
+            metadata: opts.metadata || opts,
+        });
     };
 
     const getPhotoList = (pathStr) => {
@@ -4448,6 +4468,7 @@ export default function Dashboard({
                 onClose={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
                 selectedComplaintOrder={selectedComplaintOrder}
                 onResolveComplaint={handleResolveComplaint}
+                onOpenSketchLightbox={handleOpenSketchLightbox}
             />
 
             {/* MODAL SURAT JALAN / WAYBILL PRINT (4-COLOR COPY) */}
@@ -4579,54 +4600,18 @@ export default function Dashboard({
                 onPhotoChange={handleComplaintPhotoChange}
             />
 
-            {/* GLOBAL SKETCH LIGHTBOX MODAL */}
-            {sketchLightbox.isOpen && (
-                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800">
-                        <div className="p-4 bg-white border-b border-slate-200 flex justify-between items-center">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <FileText className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Sketsa Pola & Gambar Sambungan Kaca
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">No SPO: {sketchLightbox.title}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <a
-                                    href={sketchLightbox.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    download
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    <span>Unduh Gambar</span>
-                                </a>
-                                <button
-                                    onClick={() => setSketchLightbox({ isOpen: false, url: '', title: '' })}
-                                    className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex-1 p-6 bg-slate-900 flex items-center justify-center overflow-auto">
-                            <img
-                                src={sketchLightbox.url}
-                                alt="Detail Sketsa Kaca"
-                                className="max-w-full max-h-[75vh] object-contain rounded-2xl border border-slate-700 shadow-2xl"
-                            />
-                        </div>
-                        <div className="p-3.5 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500 font-mono">
-                            Acuan gambar sketsa pola fisik & posisi sambungan kaca untuk semua divisi operasional SYP Glass (Gudang, Potong, Gosok, Bevel, Etsa).
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* GLOBAL IMAGE LIGHTBOX MODAL */}
+            <ImageLightboxModal
+                isOpen={sketchLightbox.isOpen}
+                onClose={() => setSketchLightbox({ isOpen: false, url: '', title: '', type: 'order', subtitle: '', description: '', badge: '', metadata: {} })}
+                url={sketchLightbox.url}
+                title={sketchLightbox.title}
+                type={sketchLightbox.type}
+                subtitle={sketchLightbox.subtitle}
+                description={sketchLightbox.description}
+                badge={sketchLightbox.badge}
+                metadata={sketchLightbox.metadata}
+            />
         </div>
     );
 }
