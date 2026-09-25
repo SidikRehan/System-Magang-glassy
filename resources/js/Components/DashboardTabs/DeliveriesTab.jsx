@@ -61,22 +61,27 @@ export default function DeliveriesTab({
     const [assignNotes, setAssignNotes] = useState('');
     const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
 
+    const safeUserName = String(userName || auth?.user?.name || 'User');
+    const safeOrders = useMemo(() => Array.isArray(initialOrders) ? initialOrders : [], [initialOrders]);
+    const safeDeliveries = useMemo(() => Array.isArray(initialDeliveries) ? initialDeliveries : [], [initialDeliveries]);
+    const safeFinanceTransactions = useMemo(() => Array.isArray(financeTransactionsList) ? financeTransactionsList : [], [financeTransactionsList]);
+
     // Categorize orders based on division execution completion
     const finishedOrders = useMemo(() => {
-        return initialOrders.filter(o => isOrderExecutionFinished(o));
-    }, [initialOrders]);
+        return safeOrders.filter(o => o && isOrderExecutionFinished(o));
+    }, [safeOrders]);
 
     const unassignedOrders = useMemo(() => {
-        return finishedOrders.filter(o => !o.assigned_driver && !o.assigned_vehicle);
+        return finishedOrders.filter(o => o && !o.assigned_driver && !o.assigned_vehicle);
     }, [finishedOrders]);
 
     const assignedOrders = useMemo(() => {
-        return finishedOrders.filter(o => o.assigned_driver || o.assigned_vehicle);
+        return finishedOrders.filter(o => o && (o.assigned_driver || o.assigned_vehicle));
     }, [finishedOrders]);
 
     const inProductionOrders = useMemo(() => {
-        return initialOrders.filter(o => !isOrderExecutionFinished(o) && o.status !== 'draft');
-    }, [initialOrders]);
+        return safeOrders.filter(o => o && !isOrderExecutionFinished(o) && o.status !== 'draft');
+    }, [safeOrders]);
 
     // Active base list for the current filter tab
     const baseOrdersList = useMemo(() => {
@@ -191,7 +196,7 @@ export default function DeliveriesTab({
     };
 
     const toggleSelectOrderForBatch = (orderId) => {
-        const order = initialOrders.find(o => o.id === orderId);
+        const order = safeOrders.find(o => o.id === orderId);
         if (order && !isOrderExecutionFinished(order)) {
             alert(`⚠️ Orderan SPO #${order.spo_number} belum selesai dieksekusi oleh divisi terakhir dan belum dapat dijadwalkan pengirimannya.`);
             return;
@@ -225,7 +230,7 @@ export default function DeliveriesTab({
             return;
         }
 
-        const unreadyOrders = initialOrders.filter(o => selectedBatchOrderIds.includes(o.id) && !isOrderExecutionFinished(o));
+        const unreadyOrders = safeOrders.filter(o => selectedBatchOrderIds.includes(o.id) && !isOrderExecutionFinished(o));
         if (unreadyOrders.length > 0) {
             alert('⚠️ Gagal: Orderan ' + unreadyOrders.map(o => '#' + o.spo_number).join(', ') + ' belum selesai dieksekusi sampai divisi terakhir! Hilangkan centang pada orderan tersebut.');
             return;
@@ -263,11 +268,11 @@ export default function DeliveriesTab({
                 <div>
                     <h2 className="text-2xl font-black text-[#242222] flex items-center gap-2.5">
                         <Truck className="w-6 h-6 text-[#1b68b0]" />
-                        <span>{userRole === 'driver' ? `Pengiriman Saya (${userName})` : 'Penugasan Pengiriman Multi-Alamat & Surat Jalan'}</span>
+                        <span>{userRole === 'driver' ? `Pengiriman Saya (${safeUserName})` : 'Penugasan Pengiriman Multi-Alamat & Surat Jalan'}</span>
                     </h2>
                     <p className="text-slate-500 text-xs font-medium mt-1">
                         {userRole === 'driver' 
-                            ? `Daftar penugasan trip & manifest pengiriman alamat konsumen khusus untuk akun supir Anda (${userName}).`
+                            ? `Daftar penugasan trip & manifest pengiriman alamat konsumen khusus untuk akun supir Anda (${safeUserName}).`
                             : 'Kelola alokasi armada multi-stop, cetak rute manifest surat jalan 4 warna, dan pantau pengiriman.'}
                     </p>
                 </div>
@@ -276,7 +281,7 @@ export default function DeliveriesTab({
                     <span className="text-slate-600">Order Siap / Kirim:</span>
                     <span className="bg-blue-50 text-[#1b68b0] px-2 py-0.5 rounded-full font-mono font-black border border-blue-200">
                         {userRole === 'driver'
-                            ? initialOrders.filter(o => isDriverMatch(o.assigned_driver || o.driver_name, userName) && (o.status === 'pengiriman' || o.status === 'selesai')).length
+                            ? safeOrders.filter(o => o && isDriverMatch(o.assigned_driver || o.driver_name, safeUserName) && (o.status === 'pengiriman' || o.status === 'selesai')).length
                             : finishedOrders.length} SPO
                     </span>
                 </div>
@@ -286,8 +291,8 @@ export default function DeliveriesTab({
             {userRole === 'driver' ? (
                 <div className="space-y-6">
                     {(() => {
-                        const readyAndShipped = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver);
-                        const deliveryList = initialDeliveries.length > 0 ? initialDeliveries : readyAndShipped.map(o => ({
+                        const readyAndShipped = safeOrders.filter(o => o && (o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver));
+                        const deliveryList = safeDeliveries.length > 0 ? safeDeliveries : readyAndShipped.map(o => ({
                             id: o.id,
                             waybill_number: 'SJ-' + (o.spo_number || o.id),
                             trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
@@ -317,12 +322,12 @@ export default function DeliveriesTab({
                             }
                         });
 
-                        const allDriverTrips = Object.values(grouped).filter(t => isDriverMatch(t.driver_name, userName));
+                        const allDriverTrips = Object.values(grouped).filter(t => isDriverMatch(t.driver_name, safeUserName));
                         const activeDriverTrips = allDriverTrips.filter(t => t.orders.some(o => o.status !== 'selesai'));
                         const historyDriverTrips = allDriverTrips.filter(t => t.orders.some(o => o.status === 'selesai'));
-                        const myClaims = financeTransactionsList.filter(t => 
-                            t.source_role === 'driver' && 
-                            (t.user_id === auth?.user?.id || t.title?.toLowerCase().includes(userName.toLowerCase()) || t.notes?.toLowerCase().includes(userName.toLowerCase()))
+                        const myClaims = safeFinanceTransactions.filter(t => 
+                            t && t.source_role === 'driver' && 
+                            (t.user_id === auth?.user?.id || (t.title && t.title.toLowerCase().includes(safeUserName.toLowerCase())) || (t.notes && t.notes.toLowerCase().includes(safeUserName.toLowerCase())))
                         );
 
                         return (
@@ -799,8 +804,8 @@ export default function DeliveriesTab({
                         </div>
 
                         {(() => {
-                            const readyAndShipped = initialOrders.filter(o => o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver);
-                            const deliveryList = initialDeliveries.length > 0 ? initialDeliveries : readyAndShipped.map(o => ({
+                            const readyAndShipped = safeOrders.filter(o => o && (o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver));
+                            const deliveryList = safeDeliveries.length > 0 ? safeDeliveries : readyAndShipped.map(o => ({
                                 id: o.id,
                                 waybill_number: 'SJ-' + (o.spo_number || o.id),
                                 trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
