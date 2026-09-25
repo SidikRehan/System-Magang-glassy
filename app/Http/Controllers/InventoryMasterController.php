@@ -149,7 +149,8 @@ class InventoryMasterController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $newQty = $glass->qty + (int) $validated['add_qty'];
+        $addQty = (int) $validated['add_qty'];
+        $newQty = $glass->qty + $addQty;
         $status = $newQty > 10 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
 
         $glass->update([
@@ -161,7 +162,41 @@ class InventoryMasterController extends Controller
             'supplier_pic' => $validated['supplier_pic'] ?? $glass->supplier_pic,
         ]);
 
-        return redirect()->back()->with('success', "Stok kaca {$glass->name} berhasil ditambah sebanyak {$validated['add_qty']} {$glass->unit}!");
+        // Auto-create FinanceTransaction for COGS (HPP Pembelian Bahan Baku Kaca)
+        $buyPrice = (float) ($glass->buy_price ?? 0);
+        $totalCost = $addQty * $buyPrice;
+
+        if ($totalCost > 0) {
+            $prefix = 'PO-BB';
+            $period = date('Ym');
+            $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+
+            FinanceTransaction::create([
+                'transaction_code' => $trxCode,
+                'type' => 'pembelian_bahan',
+                'category' => 'Bahan Baku Kaca Lembaran',
+                'title' => 'Restok ' . $glass->name . ' (' . $addQty . ' ' . ($glass->unit ?? 'Lembar') . ')',
+                'amount' => $totalCost,
+                'supplier_name' => $validated['supplier_name'] ?? $glass->supplier_name,
+                'payment_method' => 'Kas / Bank',
+                'payment_status' => 'Lunas',
+                'approval_status' => 'approved',
+                'source_role' => Auth::user()?->role ?? 'admin_toko',
+                'transaction_date' => now()->toDateString(),
+                'notes' => 'Restok otomatis bahan kaca: ' . $glass->name . ' (' . $glass->thickness_mm . 'mm) sebanyak ' . $addQty . ' ' . ($glass->unit ?? 'lembar') . ' @ Rp ' . number_format($buyPrice, 0, ',', '.') . (!empty($validated['notes']) ? '. Catatan: ' . $validated['notes'] : ''),
+                'user_id' => Auth::id(),
+                'approved_by_user_id' => Auth::id(),
+                'approved_at' => now(),
+            ]);
+        }
+
+        $msg = "Stok kaca {$glass->name} berhasil ditambah sebanyak {$addQty} {$glass->unit}!";
+        if ($totalCost > 0) {
+            $msg .= " Pembelian senilai Rp " . number_format($totalCost, 0, ',', '.') . " otomatis dibukukan ke Finance (HPP Bahan).";
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     public function destroySheetGlass($id)
@@ -306,7 +341,8 @@ class InventoryMasterController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $newQty = $acc->qty + (int) $validated['add_qty'];
+        $addQty = (int) $validated['add_qty'];
+        $newQty = $acc->qty + $addQty;
         $status = $newQty > 20 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
 
         $acc->update([
@@ -314,7 +350,40 @@ class InventoryMasterController extends Controller
             'status' => $status,
         ]);
 
-        return redirect()->back()->with('success', "Stok aksesoris {$acc->name} bertambah {$validated['add_qty']} {$acc->unit}!");
+        // Auto-create FinanceTransaction for COGS (HPP Pembelian Aksesoris)
+        $buyPrice = (float) ($acc->buy_price ?? 0);
+        $totalCost = $addQty * $buyPrice;
+
+        if ($totalCost > 0) {
+            $prefix = 'PO-ACC';
+            $period = date('Ym');
+            $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+
+            FinanceTransaction::create([
+                'transaction_code' => $trxCode,
+                'type' => 'pembelian_aksesoris',
+                'category' => 'Aksesoris & Hardware',
+                'title' => 'Restok ' . $acc->name . ' (' . $addQty . ' ' . ($acc->unit ?? 'Pcs') . ')',
+                'amount' => $totalCost,
+                'payment_method' => 'Kas / Bank',
+                'payment_status' => 'Lunas',
+                'approval_status' => 'approved',
+                'source_role' => Auth::user()?->role ?? 'admin_toko',
+                'transaction_date' => now()->toDateString(),
+                'notes' => 'Restok otomatis aksesoris: ' . $acc->name . ' sebanyak ' . $addQty . ' ' . ($acc->unit ?? 'Pcs') . ' @ Rp ' . number_format($buyPrice, 0, ',', '.') . (!empty($validated['notes']) ? '. Catatan: ' . $validated['notes'] : ''),
+                'user_id' => Auth::id(),
+                'approved_by_user_id' => Auth::id(),
+                'approved_at' => now(),
+            ]);
+        }
+
+        $msg = "Stok aksesoris {$acc->name} bertambah {$addQty} {$acc->unit}!";
+        if ($totalCost > 0) {
+            $msg .= " Pembelian senilai Rp " . number_format($totalCost, 0, ',', '.') . " otomatis dibukukan ke Finance (HPP Aksesoris).";
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     public function destroyAccessory($id)

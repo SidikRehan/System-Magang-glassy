@@ -58,6 +58,7 @@ import PromoteOrderModal from '@/Components/Modals/PromoteOrderModal';
 import SalesRekapModal from '@/Components/Modals/SalesRekapModal';
 import ScrollToTopButton from '@/Components/ScrollToTopButton';
 import RevisionDetailModal from '@/Components/Modals/RevisionDetailModal';
+import ImageLightboxModal from '@/Components/Modals/ImageLightboxModal';
 
 
 export default function Dashboard({ 
@@ -165,7 +166,8 @@ export default function Dashboard({
         userRole.startsWith('divisi_') ? 'production' :
         (userRole === 'admin_gudang' || userRole === 'admin_toko') ? 'orders' :
         userRole === 'hrd' ? 'employees' :
-        (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') ? 'dashboard' : 'orders'
+        (userRole === 'finance' || userRole === 'admin_finance') ? 'finance' :
+        userRole === 'owner' ? 'dashboard' : 'orders'
     );
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -389,13 +391,32 @@ export default function Dashboard({
         setShowStickerModal(true);
     };
 
-    // Sketch Lightbox Modal State
-    const [sketchLightbox, setSketchLightbox] = useState({ isOpen: false, url: '', title: '' });
+    // Sketch / Image Lightbox Modal State
+    const [sketchLightbox, setSketchLightbox] = useState({
+        isOpen: false,
+        url: '',
+        title: '',
+        type: 'order',
+        subtitle: '',
+        description: '',
+        badge: '',
+        metadata: {}
+    });
 
-    const handleOpenSketchLightbox = (path, title) => {
+    const handleOpenSketchLightbox = (path, title, options = {}) => {
         if (!path) return;
         const fullUrl = path.startsWith('http') || path.startsWith('/') ? path : `/storage/${path}`;
-        setSketchLightbox({ isOpen: true, url: fullUrl, title: title || 'Sketsa Kaca' });
+        const opts = typeof options === 'string' ? { type: options } : (options || {});
+        setSketchLightbox({
+            isOpen: true,
+            url: fullUrl,
+            title: title || 'Lampiran Gambar',
+            type: opts.type || null,
+            subtitle: opts.subtitle || null,
+            description: opts.description || null,
+            badge: opts.badge || null,
+            metadata: opts.metadata || opts,
+        });
     };
 
     const getPhotoList = (pathStr) => {
@@ -1158,6 +1179,7 @@ export default function Dashboard({
     ]);
 
     const [showRequestRestockModal, setShowRequestRestockModal] = useState(false);
+    const [selectedRequestRestockSupply, setSelectedRequestRestockSupply] = useState(null);
     const [requestRestockForm, setRequestRestockForm] = useState({
         supply_id: '',
         request_qty: 10,
@@ -1166,12 +1188,13 @@ export default function Dashboard({
     });
 
     const handleOpenRequestRestockModal = (supplyItem = null) => {
+        setSelectedRequestRestockSupply(supplyItem);
         if (supplyItem) {
             setRequestRestockForm({
                 supply_id: supplyItem.id,
-                request_qty: Math.max(10, supplyItem.min_stock * 2),
+                request_qty: Math.max(10, (supplyItem.min_stock || 5) * 2),
                 priority: supplyItem.status === 'Habis' ? 'Mendesak / Stok Habis' : 'Mendesak / Stok Menipis',
-                notes: `Stok sisa ${supplyItem.stock_qty} ${supplyItem.unit} (lokasi: ${supplyItem.location}). Mohon restok ke Admin Toko.`
+                notes: `Stok sisa ${supplyItem.stock_qty || supplyItem.qty || 0} ${supplyItem.unit} (lokasi: ${supplyItem.location}). Mohon restok ke Admin Toko.`
             });
         } else {
             setRequestRestockForm({
@@ -2374,7 +2397,8 @@ export default function Dashboard({
     useEffect(() => {
         if (userRole.startsWith('divisi_')) setActiveTab('production');
         else if (userRole === 'driver') setActiveTab('deliveries');
-        else if (userRole === 'owner') setActiveTab('finance');
+        else if (userRole === 'owner') setActiveTab('dashboard');
+        else if (userRole === 'finance' || userRole === 'admin_finance') setActiveTab('finance');
         else if (userRole === 'admin_gudang') setActiveTab('orders');
         else setActiveTab('orders');
     }, [userRole]);
@@ -3107,17 +3131,17 @@ export default function Dashboard({
     });
 
     const roleTitles = {
-        admin_toko: '🏪 Admin Toko',
-        admin_gudang: '🏭 Admin Gudang',
-        divisi_ht: '✂️ Divisi Potong (HT)',
-        divisi_gm: '✨ Divisi GM (Gosok)',
-        divisi_bv: '💎 Divisi BV (Bevel)',
-        divisi_etsa: '🌫️ Divisi Etsa (Blur)',
-        driver: '🚚 Supir / Driver',
-        owner: '📈 Owner & Direksi',
-        hrd: '👔 HRD (Personalia & SDM)',
-        admin_finance: '💳 Admin Finance',
-        finance: '💰 Finance & Akuntan'
+        admin_toko: 'Admin Toko & Kasir',
+        admin_gudang: 'Admin Gudang Manufaktur',
+        divisi_ht: 'Divisi Potong (HT)',
+        divisi_gm: 'Divisi GM (Gosok)',
+        divisi_bv: 'Divisi BV (Bevel)',
+        divisi_etsa: 'Divisi Etsa (Blur)',
+        driver: 'Armada Pengiriman (Driver)',
+        owner: 'Owner & Direksi Utama',
+        hrd: 'HRD (Personalia & SDM)',
+        admin_finance: 'Finance & Akuntansi',
+        finance: 'Finance & Akuntansi'
     };
 
     const sanitizeField = (val) => {
@@ -3536,7 +3560,7 @@ export default function Dashboard({
 
             {/* MOBILE TOP TAB BAR HORIZONTAL SCROLLER */}
             <div className="md:hidden bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 scrollbar-none">
-                {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                {(userRole === 'owner') && (
                     <button 
                         onClick={() => setActiveTab('dashboard')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'dashboard' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3584,7 +3608,7 @@ export default function Dashboard({
                         <Building2 className="w-3.5 h-3.5" /> Supplier
                     </button>
                 )}
-                {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                {(userRole === 'admin_toko' || userRole === 'owner') && (
                     <button 
                         onClick={() => setActiveTab('accessories')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'accessories' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3592,7 +3616,7 @@ export default function Dashboard({
                         <Plug className="w-3.5 h-3.5" /> Aksesoris
                     </button>
                 )}
-                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                     <button 
                         onClick={() => setActiveTab('supplies')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'supplies' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3600,7 +3624,7 @@ export default function Dashboard({
                         <Archive className="w-3.5 h-3.5" /> Gudang
                     </button>
                 )}
-                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
                     <button 
                         onClick={() => setActiveTab('tools')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'tools' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3608,7 +3632,7 @@ export default function Dashboard({
                         <Wrench className="w-3.5 h-3.5" /> Alat
                     </button>
                 )}
-                {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
+                {(userRole === 'hrd' || userRole === 'owner') && (
                     <button 
                         onClick={() => setActiveTab('employees')} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'employees' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3643,7 +3667,7 @@ export default function Dashboard({
                         </div>
 
                         <nav className="space-y-1 flex-1">
-                            {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            {(userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <BarChart3 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Dashboard</span>
                                 </button>
@@ -3688,7 +3712,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            {(userRole === 'admin_toko' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('accessories'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         <Plug className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Aksesoris</span>
@@ -3696,7 +3720,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                                 <button onClick={() => { setActiveTab('supplies'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Gudang</span>
@@ -3704,13 +3728,13 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
                                 <button onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat</span>
                                 </button>
                             )}
 
-                            {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
+                            {(userRole === 'hrd' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('employees'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         <Users className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Karyawan</span>
@@ -3759,7 +3783,7 @@ export default function Dashboard({
                 {/* SIDEBAR (DESKTOP) - CERAH & SAAS MODERN */}
                 <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 shrink-0 h-[calc(100vh-65px)]">
                     <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
-                        {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                        {(userRole === 'owner') && (
                             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'dashboard' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <BarChart3 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Dashboard</span>
                             </button>
@@ -3824,7 +3848,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                        {(userRole === 'admin_toko' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('accessories')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'accessories' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Plug className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Aksesoris</span>
@@ -3838,7 +3862,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko' || userRole === 'finance' || userRole === 'admin_finance') && (
+                        {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                             <button onClick={() => setActiveTab('supplies')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'supplies' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Archive className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Gudang</span>
@@ -3852,13 +3876,13 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver' || userRole === 'finance' || userRole === 'admin_finance') && (
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
                             <button onClick={() => setActiveTab('tools')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'tools' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <Wrench className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Alat</span>
                             </button>
                         )}
 
-                        {(userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
+                        {(userRole === 'hrd' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'employees' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Users className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Karyawan</span>
@@ -3908,7 +3932,7 @@ export default function Dashboard({
                 <main ref={mainContentRef} className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto bg-[#F8FAFC] text-[#242222]">
                     <div key={activeTab} className="animate-tab-content">
                         {/* TAB 1: DASHBOARD UTAMA - GRAFIK PENJUALAN & PERFORMANCE PERUSAHAAN */}
-                        {activeTab === 'dashboard' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
+                        {activeTab === 'dashboard' && (userRole === 'owner') && (
                             <DashboardOverviewTab
                                 userRole={userRole}
                                 userName={userName}
@@ -4069,7 +4093,7 @@ export default function Dashboard({
                             />
                         )}
 
-                        {/* TAB 8: STOK AKSESORIS (KHUSUS ADMIN TOKO & OWNER) */}
+                        {/* TAB 8: STOK AKSESORIS */}
                         {activeTab === 'accessories' && (userRole === 'admin_toko' || userRole === 'owner') && (
                             <AccessoriesTab
                                 userRole={userRole}
@@ -4133,7 +4157,7 @@ export default function Dashboard({
                         )}
 
                         {/* TAB: PENGELOLAAN KARYAWAN & AKUN STAFF (KHUSUS HRD, FINANCE & OWNER) */}
-                        {activeTab === 'employees' && (userRole === 'hrd' || userRole === 'admin_finance' || userRole === 'finance' || userRole === 'owner') && (
+                        {activeTab === 'employees' && (userRole === 'hrd' || userRole === 'owner') && (
                             <EmployeesTab
                                 userRole={userRole}
                                 auth={auth}
@@ -4272,6 +4296,7 @@ export default function Dashboard({
                 show={showRestockModal}
                 onClose={() => { setShowRestockModal(false); setSelectedStockItem(null); }}
                 selectedStockItem={selectedStockItem}
+                sheetGlasses={sheetGlasses}
             />
 
             {/* MODAL TAMBAH JENIS BARANG STOK BARU */}
@@ -4374,8 +4399,9 @@ export default function Dashboard({
             {/* MODAL PENGAJUAN RESTOK PERLENGKAPAN GUDANG KE ADMIN TOKO */}
             <RequestRestockSupplyModal
                 show={showRequestRestockModal}
-                onClose={() => setShowRequestRestockModal(false)}
+                onClose={() => { setShowRequestRestockModal(false); setSelectedRequestRestockSupply(null); }}
                 suppliesList={warehouseSuppliesList}
+                prefillSupply={selectedRequestRestockSupply}
             />
 
             {/* MODAL DETAIL REVISI ADMIN TOKO (BACA & KONFIRMASI) */}
@@ -4448,6 +4474,7 @@ export default function Dashboard({
                 onClose={() => { setShowGudangDecisionModal(false); setSelectedComplaintOrder(null); }}
                 selectedComplaintOrder={selectedComplaintOrder}
                 onResolveComplaint={handleResolveComplaint}
+                onOpenSketchLightbox={handleOpenSketchLightbox}
             />
 
             {/* MODAL SURAT JALAN / WAYBILL PRINT (4-COLOR COPY) */}
@@ -4500,7 +4527,7 @@ export default function Dashboard({
                 roleTitles={roleTitles}
             />
 
-            {/* MODAL CATAT TRANSAKSI KEUANGAN & PEMBELIAN (OWNER & AKUNTAN) */}
+            {/* MODAL CATAT TRANSAKSI KEUANGAN & PEMBELIAN (FINANCE & AKUNTANSI / OWNER) */}
             <FinanceTransactionModal
                 isOpen={showFinanceModal}
                 onClose={() => { setShowFinanceModal(false); setFinanceModalPrefillData(null); }}
@@ -4579,54 +4606,18 @@ export default function Dashboard({
                 onPhotoChange={handleComplaintPhotoChange}
             />
 
-            {/* GLOBAL SKETCH LIGHTBOX MODAL */}
-            {sketchLightbox.isOpen && (
-                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-                    <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800">
-                        <div className="p-4 bg-white border-b border-slate-200 flex justify-between items-center">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
-                                    <FileText className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-base">
-                                        Sketsa Pola & Gambar Sambungan Kaca
-                                    </h3>
-                                    <p className="text-xs text-slate-500 font-mono">No SPO: {sketchLightbox.title}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <a
-                                    href={sketchLightbox.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    download
-                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    <span>Unduh Gambar</span>
-                                </a>
-                                <button
-                                    onClick={() => setSketchLightbox({ isOpen: false, url: '', title: '' })}
-                                    className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex-1 p-6 bg-slate-900 flex items-center justify-center overflow-auto">
-                            <img
-                                src={sketchLightbox.url}
-                                alt="Detail Sketsa Kaca"
-                                className="max-w-full max-h-[75vh] object-contain rounded-2xl border border-slate-700 shadow-2xl"
-                            />
-                        </div>
-                        <div className="p-3.5 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500 font-mono">
-                            Acuan gambar sketsa pola fisik & posisi sambungan kaca untuk semua divisi operasional SYP Glass (Gudang, Potong, Gosok, Bevel, Etsa).
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* GLOBAL IMAGE LIGHTBOX MODAL */}
+            <ImageLightboxModal
+                isOpen={sketchLightbox.isOpen}
+                onClose={() => setSketchLightbox({ isOpen: false, url: '', title: '', type: 'order', subtitle: '', description: '', badge: '', metadata: {} })}
+                url={sketchLightbox.url}
+                title={sketchLightbox.title}
+                type={sketchLightbox.type}
+                subtitle={sketchLightbox.subtitle}
+                description={sketchLightbox.description}
+                badge={sketchLightbox.badge}
+                metadata={sketchLightbox.metadata}
+            />
         </div>
     );
 }

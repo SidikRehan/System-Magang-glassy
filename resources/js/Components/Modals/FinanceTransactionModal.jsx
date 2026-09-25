@@ -128,7 +128,7 @@ export default function FinanceTransactionModal({
                                 Catat Transaksi Keuangan & Belanja Usaha
                             </h3>
                             <p className="text-xs text-slate-500">
-                                Input pengeluaran operasional, pembelian bahan baku ke supplier, aksesoris, atau alat kerja
+                                Catat beban operasional rutin (OPEX), kas keluar, belanja penunjang, atau penyesuaian kas
                             </p>
                         </div>
                     </div>
@@ -142,6 +142,14 @@ export default function FinanceTransactionModal({
 
                 {/* MODAL BODY */}
                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
+                    {/* INFO CALLOUT: OTOMASI INVENTORY VS OPEX MANUAL */}
+                    <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3 flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-[#1b68b0] shrink-0 mt-0.5" />
+                        <div className="text-[11px] text-slate-600 leading-relaxed">
+                            <span className="font-bold text-[#1b68b0] block">Sinkronisasi Otomatis Stok Gudang & Toko Aktif</span>
+                            Pembelian & restok bahan baku kaca dan aksesoris sudah otomatis dibukukan ke pembukuan Finance (HPP/COGS) saat diproses oleh Admin Toko / Gudang. Form ini ditujukan untuk pencatatan beban operasional (OPEX: listrik, BBM, gaji karyawan, sewa, servis mesin) atau pengeluaran kas non-stok.
+                        </div>
+                    </div>
                     {/* TIPE TRANSAKSI (TABS PILLS) */}
                     <div>
                         <label className="block text-xs font-bold text-slate-700 mb-2">

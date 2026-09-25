@@ -8,7 +8,7 @@ export default function PrintFinancialReportModal({
     metrics = {},
     financeTransactionsList = [],
     ordersList = [],
-    currentUserName = 'Owner & Tim Akuntan'
+    currentUserName = 'Tim Finance & Akuntansi'
 }) {
     if (!isOpen) return null;
 

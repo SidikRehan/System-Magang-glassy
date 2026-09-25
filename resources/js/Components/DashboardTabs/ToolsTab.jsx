@@ -264,7 +264,15 @@ export default function ToolsTab({
                                     <div className="flex items-start gap-3">
                                         {t.image_path ? (
                                             <div 
-                                                onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, 'Sample ' + t.name)}
+                                                onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, t.name, {
+                                                    type: 'tool',
+                                                    subtitle: `Kode Alat: ${t.tool_code || '-'} • ${t.name}`,
+                                                    badge: 'Inventaris Alat & Mesin',
+                                                    description: `Foto dokumentasi fisik unit mesin/alat kerja teknisi pabrik (${t.name}). Digunakan untuk identifikasi inventaris, inspeksi kondisi fisik (${t.condition || 'Baik'}), dan pemantauan riwayat peminjaman/servis.`,
+                                                    itemCode: t.tool_code,
+                                                    condition: t.condition,
+                                                    location: t.storage_location,
+                                                })}
                                                 className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-2xs shrink-0 cursor-pointer bg-white"
                                                 title="Klik untuk memperbesar foto sample mesin / alat"
                                             >
@@ -374,7 +382,15 @@ export default function ToolsTab({
                                             <td className="p-2 text-center">
                                                 {t.image_path ? (
                                                     <div 
-                                                        onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, 'Sample ' + t.name)}
+                                                        onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, t.name, {
+                                                            type: 'tool',
+                                                            subtitle: `Kode Alat: ${t.tool_code || '-'} • ${t.name}`,
+                                                            badge: 'Inventaris Alat & Mesin',
+                                                            description: `Foto dokumentasi fisik unit mesin/alat kerja teknisi pabrik (${t.name}). Digunakan untuk identifikasi inventaris, inspeksi kondisi fisik (${t.condition || 'Baik'}), dan pemantauan riwayat peminjaman/servis.`,
+                                                            itemCode: t.tool_code,
+                                                            condition: t.condition,
+                                                            location: t.storage_location,
+                                                        })}
                                                         className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
                                                         title="Klik untuk memperbesar foto sample mesin / alat"
                                                     >

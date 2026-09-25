@@ -242,7 +242,7 @@ export default function FinanceTab({
                             </h3>
                         </div>
                         <span className="text-[11px] font-mono text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300 font-bold">
-                            Otorisasi: Owner & Tim Akuntan
+                            Otorisasi: Owner & Direksi (Verifikasi: Tim Finance)
                         </span>
                     </div>
 
@@ -281,9 +281,10 @@ export default function FinanceTab({
                                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                                     <button
                                         onClick={() => handleRejectClaim(clm.id)}
-                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition cursor-pointer"
+                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                                     >
-                                        ✕ Tolak
+                                        <X className="w-3.5 h-3.5" />
+                                        <span>Tolak</span>
                                     </button>
                                     <button
                                         onClick={() => handleApproveClaim(clm.id)}
@@ -1125,7 +1126,7 @@ export default function FinanceTab({
                                             </td>
                                             <td className="py-3 px-4 text-center">
                                                 <div className="flex items-center justify-center gap-1.5">
-                                                    {trx.approval_status === 'pending' && (userRole === 'owner' || userRole === 'admin_toko') && (
+                                                    {trx.approval_status === 'pending' && (userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                                         <>
                                                             <button
                                                                 onClick={() => handleApproveClaim(trx.id)}

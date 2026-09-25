@@ -5,6 +5,19 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { 
+    Store, 
+    Warehouse, 
+    Scissors, 
+    Sparkles, 
+    Gem, 
+    Wind, 
+    Truck, 
+    TrendingUp, 
+    Users, 
+    CreditCard, 
+    Zap 
+} from 'lucide-react';
 
 export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -26,19 +39,19 @@ export default function Login({ status, canResetPassword }) {
 
     // Quick Login Demo Helper Accounts
     const demoAccounts = [
-        { label: '🏪 Admin Toko', email: 'toko@sypglass.co.id' },
-        { label: '🏭 Admin Gudang', email: 'gudang@sypglass.co.id' },
-        { label: '✂️ Divisi HT', email: 'ht@sypglass.co.id' },
-        { label: '✨ Divisi GM', email: 'gm@sypglass.co.id' },
-        { label: '💎 Divisi BV', email: 'bv@sypglass.co.id' },
-        { label: '🌫️ Divisi Etsa', email: 'etsa@sypglass.co.id' },
-        { label: '🚚 Supir 1 (Pak Budi)', email: 'driver@sypglass.co.id' },
-        { label: '🚚 Supir 2 (Pak Mulyadi)', email: 'mulyadi.driver@sypglass.co.id' },
-        { label: '🚚 Supir 3 (Pak Asep)', email: 'asep.driver@sypglass.co.id' },
-        { label: '🚚 Supir 4 (Pak Hendra)', email: 'hendra.driver@sypglass.co.id' },
-        { label: '📈 Owner & Akuntan', email: 'owner@sypglass.co.id' },
-        { label: '👔 HRD Personalia', email: 'hrd@sypglass.co.id' },
-        { label: '💵 Admin Finance', email: 'finance@sypglass.co.id' },
+        { label: 'Admin Toko', email: 'toko@sypglass.co.id', icon: Store, iconColor: 'text-[#1b68b0]' },
+        { label: 'Admin Gudang', email: 'gudang@sypglass.co.id', icon: Warehouse, iconColor: 'text-slate-600' },
+        { label: 'Divisi HT', email: 'ht@sypglass.co.id', icon: Scissors, iconColor: 'text-amber-600' },
+        { label: 'Divisi GM', email: 'gm@sypglass.co.id', icon: Sparkles, iconColor: 'text-blue-500' },
+        { label: 'Divisi BV', email: 'bv@sypglass.co.id', icon: Gem, iconColor: 'text-indigo-500' },
+        { label: 'Divisi Etsa', email: 'etsa@sypglass.co.id', icon: Wind, iconColor: 'text-cyan-600' },
+        { label: 'Supir 1 (Pak Budi)', email: 'driver@sypglass.co.id', icon: Truck, iconColor: 'text-emerald-600' },
+        { label: 'Supir 2 (Pak Mulyadi)', email: 'mulyadi.driver@sypglass.co.id', icon: Truck, iconColor: 'text-emerald-600' },
+        { label: 'Supir 3 (Pak Asep)', email: 'asep.driver@sypglass.co.id', icon: Truck, iconColor: 'text-emerald-600' },
+        { label: 'Supir 4 (Pak Hendra)', email: 'hendra.driver@sypglass.co.id', icon: Truck, iconColor: 'text-emerald-600' },
+        { label: 'HRD Personalia', email: 'hrd@sypglass.co.id', icon: Users, iconColor: 'text-rose-600' },
+        { label: 'Finance & Akuntan', email: 'finance@sypglass.co.id', icon: CreditCard, iconColor: 'text-[#70b03c]' },
+        { label: 'Owner & Direksi', email: 'owner@sypglass.co.id', icon: TrendingUp, iconColor: 'text-[#1b68b0]' },
     ];
 
     const quickFill = (email) => {
@@ -73,18 +86,27 @@ export default function Login({ status, canResetPassword }) {
 
                 {/* QUICK LOGIN DEMO ACCOUNT SELECTOR */}
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#1b68b0] block">⚡ Quick Demo Login Role (Pilih 1-Click):</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#1b68b0] flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-[#1b68b0]" /> Quick Demo Login Role (Pilih 1-Click):
+                    </span>
                     <div className="grid grid-cols-2 gap-1.5 text-xs">
-                        {demoAccounts.map((acc, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                onClick={() => quickFill(acc.email)}
-                                className={`text-left p-1.5 rounded transition border text-[11px] font-semibold ${data.email === acc.email ? 'bg-[#1b68b0]/15 border-[#1b68b0] text-[#1b68b0] font-bold' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}
-                            >
-                                {acc.label}
-                            </button>
-                        ))}
+                        {demoAccounts.map((acc, idx) => {
+                            const Icon = acc.icon;
+                            const isOwner = acc.email === 'owner@sypglass.co.id';
+                            return (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => quickFill(acc.email)}
+                                    className={`flex items-center gap-2 text-left p-2 rounded-lg transition border text-[11px] font-semibold cursor-pointer ${
+                                        isOwner ? 'col-span-2 justify-center py-2.5 bg-blue-50/70 border-blue-200 text-slate-800 hover:bg-blue-100/70 hover:border-blue-300' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                                    } ${data.email === acc.email ? '!bg-[#1b68b0]/15 !border-[#1b68b0] !text-[#1b68b0] font-bold' : ''}`}
+                                >
+                                    <Icon className={`w-3.5 h-3.5 shrink-0 ${acc.iconColor}`} />
+                                    <span className="truncate">{acc.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
