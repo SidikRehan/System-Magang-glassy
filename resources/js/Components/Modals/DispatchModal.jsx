@@ -1,5 +1,5 @@
-import React from 'react';
-import { Send, X, ArrowRight, Layers, FileText, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, X, ArrowRight, Layers, FileText, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function DispatchModal({
     show,
@@ -10,6 +10,12 @@ export default function DispatchModal({
     relevantDivisions = [],
     handleDispatchOrderSubmit
 }) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        setIsSubmitting(false);
+    }, [show, selectedDispatchOrder]);
+
     if (!show || !selectedDispatchOrder) return null;
 
     const currentDivObj = relevantDivisions.find(d => d.key === targetDivChoice) || relevantDivisions[0] || {
@@ -20,9 +26,39 @@ export default function DispatchModal({
         bg: 'bg-rose-50 text-rose-700 border-rose-200'
     };
 
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        if (handleDispatchOrderSubmit) {
+            handleDispatchOrderSubmit(e, {
+                onFinish: () => setIsSubmitting(false)
+            });
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 text-slate-800">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 text-slate-800 relative overflow-hidden">
+                {/* LOADING OVERLAY WHEN SUBMITTING DISPATCH */}
+                {isSubmitting && (
+                    <div className="absolute inset-0 bg-white/90 backdrop-blur-xs z-30 rounded-3xl flex flex-col items-center justify-center p-4 text-center animate-in fade-in duration-200">
+                        <div className="bg-white p-5 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-3 max-w-xs">
+                            <div className="w-12 h-12 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0] border border-[#1b68b0]/20">
+                                <Loader2 className="w-6 h-6 animate-spin text-[#1b68b0]" />
+                            </div>
+                            <div>
+                                <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5 justify-center">
+                                    <Send className="w-4 h-4 text-[#1b68b0] animate-bounce" />
+                                    <span>Mendisposisi Order...</span>
+                                </h4>
+                                <p className="text-xs text-slate-500 mt-1 font-medium">
+                                    Mengirimkan SPO <strong className="text-slate-700">#{selectedDispatchOrder?.spo_number}</strong> ke <strong className="text-[#1b68b0]">{currentDivObj?.name}</strong>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* MODAL HEADER */}
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
                     <div className="flex items-center gap-2.5">
@@ -38,7 +74,8 @@ export default function DispatchModal({
                     </div>
                     <button 
                         onClick={() => onClose()} 
-                        className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer"
+                        disabled={isSubmitting}
+                        className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer disabled:opacity-50"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -97,7 +134,7 @@ export default function DispatchModal({
                 </div>
 
                 {/* TARGET DIVISION SELECTION CARD */}
-                <form onSubmit={handleDispatchOrderSubmit} className="space-y-4 text-xs">
+                <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
                         <label className="text-slate-700 block font-bold text-xs">
                             Divisi Tujuan Eksekusi Pertama:
@@ -108,7 +145,8 @@ export default function DispatchModal({
                             <select 
                                 value={targetDivChoice} 
                                 onChange={e => setTargetDivChoice(e.target.value)}
-                                className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-[#1b68b0] font-bold text-sm focus:border-[#1b68b0] cursor-pointer"
+                                disabled={isSubmitting}
+                                className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-[#1b68b0] font-bold text-sm focus:border-[#1b68b0] cursor-pointer disabled:opacity-50"
                             >
                                 {relevantDivisions.map(div => (
                                     <option key={div.key} value={div.key}>
@@ -127,12 +165,25 @@ export default function DispatchModal({
                     </div>
 
                     <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
-                        <button type="button" onClick={() => onClose()} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-semibold cursor-pointer text-xs transition">
+                        <button type="button" onClick={() => onClose()} disabled={isSubmitting} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-semibold cursor-pointer text-xs transition disabled:opacity-50">
                             Batal
                         </button>
-                        <button type="submit" className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] font-bold text-white rounded-xl text-xs flex items-center gap-2 shadow-xs cursor-pointer transition">
-                            <span>Kirim Ke {currentDivObj.code || 'Divisi'}</span>
-                            <ArrowRight className="w-4 h-4" />
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting}
+                            className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] disabled:bg-slate-300 disabled:cursor-not-allowed font-bold text-white rounded-xl text-xs flex items-center gap-2 shadow-xs cursor-pointer transition"
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Mengirim Ke {currentDivObj.code || 'Divisi'}...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>Kirim Ke {currentDivObj.code || 'Divisi'}</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

@@ -5,7 +5,7 @@ import {
     Printer, Fuel, CreditCard, CheckSquare, XSquare, 
     Plus, AlertCircle, FileText, CheckCircle2, Phone, 
     ShieldCheck, Sparkles, Send, Clock, Camera, Edit3,
-    Search, Lock, X, Layers, Filter, Check, History, Wrench
+    Search, Lock, X, Layers, Filter, Check, History, Wrench, Loader2
 } from 'lucide-react';
 import { isDriverMatch, isOrderExecutionFinished, getOrderRelevantDivisions, formatIndonesianDate, formatIndonesianDateTime } from '@/Utils/dashboardHelpers';
 import AssignVehicleModal from '@/Components/Modals/AssignVehicleModal';
@@ -36,20 +36,10 @@ export default function DeliveriesTab({
     const [selectedBatchOrderIds, setSelectedBatchOrderIds] = useState([]);
     const [dispatchDriverInput, setDispatchDriverInput] = useState('Pak Budi (Supir Utama DC)');
     const [dispatchVehicleInput, setDispatchVehicleInput] = useState('Engkel Box (D 8472 AB)');
+    const [dispatchDateInput, setDispatchDateInput] = useState(() => new Date().toISOString().split('T')[0]);
     const [dispatchNotesInput, setDispatchNotesInput] = useState('');
-    const [showDeliveryNotesHelper, setShowDeliveryNotesHelper] = useState(false);
+    const [isSubmittingBatch, setIsSubmittingBatch] = useState(false);
 
-    const WAREHOUSE_EQUIPMENT_PRESETS = [
-        'Kop Vacuum Lifter Kaca (2 Pcs)',
-        'Tangga Alumunium Lipat',
-        'Lem Sealant & Gun Applicator',
-        'Gabus & Corner Protector Kaca',
-        'Sabuk Klem / Tali Ratchet Armada',
-        'Sarung Tangan Safety Anti-Potong',
-        'Siku Ukur & Meteran Lapangan',
-        'Terpal Hujan & Matras Karet Bak',
-        'Set Kunci & Obeng Pasang'
-    ];
 
     const [deliverySearchQuery, setDeliverySearchQuery] = useState('');
     const [deliveryFilterTab, setDeliveryFilterTab] = useState('all'); // 'all', 'unassigned', 'assigned', 'in_production'
@@ -58,6 +48,7 @@ export default function DeliveriesTab({
     const [selectedAssignOrder, setSelectedAssignOrder] = useState(null);
     const [assignDriver, setAssignDriver] = useState('Pak Budi (Supir Utama DC)');
     const [assignVehicle, setAssignVehicle] = useState('Engkel Box (D 8472 AB)');
+    const [assignDate, setAssignDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [assignNotes, setAssignNotes] = useState('');
     const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
 
@@ -65,6 +56,99 @@ export default function DeliveriesTab({
     const safeOrders = useMemo(() => Array.isArray(initialOrders) ? initialOrders : [], [initialOrders]);
     const safeDeliveries = useMemo(() => Array.isArray(initialDeliveries) ? initialDeliveries : [], [initialDeliveries]);
     const safeFinanceTransactions = useMemo(() => Array.isArray(financeTransactionsList) ? financeTransactionsList : [], [financeTransactionsList]);
+
+    // Group all safeOrders and safeDeliveries into unified Trip objects
+    const allGroupedTrips = useMemo(() => {
+        const grouped = {};
+        const ordersMap = {};
+
+        safeOrders.forEach(o => {
+            if (o && o.id) ordersMap[o.id] = o;
+        });
+
+        // 1. Process safeOrders assigned to drivers or in delivery/finished state
+        safeOrders.forEach(o => {
+            if (!o) return;
+            const isAssignedOrDelivery = o.assigned_driver || o.assigned_vehicle || o.trip_code || o.status === 'pengiriman' || o.status === 'selesai';
+            if (!isAssignedOrDelivery) return;
+
+            const tripCode = o.trip_code || `TRIP-${o.id}`;
+            if (!grouped[tripCode]) {
+                grouped[tripCode] = {
+                    trip_code: tripCode,
+                    driver_name: o.assigned_driver || o.driver_name || 'Belum Ditugaskan',
+                    vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
+                    delivery_date: o.delivery_date || (o.shipped_at ? String(o.shipped_at).split('T')[0] : null),
+                    orders: [],
+                    deliveries: [],
+                };
+            }
+
+            if (o.assigned_driver) grouped[tripCode].driver_name = o.assigned_driver;
+            if (o.assigned_vehicle) grouped[tripCode].vehicle_plate = o.assigned_vehicle;
+            if (o.delivery_date) grouped[tripCode].delivery_date = o.delivery_date;
+
+            if (!grouped[tripCode].orders.some(existing => existing.id === o.id)) {
+                grouped[tripCode].orders.push(o);
+            }
+        });
+
+        // 2. Process safeDeliveries records from database
+        safeDeliveries.forEach(d => {
+            if (!d) return;
+            const assocOrder = d.order || ordersMap[d.order_id];
+            const tripCode = d.trip_code || assocOrder?.trip_code || `TRIP-${d.order_id || d.id}`;
+
+            if (!grouped[tripCode]) {
+                grouped[tripCode] = {
+                    trip_code: tripCode,
+                    driver_name: d.driver_name || assocOrder?.assigned_driver || 'Belum Ditugaskan',
+                    vehicle_plate: d.vehicle_plate || assocOrder?.assigned_vehicle || 'Engkel Box (D 8472 AB)',
+                    delivery_date: d.delivery_date || assocOrder?.delivery_date || null,
+                    orders: [],
+                    deliveries: [],
+                };
+            }
+
+            if (d.driver_name && grouped[tripCode].driver_name === 'Belum Ditugaskan') {
+                grouped[tripCode].driver_name = d.driver_name;
+            }
+            if (d.vehicle_plate && (!grouped[tripCode].vehicle_plate || grouped[tripCode].vehicle_plate === 'Engkel Box (D 8472 AB)')) {
+                grouped[tripCode].vehicle_plate = d.vehicle_plate;
+            }
+            if (d.delivery_date) {
+                grouped[tripCode].delivery_date = d.delivery_date;
+            }
+
+            if (!grouped[tripCode].deliveries.some(existing => existing.id === d.id)) {
+                grouped[tripCode].deliveries.push(d);
+            }
+
+            if (assocOrder && assocOrder.id) {
+                if (!grouped[tripCode].orders.some(existing => existing.id === assocOrder.id)) {
+                    grouped[tripCode].orders.push(assocOrder);
+                }
+            }
+        });
+
+        return Object.values(grouped).filter(t => t && Array.isArray(t.orders) && t.orders.length > 0);
+    }, [safeOrders, safeDeliveries]);
+
+    const allDriverTrips = useMemo(() => {
+        return allGroupedTrips.filter(t => isDriverMatch(t.driver_name, safeUserName));
+    }, [allGroupedTrips, safeUserName]);
+
+    const activeDriverTrips = useMemo(() => {
+        return allDriverTrips.filter(t => t.orders.some(o => o.status !== 'selesai'));
+    }, [allDriverTrips]);
+
+    const historyDriverTrips = useMemo(() => {
+        return allDriverTrips.filter(t => t.orders.some(o => o.status === 'selesai'));
+    }, [allDriverTrips]);
+
+    const activeAdminTrips = useMemo(() => {
+        return allGroupedTrips.filter(t => t.orders.some(o => o.status !== 'selesai'));
+    }, [allGroupedTrips]);
 
     // Categorize orders based on division execution completion
     const finishedOrders = useMemo(() => {
@@ -125,6 +209,7 @@ export default function DeliveriesTab({
         setSelectedAssignOrder(order);
         if (order.assigned_driver) setAssignDriver(order.assigned_driver);
         if (order.assigned_vehicle) setAssignVehicle(order.assigned_vehicle);
+        setAssignDate(order.delivery_date || new Date().toISOString().split('T')[0]);
         setAssignNotes(order.delivery_notes || '');
         setShowAssignVehicleModal(true);
     };
@@ -142,6 +227,7 @@ export default function DeliveriesTab({
             order_ids: [selectedAssignOrder.id],
             driver_name: assignDriver,
             vehicle_plate: assignVehicle,
+            delivery_date: assignDate,
             notes: assignNotes
         }, {
             onSuccess: () => {
@@ -159,6 +245,7 @@ export default function DeliveriesTab({
     const [editingTripData, setEditingTripData] = useState(null);
     const [editTripDriver, setEditTripDriver] = useState('Pak Budi (Supir Utama DC)');
     const [editTripVehicle, setEditTripVehicle] = useState('Engkel Box (D 8472 AB)');
+    const [editTripDate, setEditTripDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [editTripNotes, setEditTripNotes] = useState('');
     const [isSubmittingEditTrip, setIsSubmittingEditTrip] = useState(false);
 
@@ -166,6 +253,7 @@ export default function DeliveriesTab({
         setEditingTripData(trip);
         setEditTripDriver(trip.driver_name || 'Pak Budi (Supir Utama DC)');
         setEditTripVehicle(trip.vehicle_plate || 'Engkel Box (D 8472 AB)');
+        setEditTripDate(trip.delivery_date || trip.orders?.[0]?.delivery_date || trip.deliveries?.[0]?.delivery_date || new Date().toISOString().split('T')[0]);
         const firstOrderNotes = trip.orders?.[0]?.delivery_notes || trip.deliveries?.[0]?.notes || '';
         setEditTripNotes(firstOrderNotes);
         setShowEditTripModal(true);
@@ -182,6 +270,7 @@ export default function DeliveriesTab({
             order_ids: orderIds,
             driver_name: editTripDriver,
             vehicle_plate: editTripVehicle,
+            delivery_date: editTripDate,
             notes: editTripNotes,
             trip_code: editingTripData.trip_code
         }, {
@@ -197,8 +286,13 @@ export default function DeliveriesTab({
 
     const toggleSelectOrderForBatch = (orderId) => {
         const order = safeOrders.find(o => o.id === orderId);
-        if (order && !isOrderExecutionFinished(order)) {
+        if (!order) return;
+        if (!isOrderExecutionFinished(order)) {
             alert(`⚠️ Orderan SPO #${order.spo_number} belum selesai dieksekusi oleh divisi terakhir dan belum dapat dijadwalkan pengirimannya.`);
+            return;
+        }
+        if (order.assigned_driver || order.assigned_vehicle) {
+            alert(`⚠️ Orderan SPO #${order.spo_number} sudah memiliki penugasan armada (${order.assigned_driver || 'Supir Armada'}). Untuk mengganti supir/mobil, gunakan tombol "Ubah Mobil" pada kolom Armada.`);
             return;
         }
         setSelectedBatchOrderIds(prev =>
@@ -207,14 +301,13 @@ export default function DeliveriesTab({
     };
 
     const toggleSelectAllReadyOrders = () => {
-        const selectableOrders = filteredOrders.filter(o => isOrderExecutionFinished(o));
-        if (selectableOrders.length === 0) return;
+        const unassignedSelectable = filteredOrders.filter(o => isOrderExecutionFinished(o) && !o.assigned_driver && !o.assigned_vehicle);
+        if (unassignedSelectable.length === 0) {
+            alert('ℹ️ Tidak ada orderan siap kirim yang belum memiliki supir/armada!');
+            return;
+        }
 
-        const unassignedSelectable = selectableOrders.filter(o => !o.assigned_driver);
-        const targetOrders = (deliveryFilterTab === 'unassigned' || (unassignedSelectable.length > 0 && selectedBatchOrderIds.length !== unassignedSelectable.length))
-            ? unassignedSelectable
-            : selectableOrders;
-        const targetIds = targetOrders.map(o => o.id);
+        const targetIds = unassignedSelectable.map(o => o.id);
 
         if (selectedBatchOrderIds.length === targetIds.length) {
             setSelectedBatchOrderIds([]);
@@ -236,15 +329,21 @@ export default function DeliveriesTab({
             return;
         }
 
+        setIsSubmittingBatch(true);
+
         router.post('/orders/batch-delivery', {
             order_ids: selectedBatchOrderIds,
             driver_name: dispatchDriverInput,
             vehicle_plate: dispatchVehicleInput,
+            delivery_date: dispatchDateInput,
             notes: dispatchNotesInput
         }, {
             onSuccess: () => {
                 setSelectedBatchOrderIds([]);
                 setDispatchNotesInput('');
+            },
+            onFinish: () => {
+                setIsSubmittingBatch(false);
             }
         });
     };
@@ -291,40 +390,6 @@ export default function DeliveriesTab({
             {userRole === 'driver' ? (
                 <div className="space-y-6">
                     {(() => {
-                        const readyAndShipped = safeOrders.filter(o => o && (o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver));
-                        const deliveryList = safeDeliveries.length > 0 ? safeDeliveries : readyAndShipped.map(o => ({
-                            id: o.id,
-                            waybill_number: 'SJ-' + (o.spo_number || o.id),
-                            trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
-                            order: o,
-                            driver_name: o.assigned_driver || o.driver_name || '',
-                            vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
-                            waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
-                            delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman'
-                        }));
-
-                        const grouped = {};
-                        deliveryList.forEach(d => {
-                            const key = d.trip_code || ((d.driver_name || 'Unassigned') + '_' + (d.vehicle_plate || 'Armada'));
-                            if (!grouped[key]) {
-                                grouped[key] = {
-                                    trip_code: d.trip_code || key,
-                                    driver_name: d.driver_name || 'Belum Ditugaskan',
-                                    vehicle_plate: d.vehicle_plate || 'Engkel Box (D 8472 AB)',
-                                    deliveries: [],
-                                    orders: []
-                                };
-                            }
-                            grouped[key].deliveries.push(d);
-                            const ord = d.order || d;
-                            if (ord && !grouped[key].orders.find(o => o.id === ord.id)) {
-                                grouped[key].orders.push(ord);
-                            }
-                        });
-
-                        const allDriverTrips = Object.values(grouped).filter(t => isDriverMatch(t.driver_name, safeUserName));
-                        const activeDriverTrips = allDriverTrips.filter(t => t.orders.some(o => o.status !== 'selesai'));
-                        const historyDriverTrips = allDriverTrips.filter(t => t.orders.some(o => o.status === 'selesai'));
                         const myClaims = safeFinanceTransactions.filter(t => 
                             t && t.source_role === 'driver' && 
                             (t.user_id === auth?.user?.id || (t.title && t.title.toLowerCase().includes(safeUserName.toLowerCase())) || (t.notes && t.notes.toLowerCase().includes(safeUserName.toLowerCase())))
@@ -421,6 +486,10 @@ export default function DeliveriesTab({
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="bg-blue-50 text-[#1b68b0] font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
                                                                         {trip.trip_code}
+                                                                    </span>
+                                                                    <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                                                                        <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                                                                        <span>{formatIndonesianDate(trip.delivery_date || trip.orders?.[0]?.delivery_date || trip.deliveries?.[0]?.delivery_date)}</span>
                                                                     </span>
                                                                     <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
                                                                         <User className="w-3.5 h-3.5 text-slate-500" />
@@ -804,38 +873,7 @@ export default function DeliveriesTab({
                         </div>
 
                         {(() => {
-                            const readyAndShipped = safeOrders.filter(o => o && (o.status === 'pengiriman' || o.status === 'selesai' || o.assigned_driver));
-                            const deliveryList = safeDeliveries.length > 0 ? safeDeliveries : readyAndShipped.map(o => ({
-                                id: o.id,
-                                waybill_number: 'SJ-' + (o.spo_number || o.id),
-                                trip_code: o.trip_code || ('TRIP-DEMO-' + o.id),
-                                order: o,
-                                driver_name: o.assigned_driver || o.driver_name || '',
-                                vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
-                                waybill_color: o.payment_status === 'Lunas' ? 'Putih' : 'Merah',
-                                delivery_status: o.status === 'selesai' ? 'Selesai Terkirim' : 'Dalam Pengiriman'
-                            }));
-
-                            const grouped = {};
-                            deliveryList.forEach(d => {
-                                const key = d.trip_code || ((d.driver_name || 'Unassigned') + '_' + (d.vehicle_plate || 'Armada'));
-                                if (!grouped[key]) {
-                                    grouped[key] = {
-                                        trip_code: d.trip_code || key,
-                                        driver_name: d.driver_name || 'Belum Ditugaskan',
-                                        vehicle_plate: d.vehicle_plate || 'Engkel Box (D 8472 AB)',
-                                        deliveries: [],
-                                        orders: []
-                                    };
-                                }
-                                grouped[key].deliveries.push(d);
-                                const ord = d.order || d;
-                                if (ord && ord.id && !grouped[key].orders.find(o => o && o.id === ord.id)) {
-                                    grouped[key].orders.push(ord);
-                                }
-                            });
-
-                            const trips = Object.values(grouped).filter(t => t && Array.isArray(t.orders) && t.orders.length > 0);
+                            const trips = activeAdminTrips;
 
                             if (trips.length === 0) {
                                 return (
@@ -851,9 +889,13 @@ export default function DeliveriesTab({
                                         <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 relative">
                                             <div className="flex flex-wrap justify-between items-start border-b border-slate-100 pb-3 gap-2">
                                                 <div>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
                                                         <span className="bg-blue-50 text-[#1b68b0] font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
                                                             {trip.trip_code}
+                                                        </span>
+                                                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                                                            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                                                            <span>{formatIndonesianDate(trip.delivery_date || trip.orders?.[0]?.delivery_date || trip.deliveries?.[0]?.delivery_date)}</span>
                                                         </span>
                                                         <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
                                                             <User className="w-3.5 h-3.5 text-slate-500" />
@@ -1075,7 +1117,27 @@ export default function DeliveriesTab({
                         </div>
 
                         {/* FORM PENUGASAN MOBIL ARMADA BATCH (DALAM CONTAINER TABEL) */}
-                        <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-4 space-y-3">
+                        <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-4 space-y-3 relative overflow-hidden">
+                            {/* LOADING OVERLAY WHEN SUBMITTING BATCH ASSIGNMENT */}
+                            {isSubmittingBatch && (
+                                <div className="absolute inset-0 bg-white/90 backdrop-blur-xs z-30 rounded-xl flex flex-col items-center justify-center p-4 text-center animate-in fade-in duration-200">
+                                    <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center gap-2.5 max-w-xs">
+                                        <div className="w-10 h-10 rounded-xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0] border border-[#1b68b0]/20">
+                                            <Loader2 className="w-5 h-5 animate-spin text-[#1b68b0]" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-[#242222] text-xs flex items-center gap-1.5 justify-center">
+                                                <Truck className="w-4 h-4 text-[#1b68b0] animate-bounce" />
+                                                <span>Menugaskan Armada Pengiriman...</span>
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 mt-1 font-medium">
+                                                Memproses {selectedBatchOrderIds.length} order SPO terpilih.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
                                 <div className="flex items-center gap-2">
                                     <Truck className="w-4 h-4 text-[#1b68b0]" />
@@ -1087,7 +1149,17 @@ export default function DeliveriesTab({
                             </div>
 
                             <form onSubmit={handleAssignBatchDeliverySubmit} className="space-y-3 text-xs">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    <div>
+                                        <label className="text-slate-700 block mb-1 font-bold">Tanggal Pengiriman:</label>
+                                        <input
+                                            type="date"
+                                            value={dispatchDateInput}
+                                            onChange={e => setDispatchDateInput(e.target.value)}
+                                            className="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
+                                        />
+                                    </div>
+
                                     <div>
                                         <label className="text-slate-700 block mb-1 font-bold">Supir / Driver Armada:</label>
                                         <select
@@ -1119,91 +1191,34 @@ export default function DeliveriesTab({
                                     <div className="flex flex-col justify-end">
                                         <button
                                             type="submit"
-                                            disabled={selectedBatchOrderIds.length === 0}
+                                            disabled={selectedBatchOrderIds.length === 0 || isSubmittingBatch}
                                             className={`w-full font-bold px-3 py-2.5 rounded-xl text-xs shadow-xs flex items-center justify-center gap-1.5 transition ${
-                                                selectedBatchOrderIds.length > 0
+                                                selectedBatchOrderIds.length > 0 && !isSubmittingBatch
                                                     ? 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer'
                                                     : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
                                             }`}
                                         >
-                                            <Send className="w-3.5 h-3.5" />
-                                            <span>Tugaskan Mobil Armada ({selectedBatchOrderIds.length} Order)</span>
+                                            {isSubmittingBatch ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    <span>Memproses...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="w-3.5 h-3.5" />
+                                                    <span>Tugaskan Mobil Armada ({selectedBatchOrderIds.length} Order)</span>
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* SECTION CATATAN PENGIRIMAN & BARANG PENUNJANG GUDANG */}
                                 <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-                                    <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-2">
-                                        <label className="text-slate-800 font-bold text-xs flex items-center gap-1.5">
-                                            <FileText className="w-3.5 h-3.5 text-[#1b68b0]" />
-                                            <span>Catatan Rute & Barang Penunjang Gudang:</span>
-                                        </label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowDeliveryNotesHelper(!showDeliveryNotesHelper)}
-                                            className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                                                showDeliveryNotesHelper || dispatchNotesInput
-                                                    ? 'bg-[#1b68b0] text-white shadow-2xs'
-                                                    : 'bg-[#1b68b0]/10 hover:bg-[#1b68b0]/20 text-[#1b68b0] border border-[#1b68b0]/20'
-                                            }`}
-                                        >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>+ Catatan Pengiriman</span>
-                                            {dispatchNotesInput && (
-                                                <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-                                                    Aktif
-                                                </span>
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    {(showDeliveryNotesHelper || dispatchNotesInput) && (
-                                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 animate-in fade-in duration-150">
-                                            <div className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
-                                                <span className="flex items-center gap-1">
-                                                    <Wrench className="w-3.5 h-3.5 text-[#1b68b0]" />
-                                                    <span>Pilih Cepat Alat Penunjang Gudang Harus Dibawa Armada:</span>
-                                                </span>
-                                                <span className="text-[10px] text-slate-500 font-medium">Klik item untuk menambah/menghapus</span>
-                                            </div>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {WAREHOUSE_EQUIPMENT_PRESETS.map((preset, idx) => {
-                                                    const notesStr = typeof dispatchNotesInput === 'string' ? dispatchNotesInput : '';
-                                                    const isAdded = notesStr.includes(preset);
-                                                    return (
-                                                        <button
-                                                            key={idx}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (isAdded) {
-                                                                    const updated = notesStr
-                                                                        .split(/,\s*/)
-                                                                        .filter(item => item !== preset && item !== `Perlu Bawa Gudang: ${preset}`)
-                                                                        .join(', ');
-                                                                    setDispatchNotesInput(updated);
-                                                                } else {
-                                                                    if (!notesStr || notesStr.trim() === '') {
-                                                                        setDispatchNotesInput(`Perlu Bawa Gudang: ${preset}`);
-                                                                    } else {
-                                                                        setDispatchNotesInput(`${notesStr}, ${preset}`);
-                                                                    }
-                                                                }
-                                                            }}
-                                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer border ${
-                                                                isAdded
-                                                                    ? 'bg-[#1b68b0] text-white border-[#1b68b0] shadow-2xs'
-                                                                    : 'bg-white hover:bg-blue-50 text-slate-700 hover:text-[#1b68b0] border-slate-200'
-                                                            }`}
-                                                        >
-                                                            {isAdded ? <Check className="w-3 h-3 text-white" /> : <Plus className="w-3 h-3 text-slate-400" />}
-                                                            <span>{preset}</span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
+                                    <label className="text-slate-800 font-bold text-xs flex items-center gap-1.5">
+                                        <FileText className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                        <span>Catatan Rute & Barang Penunjang Gudang:</span>
+                                    </label>
 
                                     <textarea
                                         rows={2}
@@ -1273,38 +1288,50 @@ export default function DeliveriesTab({
                                                 }];
 
                                             const isLunas = ord.payment_status === 'Lunas';
-                                            const relevantDivs = getOrderRelevantDivisions(ord);
-                                            const divProgress = ord.division_progress || {};
+                                             const relevantDivs = getOrderRelevantDivisions(ord);
+                                             const divProgress = ord.division_progress || {};
+                                             const isAssigned = Boolean(ord.assigned_driver || ord.assigned_vehicle);
+                                             const isSelectable = isReady && !isAssigned;
 
-                                            return (
-                                                <tr
-                                                    key={ord.id}
-                                                    className={`transition ${
-                                                        isSelected 
-                                                            ? 'bg-blue-50/60 border-l-4 border-l-[#1b68b0]' 
-                                                            : !isReady 
-                                                                ? 'bg-slate-50/50 hover:bg-slate-50/80 opacity-90' 
-                                                                : 'hover:bg-slate-50/70'
-                                                    }`}
-                                                >
-                                                    <td className="p-3 text-center">
-                                                        {isReady ? (
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => toggleSelectOrderForBatch(ord.id)}
-                                                                className="w-4 h-4 rounded text-[#1b68b0] focus:ring-[#1b68b0] border-slate-300 cursor-pointer"
-                                                            />
-                                                        ) : (
-                                                            <input
-                                                                type="checkbox"
-                                                                disabled
-                                                                checked={false}
-                                                                className="w-4 h-4 rounded text-slate-300 bg-slate-100 border-slate-300 cursor-not-allowed opacity-50"
-                                                                title="Order belum selesai dieksekusi oleh divisi terakhir"
-                                                            />
-                                                        )}
-                                                    </td>
+                                             return (
+                                                 <tr
+                                                     key={ord.id}
+                                                     className={`transition ${
+                                                         isSelected 
+                                                             ? 'bg-blue-50/60 border-l-4 border-l-[#1b68b0]' 
+                                                             : !isReady 
+                                                                 ? 'bg-slate-50/50 hover:bg-slate-50/80 opacity-90' 
+                                                                 : isAssigned
+                                                                     ? 'bg-emerald-50/20 hover:bg-emerald-50/40'
+                                                                     : 'hover:bg-slate-50/70'
+                                                     }`}
+                                                 >
+                                                     <td className="p-3 text-center">
+                                                         {isSelectable ? (
+                                                             <input
+                                                                 type="checkbox"
+                                                                 checked={isSelected}
+                                                                 onChange={() => toggleSelectOrderForBatch(ord.id)}
+                                                                 className="w-4 h-4 rounded text-[#1b68b0] focus:ring-[#1b68b0] border-slate-300 cursor-pointer"
+                                                             />
+                                                         ) : isAssigned ? (
+                                                             <input
+                                                                 type="checkbox"
+                                                                 disabled
+                                                                 checked={false}
+                                                                 className="w-4 h-4 rounded text-slate-300 bg-slate-100 border-slate-300 cursor-not-allowed opacity-40"
+                                                                 title={`Order SPO #${ord.spo_number} sudah memiliki armada (${ord.assigned_driver}). Gunakan tombol 'Ubah Mobil' pada kolom Armada jika ingin mengubah penugasan.`}
+                                                             />
+                                                         ) : (
+                                                             <input
+                                                                 type="checkbox"
+                                                                 disabled
+                                                                 checked={false}
+                                                                 className="w-4 h-4 rounded text-slate-300 bg-slate-100 border-slate-300 cursor-not-allowed opacity-40"
+                                                                 title="Order belum selesai dieksekusi oleh divisi terakhir"
+                                                             />
+                                                         )}
+                                                     </td>
 
                                                     <td className="p-3">
                                                         <div className="font-extrabold text-[#1b68b0] font-mono text-xs flex items-center gap-1.5">
@@ -1316,8 +1343,14 @@ export default function DeliveriesTab({
                                                             )}
                                                         </div>
                                                         {ord.trip_code ? (
-                                                            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                                                                Trip: <strong className="text-slate-700">{ord.trip_code}</strong>
+                                                            <div className="text-[10px] text-slate-500 font-mono mt-0.5 space-y-0.5">
+                                                                <div>Trip: <strong className="text-slate-700">{ord.trip_code}</strong></div>
+                                                                {ord.delivery_date && (
+                                                                    <div className="text-emerald-700 font-bold flex items-center gap-1">
+                                                                        <Calendar className="w-3 h-3 text-emerald-600 shrink-0" />
+                                                                        <span>{formatIndonesianDate(ord.delivery_date)}</span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ) : (
                                                             <div className="text-[10px] text-slate-400 font-mono mt-0.5">
@@ -1577,6 +1610,8 @@ export default function DeliveriesTab({
                         setDriver={setAssignDriver}
                         vehicle={assignVehicle}
                         setVehicle={setAssignVehicle}
+                        deliveryDate={assignDate}
+                        setDeliveryDate={setAssignDate}
                         notes={assignNotes}
                         setNotes={setAssignNotes}
                         handleSubmit={handleSingleAssignSubmit}
@@ -1592,6 +1627,8 @@ export default function DeliveriesTab({
                         setDriver={setEditTripDriver}
                         vehicle={editTripVehicle}
                         setVehicle={setEditTripVehicle}
+                        deliveryDate={editTripDate}
+                        setDeliveryDate={setEditTripDate}
                         notes={editTripNotes}
                         setNotes={setEditTripNotes}
                         handleSubmit={handleEditTripSubmit}

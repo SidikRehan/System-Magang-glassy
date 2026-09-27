@@ -711,12 +711,15 @@ class SypOperationalController extends Controller
             'order_ids.*' => 'required|exists:orders,id',
             'driver_name' => 'required|string',
             'vehicle_plate' => 'required|string',
+            'delivery_date' => 'nullable|date',
             'notes' => 'nullable|string',
+            'trip_code' => 'nullable|string',
         ]);
 
-        $tripCode = 'TRIP-' . date('Ymd') . '-' . rand(1000, 9999);
+        $tripCode = !empty($validated['trip_code']) ? $validated['trip_code'] : ('TRIP-' . date('Ymd') . '-' . rand(1000, 9999));
         $driverName = $validated['driver_name'];
         $vehiclePlate = $validated['vehicle_plate'];
+        $deliveryDate = !empty($validated['delivery_date']) ? $validated['delivery_date'] : date('Y-m-d');
         $notes = $validated['notes'] ?? null;
 
         $orders = Order::whereIn('id', $validated['order_ids'])->get();
@@ -741,6 +744,7 @@ class SypOperationalController extends Controller
             $order->assigned_driver = $driverName;
             $order->assigned_vehicle = $vehiclePlate;
             $order->trip_code = $tripCode;
+            $order->delivery_date = $deliveryDate;
             if ($order->status !== 'selesai') {
                 $order->status = 'pengiriman';
                 $order->current_division = 'pengiriman';
@@ -759,6 +763,7 @@ class SypOperationalController extends Controller
                     'vehicle_plate' => $vehiclePlate,
                     'waybill_color' => $waybillColor,
                     'delivery_status' => 'Dalam Pengiriman',
+                    'delivery_date' => $deliveryDate,
                     'notes' => $notes,
                 ]
             );
@@ -1042,21 +1047,36 @@ class SypOperationalController extends Controller
             return redirect()->back()->with('message', '⚠️ Akses Ditolak: Hanya Divisi Potong (HT) atau Admin Gudang yang dapat mengonfirmasi pemakaian kaca sisa!');
         }
 
-        $scrapStr = $order->used_scrap_rak ?: '';
-        
-        preg_match('/SCRAP-\d+/', $scrapStr, $matches);
-        $scrapCode = $matches[0] ?? null;
+        $scrapId = $request->input('scrap_id');
+        $scrapCodeInput = $request->input('scrap_code');
 
-        if ($scrapCode) {
-            $scrapItem = ScrapGlass::where('scrap_code', $scrapCode)->first();
-            if ($scrapItem) {
-                $scrapItem->update([
-                    'status' => 'Terpakai'
-                ]);
+        $scrapItem = null;
+        if ($scrapId) {
+            $scrapItem = ScrapGlass::find($scrapId);
+        } elseif ($scrapCodeInput) {
+            $scrapItem = ScrapGlass::where('scrap_code', $scrapCodeInput)->first();
+        }
+
+        if (!$scrapItem) {
+            $scrapStr = $order->used_scrap_rak ?: '';
+            preg_match('/SCRAP-\d+/', $scrapStr, $matches);
+            $scrapCode = $matches[0] ?? null;
+
+            if ($scrapCode) {
+                $scrapItem = ScrapGlass::where('scrap_code', $scrapCode)->first();
             }
         }
 
-        $usedStr = '✅ [TERPAKAI DIVISI HT] ' . ($scrapCode ? ('Kaca Sisa ' . $scrapCode) : $scrapStr) . ' (Diambil dari stok rak & dipotong untuk SPO-' . $order->spo_number . ')';
+        if ($scrapItem) {
+            $scrapItem->update([
+                'status' => 'Terpakai'
+            ]);
+            $scrapLabel = $scrapItem->scrap_code . ' (' . $scrapItem->glass_type . ' ' . $scrapItem->length_cm . '×' . $scrapItem->width_cm . ' cm, ' . $scrapItem->rak_location . ')';
+        } else {
+            $scrapLabel = $order->used_scrap_rak ?: 'Kaca Sisa Rak Storage';
+        }
+
+        $usedStr = '✅ [TERPAKAI DIVISI HT] ' . $scrapLabel . ' (Diambil dari stok rak & dipotong untuk SPO-' . $order->spo_number . ')';
         $order->used_scrap_rak = $usedStr;
         $order->save();
 
@@ -1065,7 +1085,7 @@ class SypOperationalController extends Controller
             'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
             'action_type' => 'PAKAI_SCRAP',
             'target_user_name' => $order->spo_number,
-            'description' => 'Divisi HT Menggunakan kaca sisa ' . ($scrapCode ?: $scrapStr) . ' untuk pengerjaan SPO #' . $order->spo_number . '. Stok kaca sisa diperbarui menjadi Terpakai.',
+            'description' => 'Divisi HT Menggunakan kaca sisa ' . $scrapLabel . ' untuk pengerjaan SPO #' . $order->spo_number . '. Stok kaca sisa diperbarui menjadi Terpakai.',
             'created_at' => now(),
         ]);
 

@@ -282,22 +282,31 @@ export default function Dashboard({
 
     const isDriverMatch = (driverField, targetUserName) => {
         if (!driverField || !targetUserName) return false;
-        const dStr = String(driverField).toLowerCase();
-        const uStr = String(targetUserName).toLowerCase();
+        const dStr = String(driverField).trim();
+        const uStr = String(targetUserName).trim();
 
-        const normalize = (s) => s.replace(/\b(pak|driver|supir|utama|dc|engkel|l300|subcon|armada|pick|up)\b/gi, '').trim();
+        if (dStr.toLowerCase() === uStr.toLowerCase()) return true;
+
+        const normalize = (s) => 
+            s.toLowerCase()
+             .replace(/[\(\)\[\]\-_,\.]/g, ' ')
+             .replace(/\b(pak|driver|supir|utama|dc|engkel|l300|subcon|armada|pick|up)\b/gi, ' ')
+             .replace(/\s+/g, ' ')
+             .trim();
         
         const dClean = normalize(dStr);
         const uClean = normalize(uStr);
 
         if (dClean.length > 0 && uClean.length > 0) {
-            if (dStr.includes(uClean) || uStr.includes(dClean) || dClean.includes(uClean) || uClean.includes(dClean)) {
+            if (dClean === uClean || dClean.includes(uClean) || uClean.includes(dClean)) {
                 return true;
             }
         }
 
-        const uTokens = uStr.split(/\s+/).filter(t => !['pak', 'driver', 'supir', 'utama', 'dc', 'armada'].includes(t.toLowerCase()) && t.length >= 3);
-        return uTokens.some(token => dStr.includes(token));
+        const uTokens = uClean.split(/\s+/).filter(t => t.length >= 3);
+        const dTokens = dClean.split(/\s+/).filter(t => t.length >= 3);
+
+        return uTokens.some(token => dTokens.includes(token) || dClean.includes(token));
     };
 
     const isDateInTimeRange = (dateStr, rangeKey) => {
@@ -530,7 +539,7 @@ export default function Dashboard({
         handleOpenDetailModal(order);
     };
 
-    const handleFinishJobSubmit = (orderId, targetDiv) => {
+    const handleFinishJobSubmit = (orderId, targetDiv, options = {}) => {
         router.post(route('orders.finish', orderId), { next_division: targetDiv }, {
             preserveScroll: true,
             onSuccess: () => {
@@ -538,6 +547,11 @@ export default function Dashboard({
                 setSelectedExecutionOrder(null);
                 if (activeWorkingOrderId === orderId) {
                     setActiveWorkingOrderId(null);
+                }
+            },
+            onFinish: () => {
+                if (options && typeof options.onFinish === 'function') {
+                    options.onFinish();
                 }
             }
         });
@@ -3440,8 +3454,8 @@ export default function Dashboard({
         setShowDispatchModal(true);
     };
 
-    const handleDispatchOrderSubmit = (e) => {
-        e.preventDefault();
+    const handleDispatchOrderSubmit = (e, options = {}) => {
+        if (e && e.preventDefault) e.preventDefault();
         if (!selectedDispatchOrder) return;
         router.post(route('orders.dispatch', selectedDispatchOrder.id), {
             target_division: targetDivChoice
@@ -3449,6 +3463,11 @@ export default function Dashboard({
             onSuccess: () => {
                 setShowDispatchModal(false);
                 setSelectedDispatchOrder(null);
+            },
+            onFinish: () => {
+                if (options && typeof options.onFinish === 'function') {
+                    options.onFinish();
+                }
             }
         });
     };
@@ -3463,8 +3482,15 @@ export default function Dashboard({
         });
     };
 
-    const handleStartJob = (id) => {
-        router.post(route('orders.start', id));
+    const handleStartJob = (id, options = {}) => {
+        router.post(route('orders.start', id), {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                if (options && typeof options.onFinish === 'function') {
+                    options.onFinish();
+                }
+            }
+        });
     };
 
     const handleFinishJob = (id, nextDiv = 'QC_Ready') => {

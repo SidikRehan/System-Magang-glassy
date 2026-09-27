@@ -1,6 +1,181 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { router } from '@inertiajs/react';
-import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight, Phone, MapPin, Calendar, Clock, FileText, Layers, Box, Sparkles, Plus, Minus, Edit3, Trash2, Search, RotateCcw, Info, Check, ShieldAlert, FileCheck, Layers3, AlertCircle } from 'lucide-react';
+import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight, Phone, MapPin, Calendar, Clock, FileText, Layers, Box, Sparkles, Plus, Minus, Edit3, Trash2, Search, RotateCcw, Info, Check, ShieldAlert, FileCheck, Layers3, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+
+function SearchableScrapSelect({
+    scrapGlasses = [],
+    selectedId = '',
+    onSelect = () => {},
+    initialGlassType = '',
+    placeholder = '🔍 Ketik untuk cari & pilih kaca sisa (kode, jenis, ukuran cm, rak)...'
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const containerRef = useRef(null);
+    const inputRef = useRef(null);
+
+    const availableScraps = React.useMemo(() => {
+        return (Array.isArray(scrapGlasses) ? scrapGlasses : []).filter(s => s.status === 'Layak Pakai');
+    }, [scrapGlasses]);
+
+    const selectedScrap = availableScraps.find(s => String(s.id) === String(selectedId));
+
+    const getDisplayText = (s) => {
+        if (!s) return '';
+        return `[${s.scrap_code}] ${s.glass_type} (${s.length_cm} × ${s.width_cm} cm) — Lokasi: ${s.rak_location}`;
+    };
+
+    const filteredScraps = availableScraps.filter(s => {
+        if (!searchTerm || !searchTerm.trim()) return true;
+        const q = searchTerm.toLowerCase().trim();
+        return (
+            (s.scrap_code || '').toLowerCase().includes(q) ||
+            (s.glass_type || '').toLowerCase().includes(q) ||
+            (s.rak_location || '').toLowerCase().includes(q) ||
+            `${s.length_cm}`.includes(q) ||
+            `${s.width_cm}`.includes(q) ||
+            `${s.length_cm}x${s.width_cm}`.includes(q) ||
+            `${s.length_cm} x ${s.width_cm}`.includes(q)
+        );
+    });
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) {
+                setIsOpen(false);
+                setSearchTerm('');
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleSelectOption = (s) => {
+        onSelect(s.id);
+        setSearchTerm('');
+        setIsOpen(false);
+    };
+
+    const handleClear = (e) => {
+        e.stopPropagation();
+        onSelect('');
+        setSearchTerm('');
+        setIsOpen(true);
+        if (inputRef.current) inputRef.current.focus();
+    };
+
+    return (
+        <div ref={containerRef} className="relative flex-1 min-w-[280px]">
+            <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-[#1b68b0] absolute left-3 pointer-events-none z-10" />
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={isOpen ? searchTerm : (selectedScrap ? getDisplayText(selectedScrap) : searchTerm)}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (!isOpen) setIsOpen(true);
+                    }}
+                    onFocus={() => {
+                        setIsOpen(true);
+                        setSearchTerm('');
+                    }}
+                    placeholder={selectedScrap ? getDisplayText(selectedScrap) : placeholder}
+                    className="w-full bg-white border border-slate-300 text-slate-800 rounded-xl pl-9 pr-14 py-2 text-xs font-mono font-bold shadow-xs transition focus:outline-none focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15"
+                />
+
+                <div className="absolute right-2 flex items-center gap-1">
+                    {(selectedId || searchTerm) && (
+                        <button
+                            type="button"
+                            onClick={handleClear}
+                            className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                            title="Hapus / Reset"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setIsOpen(!isOpen);
+                            if (!isOpen && inputRef.current) inputRef.current.focus();
+                        }}
+                        className="p-1 hover:bg-slate-100 rounded-md text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                    >
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#1b68b0]' : ''}`} />
+                    </button>
+                </div>
+            </div>
+
+            {/* FLOATING DROPDOWN POPUP */}
+            {isOpen && (
+                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-64 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100 text-slate-800">
+                    <div className="p-2.5 bg-slate-50 text-[10px] text-slate-500 font-bold flex flex-wrap justify-between items-center gap-2 border-b border-slate-100">
+                        <span className="flex items-center gap-1">
+                            <Layers className="w-3 h-3 text-[#1b68b0]" /> Cari & Pilih Kaca Sisa Rak Storage:
+                        </span>
+                        
+                        <div className="flex items-center gap-1.5">
+                            {initialGlassType && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchTerm(initialGlassType.split(' ')[0] || initialGlassType)}
+                                    className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-[#1b68b0]/30 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer transition"
+                                >
+                                    <Sparkles className="w-3 h-3 text-[#1b68b0]" />
+                                    <span>Filter: {initialGlassType}</span>
+                                </button>
+                            )}
+                            <span className="bg-blue-50 text-[#1b68b0] px-2 py-0.5 rounded font-mono font-bold">
+                                {filteredScraps.length} Tersedia
+                            </span>
+                        </div>
+                    </div>
+
+                    {filteredScraps.length > 0 ? (
+                        filteredScraps.map((sc) => {
+                            const isSelected = String(sc.id) === String(selectedId);
+                            return (
+                                <button
+                                    key={sc.id}
+                                    type="button"
+                                    onClick={() => handleSelectOption(sc)}
+                                    className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-blue-50 text-[#1b68b0] font-extrabold border-l-4 border-l-[#1b68b0]'
+                                            : 'text-slate-700 hover:bg-slate-50 hover:text-[#1b68b0]'
+                                    }`}
+                                >
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-black text-[#1b68b0] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 text-[10px]">
+                                                {sc.scrap_code}
+                                            </span>
+                                            <strong className="text-slate-800 font-extrabold">{sc.glass_type}</strong>
+                                        </div>
+                                        <div className="text-[11px] text-slate-500 font-mono flex items-center gap-2">
+                                            <span>Ukuran: <strong className="text-slate-700">{sc.length_cm} × {sc.width_cm} cm</strong></span>
+                                            <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-slate-200">
+                                                Lokasi: {sc.rak_location || 'Rak Storage'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {isSelected && <Check className="w-4 h-4 text-[#1b68b0] shrink-0" />}
+                                </button>
+                            );
+                        })
+                    ) : (
+                        <div className="p-4 text-center text-xs text-slate-400 space-y-1 font-mono">
+                            <p>Tidak ada kaca sisa yang sesuai kata kunci "{searchTerm}".</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function DivisionExecutionModal({
     show,
@@ -126,7 +301,18 @@ export default function DivisionExecutionModal({
 
     // State untuk Konfirmasi & Penolakan Kaca Sisa oleh Divisi HT
     const [isSubmittingUseScrap, setIsSubmittingUseScrap] = useState(false);
+    const [selectedSelfScrapId, setSelectedSelfScrapId] = useState('');
+    const [isSubmittingSelfScrap, setIsSubmittingSelfScrap] = useState(false);
+    const [isSubmittingFinishModal, setIsSubmittingFinishModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+
+    const handleFinishModalSubmit = () => {
+        if (!selectedExecutionOrder || !onFinishJobSubmit) return;
+        setIsSubmittingFinishModal(true);
+        onFinishJobSubmit(selectedExecutionOrder.id, selectedNextDiv, {
+            onFinish: () => setIsSubmittingFinishModal(false)
+        });
+    };
     const [rejectReasonType, setRejectReasonType] = useState('baret_cacat');
     const [rejectNotes, setRejectNotes] = useState('');
     const [resizeScrap, setResizeScrap] = useState(false);
@@ -483,8 +669,30 @@ export default function DivisionExecutionModal({
                     }
                 }
             },
+        });
+    };
+
+    const handleSelfReportScrapSubmit = (e) => {
+        e.preventDefault();
+        if (!selectedSelfScrapId) {
+            alert('⚠️ Mohon pilih kaca sisa dari rak terlebih dahulu!');
+            return;
+        }
+        setIsSubmittingSelfScrap(true);
+        router.post(route('orders.use_scrap', selectedExecutionOrder.id), {
+            scrap_id: selectedSelfScrapId
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSubmittingSelfScrap(false);
+                const chosenScrap = (Array.isArray(scrapGlasses) ? scrapGlasses : []).find(s => s.id === parseInt(selectedSelfScrapId) || s.id === selectedSelfScrapId);
+                if (chosenScrap && selectedExecutionOrder) {
+                    selectedExecutionOrder.used_scrap_rak = `✅ [TERPAKAI DIVISI HT] ${chosenScrap.scrap_code} (${chosenScrap.glass_type} ${chosenScrap.length_cm}×${chosenScrap.width_cm} cm di ${chosenScrap.rak_location})`;
+                }
+                setSelectedSelfScrapId('');
+            },
             onError: () => {
-                setIsSubmittingUseScrap(false);
+                setIsSubmittingSelfScrap(false);
             }
         });
     };
@@ -906,6 +1114,44 @@ export default function DivisionExecutionModal({
                                     )}
                                 </div>
                             )
+                        )}
+
+                        {/* SELF-REPORT PEMAKAIAN KACA SISA (JIKA ADMIN TOKO TIDAK MEMBERIKAN REKOMENDASI) */}
+                        {(!selectedExecutionOrder.used_scrap_rak || selectedExecutionOrder.used_scrap_rak === '-' || selectedExecutionOrder.used_scrap_rak.trim() === '') && (selectedExecutionOrder.current_division === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner') && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs text-slate-800">
+                                <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                                    <div className="flex items-center gap-2 font-extrabold text-xs text-[#1b68b0] uppercase tracking-wider">
+                                        <Layers className="w-4 h-4 text-[#1b68b0]" />
+                                        <span>LAPORKAN PEMAKAIAN KACA SISA RAK (INISIATIF DIVISI POTONG)</span>
+                                    </div>
+                                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                        Tidak Ada Rekomendasi Toko
+                                    </span>
+                                </div>
+
+                                <p className="text-xs text-slate-600 font-sans leading-relaxed">
+                                    Admin Toko tidak mencantumkan rekomendasi kaca sisa untuk orderan ini. Jika Divisi Potong menemukan & menggunakan kaca sisa dari rak storage, silakan cari, pilih, dan laporkan di bawah ini agar stok sisa di rak otomatis ter-update:
+                                </p>
+
+                                <form onSubmit={handleSelfReportScrapSubmit} className="flex flex-wrap items-center gap-3 pt-1">
+                                    <SearchableScrapSelect
+                                        scrapGlasses={scrapGlasses}
+                                        selectedId={selectedSelfScrapId}
+                                        onSelect={(id) => setSelectedSelfScrapId(id)}
+                                        initialGlassType={initialGlassType}
+                                        placeholder="🔍 Ketik untuk cari & pilih kaca sisa (kode, jenis, ukuran cm, rak)..."
+                                    />
+
+                                    <button
+                                        type="submit"
+                                        disabled={!selectedSelfScrapId || isSubmittingSelfScrap}
+                                        className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs transition flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
+                                    >
+                                        {isSubmittingSelfScrap ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                        <span>{isSubmittingSelfScrap ? 'Menyimpan...' : 'Laporkan Pakai Kaca Sisa'}</span>
+                                    </button>
+                                </form>
+                            </div>
                         )}
 
                         {/* RINCIAN ITEM SPESIFIKASI KACA DETAIL & TOMBOL [+ SISA POTONG] */}
@@ -1686,13 +1932,21 @@ export default function DivisionExecutionModal({
 
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    onFinishJobSubmit(selectedExecutionOrder.id, selectedNextDiv);
-                                                }}
-                                                className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
+                                                disabled={isSubmittingFinishModal}
+                                                onClick={handleFinishModalSubmit}
+                                                className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-black px-6 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                <CheckCircle2 className="w-4 h-4" />
-                                                <span>Selesai & Teruskan Pekerjaan</span>
+                                                {isSubmittingFinishModal ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                                        <span>Memproses Selesai...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                        <span>Selesai & Teruskan Pekerjaan</span>
+                                                    </>
+                                                )}
                                             </button>
                                         </>
                                     );

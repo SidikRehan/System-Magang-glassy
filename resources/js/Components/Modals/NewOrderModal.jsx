@@ -106,7 +106,7 @@ export default function NewOrderModal({
         )
     );
 
-    const isPriorityValid = orderForm.priority_status !== 'Prioritas' || (parseFloat(orderForm.priority_fee) || 0) > 0;
+    const isPriorityValid = orderForm.priority_status !== 'Prioritas' || (parseFloat(orderForm.priority_fee) || 0) >= 0;
 
     const isFormValid = isCustomerNameValid && isCustomerPhoneValid && isCustomerAddressValid && isDescriptionValid && isOrderDateValid && isItemsValid && isPriorityValid;
 
@@ -961,17 +961,17 @@ export default function NewOrderModal({
                                         setOrderForm(d => ({
                                             ...d,
                                             priority_status: val,
-                                            priority_fee: val === 'Prioritas' ? (d.priority_fee || '') : 0
+                                            priority_fee: val === 'Prioritas' ? (d.priority_fee ?? 0) : 0
                                         }));
                                     }} 
                                     className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] shadow-xs cursor-pointer"
                                 >
                                     <option value="Biasa">Biasa (Standard)</option>
-                                    <option value="Prioritas">🔥 Prioritas (Buru-buru / Fee Custom)</option>
+                                    <option value="Prioritas">🔥 Prioritas (Buru-buru / Express)</option>
                                 </select>
                             </div>
                             {orderForm.priority_status === 'Prioritas' && (
-                                <div>
+                                <div className="sm:col-span-2 space-y-1.5">
                                     <label className="text-slate-600 block mb-1 font-semibold">Nominal Fee Prioritas (Rp):</label>
                                     <input 
                                         type="text" 
@@ -979,10 +979,45 @@ export default function NewOrderModal({
                                         value={formatRupiahInput(orderForm.priority_fee)} 
                                         onChange={e => setOrderForm('priority_fee', parseRupiahInput(e.target.value))} 
                                         onFocus={e => e.target.select()}
-                                        className={getFieldClass(isPriorityValid, "w-full bg-white border rounded-xl p-2.5 text-amber-800 font-bold font-mono shadow-xs transition")} 
-                                        placeholder="cth: 150.000 atau 200.000" 
+                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-amber-800 font-bold font-mono shadow-xs transition focus:border-[#1b68b0]" 
+                                        placeholder="0 (Free / Gratis)" 
                                     />
-                                    <span className="text-[10px] text-amber-700 block mt-1">*Admin isi manual</span>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                        <span className="text-[11px] text-slate-500 font-medium">Pilih Cepat:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOrderForm('priority_fee', 0)}
+                                            className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                                                (parseFloat(orderForm.priority_fee) || 0) === 0
+                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            Rp 0 (Free / Gratis)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOrderForm('priority_fee', 50000)}
+                                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                                        >
+                                            Rp 50.000
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOrderForm('priority_fee', 100000)}
+                                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                                        >
+                                            Rp 100.000
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOrderForm('priority_fee', 150000)}
+                                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                                        >
+                                            Rp 150.000
+                                        </button>
+                                    </div>
+                                    <span className="text-[10px] text-amber-700 block mt-0.5">*Default Rp 0 (Free / Gratis tanpa biaya tambahan ke konsumen). Isi nominal jika ada charge prioritas.</span>
                                 </div>
                             )}
                             <div>
@@ -1237,9 +1272,15 @@ export default function NewOrderModal({
                                     Biaya Prioritas Pengerjaan (Buru-buru):
                                     {orderForm.priority_status !== 'Prioritas' && <span className="text-[10px] text-slate-500 font-normal ml-1">(Status: Biasa)</span>}
                                 </span>
-                                <strong className="font-mono text-amber-800 font-extrabold text-sm">
-                                    + Rp {calcPriorityFee.toLocaleString()}
-                                </strong>
+                                {calcPriorityFee === 0 ? (
+                                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">
+                                        + Rp 0 (Free / Gratis)
+                                    </span>
+                                ) : (
+                                    <strong className="font-mono text-amber-800 font-extrabold text-sm">
+                                        + Rp {calcPriorityFee.toLocaleString('id-ID')}
+                                    </strong>
+                                )}
                             </div>
 
                             {/* BIAYA CUSTOM ADMIN */}

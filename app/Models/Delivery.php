@@ -20,6 +20,7 @@ class Delivery extends Model
         'delivery_status',
         'proof_photo_path',
         'notes',
+        'delivery_date',
     ];
 
     public function order()

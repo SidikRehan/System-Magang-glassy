@@ -55,6 +55,7 @@ class Order extends Model
         'is_company_use',
         'proof_photo_path',
         'recipient_name',
+        'delivery_date',
     ];
 
     protected $casts = [
