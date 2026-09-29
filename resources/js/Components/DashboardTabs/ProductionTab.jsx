@@ -1,6 +1,6 @@
 import React from 'react';
 import { router } from '@inertiajs/react';
-import { roleTitles, formatIndonesianDate, checkOrderDivisi, isDateInTimeRange } from '@/Utils/dashboardHelpers';
+import { roleTitles, formatIndonesianDate, checkOrderDivisi, isDateInTimeRange, computeDefaultNextDiv } from '@/Utils/dashboardHelpers';
 import {
     Factory,
     Hammer,
@@ -179,6 +179,7 @@ export default function ProductionTab({
                         { key: 'divisi_bv', label: 'Divisi BV (Bevel)', icon: Gem, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_bv')).length },
                         { key: 'divisi_etsa', label: 'Divisi Etsa (Blur)', icon: Paintbrush, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_etsa')).length },
                         { key: 'QC_Ready', label: 'Selesai (Siap Kirim QC)', icon: CheckCircle2, count: initialOrders.filter(o => checkOrderDivisi(o, 'QC_Ready')).length },
+                        { key: 'selesai_global', label: 'Riwayat Selesai', icon: History, count: initialOrders.filter(o => o.status === 'selesai').length },
                     ].map(tab => {
                         const Icon = tab.icon;
                         const isActive = productionSubTab === tab.key;
@@ -421,6 +422,8 @@ export default function ProductionTab({
                             if (found) return found;
                         }
                         return initialOrders.find(o => {
+                            if (o.complaint_status === 'pending_gudang') return false;
+                            
                             if (isDivisionWorker) {
                                 return o.current_division === userRole && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
                             }
@@ -676,7 +679,7 @@ export default function ProductionTab({
                                                 <>
                                                     <span className="text-xs text-slate-500 font-mono font-semibold hidden sm:inline-block">Teruskan ke:</span>
                                                     <select
-                                                        value={activeCardNextDiv}
+                                                        value={activeCardNextDiv === 'QC_Ready' ? computeDefaultNextDiv(activeOngoingOrder) : activeCardNextDiv}
                                                         onChange={(e) => setActiveCardNextDiv(e.target.value)}
                                                         className="bg-white border border-slate-300 text-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:border-[#1b68b0] font-mono shadow-xs cursor-pointer"
                                                     >
@@ -690,7 +693,19 @@ export default function ProductionTab({
                                                     <button
                                                         type="button"
                                                         disabled={finishingOrderId === activeOngoingOrder.id}
-                                                        onClick={() => handleFinishJobAction(activeOngoingOrder.id, activeCardNextDiv)}
+                                                        onClick={() => {
+                                                            if (activeOngoingOrder.current_division === 'divisi_ht') {
+                                                                const hasLoggedRaw = Array.isArray(activeOngoingOrder.raw_materials_used) && activeOngoingOrder.raw_materials_used.length > 0;
+                                                                const hasLoggedScrap = activeOngoingOrder.used_scrap_rak && String(activeOngoingOrder.used_scrap_rak).includes('TERPAKAI DIVISI HT');
+                                                                
+                                                                if (!hasLoggedRaw && !hasLoggedScrap) {
+                                                                    alert('⚠️ WAJIB CATAT BAHAN: Anda belum mencatat pemakaian bahan lembaran kaca atau kaca sisa (scrap) untuk pekerjaan ini.\n\nSilakan klik tombol "Detail Lengkap" lalu isi jumlah lembaran yang dipakai pada bagian "Bahan Kaca" sebelum menyelesaikan pekerjaan.');
+                                                                    return;
+                                                                }
+                                                            }
+                                                            const actualNext = activeCardNextDiv === 'QC_Ready' ? computeDefaultNextDiv(activeOngoingOrder) : activeCardNextDiv;
+                                                            handleFinishJobAction(activeOngoingOrder.id, actualNext);
+                                                        }}
                                                         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#70b03c] hover:bg-[#5f9733] disabled:bg-slate-300 disabled:cursor-not-allowed shadow-xs hover:shadow-sm transition cursor-pointer"
                                                     >
                                                         {finishingOrderId === activeOngoingOrder.id ? (
@@ -751,8 +766,8 @@ export default function ProductionTab({
                             <h3 className="text-base font-bold text-[#242222] flex items-center gap-2">
                                 <FileText className="w-5 h-5 text-[#1b68b0]" />
                                 <span>
-                                    {productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready'
-                                        ? 'Riwayat Orderan Selesai Divisi'
+                                    {productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready' || productionSubTab === 'selesai_global'
+                                        ? 'Riwayat Orderan Selesai'
                                         : 'Tabel Antrean Workstation Divisi'}
                                 </span>
                             </h3>
@@ -773,9 +788,10 @@ export default function ProductionTab({
                         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
                             {(() => {
                                 const curKey = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'HT';
-                                const isHistorySubTab = productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready';
+                                const isHistorySubTab = productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready' || productionSubTab === 'selesai_global';
 
                                 const enteredRangeList = initialOrders.filter(o => {
+                                    if (productionSubTab === 'selesai_global') return o.status === 'selesai' && isDateInTimeRange(o.created_at || o.order_date, isHistorySubTab ? statTimeRange : 'today');
                                     const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
                                     const dateToCheck = ts.started_at || ts.created_at || o.created_at || o.order_date;
                                     const matchDiv = isDivisionWorker ? (o.current_division === userRole || (o.division_progress?.[curKey] && o.division_progress?.[curKey] !== 'N/A' && o.division_progress?.[curKey] !== 'Belum')) : true;
@@ -783,6 +799,7 @@ export default function ProductionTab({
                                 });
 
                                 const completedRangeList = initialOrders.filter(o => {
+                                    if (productionSubTab === 'selesai_global') return o.status === 'selesai' && isDateInTimeRange(o.updated_at || o.execution_completed_at, isHistorySubTab ? statTimeRange : 'today');
                                     const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
                                     const dateToCheck = ts.completed_at || o.execution_completed_at;
                                     const matchDiv = (o.division_progress && o.division_progress[curKey] === 'Selesai');
@@ -890,21 +907,24 @@ export default function ProductionTab({
                             ? userRole.replace('divisi_', '').toUpperCase()
                             : (productionSubTab.startsWith('divisi_') ? productionSubTab.replace('divisi_', '').toUpperCase() : 'HT');
 
-                        const isHistorySubTab = productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready';
+                        const isHistorySubTab = productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready' || productionSubTab === 'selesai_global';
 
                         const rawFiltered = initialOrders.filter(o => {
                             if (isHistorySubTab) {
-                                const code = userRole.replace('divisi_', '').toUpperCase();
-                                const p = o.division_progress || {};
-                                const isBaseHistoryMatch = isDivisionWorker
-                                    ? (o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai'))
-                                    : checkOrderDivisi(o, productionSubTab);
+                                if (productionSubTab === 'selesai_global' && o.status !== 'selesai') return false;
+                                if (productionSubTab !== 'selesai_global') {
+                                    const code = userRole.replace('divisi_', '').toUpperCase();
+                                    const p = o.division_progress || {};
+                                    const isBaseHistoryMatch = isDivisionWorker
+                                        ? (o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai'))
+                                        : checkOrderDivisi(o, productionSubTab);
 
-                                if (!isBaseHistoryMatch) return false;
+                                    if (!isBaseHistoryMatch) return false;
+                                }
 
                                 const ts = (o.division_timestamps && o.division_timestamps[curDivKey]) ? o.division_timestamps[curDivKey] : {};
                                 const dateEntered = ts.started_at || ts.created_at || o.created_at || o.order_date;
-                                const dateCompleted = ts.completed_at || o.execution_completed_at;
+                                const dateCompleted = ts.completed_at || o.execution_completed_at || o.updated_at;
 
                                 if (statFilterType === 'entered') {
                                     return isDateInTimeRange(dateEntered, statTimeRange);
@@ -915,6 +935,8 @@ export default function ProductionTab({
                                     return isDateInTimeRange(dateCompleted || dateEntered, statTimeRange);
                                 }
                             }
+
+                            if (o.complaint_status === 'pending_gudang') return false;
 
                             if (isDivisionWorker) {
                                 return o.current_division === userRole;
@@ -941,6 +963,8 @@ export default function ProductionTab({
                         const activeOngoingId = (() => {
                             if (activeWorkingOrderId) return activeWorkingOrderId;
                             const found = initialOrders.find(o => {
+                                if (o.complaint_status === 'pending_gudang') return false;
+                                
                                 if (isDivisionWorker) {
                                     return o.current_division === userRole && o.division_progress?.[curDivKey] === 'Sedang Dikerjakan';
                                 }

@@ -232,10 +232,49 @@ export default function DivisionExecutionModal({
         );
         if (match) return match;
 
+        // 2. Normalized Exact Match
+        const norm = s => (s || '').toLowerCase().replace(/\s+/g, '').replace(/kaca/g, '');
+        match = sheetGlasses.find(g => norm(g.name) === norm(lowerType));
+        if (match) return match;
+
+        // 3. Best Sub-word Match / Scoring
+        const typeWords = lowerType.replace(/kaca/g, '').replace(/mm/g, ' mm ').split(/[\s,]+/).filter(w => w.length > 0);
+        let bestMatch = null;
+        let highestScore = 0;
+
+        for (const g of sheetGlasses) {
+            if (!g?.name) continue;
+            const gLower = g.name.toLowerCase();
+            let score = 0;
+            let penalty = 0;
+            
+            for (const w of typeWords) {
+                if (w === 'mm' || w === 'm') continue;
+                if (gLower.includes(w)) score += 2;
+            }
+            
+            // Penalti jika master stok mengandung kata khusus (warna/tipe) yang TIDAK ada di nama order
+            const specialWords = ['black', 'glasstone', 'bronze', 'grey', 'riben', 'tempered', 'laminated', 'polos', 'bening', 'gold', 'etsa'];
+            for (const sw of specialWords) {
+                if (gLower.includes(sw) && !lowerType.includes(sw)) {
+                    penalty += 3;
+                }
+            }
+
+            const finalScore = score - penalty;
+            if (finalScore > highestScore) {
+                highestScore = finalScore;
+                bestMatch = g;
+            }
+        }
+
+        if (bestMatch && highestScore > 0) return bestMatch;
+
+        // 4. Fallback (Original logic)
         const thickMatch = lowerType.match(/(\d+)\s*mm/);
         const thickNum = thickMatch ? thickMatch[1] : null;
 
-        const keywords = ['cermin', 'bening', 'tempered', 'riben', 'etsa', 'laminated', 'tinted', 'bronze', 'grey', 'acryl'];
+        const keywords = ['cermin', 'bening', 'tempered', 'riben', 'etsa', 'laminated', 'tinted', 'bronze', 'grey', 'acryl', 'glasstone', 'gold'];
         const matchedKw = keywords.find(kw => lowerType.includes(kw));
 
         return sheetGlasses.find(g => {
@@ -308,6 +347,43 @@ export default function DivisionExecutionModal({
 
     const handleFinishModalSubmit = () => {
         if (!selectedExecutionOrder || !onFinishJobSubmit) return;
+        
+        const currentDiv = selectedExecutionOrder.current_division || '';
+        const hasLoggedRaw = Array.isArray(selectedExecutionOrder.raw_materials_used) && selectedExecutionOrder.raw_materials_used.length > 0;
+        const hasLoggedScrap = selectedExecutionOrder.used_scrap_rak && String(selectedExecutionOrder.used_scrap_rak).includes('TERPAKAI DIVISI HT');
+        
+        if (currentDiv === 'divisi_ht' && !hasLoggedRaw && !hasLoggedScrap) {
+            const currentQtyVal = getRawSheetsForType();
+            const usedQty = parseInt(currentQtyVal) || 0;
+            
+            if (rawGlassType && usedQty >= 1) {
+                if (currentStockItem && usedQty > currentStockItem.qty) {
+                    alert(`❌ PEMAKAIAN MELEBIHI STOK AKTIF!\n\nStok kaca "${currentStockItem.name}" di Gudang saat ini hanya tersisa ${currentStockItem.qty} ${currentStockItem.unit}.\n\nPemakaian tidak dapat dicatat otomatis!`);
+                    return;
+                }
+
+                setIsSubmittingFinishModal(true);
+                const finalGlassType = currentStockItem ? currentStockItem.name : rawGlassType;
+                
+                router.post(route('orders.raw_material', selectedExecutionOrder.id), {
+                    glass_type: finalGlassType,
+                    sheets_used: usedQty,
+                    notes: rawNotes || 'Disimpan otomatis saat klik Selesai Pengerjaan'
+                }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        onFinishJobSubmit(selectedExecutionOrder.id, selectedNextDiv, {
+                            onFinish: () => setIsSubmittingFinishModal(false)
+                        });
+                    },
+                    onError: () => {
+                        setIsSubmittingFinishModal(false);
+                    }
+                });
+                return;
+            }
+        }
+
         setIsSubmittingFinishModal(true);
         onFinishJobSubmit(selectedExecutionOrder.id, selectedNextDiv, {
             onFinish: () => setIsSubmittingFinishModal(false)
@@ -637,8 +713,10 @@ export default function DivisionExecutionModal({
         }
 
         setIsSubmittingRaw(true);
+        const finalGlassType = currentStockItem ? currentStockItem.name : rawGlassType;
+        
         router.post(route('orders.raw_material', selectedExecutionOrder.id), {
-            glass_type: rawGlassType,
+            glass_type: finalGlassType,
             sheets_used: usedQty,
             notes: rawNotes
         }, {

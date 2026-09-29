@@ -1,8 +1,8 @@
 import React from 'react';
 import { formatIndonesianDate, formatIndonesianDateTime, roleTitles } from '@/Utils/dashboardHelpers';
-import { 
-    FileText, Sliders, Truck, CreditCard, CheckCircle2, 
-    Clock, Plus, Search, Calendar, Edit3, RefreshCw, 
+import {
+    FileText, Sliders, Truck, CreditCard, CheckCircle2,
+    Clock, Plus, Search, Calendar, Edit3, RefreshCw,
     Printer, Tag, Send, Eye, AlertCircle, MapPin, Lock,
     Building2, Bell
 } from 'lucide-react';
@@ -99,8 +99,8 @@ export default function OrdersTab({
                         {canManageSalesOrFinance ? 'Menu Orderan & Monitoring Transaksi' : 'Menu Orderan Pengerjaan'}
                     </h2>
                     <p className="text-xs text-slate-500 font-medium">
-                        {canManageSalesOrFinance 
-                            ? 'Kelola orderan aktif, status pembayaran, draf negosiasi, dan disposisi pengerjaan pabrik' 
+                        {canManageSalesOrFinance
+                            ? 'Kelola orderan aktif, status pembayaran, draf negosiasi, dan disposisi pengerjaan pabrik'
                             : 'Kelola orderan aktif pengerjaan, pengiriman, dan disposisi divisi'}
                     </p>
                 </div>
@@ -152,11 +152,10 @@ export default function OrdersTab({
                                     setActiveOrderCard(card.key);
                                 }
                             }}
-                            className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white flex flex-col justify-between gap-3 ${
-                                isActive 
-                                    ? `${card.activeRing} shadow-sm bg-slate-50/50` 
-                                    : 'border-slate-200/90 hover:border-slate-300 hover:shadow-xs'
-                            }`}
+                            className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white flex flex-col justify-between gap-3 ${isActive
+                                ? `${card.activeRing} shadow-sm bg-slate-50/50`
+                                : 'border-slate-200/90 hover:border-slate-300 hover:shadow-xs'
+                                }`}
                         >
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-slate-600 truncate">{card.label}</span>
@@ -370,7 +369,7 @@ export default function OrdersTab({
                                                     </div>
                                                     <div className="flex flex-wrap gap-1 pt-0.5">
                                                         {Array.isArray(o.processes) && o.processes.map(p => (
-                                                             <span key={p} className="text-[9px] bg-blue-50 text-[#1b68b0] font-bold px-1.5 py-0.2 rounded border border-blue-200/80">
+                                                            <span key={p} className="text-[9px] bg-blue-50 text-[#1b68b0] font-bold px-1.5 py-0.2 rounded border border-blue-200/80">
                                                                 {p}
                                                             </span>
                                                         ))}
@@ -460,13 +459,12 @@ export default function OrdersTab({
                                         {/* PAYMENT STATUS */}
                                         {canViewPricing && (
                                             <td className="p-3.5 align-top whitespace-nowrap">
-                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${
-                                                    o.payment_status === 'Lunas' 
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                        : o.payment_status === 'DP (50%)' 
-                                                        ? 'bg-blue-50 text-[#1b68b0] border-blue-200' 
+                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${o.payment_status === 'Lunas'
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                    : o.payment_status === 'DP (50%)'
+                                                        ? 'bg-blue-50 text-[#1b68b0] border-blue-200'
                                                         : 'bg-slate-100 text-slate-600 border-slate-200'
-                                                }`}>
+                                                    }`}>
                                                     {o.payment_status}
                                                 </span>
                                             </td>

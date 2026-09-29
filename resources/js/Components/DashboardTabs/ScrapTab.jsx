@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
     Boxes, Plus, Search, Eye, EyeOff, RefreshCw, 
     MessageSquare, Edit, Trash2, Calendar, Scissors, 
     Layers, CheckCircle2, AlertTriangle, Clock, ShieldCheck, 
-    Lock, Check, Package, Send, ZoomIn
+    Lock, Check, Package, Send, ZoomIn, X
 } from 'lucide-react';
 import { isMatchSearch } from '@/Utils/dashboardHelpers';
 
@@ -32,6 +32,24 @@ export default function ScrapTab({
     handleDeleteStockItem,
     handleOpenSketchLightbox = () => {},
 }) {
+    // Local search state for Scrap Glass (Kaca Sisa)
+    const [scrapSearchTerm, setScrapSearchTerm] = useState('');
+
+    // Filtered Kaca Sisa List
+    const filteredScrapList = initialScrap.filter(s => {
+        if (!scrapSearchTerm.trim()) return true;
+        const q = scrapSearchTerm.toLowerCase().trim();
+        return (
+            (s.scrap_code || '').toLowerCase().includes(q) ||
+            (s.glass_type || '').toLowerCase().includes(q) ||
+            (s.rak_location || '').toLowerCase().includes(q) ||
+            (s.status || '').toLowerCase().includes(q) ||
+            `${s.length_cm || ''} x ${s.width_cm || ''}`.toLowerCase().includes(q) ||
+            `${s.length_cm || ''}`.toLowerCase().includes(q) ||
+            `${s.width_cm || ''}`.toLowerCase().includes(q)
+        );
+    });
+
     // If not passed externally, calculate internally
     const filteredSheetGlasses = externalFilteredSheetGlasses || sheetGlasses.filter(g => {
         const matchesSearch = isMatchSearch(g, stockSearchTerm) ||
@@ -417,10 +435,13 @@ export default function ScrapTab({
             ) : (
                 /* TABEL KACA SISA POTONGAN DI RAK */
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
                             <Scissors className="w-4 h-4 text-[#1b68b0]" />
                             <span>Stok Kaca Sisa Potongan di Rak Storage</span>
+                            <span className="bg-blue-50 text-[#1b68b0] text-[11px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
+                                {filteredScrapList.length} item
+                            </span>
                         </h3>
                         {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
                             <button 
@@ -431,6 +452,30 @@ export default function ScrapTab({
                                 <span>Input Kaca Sisa Baru</span>
                             </button>
                         )}
+                    </div>
+
+                    {/* FITUR SEARCH DI BAWAH BUTTON INPUT KACA SISA BARU */}
+                    <div className="flex justify-end">
+                        <div className="relative w-full sm:w-80">
+                            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                                type="text"
+                                value={scrapSearchTerm}
+                                onChange={e => setScrapSearchTerm(e.target.value)}
+                                placeholder="Cari kode sisa, jenis kaca, rak, status..."
+                                className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-xl pl-9 pr-8 py-2 focus:bg-white focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 transition shadow-xs placeholder:text-slate-400 font-medium"
+                            />
+                            {scrapSearchTerm && (
+                                <button
+                                    type="button"
+                                    onClick={() => setScrapSearchTerm('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full cursor-pointer"
+                                    title="Bersihkan pencarian"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
@@ -446,14 +491,16 @@ export default function ScrapTab({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {initialScrap.length === 0 ? (
+                                    {filteredScrapList.length === 0 ? (
                                         <tr>
                                             <td colSpan="5" className="p-8 text-center text-slate-400 text-xs italic">
-                                                Belum ada data kaca sisa potongan di rak storage.
+                                                {scrapSearchTerm 
+                                                    ? `Tidak ditemukan kaca sisa dengan kata kunci "${scrapSearchTerm}"` 
+                                                    : 'Belum ada data kaca sisa potongan di rak storage.'}
                                             </td>
                                         </tr>
                                     ) : (
-                                        initialScrap.map(s => (
+                                        filteredScrapList.map(s => (
                                             <tr key={s.id} className="hover:bg-slate-50/70 transition">
                                                 <td className="p-3 font-mono font-extrabold text-[#1b68b0] whitespace-nowrap">{s.scrap_code}</td>
                                                 <td className="p-3 font-bold text-[#242222] min-w-[200px] break-words">{s.glass_type}</td>

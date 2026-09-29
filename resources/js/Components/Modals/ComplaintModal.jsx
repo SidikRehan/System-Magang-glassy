@@ -9,7 +9,8 @@ export default function ComplaintModal({
     form,
     setForm,
     onSubmit,
-    onPhotoChange
+    onPhotoChange,
+    isSubmitting
 }) {
     if (!show || !selectedExecutionOrder) return null;
 
@@ -206,10 +207,20 @@ export default function ComplaintModal({
                         </button>
                         <button
                             type="submit"
-                            className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
+                            disabled={isSubmitting}
+                            className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Send className="w-4 h-4" />
-                            <span>Kirim Laporan ke Admin Gudang</span>
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    <span>Mengirim...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Send className="w-4 h-4" />
+                                    <span>Kirim Laporan ke Admin Gudang</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

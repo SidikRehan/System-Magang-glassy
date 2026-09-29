@@ -22,7 +22,9 @@ import {
     CheckCircle2,
     Package,
     Loader2,
-    Building2
+    Building2,
+    Scissors,
+    Search
 } from 'lucide-react';
 import SearchableSelect from '@/Components/SearchableSelect';
 
@@ -87,7 +89,60 @@ export default function NewOrderModal({
     const [attemptedSubmit, setAttemptedSubmit] = React.useState(false);
     const [shakeKey, setShakeKey] = React.useState(0);
 
+    // Scrap Glass Picker State
+    const [showScrapPickerModal, setShowScrapPickerModal] = React.useState(false);
+    const [targetScrapGroupId, setTargetScrapGroupId] = React.useState(null);
+    const [scrapPickerSearch, setScrapPickerSearch] = React.useState('');
+    const [selectedScrapId, setSelectedScrapId] = React.useState(null);
+
     // Form Validation Checks
+    const parsedScraps = React.useMemo(() => {
+        if (!orderForm.used_scrap_rak) return [];
+        const regex = /([A-Z0-9-]+)\s*\(([^,]+),\s*([^=]+)=\s*(\d+)\s*lbr\)(?:\s*\[Grp:\s*([^\]]+)\])?/g;
+        const matches = [];
+        let match;
+        while ((match = regex.exec(orderForm.used_scrap_rak)) !== null) {
+            matches.push({
+                code: match[1].trim(),
+                rak: match[2].trim(),
+                size: match[3].trim(),
+                qty: parseInt(match[4]) || 1,
+                group_id: match[5] ? match[5].trim() : null
+            });
+        }
+        return matches;
+    }, [orderForm.used_scrap_rak]);
+
+    const selectedScrapCodes = React.useMemo(() => parsedScraps.map(s => s.code), [parsedScraps]);
+    const selectedScraps = (initialScrap || []).filter(s => selectedScrapCodes.includes(s.scrap_code));
+    
+    const checkItemExceedsScrap = (item) => {
+        const itemGroupScraps = parsedScraps
+            .filter(ps => ps.group_id === String(item.group_id) || (ps.group_id === null && initialScrap?.find(s => s.scrap_code === ps.code)?.glass_type === item.glass_type))
+            .map(ps => initialScrap?.find(s => s.scrap_code === ps.code))
+            .filter(Boolean);
+
+        if (itemGroupScraps.length === 0) return false;
+        const rawLen = parseFloat(item.length_cm) || 0;
+        const rawWid = parseFloat(item.width_cm) || 0;
+        if (rawLen === 0 || rawWid === 0) return false;
+        
+        const isEdgeGrinding = (item.processes || []).includes('GM');
+        const finalLen = isEdgeGrinding ? rawLen + 1 : rawLen;
+        const finalWid = isEdgeGrinding ? rawWid + 1 : rawWid;
+
+        const maxOrderDim = Math.max(finalLen, finalWid);
+        const minOrderDim = Math.min(finalLen, finalWid);
+
+        return itemGroupScraps.every(scrap => {
+            const maxScrapDim = Math.max(parseFloat(scrap.length_cm) || 0, parseFloat(scrap.width_cm) || 0);
+            const minScrapDim = Math.min(parseFloat(scrap.length_cm) || 0, parseFloat(scrap.width_cm) || 0);
+            return maxOrderDim > maxScrapDim || minOrderDim > minScrapDim;
+        });
+    };
+
+    const hasScrapSizeError = calcItems.some(item => checkItemExceedsScrap(item));
+
     const isCustomerNameValid = Boolean(orderForm.customer_name && orderForm.customer_name.trim().length > 0);
     const isCustomerPhoneValid = Boolean(orderForm.customer_phone && orderForm.customer_phone.trim().length > 0);
     const isCustomerAddressValid = Boolean(orderForm.customer_address && orderForm.customer_address.trim().length > 0);
@@ -102,13 +157,22 @@ export default function NewOrderModal({
             (parseFloat(item.length_cm) || 0) > 0 &&
             (parseFloat(item.width_cm) || 0) > 0 &&
             (parseInt(item.qty) || 0) > 0 &&
-            !item.isExceeded
+            !item.isExceeded &&
+            !checkItemExceedsScrap(item)
         )
     );
 
     const isPriorityValid = orderForm.priority_status !== 'Prioritas' || (parseFloat(orderForm.priority_fee) || 0) >= 0;
 
-    const isFormValid = isCustomerNameValid && isCustomerPhoneValid && isCustomerAddressValid && isDescriptionValid && isOrderDateValid && isItemsValid && isPriorityValid;
+    const isPaymentValid = Boolean(
+        orderForm.is_company_use || 
+        (orderForm.custom_paid_amount !== '' && 
+         orderForm.custom_paid_amount !== null && 
+         orderForm.custom_paid_amount !== undefined && 
+         parseFloat(orderForm.custom_paid_amount) <= calcTotalPrice)
+    );
+
+    const isFormValid = isCustomerNameValid && isCustomerPhoneValid && isCustomerAddressValid && isDescriptionValid && isOrderDateValid && isItemsValid && isPriorityValid && isPaymentValid && !hasScrapSizeError;
 
     const getFieldClass = (isValid, baseClass = "w-full bg-white border rounded-xl p-2.5 text-slate-800 shadow-xs transition") => {
         if (!isValid && attemptedSubmit) {
@@ -312,48 +376,148 @@ export default function NewOrderModal({
                                     {groups.map((grp, gIdx) => (
                                         <div key={grp.group_id || gIdx} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs relative">
                                             {/* GROUP HEADER */}
-                                            <div className="bg-slate-50 p-3.5 sm:p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                                <div className="w-full sm:w-auto flex-1 space-y-1.5">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-extrabold text-[#1b68b0] text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                                            <span>Group Kaca #{gIdx + 1}</span>
+                                            <div className="bg-slate-50 p-3.5 sm:p-4 border-b border-slate-200 space-y-3">
+                                                {/* BARIS 1: JUDUL GROUP, METRIK & BUTTON TAMBAH UKURAN */}
+                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 pb-2.5 border-b border-slate-200/80">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-black text-[#1b68b0] text-xs sm:text-sm flex items-center gap-1.5 uppercase tracking-wide">
+                                                            <Layers className="w-4 h-4 text-[#1b68b0]" /> Group Kaca #{gIdx + 1}
                                                         </span>
-                                                        <span className="bg-blue-50 text-[#1b68b0] px-2 py-0.5 rounded-full text-[10px] font-mono border border-blue-200 font-bold">
+                                                        <span className="bg-blue-50 text-[#1b68b0] px-2.5 py-0.5 rounded-full text-[11px] font-mono border border-blue-200 font-bold">
                                                             {grp.items.length} Variasi Ukuran
                                                         </span>
                                                     </div>
-                                                     <div className="flex items-center gap-2 flex-1">
-                                                        <label className="text-slate-600 text-xs font-semibold whitespace-nowrap">Jenis Kaca Dasar:</label>
+
+                                                    <div className="flex items-center gap-3 text-xs self-end sm:self-center flex-wrap sm:flex-nowrap">
+                                                        <div className="text-right">
+                                                            <span className="text-[10px] text-slate-400 block font-mono">Total Luas Group:</span>
+                                                            <span className="font-mono text-[#1b68b0] font-bold text-xs">{formatAreaDisplay(grp.totalArea)} m²</span>
+                                                        </div>
+                                                        <div className="text-right bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 shadow-2xs">
+                                                            <span className="text-[10px] text-emerald-700 block font-mono font-medium">Subtotal Group:</span>
+                                                            <span className="font-mono text-emerald-800 font-extrabold text-xs sm:text-sm">Rp {grp.totalSubtotal.toLocaleString()}</span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleAddItemWithGlassType(grp.group_id, grp.glass_type)}
+                                                            className="bg-white hover:bg-blue-50 text-[#1b68b0] font-bold px-3 py-1.5 rounded-xl text-xs border border-blue-200 flex items-center gap-1.5 transition shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#1b68b0]"
+                                                            title="Tambah variasi ukuran baru untuk jenis kaca ini"
+                                                        >
+                                                            <Plus className="w-3.5 h-3.5" />
+                                                            <span>Tambah Ukuran</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* BARIS 2: PILIHAN JENIS KACA DASAR & TOMBOL GUNAKAN KACA SISA */}
+                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
+                                                    <label className="text-slate-700 text-xs font-bold whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                                                        <span>Jenis Kaca Dasar:</span>
+                                                    </label>
+                                                    <div className="flex-1 min-w-[200px]">
                                                         <SearchableSelect
                                                             value={grp.glass_type}
                                                             onChange={val => handleGroupGlassTypeChange(grp.group_id, val)}
                                                             options={getDynamicGlassTypes(sheetGlasses)}
                                                             sheetGlasses={sheetGlasses}
-                                                            placeholder="-- Ketik atau Cari Jenis Kaca Dasar --"
+                                                            placeholder="-- Ketik atau Cari Jenis Kaca Bahan Lembaran --"
                                                             invalid={attemptedSubmit && (!grp.glass_type || grp.glass_type.trim().length === 0)}
                                                         />
                                                     </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 text-xs flex-wrap sm:flex-nowrap pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200">
-                                                    <div className="text-right">
-                                                        <span className="text-[10px] text-slate-400 block font-mono">Total Luas Group:</span>
-                                                        <span className="font-mono text-[#1b68b0] font-bold">{formatAreaDisplay(grp.totalArea)} m²</span>
-                                                    </div>
-                                                    <div className="text-right bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
-                                                        <span className="text-[10px] text-emerald-700/80 block font-mono">Subtotal Group:</span>
-                                                        <span className="font-mono text-emerald-800 font-bold text-xs sm:text-sm">Rp {grp.totalSubtotal.toLocaleString()}</span>
-                                                    </div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleAddItemWithGlassType(grp.group_id, grp.glass_type)}
-                                                        className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] font-bold px-3 py-1.5 rounded-xl text-xs border border-blue-200 flex items-center gap-1 transition shadow-xs whitespace-nowrap cursor-pointer"
-                                                        title="Tambah variasi ukuran baru untuk jenis kaca ini"
+                                                        onClick={() => {
+                                                            setTargetScrapGroupId(grp.group_id);
+                                                            setScrapPickerSearch('');
+                                                            setShowScrapPickerModal(true);
+                                                        }}
+                                                        className="bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-3 py-2 rounded-xl text-xs border border-purple-200 flex items-center justify-center gap-1.5 transition shadow-2xs cursor-pointer shrink-0"
+                                                        title="Pilih dari stok kaca sisa potongan di rak storage"
                                                     >
-                                                        <Plus className="w-3.5 h-3.5" />
-                                                        <span>Tambah Ukuran</span>
+                                                        <Scissors className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                                        <span>Gunakan Kaca Sisa</span>
                                                     </button>
                                                 </div>
+
+                                                {/* BARIS 3: KACA SISA TERPASANG (JIKA MEMILIH KACA SISA) */}
+                                                {(() => {
+                                                    const groupScraps = parsedScraps
+                                                        .filter(ps => ps.group_id === String(grp.group_id) || (ps.group_id === null && initialScrap?.find(s => s.scrap_code === ps.code)?.glass_type === grp.glass_type))
+                                                        .map(ps => initialScrap?.find(s => s.scrap_code === ps.code))
+                                                        .filter(Boolean);
+                                                    if (groupScraps.length === 0) return null;
+                                                    
+                                                    return (
+                                                        <div className="bg-purple-50/90 border border-purple-200 rounded-xl p-3 flex flex-col sm:flex-row items-start justify-between gap-3 text-xs text-purple-900 shadow-2xs animate-in fade-in duration-150">
+                                                            <div className="flex flex-col gap-2.5 flex-1 w-full">
+                                                                <div className="bg-purple-600 text-white font-mono font-bold px-2.5 py-1 rounded-lg text-[10px] flex items-center gap-1.5 self-start shadow-xs">
+                                                                    <Scissors className="w-3.5 h-3.5" /> Kaca Sisa Terpasang:
+                                                                </div>
+                                                                <div className="flex flex-col gap-1.5 w-full mt-2">
+                                                                    {groupScraps.map((scrap, index) => (
+                                                                        <div key={index} className="bg-purple-50/50 border border-purple-100 rounded-lg p-2.5 flex items-center justify-between hover:bg-purple-50 transition-colors">
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="bg-white p-1.5 rounded-md shadow-sm border border-purple-100 text-purple-600">
+                                                                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                                                                </div>
+                                                                                <div className="flex flex-col">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <span className="font-bold text-[#1b68b0] text-xs">{scrap.scrap_code}</span>
+                                                                                        <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">Terpasang</span>
+                                                                                    </div>
+                                                                                    <span className="text-[11px] text-slate-600 mt-0.5 font-medium">
+                                                                                        {scrap.glass_type} • {scrap.length_cm} x {scrap.width_cm} cm • Rak: {scrap.rak_location}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    if (handleToggleIndividualScrap) {
+                                                                                        handleToggleIndividualScrap({ scrap }, 1, 0);
+                                                                                    } else {
+                                                                                        // Fallback manual rebuild
+                                                                                        setOrderForm(prev => {
+                                                                                            if (!prev.used_scrap_rak) return prev;
+                                                                                            const updated = prev.used_scrap_rak
+                                                                                                .replace(new RegExp(`${scrap.scrap_code}[^,]*((,\\s*(?=SCR))|$)`, 'g'), '')
+                                                                                                .replace(/,\s*$/, '')
+                                                                                                .trim();
+                                                                                            return { ...prev, used_scrap_rak: updated };
+                                                                                        });
+                                                                                    }
+                                                                                }}
+                                                                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded-md transition-colors cursor-pointer"
+                                                                                title={`Batal gunakan ${scrap.scrap_code}`}
+                                                                            >
+                                                                                <X className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setOrderForm(prev => {
+                                                                        if (!prev.used_scrap_rak) return prev;
+                                                                        let updated = prev.used_scrap_rak;
+                                                                        groupScraps.forEach(scrap => {
+                                                                            updated = updated.replace(new RegExp(`${scrap.scrap_code}[^,]*((,\\s*(?=SCR))|$)`, 'g'), '');
+                                                                        });
+                                                                        updated = updated.replace(/,\s*$/, '').trim();
+                                                                        return { ...prev, used_scrap_rak: updated };
+                                                                    });
+                                                                }}
+                                                                className="bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0 self-start sm:mt-0"
+                                                                title="Lepas semua penggunaan kaca sisa pada pesanan ini"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                                <span>Lepas Kaca Sisa</span>
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
 
                                             {/* SUB-ITEMS LIST */}
@@ -447,15 +611,30 @@ export default function NewOrderModal({
                                                             </div>
                                                         )}
 
+                                                        {/* WARNING MELEBIHI KACA SISA */}
+                                                        {checkItemExceedsScrap(item) && (
+                                                            <div className="p-3 rounded-2xl border bg-rose-50 border-rose-200 text-rose-800 text-xs space-y-1 shadow-xs animate-in fade-in duration-150 mt-3">
+                                                                <div className="font-bold flex items-center gap-1.5 text-rose-700">
+                                                                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                                                                    <span>Ukuran Melebihi Kaca Sisa yang Dipilih!</span>
+                                                                </div>
+                                                                <p className="text-[11px] text-slate-600 leading-relaxed pl-5.5">
+                                                                    Ukuran potongan pesanan melebihi batas maksimal dari semua kaca sisa yang Anda pilih saat ini. Kaca pesanan tidak bisa dipotong dari sisa tersebut. Silakan hapus penggunaan kaca sisa, pilih kaca sisa lain yang ukurannya lebih besar, atau perkecil ukuran pesanan.
+                                                                </p>
+                                                            </div>
+                                                        )}
+
                                                         {/* SCRAP RECOMMENDATION BANNER */}
                                                         {(() => {
                                                             const scrapMatch = findMatchingScrapsForOrder(item, initialScrap);
                                                             const isEdgeGrinding = (item.processes || []).includes('GM');
+                                                            const itemGroupScraps = parsedScraps
+                                                                .filter(ps => ps.group_id === String(grp.group_id) || (ps.group_id === null && initialScrap?.find(s => s.scrap_code === ps.code)?.glass_type === grp.glass_type))
+                                                                .map(ps => initialScrap?.find(s => s.scrap_code === ps.code))
+                                                                .filter(Boolean);
+                                                            
                                                             const exactScrapBlockedByGrinding = isEdgeGrinding
-                                                                ? initialScrap?.find(s => {
-                                                                    if (s.status && s.status !== 'Layak Pakai') return false;
-                                                                    if (!isGlassTypeCompatible(item.glass_type, s.glass_type)) return false;
-
+                                                                ? itemGroupScraps.find(s => {
                                                                     const sLen = parseFloat(s.length_cm) || 0;
                                                                     const sWid = parseFloat(s.width_cm) || 0;
                                                                     const rawLen = parseDim(item.length_cm);
@@ -853,19 +1032,27 @@ export default function NewOrderModal({
                                     const accName = isObj ? acc.name : acc;
                                     const accPrice = isObj ? (parseFloat(acc.price) || 0) : 0;
                                     const accUnit = isObj ? (acc.unit || 'pcs') : 'pcs';
-                                    const accStock = isObj ? (acc.stock || 50) : 50;
+                                    const masterAcc = (MASTER_ACCESSORY_STOCK || []).find(m => isObj && (m.id === acc.id || m.name === acc.name));
+                                    const accStock = masterAcc && masterAcc.stock !== undefined ? parseInt(masterAcc.stock) : (isObj && acc.stock !== undefined ? parseInt(acc.stock) : 99999);
                                     const accQty = isObj ? (parseInt(acc.qty) || 1) : 1;
+                                    const isExceedingStock = accStock > 0 && accQty >= accStock;
                                     const accTotal = accPrice * accQty;
 
                                     return (
                                         <div key={accIdx} className="p-3 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs shadow-xs">
-                                            <div className="flex items-center gap-2 flex-1">
+                                            <div className="flex items-center gap-2 flex-wrap flex-1">
                                                 <span className="font-bold text-slate-800">{accName}</span>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
                                                     accStock < 10 ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                 }`}>
                                                     Stok: {accStock} {accUnit}
                                                 </span>
+                                                {isExceedingStock && (
+                                                    <span className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-bold border border-rose-200 flex items-center gap-1">
+                                                        <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                                                        Maks. Stok Terpenuhi ({accStock} {accUnit})
+                                                    </span>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between">
@@ -875,9 +1062,18 @@ export default function NewOrderModal({
                                                         type="text"
                                                         inputMode="numeric"
                                                         value={accQty ?? ''}
-                                                        onChange={e => handleAccessoryQtyChange(accIdx, e.target.value)}
+                                                        onChange={e => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            if (accStock > 0 && val > accStock) {
+                                                                handleAccessoryQtyChange(accIdx, accStock);
+                                                            } else {
+                                                                handleAccessoryQtyChange(accIdx, e.target.value);
+                                                            }
+                                                        }}
                                                         onFocus={e => e.target.select()}
-                                                        className="w-16 bg-slate-50 border border-slate-200 rounded-lg p-1 text-center text-xs font-mono font-bold text-slate-800 focus:border-[#1b68b0] focus:bg-white"
+                                                        className={`w-16 bg-slate-50 border rounded-lg p-1 text-center text-xs font-mono font-bold text-slate-800 focus:bg-white ${
+                                                            isExceedingStock ? 'border-amber-400 focus:border-amber-500' : 'border-slate-200 focus:border-[#1b68b0]'
+                                                        }`}
                                                     />
                                                     <span className="text-[10px] text-slate-500">{accUnit}</span>
                                                 </div>
@@ -947,13 +1143,22 @@ export default function NewOrderModal({
 
                     {/* SECTION 6: PRIORITAS & DEADLINE */}
                     <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
-                        <h4 className="font-bold text-[#242222] text-xs border-b border-slate-200 pb-2 flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-amber-600" />
-                            <span>Status Prioritas & Tanggal Selesai</span>
+                        <h4 className="font-bold text-[#242222] text-xs border-b border-slate-200 pb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-amber-600" />
+                                <span>Status Prioritas & Tanggal Selesai</span>
+                            </span>
+                            {orderForm.priority_status === 'Prioritas' && (
+                                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-full font-mono">
+                                    🔥 Order Prioritas / Express
+                                </span>
+                            )}
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                                <label className="text-slate-600 block mb-1 font-semibold">Status Pengerjaan:</label>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                            {/* 1. STATUS PENGERJAAN */}
+                            <div className={orderForm.priority_status === 'Prioritas' ? 'lg:col-span-4' : 'lg:col-span-6'}>
+                                <label className="text-slate-700 block mb-1.5 text-xs font-bold">Status Pengerjaan:</label>
                                 <select 
                                     value={orderForm.priority_status} 
                                     onChange={e => {
@@ -964,71 +1169,91 @@ export default function NewOrderModal({
                                             priority_fee: val === 'Prioritas' ? (d.priority_fee ?? 0) : 0
                                         }));
                                     }} 
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] shadow-xs cursor-pointer"
+                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 shadow-xs cursor-pointer text-xs"
                                 >
                                     <option value="Biasa">Biasa (Standard)</option>
                                     <option value="Prioritas">🔥 Prioritas (Buru-buru / Express)</option>
                                 </select>
                             </div>
+
+                            {/* 2. HARUS DISELESAIKAN PADA (DEADLINE) */}
+                            <div className={orderForm.priority_status === 'Prioritas' ? 'lg:col-span-3' : 'lg:col-span-6'}>
+                                <label className="text-slate-700 block mb-1.5 text-xs font-bold">Harus Selesai (Deadline):</label>
+                                <input 
+                                    type="date" 
+                                    value={orderForm.deadline_date} 
+                                    onChange={e => setOrderForm('deadline_date', e.target.value)} 
+                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 shadow-xs text-xs" 
+                                />
+                            </div>
+
+                            {/* 3. NOMINAL FEE PRIORITAS (HANYA MUNCUL JIKA PRIORITAS) */}
                             {orderForm.priority_status === 'Prioritas' && (
-                                <div className="sm:col-span-2 space-y-1.5">
-                                    <label className="text-slate-600 block mb-1 font-semibold">Nominal Fee Prioritas (Rp):</label>
+                                <div className="lg:col-span-5 space-y-1.5 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
+                                    <label className="text-amber-900 block font-bold text-xs">Nominal Fee Prioritas (Rp):</label>
                                     <input 
                                         type="text" 
                                         inputMode="numeric"
                                         value={formatRupiahInput(orderForm.priority_fee)} 
                                         onChange={e => setOrderForm('priority_fee', parseRupiahInput(e.target.value))} 
                                         onFocus={e => e.target.select()}
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-amber-800 font-bold font-mono shadow-xs transition focus:border-[#1b68b0]" 
+                                        className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-amber-900 font-black font-mono shadow-xs transition focus:border-[#1b68b0] text-xs" 
                                         placeholder="0 (Free / Gratis)" 
                                     />
-                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                        <span className="text-[11px] text-slate-500 font-medium">Pilih Cepat:</span>
+                                    
+                                    {/* PILIH CEPAT NOMINAL */}
+                                    <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                                        <span className="text-[10px] text-slate-600 font-bold mr-0.5">Pilih Cepat:</span>
                                         <button
                                             type="button"
                                             onClick={() => setOrderForm('priority_fee', 0)}
-                                            className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
                                                 (parseFloat(orderForm.priority_fee) || 0) === 0
-                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
                                                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                                             }`}
                                         >
-                                            Rp 0 (Free / Gratis)
+                                            Rp 0 (Free)
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setOrderForm('priority_fee', 50000)}
-                                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                (parseFloat(orderForm.priority_fee) || 0) === 50000
+                                                    ? 'bg-[#1b68b0] text-white border-[#15528c] shadow-xs'
+                                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                            }`}
                                         >
                                             Rp 50.000
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setOrderForm('priority_fee', 100000)}
-                                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                (parseFloat(orderForm.priority_fee) || 0) === 100000
+                                                    ? 'bg-[#1b68b0] text-white border-[#15528c] shadow-xs'
+                                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                            }`}
                                         >
                                             Rp 100.000
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setOrderForm('priority_fee', 150000)}
-                                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                (parseFloat(orderForm.priority_fee) || 0) === 150000
+                                                    ? 'bg-[#1b68b0] text-white border-[#15528c] shadow-xs'
+                                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                            }`}
                                         >
                                             Rp 150.000
                                         </button>
                                     </div>
-                                    <span className="text-[10px] text-amber-700 block mt-0.5">*Default Rp 0 (Free / Gratis tanpa biaya tambahan ke konsumen). Isi nominal jika ada charge prioritas.</span>
+                                    <span className="text-[10px] text-amber-800 block font-mono leading-tight pt-0.5">
+                                        💡 *Default Rp 0 (Free/Gratis tanpa charge). Isi nominal jika ada charge ekspress.
+                                    </span>
                                 </div>
                             )}
-                            <div>
-                                <label className="text-slate-600 block mb-1 font-semibold">Harus diselesaikan pada (Deadline):</label>
-                                <input 
-                                    type="date" 
-                                    value={orderForm.deadline_date} 
-                                    onChange={e => setOrderForm('deadline_date', e.target.value)} 
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] shadow-xs" 
-                                />
-                            </div>
                         </div>
                     </div>
 
@@ -1064,12 +1289,15 @@ export default function NewOrderModal({
                                     inputMode="numeric"
                                     value={formatRupiahInput(orderForm.custom_paid_amount)} 
                                     onChange={e => {
-                                        const num = parseRupiahInput(e.target.value);
+                                        let num = parseRupiahInput(e.target.value);
+                                        if (Number(num || 0) > calcTotalPrice) {
+                                            num = calcTotalPrice.toString();
+                                        }
                                         const pct = calcTotalPrice > 0 ? Math.round((Number(num || 0) / calcTotalPrice) * 100) : 50;
                                         setOrderForm(d => ({ ...d, custom_paid_amount: num, dp_percent: pct }));
                                     }} 
                                     onFocus={e => e.target.select()}
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-emerald-700 font-mono font-bold text-sm focus:border-[#1b68b0] shadow-xs" 
+                                    className={getFieldClass(isPaymentValid, "w-full bg-white border border-slate-200 rounded-xl p-2.5 text-emerald-700 font-mono font-bold text-sm shadow-xs")} 
                                     placeholder="cth: 500.000 atau 1.000.000" 
                                 />
                             </div>
@@ -1326,6 +1554,7 @@ export default function NewOrderModal({
                                 {!isOrderDateValid && <li>Tanggal Order belum diisi</li>}
                                 {!isItemsValid && <li>Item Kaca belum lengkap (Jenis Kaca, Panjang, Lebar, Qty)</li>}
                                 {!isPriorityValid && <li>Nominal Fee Prioritas wajib diisi (&gt; 0)</li>}
+                                {!isPaymentValid && <li>Jumlah Uang Diterima / DP wajib diisi & tidak boleh melebihi Total Harga</li>}
                             </ul>
                         </div>
                     )}
@@ -1409,6 +1638,160 @@ export default function NewOrderModal({
                     </div>
                 </form>
             </div>
+            {/* MODAL PICKER KACA SISA POTONGAN */}
+            {showScrapPickerModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto text-slate-800">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700">
+                                    <Scissors className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-[#242222] text-sm sm:text-base">Pilih Kaca Sisa Potongan di Rak Storage</h3>
+                                    <p className="text-slate-500 text-xs">Pilih kaca sisa yang tersedia untuk digunakan sebagai jenis kaca pesanan ini.</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowScrapPickerModal(false)}
+                                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* SEARCH INPUT */}
+                        <div className="relative">
+                            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                                type="text"
+                                value={scrapPickerSearch}
+                                onChange={e => setScrapPickerSearch(e.target.value)}
+                                placeholder="Cari kode sisa (SCRAP-...), jenis kaca, ukuran cm, rak storage..."
+                                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl pl-9 pr-8 py-2.5 focus:bg-white focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 shadow-xs font-medium"
+                            />
+                            {scrapPickerSearch && (
+                                <button
+                                    type="button"
+                                    onClick={() => setScrapPickerSearch('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full cursor-pointer"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* LIST OF SCRAP GLASSES */}
+                        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                            {(() => {
+                                const filtered = (initialScrap || []).filter(s => {
+                                    if (!scrapPickerSearch.trim()) return true;
+                                    const q = scrapPickerSearch.toLowerCase().trim();
+                                    return (
+                                        (s.scrap_code || '').toLowerCase().includes(q) ||
+                                        (s.glass_type || '').toLowerCase().includes(q) ||
+                                        (s.rak_location || '').toLowerCase().includes(q) ||
+                                        (s.status || '').toLowerCase().includes(q) ||
+                                        `${s.length_cm || ''} x ${s.width_cm || ''}`.toLowerCase().includes(q) ||
+                                        `${s.length_cm || ''}`.includes(q) ||
+                                        `${s.width_cm || ''}`.includes(q)
+                                    );
+                                });
+
+                                if (filtered.length === 0) {
+                                    return (
+                                        <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-slate-200">
+                                            Tidak ada data kaca sisa potongan yang cocok.
+                                        </div>
+                                    );
+                                }
+
+                                return filtered.map((s) => {
+                                    const isAlreadySelected = orderForm.used_scrap_rak && orderForm.used_scrap_rak.includes(s.scrap_code);
+                                    const isSelected = isAlreadySelected || selectedScrapId === s.id;
+                                    
+                                    return (
+                                        <div
+                                            key={s.id}
+                                            className={`p-3 bg-white border rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all duration-300 shadow-xs ${
+                                                isSelected 
+                                                    ? 'border-emerald-500 bg-emerald-50/50 scale-[1.02] shadow-md ring-2 ring-emerald-500/20 z-10 relative' 
+                                                    : 'border-slate-200 hover:border-purple-300 hover:bg-purple-50/40'
+                                            }`}
+                                        >
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-mono font-extrabold text-[#1b68b0] text-xs">{s.scrap_code}</span>
+                                                    <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-purple-200">
+                                                        {s.rak_location}
+                                                    </span>
+                                                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                                        {s.status || 'Layak Pakai'}
+                                                    </span>
+                                                </div>
+                                                <div className="font-bold text-slate-800 text-xs">{s.glass_type}</div>
+                                                <div className="font-mono text-slate-500 text-[11px]">
+                                                    Ukuran: <strong>{s.length_cm} x {s.width_cm} cm</strong>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (isAlreadySelected) {
+                                                        setOrderForm(prev => {
+                                                            const current = prev.used_scrap_rak ? prev.used_scrap_rak.trim() : '';
+                                                            const regex = new RegExp(`(?<=^|,\\s*)${s.scrap_code}\\b[^\\[]*(?:\\[Grp:[^\\]]+\\])?`, 'g');
+                                                            const filtered = current.replace(regex, '').replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '');
+                                                            return { ...prev, used_scrap_rak: filtered };
+                                                        });
+                                                    } else {
+                                                        setSelectedScrapId(s.id);
+                                                        setTimeout(() => {
+                                                            const scrapEntry = `${s.scrap_code} (${s.rak_location}, ${s.length_cm}x${s.width_cm}cm = 1 lbr) [Grp: ${targetScrapGroupId}]`;
+                                                            setOrderForm(prev => {
+                                                                const current = prev.used_scrap_rak ? prev.used_scrap_rak.trim() : '';
+                                                                if (!current.includes(s.scrap_code)) {
+                                                                    const updated = current ? `${current}, ${scrapEntry}` : scrapEntry;
+                                                                    return { ...prev, used_scrap_rak: updated };
+                                                                }
+                                                                return prev;
+                                                            });
+
+                                                            if (targetScrapGroupId !== null) {
+                                                                handleGroupGlassTypeChange(targetScrapGroupId, s.glass_type);
+                                                            }
+                                                            
+                                                            setSelectedScrapId(null);
+                                                        }, 200);
+                                                    }
+                                                }}
+                                                className={`font-bold px-3.5 py-1.5 rounded-xl text-xs transition-all duration-300 shadow-xs cursor-pointer whitespace-nowrap self-end sm:self-center flex items-center justify-center gap-1.5 ${
+                                                    isSelected
+                                                        ? 'bg-emerald-500 hover:bg-rose-500 hover:ring-rose-500/30 text-white scale-105 ring-2 ring-emerald-500/30 group'
+                                                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                                                }`}
+                                            >
+                                                {isSelected ? (
+                                                    <>
+                                                        <CheckCircle2 className="w-4 h-4 animate-in zoom-in group-hover:hidden" />
+                                                        <X className="w-4 h-4 hidden group-hover:block" />
+                                                        <span className="group-hover:hidden">Terpilih!</span>
+                                                        <span className="hidden group-hover:inline">Batal</span>
+                                                    </>
+                                                ) : (
+                                                    "Pilih Kaca Sisa Ini"
+                                                )}
+                                            </button>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

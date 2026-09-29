@@ -24,4 +24,13 @@ class SheetGlass extends Model
         'qty' => 'integer',
         'last_restock' => 'date',
     ];
+    public function setNameAttribute($value)
+    {
+        if ($value) {
+            $value = preg_replace('/(\d+)\s*mm/i', '$1 mm', $value);
+            $value = preg_replace('/\s+/', ' ', $value);
+            $value = trim($value);
+        }
+        $this->attributes['name'] = $value;
+    }
 }

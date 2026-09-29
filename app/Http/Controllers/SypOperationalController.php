@@ -1010,6 +1010,20 @@ class SypOperationalController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        // Kurangi stok SheetGlass
+        $sheetGlass = \App\Models\SheetGlass::where('name', $validated['glass_type'])->first();
+        
+        if (!$sheetGlass) {
+            return redirect()->back()->with('message', '❌ Gagal: Tipe kaca "' . $validated['glass_type'] . '" tidak ditemukan di Master Stok Gudang! Pastikan nama kaca cocok dengan katalog.');
+        }
+
+        if ($sheetGlass->qty < $validated['sheets_used']) {
+            return redirect()->back()->with('message', '❌ Gagal: Stok lembaran kaca "' . $validated['glass_type'] . '" di Gudang tidak mencukupi (Sisa: ' . $sheetGlass->qty . ')!');
+        }
+
+        $sheetGlass->qty -= (int) $validated['sheets_used'];
+        $sheetGlass->save();
+
         $rawUsage = (array) ($order->raw_materials_used ?? []);
         $rawUsage[] = [
             'id' => time() . rand(100, 999),

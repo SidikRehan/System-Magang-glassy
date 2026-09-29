@@ -72,8 +72,8 @@ export default function DispatchModal({
                             <p className="text-xs text-slate-500 font-mono">Pilih Divisi Produksi Pertama</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => onClose()} 
+                    <button
+                        onClick={() => onClose()}
                         disabled={isSubmitting}
                         className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1.5 transition cursor-pointer disabled:opacity-50"
                     >
@@ -142,8 +142,8 @@ export default function DispatchModal({
 
                         {/* SELECTOR / DISPLAY */}
                         {relevantDivisions.length > 1 ? (
-                            <select 
-                                value={targetDivChoice} 
+                            <select
+                                value={targetDivChoice}
                                 onChange={e => setTargetDivChoice(e.target.value)}
                                 disabled={isSubmitting}
                                 className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-[#1b68b0] font-bold text-sm focus:border-[#1b68b0] cursor-pointer disabled:opacity-50"
@@ -168,8 +168,8 @@ export default function DispatchModal({
                         <button type="button" onClick={() => onClose()} disabled={isSubmitting} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-semibold cursor-pointer text-xs transition disabled:opacity-50">
                             Batal
                         </button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={isSubmitting}
                             className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] disabled:bg-slate-300 disabled:cursor-not-allowed font-bold text-white rounded-xl text-xs flex items-center gap-2 shadow-xs cursor-pointer transition"
                         >

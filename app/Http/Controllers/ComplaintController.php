@@ -89,21 +89,80 @@ class ComplaintController extends Controller
             $complaintData['gudang_decision'] = 'replace_glass';
             $complaintData['resolved_at'] = now()->toDateTimeString();
 
-            // Update history of reporting division to reflect replaced glass
-            $progress = (array) ($order->division_progress ?? []);
-            if ($reportingDivKey) {
-                $progress[$reportingDivKey] = 'Kaca Diganti Gudang & Dikembalikan ke Potong (HT)';
-            }
-            // Mark HT as requiring re-cutting for replacement
-            $progress['HT'] = 'Potong Ulang (Orderan Ulang Ganti Kaca dari ' . $reportingDivKey . ')';
+            $items = $order->items ?? [];
+            $defectiveItemsList = $complaintData['defective_items'] ?? [];
+            $newOrderItems = [];
 
-            $order->complaint_status = 're_cut_needed';
+            foreach ($defectiveItemsList as $defItem) {
+                $idx = (int) ($defItem['item_index'] ?? -1);
+                $qtyDefective = (int) ($defItem['qty_defective'] ?? 0);
+
+                if ($idx >= 0 && isset($items[$idx]) && $qtyDefective > 0) {
+                    // 1. Kurangi Qty dari Order Induk
+                    $originalQty = (int) $items[$idx]['qty'];
+                    $newQty = max(0, $originalQty - $qtyDefective);
+                    $items[$idx]['qty'] = $newQty;
+                    // Note: Harga total tidak diubah agar tagihan kustomer tetap sesuai pesanan awal.
+
+                    // 2. Siapkan item untuk Order Baru (Ganti Kaca)
+                    $newItem = $items[$idx];
+                    $newItem['qty'] = $qtyDefective;
+                    $newItem['base_glass_price'] = 0;
+                    $newItem['subtotal'] = 0;
+                    $newItem['fee_gm'] = 0;
+                    $newItem['fee_ht'] = 0;
+                    $newItem['fee_bv'] = 0;
+                    $newItem['fee_bor'] = 0;
+                    $newItem['fee_etsa'] = 0;
+                    $newOrderItems[] = $newItem;
+
+                    // 3. Masukkan potongan rusak ke tabel Scrap (Sisa Kaca Rak)
+                    for ($i = 0; $i < $qtyDefective; $i++) {
+                        \App\Models\ScrapGlass::create([
+                            'scrap_code' => 'SCR-' . date('ymd') . '-' . rand(1000, 9999),
+                            'glass_type' => $defItem['glass_type'] ?? '-',
+                            'length_cm' => $defItem['height'] ?? $defItem['length_cm'] ?? 0,
+                            'width_cm' => $defItem['width'] ?? $defItem['width_cm'] ?? 0,
+                            'rak_location' => 'Rak Titip (Ex. ' . $reportingDivKey . ' Baret)',
+                            'status' => 'Baret / Cacat'
+                        ]);
+                    }
+                }
+            }
+
+            // Simpan pembaruan Order Induk (Melanjutkan proses dengan sisa qty)
+            $order->items = $items;
+            $order->complaint_status = 'resolved';
             $order->complaint_data = $complaintData;
-            $order->current_division = 'divisi_ht';
-            $order->division_progress = $progress;
             $order->save();
 
-            return redirect()->back()->with('message', '🚨 Permintaan Ganti Barang Kaca Disetujui! SPO #' . $order->spo_number . ' telah masuk sebagai Order Ulang Ganti Barang dan dikembalikan ke Divisi Potong (HT).');
+            // 4. Buat Order Baru (Khusus Kaca Ganti)
+            if (count($newOrderItems) > 0) {
+                $newOrder = $order->replicate();
+                $newOrder->spo_number = $order->spo_number . '-GANTI';
+                $newOrder->items = $newOrderItems;
+                $newOrder->subtotal = 0;
+                $newOrder->total_price = 0;
+                $newOrder->paid_amount = 0;
+                $newOrder->payment_status = 'Lunas (Ganti/Retur)';
+                $newOrder->priority_fee = 0;
+                $newOrder->custom_fee = 0;
+                
+                $newOrder->status = 'pengerjaan';
+                $newOrder->current_division = 'divisi_ht';
+                $newOrder->division_progress = ['HT' => 'Menunggu Pengerjaan'];
+                $newOrder->division_timestamps = ['HT' => ['started_at' => null, 'completed_at' => null]];
+                
+                $newOrder->complaint_status = 're_cut_needed';
+                $newOrder->complaint_data = $complaintData;
+                $newOrder->description = "Order Ulang Ganti Kaca dari SPO Induk: " . $order->spo_number . ". Alasan: " . ($complaintData['reason'] ?? 'Cacat');
+                $newOrder->created_at = now();
+                $newOrder->updated_at = now();
+                
+                $newOrder->save();
+            }
+
+            return redirect()->back()->with('message', '🚨 Permintaan Ganti Kaca Diproses! Kaca cacat masuk ke Scrap. Order Ganti (Potong Ulang) telah dibuat untuk Divisi Potong, dan sisa Order Induk dilanjutkan.');
         }
 
         return redirect()->back()->with('message', '⚠️ Keputusan tidak valid!');

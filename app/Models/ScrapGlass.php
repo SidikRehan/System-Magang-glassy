@@ -17,4 +17,13 @@ class ScrapGlass extends Model
         'rak_location',
         'status',
     ];
+    public function setGlassTypeAttribute($value)
+    {
+        if ($value) {
+            $value = preg_replace('/(\d+)\s*mm/i', '$1 mm', $value);
+            $value = preg_replace('/\s+/', ' ', $value);
+            $value = trim($value);
+        }
+        $this->attributes['glass_type'] = $value;
+    }
 }

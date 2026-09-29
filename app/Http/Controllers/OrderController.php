@@ -108,7 +108,7 @@ class OrderController extends Controller
             $paidAmount = (float)($rawPaid ?? 0);
             $paymentStatus = 'Belum Lunas';
         } else {
-            $paidAmount = $request->filled('custom_paid_amount') ? (float)$rawPaid : round(($totalPrice * (float)$request->input('dp_percent', 50)) / 100);
+            $paidAmount = $request->filled('custom_paid_amount') ? (float)$request->input('custom_paid_amount') : 0;
             if ($paidAmount >= $totalPrice && $totalPrice > 0) {
                 $paidAmount = $totalPrice;
                 $paymentStatus = 'Lunas';
@@ -359,8 +359,8 @@ class OrderController extends Controller
 
         if ($isPromoted || $targetStatus === 'pengerjaan') {
             $order->status = 'pengerjaan';
-            $rawPaid = $request->input('custom_paid_amount', $request->input('paid_amount', null));
-            $paidAmount = $request->filled('custom_paid_amount') ? (float)$rawPaid : round(($totalPrice * (float)$request->input('dp_percent', 50)) / 100);
+            $rawPaid = $request->input('custom_paid_amount', $request->input('paid_amount', 0));
+            $paidAmount = $request->filled('custom_paid_amount') ? (float)$rawPaid : 0;
 
             if ($paidAmount >= $totalPrice && $totalPrice > 0) {
                 $order->paid_amount = $totalPrice;

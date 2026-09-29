@@ -51,13 +51,13 @@ export const isDriverMatch = (driverField, targetUserName) => {
 
     if (dStr.toLowerCase() === uStr.toLowerCase()) return true;
 
-    const normalize = (s) => 
+    const normalize = (s) =>
         s.toLowerCase()
-         .replace(/[\(\)\[\]\-_,\.]/g, ' ')
-         .replace(/\b(pak|driver|supir|utama|dc|engkel|l300|subcon|armada|pick|up)\b/gi, ' ')
-         .replace(/\s+/g, ' ')
-         .trim();
-    
+            .replace(/[\(\)\[\]\-_,\.]/g, ' ')
+            .replace(/\b(pak|driver|supir|utama|dc|engkel|l300|subcon|armada|pick|up)\b/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
     const dClean = normalize(dStr);
     const uClean = normalize(uStr);
 
@@ -204,8 +204,31 @@ export const getOrderRelevantDivisions = (o) => {
     return procs.map(p => divisionInfo[p]).filter(Boolean);
 };
 
+export const computeDefaultNextDiv = (ord) => {
+    if (!ord) return 'QC_Ready';
+    const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
+    const reqCodes = ['HT'];
+    const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
+    if (Array.isArray(ord.processes)) ord.processes.forEach(addC);
+    if (Array.isArray(ord.items)) {
+        ord.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
+    }
+    reqCodes.sort((a, b) => fixedSeq.indexOf(a) - fixedSeq.indexOf(b));
+    const curKey = (ord.current_division || '').replace('divisi_', '').toUpperCase();
+    const curIdx = reqCodes.indexOf(curKey);
+    if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
+        const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
+        return map[reqCodes[curIdx + 1]] || 'QC_Ready';
+    }
+    return 'QC_Ready';
+};
+
 export const checkOrderDivisi = (o, divKey) => {
     if (!o) return false;
+    
+    // Jika order sedang disuspend menunggu admin gudang, keluarkan dari antrian divisi
+    if (o.complaint_status === 'pending_gudang') return false;
+    
     if (divKey === 'QC_Ready') return o.current_division === 'QC_Ready';
     if (divKey === 'all') return (o.status === 'pengerjaan' || o.current_division === 'QC_Ready') && o.current_division !== 'admin_gudang';
     if (o.current_division === divKey) return true;

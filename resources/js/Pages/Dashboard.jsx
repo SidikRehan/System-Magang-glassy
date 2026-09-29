@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
-import { 
-    BarChart3, FileText, Truck, Sliders, Boxes, Building2, 
-    Plug, Archive, Wrench, Users, CreditCard, Search, 
+import {
+    BarChart3, FileText, Truck, Sliders, Boxes, Building2,
+    Plug, Archive, Wrench, Users, CreditCard, Search,
     LogOut, Menu, X, AlertTriangle, Handshake, CheckCircle2, ArrowRight,
-    Plus, Edit3, Layers, Download, Trash2, RotateCcw, MessageCircle, Check, Calendar
+    Plus, Edit3, Layers, Download, Trash2, RotateCcw, MessageCircle, Check, Calendar, PauseCircle
 } from 'lucide-react';
 import NewOrderModal from '@/Components/Modals/NewOrderModal';
 import EditDraftOrderModal from '@/Components/Modals/EditDraftOrderModal';
@@ -28,6 +28,7 @@ import GlassStickerModal from '@/Components/Modals/GlassStickerModal';
 import DashboardOverviewTab from '@/Components/DashboardTabs/DashboardOverviewTab';
 import OrdersTab from '@/Components/DashboardTabs/OrdersTab';
 import ProductionTab from '@/Components/DashboardTabs/ProductionTab';
+import SuspendedTab from '@/Components/DashboardTabs/SuspendedTab';
 import ScrapTab from '@/Components/DashboardTabs/ScrapTab';
 import DeliveriesTab from '@/Components/DashboardTabs/DeliveriesTab';
 import FinanceTab from '@/Components/DashboardTabs/FinanceTab';
@@ -61,19 +62,19 @@ import RevisionDetailModal from '@/Components/Modals/RevisionDetailModal';
 import ImageLightboxModal from '@/Components/Modals/ImageLightboxModal';
 
 
-export default function Dashboard({ 
-    orders: initialOrders = [], 
-    scrapGlasses: initialScrap = [], 
-    deliveries: initialDeliveries = [], 
-    users: initialUsersList = [], 
-    activityLogs: initialActivityLogsList = [], 
-    financeTransactions: initialFinanceTransactions = [], 
+export default function Dashboard({
+    orders: initialOrders = [],
+    scrapGlasses: initialScrap = [],
+    deliveries: initialDeliveries = [],
+    users: initialUsersList = [],
+    activityLogs: initialActivityLogsList = [],
+    financeTransactions: initialFinanceTransactions = [],
     sheetGlasses: initialSheetGlasses = [],
     suppliers: initialSuppliers = [],
     accessories: initialAccessories = [],
     tools: initialTools = [],
     supplies: initialSupplies = [],
-    metrics = {} 
+    metrics = {}
 }) {
     const scrapGlasses = initialScrap;
     const orders = initialOrders;
@@ -163,11 +164,11 @@ export default function Dashboard({
 
     const [activeTab, setActiveTab] = useState(
         userRole === 'driver' ? 'deliveries' :
-        userRole.startsWith('divisi_') ? 'production' :
-        (userRole === 'admin_gudang' || userRole === 'admin_toko') ? 'orders' :
-        userRole === 'hrd' ? 'employees' :
-        (userRole === 'finance' || userRole === 'admin_finance') ? 'finance' :
-        userRole === 'owner' ? 'dashboard' : 'orders'
+            (userRole.startsWith('divisi_') || userRole === 'admin_gudang') ? 'production' :
+                userRole === 'admin_toko' ? 'orders' :
+                    userRole === 'hrd' ? 'employees' :
+                        (userRole === 'finance' || userRole === 'admin_finance') ? 'finance' :
+                            userRole === 'owner' ? 'dashboard' : 'orders'
     );
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -287,13 +288,13 @@ export default function Dashboard({
 
         if (dStr.toLowerCase() === uStr.toLowerCase()) return true;
 
-        const normalize = (s) => 
+        const normalize = (s) =>
             s.toLowerCase()
-             .replace(/[\(\)\[\]\-_,\.]/g, ' ')
-             .replace(/\b(pak|driver|supir|utama|dc|engkel|l300|subcon|armada|pick|up)\b/gi, ' ')
-             .replace(/\s+/g, ' ')
-             .trim();
-        
+                .replace(/[\(\)\[\]\-_,\.]/g, ' ')
+                .replace(/\b(pak|driver|supir|utama|dc|engkel|l300|subcon|armada|pick|up)\b/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
         const dClean = normalize(dStr);
         const uClean = normalize(uStr);
 
@@ -478,6 +479,8 @@ export default function Dashboard({
         }
     };
 
+    const [isSubmittingComplaint, setIsSubmittingComplaint] = useState(false);
+
     const handleSubmitComplaint = (e) => {
         e.preventDefault();
         if (!selectedExecutionOrder) return;
@@ -494,11 +497,15 @@ export default function Dashboard({
             formData.append('photo', complaintForm.photo);
         }
 
+        setIsSubmittingComplaint(true);
         router.post(route('orders.complaint', selectedExecutionOrder.id), formData, {
             preserveScroll: true,
             onSuccess: () => {
                 setShowComplaintModal(false);
                 setShowExecutionModal(false);
+            },
+            onFinish: () => {
+                setIsSubmittingComplaint(false);
             }
         });
     };
@@ -2409,11 +2416,10 @@ export default function Dashboard({
 
     // Auto set default active tab based on user's role
     useEffect(() => {
-        if (userRole.startsWith('divisi_')) setActiveTab('production');
+        if (userRole.startsWith('divisi_') || userRole === 'admin_gudang') setActiveTab('production');
         else if (userRole === 'driver') setActiveTab('deliveries');
         else if (userRole === 'owner') setActiveTab('dashboard');
         else if (userRole === 'finance' || userRole === 'admin_finance') setActiveTab('finance');
-        else if (userRole === 'admin_gudang') setActiveTab('orders');
         else setActiveTab('orders');
     }, [userRole]);
 
@@ -2491,8 +2497,8 @@ export default function Dashboard({
 
     const extractThickness = (glassTypeStr) => {
         if (!glassTypeStr) return 5;
-        const match = glassTypeStr.match(/(\d+)\s*(?:mm|mili)/i);
-        return match ? parseInt(match[1]) : 5;
+        const match = String(glassTypeStr).match(/(\d+(?:\+\d+)?)\s*(?:mm|mili)?/i);
+        return match ? match[1] : 5;
     };
 
     const parseDim = (val) => {
@@ -2526,21 +2532,48 @@ export default function Dashboard({
         return String(val).replace(/[^0-9+\-\s]/g, '');
     };
 
-    const getDynamicGlassTypes = (stockList) => {
-        const defaultTypes = [
-            'Kaca Cermin 5 mm polos',
-            'Kaca Cermin Grey 5 mm',
-            'Kaca Bening 5 mm polos',
-            'Kaca Bening 8 mm polos',
-            'Kaca Bening 10 mm polos',
-            'Kaca Jumbo Polos 12 mm',
-            'Kaca Dark Grey 5 mm',
-            'Kaca Frosted Etsa Sandblast 5 mm',
-            'Kaca 12 mm Polos Tempered'
-        ];
+    const normalizeGlassTypeName = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/(\d+)\s*mm/gi, '$1 mm')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
 
-        const stockTypes = (stockList || []).map(g => g.name || g.glass_type).filter(Boolean);
-        return Array.from(new Set([...defaultTypes, ...stockTypes]));
+    const getDynamicGlassTypes = (stockList) => {
+        const map = new Map();
+
+        // 1. Populate from available sheet glass stock (SheetGlass)
+        const rawStock = (stockList || []).map(g => g.name || g.glass_type).filter(Boolean);
+        rawStock.forEach(name => {
+            const norm = normalizeGlassTypeName(name);
+            if (norm && !map.has(norm.toLowerCase())) {
+                map.set(norm.toLowerCase(), norm);
+            }
+        });
+
+        // 2. Fallback to clean standard sheet glass inventory list if stock is empty
+        if (map.size === 0) {
+            const defaultTypes = [
+                'Kaca Cermin 5 mm polos',
+                'Kaca Cermin Grey 5 mm',
+                'Kaca Bening 5 mm polos',
+                'Kaca Bening 8 mm polos',
+                'Kaca Bening 10 mm polos',
+                'Kaca Jumbo Polos 12 mm',
+                'Kaca Dark Grey 5 mm',
+                'Kaca Frosted Etsa Sandblast 5 mm',
+                'Kaca 12 mm Polos Tempered'
+            ];
+            defaultTypes.forEach(dt => {
+                const norm = normalizeGlassTypeName(dt);
+                if (norm && !map.has(norm.toLowerCase())) {
+                    map.set(norm.toLowerCase(), norm);
+                }
+            });
+        }
+
+        return Array.from(map.values());
     };
 
     const formatNumberDots = (val) => {
@@ -2627,28 +2660,68 @@ export default function Dashboard({
     const isGlassTypeCompatible = (itemGlassType, scrapGlassType) => {
         if (!itemGlassType || !scrapGlassType) return false;
 
-        // 1. Thickness must match
+        // 1. Thickness must match strictly
         const itemThickness = extractThickness(itemGlassType);
         const scrapThickness = extractThickness(scrapGlassType);
-        if (itemThickness && scrapThickness && itemThickness !== scrapThickness) {
+        if (itemThickness && scrapThickness && String(itemThickness) !== String(scrapThickness)) {
             return false;
         }
 
-        const itemType = itemGlassType.toLowerCase();
-        const sType = scrapGlassType.toLowerCase();
+        const itemNorm = String(itemGlassType).toLowerCase();
+        const sNorm = String(scrapGlassType).toLowerCase();
 
-        // 2. Strict category check for special glass types
-        const specialKeywords = ['cermin', 'riben', 'es', 'tempered', 'laminated', 'oneside', 'tinted', 'reflective', 'akrilik'];
-        for (const kw of specialKeywords) {
-            if (itemType.includes(kw) !== sType.includes(kw)) {
+        // 2. Core material & category keywords (MUST match presence/absence)
+        const categoryKeywords = [
+            'cermin', 'mirror',
+            'tempered',
+            'laminated',
+            'riben', 'rayban', 'ryban', 'tinted',
+            'es', 'frosted', 'sandblast',
+            'moru', 'fluted', 'reeded',
+            'oneside', 'one side',
+            'akrilik', 'acrylic',
+            'reflective'
+        ];
+
+        for (const kw of categoryKeywords) {
+            const itemHas = itemNorm.includes(kw);
+            const scrapHas = sNorm.includes(kw);
+            if (itemHas !== scrapHas) {
                 return false;
             }
         }
 
-        // 3. For bening / polos (clear float glass)
-        const isItemBening = itemType.includes('bening') || itemType.includes('polos');
-        const isScrapBening = sType.includes('bening') || sType.includes('polos');
-        if (isItemBening || isScrapBening) {
+        // 3. Color & Tint keywords (MUST match presence/absence)
+        const colorKeywords = [
+            'bronze',
+            'grey', 'gray', 'dark grey', 'dark gray', 'euro grey', 'euro gray',
+            'blue', 'green',
+            'gold', 'silver',
+            'tea', 'brown',
+            'hitam', 'black',
+            'putih', 'white'
+        ];
+
+        for (const ck of colorKeywords) {
+            const itemHasColor = itemNorm.includes(ck);
+            const scrapHasColor = sNorm.includes(ck);
+            if (itemHasColor !== scrapHasColor) {
+                return false;
+            }
+        }
+
+        // 4. Distinction between special glass vs standard plain clear float glass
+        const isSpecialItem = categoryKeywords.some(kw => itemNorm.includes(kw)) || colorKeywords.some(ck => itemNorm.includes(ck));
+        const isSpecialScrap = categoryKeywords.some(kw => sNorm.includes(kw)) || colorKeywords.some(ck => sNorm.includes(ck));
+
+        if (isSpecialItem !== isSpecialScrap) {
+            return false;
+        }
+
+        // 5. Plain / Bening float glass check
+        if (!isSpecialItem && !isSpecialScrap) {
+            const isItemBening = itemNorm.includes('bening') || itemNorm.includes('polos');
+            const isScrapBening = sNorm.includes('bening') || sNorm.includes('polos');
             if (isItemBening !== isScrapBening) return false;
         }
 
@@ -2765,7 +2838,7 @@ export default function Dashboard({
 
     const handleAddItemWithGlassType = (groupId, glassType = '', insertAfterIndex = null) => {
         const currentItems = orderForm.items || [];
-        
+
         let insertIndex = currentItems.length;
         if (insertAfterIndex !== null && insertAfterIndex !== undefined && insertAfterIndex >= 0) {
             insertIndex = insertAfterIndex + 1;
@@ -2957,17 +3030,28 @@ export default function Dashboard({
         const masterItem = MASTER_ACCESSORY_STOCK.find(item => item.id === stockItemId);
         if (!masterItem) return;
 
+        const maxStock = masterItem.stock !== undefined ? parseInt(masterItem.stock) : 99999;
         const currentAccs = Array.isArray(orderForm.accessories) ? [...orderForm.accessories] : [];
         const existingIdx = currentAccs.findIndex(a => typeof a === 'object' && a.id === masterItem.id);
         if (existingIdx >= 0) {
-            currentAccs[existingIdx].qty += 1;
+            const currentQty = parseInt(currentAccs[existingIdx].qty) || 1;
+            if (maxStock > 0 && currentQty >= maxStock) {
+                alert(`Stok aksesoris "${masterItem.name}" tidak mencukupi! (Maksimal Stok: ${maxStock} ${masterItem.unit || 'pcs'})`);
+                return;
+            }
+            currentAccs[existingIdx].qty = Math.min(maxStock > 0 ? maxStock : 99999, currentQty + 1);
+            currentAccs[existingIdx].stock = maxStock;
         } else {
+            if (maxStock <= 0) {
+                alert(`Stok aksesoris "${masterItem.name}" saat ini habis (0 ${masterItem.unit || 'pcs'})!`);
+                return;
+            }
             currentAccs.push({
                 id: masterItem.id,
                 name: masterItem.name,
                 price: masterItem.price,
                 unit: masterItem.unit,
-                stock: masterItem.stock,
+                stock: maxStock,
                 qty: 1
             });
         }
@@ -2982,7 +3066,16 @@ export default function Dashboard({
     const handleAccessoryQtyChange = (index, qty) => {
         const currentAccs = Array.isArray(orderForm.accessories) ? [...orderForm.accessories] : [];
         if (currentAccs[index] && typeof currentAccs[index] === 'object') {
-            currentAccs[index].qty = Math.max(1, parseInt(qty) || 1);
+            const item = currentAccs[index];
+            const masterItem = (MASTER_ACCESSORY_STOCK || []).find(m => m.id === item.id || m.name === item.name);
+            const maxStock = masterItem && masterItem.stock !== undefined ? parseInt(masterItem.stock) : (item.stock !== undefined ? parseInt(item.stock) : 99999);
+
+            let parsedQty = parseInt(qty) || 0;
+            if (maxStock > 0 && parsedQty > maxStock) {
+                parsedQty = maxStock;
+            }
+            item.qty = Math.max(1, parsedQty);
+            item.stock = maxStock;
             setOrderForm('accessories', currentAccs);
         }
     };
@@ -2998,7 +3091,7 @@ export default function Dashboard({
         const perimeterM = (2 * (l + w)) / 100;
 
         // 1. Cari jenis kaca yang cocok di katalog master sheetGlasses
-        const matchedGlass = (sheetGlasses || []).find(g => 
+        const matchedGlass = (sheetGlasses || []).find(g =>
             (g.name && it.glass_type && (g.name.toLowerCase() === it.glass_type.toLowerCase() || it.glass_type.toLowerCase().includes(g.name.toLowerCase()) || g.name.toLowerCase().includes(it.glass_type.toLowerCase()))) ||
             (g.id && it.glass_id && g.id === it.glass_id)
         );
@@ -3023,22 +3116,29 @@ export default function Dashboard({
         const isExceeded = (l > 0 || w > 0) && (itemMaxDim > maxSheetDim || itemMinDim > minSheetDim);
 
         // 2. Tentukan harga per m2 berdasarkan master katalog
-        let pricePerM2 = 380000;
-        if (matchedGlass && matchedGlass.sell_price > 0) {
-            pricePerM2 = parseFloat(matchedGlass.sell_price);
-        } else {
-            const t = parseInt(it.thickness_mm) || 5;
-            if (t >= 12) pricePerM2 = 950000;
-            else if (t >= 10) pricePerM2 = 720000;
-            else if (t >= 8) pricePerM2 = 450000;
-            else pricePerM2 = 380000;
-        }
+        let pricePerM2 = 0;
+        let rateGM = 0;
+        let rateHT = 0;
+        let rateBV = 0;
+        let rateEtsa = 0;
 
-        // 3. Tarif proses kustom dari jenis kaca
-        const rateGM = matchedGlass?.rate_gm ? parseFloat(matchedGlass.rate_gm) : 10000;
-        const rateHT = matchedGlass?.rate_ht ? parseFloat(matchedGlass.rate_ht) : 1000;
-        const rateBV = matchedGlass?.rate_bv ? parseFloat(matchedGlass.rate_bv) : 15000;
-        const rateEtsa = matchedGlass?.rate_etsa ? parseFloat(matchedGlass.rate_etsa) : 50000;
+        if (it.glass_type && String(it.glass_type).trim() !== '') {
+            if (matchedGlass && matchedGlass.sell_price > 0) {
+                pricePerM2 = parseFloat(matchedGlass.sell_price);
+            } else {
+                const t = parseInt(it.thickness_mm) || 5;
+                if (t >= 12) pricePerM2 = 950000;
+                else if (t >= 10) pricePerM2 = 720000;
+                else if (t >= 8) pricePerM2 = 450000;
+                else pricePerM2 = 380000;
+            }
+
+            // 3. Tarif proses kustom dari jenis kaca
+            rateGM = matchedGlass?.rate_gm ? parseFloat(matchedGlass.rate_gm) : 10000;
+            rateHT = matchedGlass?.rate_ht ? parseFloat(matchedGlass.rate_ht) : 1000;
+            rateBV = matchedGlass?.rate_bv ? parseFloat(matchedGlass.rate_bv) : 15000;
+            rateEtsa = matchedGlass?.rate_etsa ? parseFloat(matchedGlass.rate_etsa) : 50000;
+        }
 
         // 4. Hitung harga bahan kaca murni proporsional luas area m2 (0 jika Orderan Kosong / Dipakai Perusahaan)
         const rawBasePrice = Math.round(areaM2 * pricePerM2);
@@ -3053,10 +3153,10 @@ export default function Dashboard({
         let feeBor = 0;
         let holeRuasCm = 0;
         if (procs.includes('Bor')) {
-            const holes = Array.isArray(it.holes) && it.holes.length > 0 
-                ? it.holes 
+            const holes = Array.isArray(it.holes) && it.holes.length > 0
+                ? it.holes
                 : [{ hole_length_cm: it.hole_length_cm || 2, hole_width_cm: it.hole_width_cm || 2, hole_qty: it.hole_qty || 1 }];
-            
+
             holes.forEach(h => {
                 const hL = parseDim(h.hole_length_cm) || 2;
                 const hW = parseDim(h.hole_width_cm) || 2;
@@ -3537,10 +3637,10 @@ export default function Dashboard({
                     >
                         {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                     </button>
-                    <img 
-                        src="/assets/Logo_UTB.png" 
-                        alt="Logo UTB" 
-                        className="h-10 w-auto object-contain shrink-0" 
+                    <img
+                        src="/assets/Logo_UTB.png"
+                        alt="Logo UTB"
+                        className="h-10 w-auto object-contain shrink-0"
                     />
                     <div>
                         <h1 className="font-black text-sm sm:text-lg tracking-wider text-[#242222]">UTB</h1>
@@ -3587,16 +3687,16 @@ export default function Dashboard({
             {/* MOBILE TOP TAB BAR HORIZONTAL SCROLLER */}
             <div className="md:hidden bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 scrollbar-none">
                 {(userRole === 'owner') && (
-                    <button 
-                        onClick={() => setActiveTab('dashboard')} 
+                    <button
+                        onClick={() => setActiveTab('dashboard')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'dashboard' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <BarChart3 className="w-3.5 h-3.5" /> Dashboard
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                    <button 
-                        onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} 
+                    <button
+                        onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'orders' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <FileText className="w-3.5 h-3.5" /> <span>Orderan</span>
@@ -3606,72 +3706,72 @@ export default function Dashboard({
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
-                    <button 
-                        onClick={() => setActiveTab('deliveries')} 
+                    <button
+                        onClick={() => setActiveTab('deliveries')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'deliveries' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Truck className="w-3.5 h-3.5" /> Pengiriman
                     </button>
                 )}
                 {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (
-                    <button 
-                        onClick={() => setActiveTab('production')} 
+                    <button
+                        onClick={() => setActiveTab('production')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'production' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Sliders className="w-3.5 h-3.5" /> Disposisi
                     </button>
                 )}
                 {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
-                    <button 
-                        onClick={() => setActiveTab('scrap')} 
+                    <button
+                        onClick={() => setActiveTab('scrap')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'scrap' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Boxes className="w-3.5 h-3.5" /> Kaca
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'owner') && (
-                    <button 
-                        onClick={() => setActiveTab('suppliers')} 
+                    <button
+                        onClick={() => setActiveTab('suppliers')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'suppliers' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Building2 className="w-3.5 h-3.5" /> Supplier
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'owner') && (
-                    <button 
-                        onClick={() => setActiveTab('accessories')} 
+                    <button
+                        onClick={() => setActiveTab('accessories')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'accessories' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Plug className="w-3.5 h-3.5" /> Aksesoris
                     </button>
                 )}
                 {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
-                    <button 
-                        onClick={() => setActiveTab('supplies')} 
+                    <button
+                        onClick={() => setActiveTab('supplies')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'supplies' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Archive className="w-3.5 h-3.5" /> Gudang
                     </button>
                 )}
                 {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole.startsWith('divisi_') || userRole === 'driver') && (
-                    <button 
-                        onClick={() => setActiveTab('tools')} 
+                    <button
+                        onClick={() => setActiveTab('tools')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'tools' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Wrench className="w-3.5 h-3.5" /> Alat
                     </button>
                 )}
                 {(userRole === 'hrd' || userRole === 'owner') && (
-                    <button 
-                        onClick={() => setActiveTab('employees')} 
+                    <button
+                        onClick={() => setActiveTab('employees')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'employees' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <Users className="w-3.5 h-3.5" /> Karyawan
                     </button>
                 )}
                 {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                    <button 
-                        onClick={() => setActiveTab('finance')} 
+                    <button
+                        onClick={() => setActiveTab('finance')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'finance' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
                         <CreditCard className="w-3.5 h-3.5" /> <span>Finance</span>
@@ -3689,8 +3789,8 @@ export default function Dashboard({
                     <aside className="relative w-72 max-w-[80vw] bg-white border-r border-slate-200 p-4 space-y-2 overflow-y-auto z-10 flex flex-col h-full shadow-2xl">
                         <div className="flex justify-between items-center pb-2 border-b border-slate-200 mb-2">
                             <span className="font-black text-sm text-[#1b68b0] flex items-center gap-1.5">UTB NAVIGASI</span>
-                            <button 
-                                onClick={() => setMobileMenuOpen(false)} 
+                            <button
+                                onClick={() => setMobileMenuOpen(false)}
                                 className="text-slate-400 hover:text-[#242222] p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                                 title="Tutup Navigasi"
                             >
@@ -3705,8 +3805,8 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                                <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
+                            {(userRole === 'admin_toko' || userRole === 'owner') && (
+                                <button onClick={() => { setActiveTab('orders'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
                                     </div>
@@ -3736,6 +3836,22 @@ export default function Dashboard({
                                     </div>
                                 </button>
                             )}
+
+                            {(userRole.startsWith('divisi_') || userRole === 'owner') && (() => {
+                                const suspendedCount = (initialOrders || []).filter(o => o && o.complaint_status === 'pending_gudang').length;
+                                return (
+                                    <button onClick={() => { setActiveTab('suspended'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'suspended' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <PauseCircle className="w-4 h-4 shrink-0 text-amber-500" /> <span>Suspend</span>
+                                        </div>
+                                        {suspendedCount > 0 && (
+                                            <span className="bg-amber-50 text-amber-600 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
+                                                {suspendedCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })()}
 
                             {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                                 <button onClick={() => { setActiveTab('scrap'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
@@ -3836,8 +3952,8 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button onClick={() => { setActiveTab('orders'); if (userRole === 'admin_gudang') setActiveOrderCard('pengerjaan'); }} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                        {(userRole === 'admin_toko' || userRole === 'owner') && (
+                            <button onClick={() => setActiveTab('orders')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'orders' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Orderan</span>
                                 </div>
@@ -3881,6 +3997,22 @@ export default function Dashboard({
                                 })()}
                             </button>
                         )}
+
+                        {(userRole.startsWith('divisi_') || userRole === 'owner') && (() => {
+                            const suspendedCount = (initialOrders || []).filter(o => o && o.complaint_status === 'pending_gudang').length;
+                            return (
+                                <button onClick={() => setActiveTab('suspended')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'suspended' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <PauseCircle className="w-4 h-4 shrink-0 text-amber-500" /> <span>Suspend</span>
+                                    </div>
+                                    {suspendedCount > 0 && (
+                                        <span className="bg-amber-50 text-amber-600 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
+                                            {suspendedCount}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })()}
 
                         {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                             <button onClick={() => setActiveTab('scrap')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'scrap' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
@@ -4062,6 +4194,17 @@ export default function Dashboard({
                                 setStatTimeRange={setStatTimeRange}
                                 statFilterType={statFilterType}
                                 setStatFilterType={setStatFilterType}
+                            />
+                        )}
+
+                        {/* TAB: SUSPEND (HANYA DIVISI & OWNER) */}
+                        {activeTab === 'suspended' && (
+                            <SuspendedTab
+                                userRole={userRole}
+                                initialOrders={initialOrders}
+                                setSelectedComplaintOrder={setSelectedComplaintOrder}
+                                setShowGudangDecisionModal={setShowGudangDecisionModal}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
@@ -4666,6 +4809,7 @@ export default function Dashboard({
                 setForm={setComplaintForm}
                 onSubmit={handleSubmitComplaint}
                 onPhotoChange={handleComplaintPhotoChange}
+                isSubmitting={isSubmittingComplaint}
             />
 
             {/* GLOBAL IMAGE LIGHTBOX MODAL */}
