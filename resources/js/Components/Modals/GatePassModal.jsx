@@ -64,6 +64,16 @@ export default function GatePassModal({
                         </div>
                     </div>
 
+                    {/* CATATAN RUTE & BARANG PENUNJANG GUDANG */}
+                    {(selectedBarangKeluarData.notes || selectedBarangKeluarData.orders?.[0]?.delivery_notes || selectedBarangKeluarData.orders?.[0]?.notes) && (
+                        <div className="bg-[#1b68b0]/10 border border-[#1b68b0]/20 rounded-xl p-3 text-xs text-slate-800 space-y-1">
+                            <strong className="text-[#1b68b0] block font-bold">📌 Catatan Rute & Barang Penunjang Gudang:</strong>
+                            <p className="font-semibold text-slate-800 whitespace-pre-line pl-4">
+                                {selectedBarangKeluarData.notes || selectedBarangKeluarData.orders?.[0]?.delivery_notes || selectedBarangKeluarData.orders?.[0]?.notes}
+                            </p>
+                        </div>
+                    )}
+
                     {/* TABEL ITEM BARANG KELUAR GUDANG */}
                     <div>
                         <h4 className="font-bold text-xs uppercase mb-1.5 text-slate-700">Rincian Fisik Barang Kaca Keluar dari Pabrik/Gudang (Total Muatan Mobil):</h4>

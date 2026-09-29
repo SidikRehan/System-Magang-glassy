@@ -216,6 +216,19 @@ export default function MultiAddressWaybillModal({
                     </div>
 
                     {/* CATATAN DAN TANDA TANGAN KESELURUHAN */}
+                    {(() => {
+                        const tripNotes = tripData.notes || deliveries[0]?.notes || orders[0]?.delivery_notes || orders[0]?.notes;
+                        return tripNotes ? (
+                            <div className="text-[11px] bg-[#1b68b0]/10 p-3 rounded-xl border border-[#1b68b0]/20 text-slate-800 space-y-1">
+                                <strong className="text-[#1b68b0] flex items-center gap-1.5">
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span>Catatan Rute & Barang Penunjang Gudang:</span>
+                                </strong>
+                                <p className="font-bold text-slate-800 whitespace-pre-line pl-5">{tripNotes}</p>
+                            </div>
+                        ) : null;
+                    })()}
+
                     <div className="text-[11px] bg-amber-50 p-3 rounded-xl border border-amber-200 text-amber-900">
                         <strong>Instruksi Supir:</strong> Mohon serahkan Surat Jalan 4 Warna per konsumen di masing-masing lokasi. Pastikan uang COD ditagih penuh sebelum menyerahkan barang pada lembar merah COD.
                     </div>

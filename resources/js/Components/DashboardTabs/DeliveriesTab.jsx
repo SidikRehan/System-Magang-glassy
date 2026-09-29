@@ -66,11 +66,15 @@ export default function DeliveriesTab({
             if (o && o.id) ordersMap[o.id] = o;
         });
 
-        // 1. Process safeOrders assigned to drivers or in delivery/finished state
+        // 1. Process safeOrders that are explicitly assigned to drivers/vehicles or have a trip code
         safeOrders.forEach(o => {
             if (!o) return;
-            const isAssignedOrDelivery = o.assigned_driver || o.assigned_vehicle || o.trip_code || o.status === 'pengiriman' || o.status === 'selesai';
-            if (!isAssignedOrDelivery) return;
+            const isAssigned = Boolean(
+                (o.assigned_driver && o.assigned_driver !== 'Belum Ditugaskan') ||
+                (o.assigned_vehicle && o.assigned_vehicle !== 'Belum Ditugaskan') ||
+                (o.trip_code && o.trip_code !== '')
+            );
+            if (!isAssigned) return;
 
             const tripCode = o.trip_code || `TRIP-${o.id}`;
             if (!grouped[tripCode]) {
@@ -79,6 +83,7 @@ export default function DeliveriesTab({
                     driver_name: o.assigned_driver || o.driver_name || 'Belum Ditugaskan',
                     vehicle_plate: o.assigned_vehicle || 'Engkel Box (D 8472 AB)',
                     delivery_date: o.delivery_date || (o.shipped_at ? String(o.shipped_at).split('T')[0] : null),
+                    notes: o.delivery_notes || o.notes || '',
                     orders: [],
                     deliveries: [],
                 };
@@ -87,6 +92,9 @@ export default function DeliveriesTab({
             if (o.assigned_driver) grouped[tripCode].driver_name = o.assigned_driver;
             if (o.assigned_vehicle) grouped[tripCode].vehicle_plate = o.assigned_vehicle;
             if (o.delivery_date) grouped[tripCode].delivery_date = o.delivery_date;
+            if ((o.delivery_notes || o.notes) && !grouped[tripCode].notes) {
+                grouped[tripCode].notes = o.delivery_notes || o.notes;
+            }
 
             if (!grouped[tripCode].orders.some(existing => existing.id === o.id)) {
                 grouped[tripCode].orders.push(o);
@@ -97,6 +105,16 @@ export default function DeliveriesTab({
         safeDeliveries.forEach(d => {
             if (!d) return;
             const assocOrder = d.order || ordersMap[d.order_id];
+            const isAssigned = Boolean(
+                d.trip_code ||
+                (assocOrder && (
+                    (assocOrder.assigned_driver && assocOrder.assigned_driver !== 'Belum Ditugaskan') ||
+                    (assocOrder.assigned_vehicle && assocOrder.assigned_vehicle !== 'Belum Ditugaskan') ||
+                    assocOrder.trip_code
+                ))
+            );
+            if (!isAssigned) return;
+
             const tripCode = d.trip_code || assocOrder?.trip_code || `TRIP-${d.order_id || d.id}`;
 
             if (!grouped[tripCode]) {
@@ -105,6 +123,7 @@ export default function DeliveriesTab({
                     driver_name: d.driver_name || assocOrder?.assigned_driver || 'Belum Ditugaskan',
                     vehicle_plate: d.vehicle_plate || assocOrder?.assigned_vehicle || 'Engkel Box (D 8472 AB)',
                     delivery_date: d.delivery_date || assocOrder?.delivery_date || null,
+                    notes: d.notes || assocOrder?.delivery_notes || assocOrder?.notes || '',
                     orders: [],
                     deliveries: [],
                 };
@@ -118,6 +137,9 @@ export default function DeliveriesTab({
             }
             if (d.delivery_date) {
                 grouped[tripCode].delivery_date = d.delivery_date;
+            }
+            if (d.notes && (!grouped[tripCode].notes || grouped[tripCode].notes === '')) {
+                grouped[tripCode].notes = d.notes;
             }
 
             if (!grouped[tripCode].deliveries.some(existing => existing.id === d.id)) {
@@ -323,6 +345,11 @@ export default function DeliveriesTab({
             return;
         }
 
+        if (!dispatchNotesInput || !dispatchNotesInput.trim()) {
+            alert('⚠️ Catatan Rute & Barang Penunjang Gudang WAJIB diisi terlebih dahulu sebelum menugaskan mobil armada!');
+            return;
+        }
+
         const unreadyOrders = safeOrders.filter(o => selectedBatchOrderIds.includes(o.id) && !isOrderExecutionFinished(o));
         if (unreadyOrders.length > 0) {
             alert('⚠️ Gagal: Orderan ' + unreadyOrders.map(o => '#' + o.spo_number).join(', ') + ' belum selesai dieksekusi sampai divisi terakhir! Hilangkan centang pada orderan tersebut.');
@@ -499,6 +526,17 @@ export default function DeliveriesTab({
                                                                 <p className="text-xs text-slate-500 mt-1">
                                                                     {trip.vehicle_plate} — <strong className="text-[#1b68b0]">{trip.orders.filter(o => o.status !== 'selesai').length} Alamat Belum Selesai</strong>
                                                                 </p>
+                                                                {(trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes) && (
+                                                                    <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-2.5 mt-2 text-xs text-slate-800 space-y-0.5">
+                                                                        <span className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px]">
+                                                                            <FileText className="w-3.5 h-3.5 text-amber-700" />
+                                                                            <span>Catatan Rute & Barang Penunjang Gudang:</span>
+                                                                        </span>
+                                                                        <p className="font-semibold text-slate-800 whitespace-pre-line pl-5 text-[11px]">
+                                                                            {trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div className="flex flex-wrap gap-1.5 justify-end">
                                                                 <button
@@ -653,6 +691,17 @@ export default function DeliveriesTab({
                                                                 <p className="text-xs text-slate-500 mt-1">
                                                                     {trip.vehicle_plate} — <strong className="text-emerald-700">{trip.orders.filter(o => o.status === 'selesai').length} Alamat Selesai</strong>
                                                                 </p>
+                                                                {(trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes) && (
+                                                                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5 mt-2 text-xs text-slate-800 space-y-0.5">
+                                                                        <span className="font-bold text-emerald-900 flex items-center gap-1.5 text-[11px]">
+                                                                            <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                                                                            <span>Catatan Rute & Barang Penunjang Gudang:</span>
+                                                                        </span>
+                                                                        <p className="font-semibold text-slate-800 whitespace-pre-line pl-5 text-[11px]">
+                                                                            {trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div className="flex flex-wrap gap-1.5 justify-end">
                                                                 <button
@@ -905,6 +954,17 @@ export default function DeliveriesTab({
                                                     <p className="text-xs text-slate-500 mt-1">
                                                         {trip.vehicle_plate} — <strong className="text-[#1b68b0]">{trip.orders.length} Alamat Tujuan</strong>
                                                     </p>
+                                                    {(trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes) && (
+                                                        <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-2.5 mt-2 text-xs text-slate-800 space-y-0.5">
+                                                            <span className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px]">
+                                                                <FileText className="w-3.5 h-3.5 text-amber-700" />
+                                                                <span>Catatan Rute & Barang Penunjang Gudang:</span>
+                                                            </span>
+                                                            <p className="font-semibold text-slate-800 whitespace-pre-line pl-5 text-[11px]">
+                                                                {trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes}
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5 justify-end">
                                                     <button
@@ -940,6 +1000,7 @@ export default function DeliveriesTab({
                                                                 driver: trip.driver_name,
                                                                 vehicle: trip.vehicle_plate,
                                                                 trip_code: trip.trip_code,
+                                                                notes: trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes,
                                                                 date: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
                                                             });
                                                             setShowBarangKeluarModal(true);
@@ -1191,9 +1252,9 @@ export default function DeliveriesTab({
                                     <div className="flex flex-col justify-end">
                                         <button
                                             type="submit"
-                                            disabled={selectedBatchOrderIds.length === 0 || isSubmittingBatch}
+                                            disabled={selectedBatchOrderIds.length === 0 || !dispatchNotesInput.trim() || isSubmittingBatch}
                                             className={`w-full font-bold px-3 py-2.5 rounded-xl text-xs shadow-xs flex items-center justify-center gap-1.5 transition ${
-                                                selectedBatchOrderIds.length > 0 && !isSubmittingBatch
+                                                selectedBatchOrderIds.length > 0 && dispatchNotesInput.trim() && !isSubmittingBatch
                                                     ? 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer'
                                                     : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
                                             }`}
@@ -1215,17 +1276,23 @@ export default function DeliveriesTab({
 
                                 {/* SECTION CATATAN PENGIRIMAN & BARANG PENUNJANG GUDANG */}
                                 <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-                                    <label className="text-slate-800 font-bold text-xs flex items-center gap-1.5">
-                                        <FileText className="w-3.5 h-3.5 text-[#1b68b0]" />
-                                        <span>Catatan Rute & Barang Penunjang Gudang:</span>
+                                    <label className="text-slate-800 font-bold text-xs flex items-center justify-between">
+                                        <span className="flex items-center gap-1.5">
+                                            <FileText className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                            <span>Catatan Rute & Barang Penunjang Gudang: <span className="text-rose-500 font-black">*</span></span>
+                                        </span>
+                                        <span className="text-[10px] bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-md font-bold">
+                                            WAJIB DIISI SEBELUM TUGASKAN
+                                        </span>
                                     </label>
 
                                     <textarea
                                         rows={2}
+                                        required
                                         value={dispatchNotesInput}
                                         onChange={e => setDispatchNotesInput(e.target.value)}
                                         placeholder="Tuliskan instruksi pengiriman atau daftar tambahan barang dari gudang (cth: Bawa 2 stang suction cup dari gudang B, tangga lipat, dll)..."
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:bg-white focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 font-medium"
                                     />
                                 </div>
                             </form>

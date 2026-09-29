@@ -712,8 +712,10 @@ class SypOperationalController extends Controller
             'driver_name' => 'required|string',
             'vehicle_plate' => 'required|string',
             'delivery_date' => 'nullable|date',
-            'notes' => 'nullable|string',
+            'notes' => 'required|string',
             'trip_code' => 'nullable|string',
+        ], [
+            'notes.required' => '⚠️ Catatan Rute & Barang Penunjang Gudang WAJIB diisi sebelum menugaskan mobil armada!',
         ]);
 
         $tripCode = !empty($validated['trip_code']) ? $validated['trip_code'] : ('TRIP-' . date('Ymd') . '-' . rand(1000, 9999));

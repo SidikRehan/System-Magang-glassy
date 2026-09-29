@@ -124,16 +124,22 @@ export default function AssignVehicleModal({
                     </div>
 
                     <div>
-                        <label className="text-slate-700 font-bold text-xs flex items-center gap-1.5 mb-1">
-                            <FileText className="w-3.5 h-3.5 text-[#1b68b0]" />
-                            <span>Catatan & Barang Penunjang Gudang:</span>
+                        <label className="text-slate-700 font-bold text-xs flex items-center justify-between mb-1">
+                            <span className="flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                <span>Catatan & Barang Penunjang Gudang: <span className="text-rose-500 font-black">*</span></span>
+                            </span>
+                            <span className="text-[10px] bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-md font-bold">
+                                WAJIB DIISI
+                            </span>
                         </label>
                         <textarea 
                             rows={2}
+                            required
                             value={notes} 
                             onChange={e => setNotes(e.target.value)} 
                             placeholder="cth: Dahulukan pengantaran sebelum jam 12, bawa 2 pcs Kop Kaca dari gudang B..." 
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white text-xs" 
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white text-xs font-medium" 
                         />
                     </div>
 
@@ -148,11 +154,11 @@ export default function AssignVehicleModal({
                         </button>
                         <button 
                             type="submit" 
-                            disabled={isSubmitting}
+                            disabled={!notes?.trim() || isSubmitting}
                             className={`px-5 py-2.5 font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition ${
-                                isSubmitting 
-                                    ? 'bg-[#1b68b0]/70 text-white cursor-not-allowed' 
-                                    : 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer'
+                                notes?.trim() && !isSubmitting 
+                                    ? 'bg-[#1b68b0] hover:bg-[#15528c] text-white cursor-pointer' 
+                                    : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
                             }`}
                         >
                             {isSubmitting ? (
