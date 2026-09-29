@@ -147,7 +147,8 @@ export default function EditDraftOrderModal({
         )
     );
 
-    const isPriorityValid = orderForm.priority_status !== 'Prioritas' || (parseFloat(orderForm.priority_fee) || 0) >= 0;
+    const isPriorityValid = Boolean(orderForm.priority_status && orderForm.priority_status.trim().length > 0) && (orderForm.priority_status !== 'Prioritas' || (parseFloat(orderForm.priority_fee) || 0) >= 0);
+    const isDeadlineDateValid = Boolean(orderForm.deadline_date && String(orderForm.deadline_date).trim().length > 0);
 
     // Catatan revisi wajib diisi jika orderan sedang direvisi (status pengerjaan)
     const isRevisionNotesValid = Boolean(
@@ -160,6 +161,7 @@ export default function EditDraftOrderModal({
         isCustomerAddressValid && 
         isDescriptionValid && 
         isOrderDateValid && 
+        isDeadlineDateValid &&
         isItemsValid && 
         isPriorityValid && 
         isRevisionNotesValid;
@@ -1205,8 +1207,9 @@ export default function EditDraftOrderModal({
                                             priority_fee: val === 'Prioritas' ? (d.priority_fee ?? 0) : 0
                                         }));
                                     }} 
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 shadow-xs cursor-pointer text-xs"
+                                    className={getFieldClass(Boolean(orderForm.priority_status), "w-full bg-white border rounded-xl p-2.5 text-slate-800 font-bold focus:ring-2 focus:ring-[#1b68b0]/15 shadow-xs cursor-pointer text-xs transition")}
                                 >
+                                    <option value="" disabled>-- Pilih Status --</option>
                                     <option value="Biasa">Biasa (Standard)</option>
                                     <option value="Prioritas">🔥 Prioritas (Buru-buru / Express)</option>
                                 </select>
@@ -1219,7 +1222,7 @@ export default function EditDraftOrderModal({
                                     type="date" 
                                     value={orderForm.deadline_date} 
                                     onChange={e => setOrderForm('deadline_date', e.target.value)} 
-                                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 shadow-xs text-xs" 
+                                    className={getFieldClass(isDeadlineDateValid, "w-full bg-white border rounded-xl p-2.5 text-slate-800 font-semibold focus:ring-2 focus:ring-[#1b68b0]/15 shadow-xs text-xs transition")}
                                 />
                             </div>
 
