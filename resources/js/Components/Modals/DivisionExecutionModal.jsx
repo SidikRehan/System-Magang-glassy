@@ -364,6 +364,7 @@ export default function DivisionExecutionModal({
                 setIsSubmittingFinishModal(true);
                 const finalGlassType = currentStockItem ? currentStockItem.name : rawGlassType;
 
+                const actualTargetDiv = userRole === 'owner' ? selectedNextDiv : computeDefaultNextDiv(selectedExecutionOrder);
                 router.post(route('orders.raw_material', selectedExecutionOrder.id), {
                     glass_type: finalGlassType,
                     sheets_used: usedQty,
@@ -371,7 +372,7 @@ export default function DivisionExecutionModal({
                 }, {
                     preserveScroll: true,
                     onSuccess: () => {
-                        onFinishJobSubmit(selectedExecutionOrder.id, selectedNextDiv, {
+                        onFinishJobSubmit(selectedExecutionOrder.id, actualTargetDiv, {
                             onFinish: () => setIsSubmittingFinishModal(false)
                         });
                     },
@@ -383,8 +384,9 @@ export default function DivisionExecutionModal({
             }
         }
 
+        const actualTargetDiv = userRole === 'owner' ? selectedNextDiv : computeDefaultNextDiv(selectedExecutionOrder);
         setIsSubmittingFinishModal(true);
-        onFinishJobSubmit(selectedExecutionOrder.id, selectedNextDiv, {
+        onFinishJobSubmit(selectedExecutionOrder.id, actualTargetDiv, {
             onFinish: () => setIsSubmittingFinishModal(false)
         });
     };
@@ -1986,17 +1988,28 @@ export default function DivisionExecutionModal({
                                         <span>Laporkan Kaca Cacat / Baret</span>
                                     </button>
 
-                                    <select
-                                        value={selectedNextDiv}
-                                        onChange={(e) => setSelectedNextDiv(e.target.value)}
-                                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-[#1b68b0] focus:bg-white font-mono shadow-xs cursor-pointer"
-                                    >
-                                        <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
-                                        <option value="divisi_ht">Teruskan ke Divisi Potong (HT & Bor)</option>
-                                        <option value="divisi_gm">Teruskan ke Divisi GM (Gosok Mesin)</option>
-                                        <option value="divisi_bv">Teruskan ke Divisi BV (Beveling)</option>
-                                        <option value="divisi_etsa">Teruskan ke Divisi Etsa (Sandblast Blur)</option>
-                                    </select>
+                                    {userRole === 'owner' ? (
+                                        <select
+                                            value={selectedNextDiv}
+                                            onChange={(e) => setSelectedNextDiv(e.target.value)}
+                                            className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-[#1b68b0] focus:bg-white font-mono shadow-xs cursor-pointer"
+                                        >
+                                            <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
+                                            <option value="divisi_ht">Teruskan ke Divisi Potong (HT & Bor)</option>
+                                            <option value="divisi_gm">Teruskan ke Divisi GM (Gosok Mesin)</option>
+                                            <option value="divisi_bv">Teruskan ke Divisi BV (Beveling)</option>
+                                            <option value="divisi_etsa">Teruskan ke Divisi Etsa (Sandblast Blur)</option>
+                                        </select>
+                                    ) : (
+                                        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-[#1b68b0] px-3.5 py-2.5 rounded-xl text-xs font-bold font-mono">
+                                            <span>Lanjut Otomatis:</span>
+                                            <span className="bg-white px-2 py-0.5 rounded-md border border-blue-200 font-extrabold text-[#242222]">
+                                                {computeDefaultNextDiv(selectedExecutionOrder) === 'QC_Ready'
+                                                    ? 'QC & Siap Kirim'
+                                                    : computeDefaultNextDiv(selectedExecutionOrder).replace('divisi_', 'Divisi ').toUpperCase()}
+                                            </span>
+                                        </div>
+                                    )}
 
                                     <button
                                         type="button"

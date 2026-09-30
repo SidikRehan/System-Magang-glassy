@@ -18,7 +18,7 @@ export default function PromoteOrderModal({
         const total = parseFloat(targetPromoteOrder.total_price) || 0;
         if (promotePaymentOption === 'lunas') return total;
         if (promotePaymentOption === 'dp') return Math.round((total * promoteDpPercent) / 100);
-        if (promotePaymentOption === 'custom') return Math.min(total, Math.max(0, parseFloat(promoteCustomPaidAmount) || 0));
+        if (promotePaymentOption === 'custom') return Math.max(0, parseFloat(promoteCustomPaidAmount) || 0);
         return 0;
     };
 
@@ -121,7 +121,6 @@ export default function PromoteOrderModal({
                                 type="number"
                                 step="10000"
                                 min="0"
-                                max={targetPromoteOrder.total_price}
                                 value={promoteCustomPaidAmount}
                                 onChange={e => setPromoteCustomPaidAmount(e.target.value)}
                                 className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono font-bold text-sm focus:border-[#1b68b0]"
@@ -150,21 +149,45 @@ export default function PromoteOrderModal({
                     )}
 
                     {/* RINCIAN PERHITUNGAN */}
-                    <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl space-y-1 text-emerald-900">
-                        <div className="flex justify-between font-bold">
-                            <span>Nominal DP Diterima:</span>
-                            <span className="font-mono text-sm text-emerald-800">
-                                Rp {Number(getPromotePaidAmount()).toLocaleString()}
-                                <span className="text-xs ml-1 font-semibold text-emerald-700">
-                                    ({targetPromoteOrder.total_price > 0 ? Math.round((getPromotePaidAmount() / targetPromoteOrder.total_price) * 100) : 0}%)
-                                </span>
-                            </span>
-                        </div>
-                        <div className="flex justify-between text-xs text-slate-600">
-                            <span>Sisa Tagihan Pelunasan (COD):</span>
-                            <span className="font-mono font-bold text-slate-800">Rp {Number(Math.max(0, targetPromoteOrder.total_price - getPromotePaidAmount())).toLocaleString()}</span>
-                        </div>
-                    </div>
+                    {(() => {
+                        const paid = getPromotePaidAmount();
+                        const total = targetPromoteOrder.total_price || 0;
+                        const sisa = Math.max(0, total - paid);
+                        const kembalian = Math.max(0, paid - total);
+
+                        return (
+                            <div className="space-y-2">
+                                <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl space-y-1 text-emerald-900">
+                                    <div className="flex justify-between font-bold">
+                                        <span>Nominal Uang Diterima:</span>
+                                        <span className="font-mono text-sm text-emerald-800">
+                                            Rp {Number(paid).toLocaleString()}
+                                            <span className="text-xs ml-1 font-semibold text-emerald-700">
+                                                ({total > 0 ? Math.round((paid / total) * 100) : 0}%)
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-xs text-slate-600">
+                                        <span>Sisa Tagihan Pelunasan (COD):</span>
+                                        <span className="font-mono font-bold text-slate-800">
+                                            {sisa === 0 ? <span className="text-emerald-700 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${Number(sisa).toLocaleString()}`}
+                                        </span>
+                                    </div>
+                                </div>
+                                {kembalian > 0 && (
+                                    <div className="bg-emerald-100/80 border border-emerald-300 p-3 rounded-2xl flex justify-between items-center text-xs text-emerald-900 shadow-xs animate-in fade-in">
+                                        <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                            <span>Uang Kembalian Customer:</span>
+                                        </div>
+                                        <span className="font-mono font-black text-emerald-800 text-sm">
+                                            Rp {kembalian.toLocaleString()}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     <p className="text-[11px] text-slate-500 leading-normal">
                         *Mengubah status draf menjadi <strong>Order Pengerjaan</strong> dan memicu antrean produksi ke Admin Gudang.

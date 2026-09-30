@@ -776,6 +776,20 @@ class InventoryMasterController extends Controller
         return redirect()->back()->with('success', "Restok perlengkapan {$restock->supply->name} berhasil disetujui dan ditambahkan ke gudang!");
     }
 
+    public function cancelRestockSupply(Request $request, $restockId)
+    {
+        $restock = SupplyRestock::findOrFail($restockId);
+
+        if ($restock->status === 'Selesai Restok') {
+            return redirect()->back()->with('error', 'Permintaan ini sudah selesai diproses dan tidak dapat dibatalkan.');
+        }
+
+        $itemName = $restock->supply?->name ?? 'Perlengkapan';
+        $restock->delete();
+
+        return redirect()->back()->with('success', "Pengajuan restok untuk {$itemName} berhasil dibatalkan.");
+    }
+
     public function destroySupply($id)
     {
         $supply = Supply::findOrFail($id);

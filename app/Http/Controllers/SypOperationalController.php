@@ -624,7 +624,7 @@ class SypOperationalController extends Controller
         $order = Order::findOrFail($id);
 
         $validated = $request->validate([
-            'proof_photo' => 'required|image|max:5120',
+            'proof_photo' => $order->proof_photo_path ? 'nullable|image|max:5120' : 'required|image|max:5120',
             'recipient_name' => 'nullable|string|max:255',
             'mark_lunas' => 'nullable|boolean',
             'payment_status' => 'nullable|string',
@@ -940,7 +940,55 @@ class SypOperationalController extends Controller
         }
 
         $currentDiv = $order->current_division;
-        $nextDiv = $request->input('next_division', 'QC_Ready');
+
+        // Auto compute next division according to order's process sequence (HT -> GM -> BV -> ETSA -> QC_Ready)
+        $autoNextDiv = function ($ord) {
+            $fixedSeq = ['HT', 'GM', 'BV', 'ETSA'];
+            $reqCodes = ['HT'];
+            $addProcess = function ($p) use (&$reqCodes) {
+                $code = strtoupper(trim((string)$p));
+                if (in_array($code, ['GM', 'BV', 'ETSA']) && !in_array($code, $reqCodes)) {
+                    $reqCodes[] = $code;
+                }
+            };
+
+            $processes = is_array($ord->processes) ? $ord->processes : json_decode($ord->processes ?? '[]', true);
+            if (is_array($processes)) {
+                foreach ($processes as $p) $addProcess($p);
+            }
+
+            $items = is_array($ord->items) ? $ord->items : json_decode($ord->items ?? '[]', true);
+            if (is_array($items)) {
+                foreach ($items as $it) {
+                    $itProcesses = is_array($it['processes'] ?? null) ? $it['processes'] : json_decode($it['processes'] ?? '[]', true);
+                    if (is_array($itProcesses)) {
+                        foreach ($itProcesses as $p) $addProcess($p);
+                    }
+                }
+            }
+
+            usort($reqCodes, function ($a, $b) use ($fixedSeq) {
+                $posA = array_search($a, $fixedSeq);
+                $posB = array_search($b, $fixedSeq);
+                return ($posA !== false ? $posA : 99) <=> ($posB !== false ? $posB : 99);
+            });
+
+            $curKey = strtoupper(str_replace('divisi_', '', $ord->current_division ?? ''));
+            $curIdx = array_search($curKey, $reqCodes);
+            if ($curIdx !== false && $curIdx < count($reqCodes) - 1) {
+                $map = ['HT' => 'divisi_ht', 'GM' => 'divisi_gm', 'BV' => 'divisi_bv', 'ETSA' => 'divisi_etsa'];
+                $nextKey = $reqCodes[$curIdx + 1];
+                return $map[$nextKey] ?? 'QC_Ready';
+            }
+
+            return 'QC_Ready';
+        };
+
+        if ($userRole === 'owner' && $request->filled('next_division') && $request->input('next_division') !== 'auto') {
+            $nextDiv = $request->input('next_division');
+        } else {
+            $nextDiv = $autoNextDiv($order);
+        }
 
         $currentDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
         $progress = (array) ($order->division_progress ?? []);
@@ -1026,6 +1074,80 @@ class SypOperationalController extends Controller
         $sheetGlass->qty -= (int) $validated['sheets_used'];
         $sheetGlass->save();
 
+        // 10. Kaca lembaran baru yang dipakai otomatis masuk ke stok kaca sisa (ScrapGlass)
+        $sheetLen = (float) ($sheetGlass->length_cm ?: 244);
+        $sheetWid = (float) ($sheetGlass->width_cm ?: 183);
+
+        $maxItemLen = 0;
+        $maxItemWid = 0;
+        $items = is_array($order->items) ? $order->items : json_decode($order->items ?? '[]', true);
+        if (is_array($items) && count($items) > 0) {
+            foreach ($items as $it) {
+                $l = (float) ($it['length_cm'] ?? 0);
+                $w = (float) ($it['width_cm'] ?? 0);
+                if ($l > $maxItemLen) $maxItemLen = $l;
+                if ($w > $maxItemWid) $maxItemWid = $w;
+            }
+        } else {
+            $maxItemLen = (float) ($order->length_cm ?? 0);
+            $maxItemWid = (float) ($order->width_cm ?? 0);
+        }
+
+        $remLen = max(10, round($sheetLen - $maxItemLen, 1));
+        $remWid = max(10, round($sheetWid - $maxItemWid, 1));
+
+        if ($remLen < 15 && $remWid >= 15) {
+            $offcutLen = $sheetLen;
+            $offcutWid = $remWid;
+        } elseif ($remWid < 15 && $remLen >= 15) {
+            $offcutLen = $remLen;
+            $offcutWid = $sheetWid;
+        } else {
+            $offcutLen = $remLen > 0 ? $remLen : round($sheetLen * 0.4, 1);
+            $offcutWid = $remWid > 0 ? $remWid : round($sheetWid * 0.6, 1);
+        }
+
+        $gtLower = strtolower($validated['glass_type']);
+        $rakLoc = 'Rak A01';
+        if (str_contains($gtLower, 'cermin') || str_contains($gtLower, 'mirror')) {
+            $rakLoc = 'Rak A02';
+        } elseif (str_contains($gtLower, 'tempered') || str_contains($gtLower, 'bevel')) {
+            $rakLoc = 'Rak B01';
+        } elseif (str_contains($gtLower, 'etsa') || str_contains($gtLower, 'sandblast')) {
+            $rakLoc = 'Rak B02';
+        }
+
+        $sheetsUsed = (int) $validated['sheets_used'];
+        $createdScraps = [];
+
+        for ($i = 0; $i < $sheetsUsed; $i++) {
+            $scrapCount = \App\Models\ScrapGlass::count() + 1;
+            $scrapCode = 'SCRAP-' . str_pad($scrapCount, 4, '0', STR_PAD_LEFT);
+            if (\App\Models\ScrapGlass::where('scrap_code', $scrapCode)->exists()) {
+                $scrapCode = 'SCRAP-' . str_pad((\App\Models\ScrapGlass::max('id') ?? 0) + 1 + $i, 4, '0', STR_PAD_LEFT);
+            }
+
+            \App\Models\ScrapGlass::create([
+                'scrap_code' => $scrapCode,
+                'glass_type' => $validated['glass_type'],
+                'length_cm' => $offcutLen,
+                'width_cm' => $offcutWid,
+                'rak_location' => $rakLoc,
+                'status' => 'Layak Pakai',
+            ]);
+
+            $createdScraps[] = $scrapCode;
+
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
+                'action_type' => 'AUTO_SCRAP_OFFCUT',
+                'target_user_name' => $scrapCode,
+                'description' => "Otomatis menyimpan sisa potongan lembaran {$validated['glass_type']} ({$offcutLen}×{$offcutWid} cm) ke {$rakLoc} dari pemotongan SPO-{$order->spo_number}.",
+                'created_at' => now(),
+            ]);
+        }
+
         $rawUsage = (array) ($order->raw_materials_used ?? []);
         $rawUsage[] = [
             'id' => time() . rand(100, 999),
@@ -1034,6 +1156,7 @@ class SypOperationalController extends Controller
             'notes' => $validated['notes'] ?? 'Pemotongan bahan lembaran baru Divisi HT',
             'recorded_by' => auth()->user()->name ?? 'Pekerja Divisi HT',
             'recorded_at' => now()->toDateTimeString(),
+            'auto_scraps' => $createdScraps,
         ];
 
         $order->raw_materials_used = $rawUsage;
@@ -1044,11 +1167,16 @@ class SypOperationalController extends Controller
             'admin_name' => auth()->user()->name ?? 'Pekerja Divisi HT',
             'action_type' => 'CATAT_BAHAN_KACA',
             'target_user_name' => $order->spo_number,
-            'description' => 'Mencatat pemakaian ' . $validated['sheets_used'] . ' lembar bahan kaca (' . $validated['glass_type'] . ') untuk SPO ' . $order->spo_number,
+            'description' => 'Mencatat pemakaian ' . $validated['sheets_used'] . ' lembar bahan kaca (' . $validated['glass_type'] . ') untuk SPO ' . $order->spo_number . (!empty($createdScraps) ? ' (Sisa potongan otomatis masuk ke Kaca Sisa: ' . implode(', ', $createdScraps) . ')' : ''),
             'created_at' => now(),
         ]);
 
-        return redirect()->back()->with('message', '✅ Pemakaian ' . $validated['sheets_used'] . ' lembar bahan kaca (' . $validated['glass_type'] . ') berhasil dicatat untuk SPO ' . $order->spo_number . '!');
+        $successMsg = '✅ Pemakaian ' . $validated['sheets_used'] . ' lembar bahan kaca (' . $validated['glass_type'] . ') berhasil dicatat untuk SPO ' . $order->spo_number . '!';
+        if (!empty($createdScraps)) {
+            $successMsg .= ' Sisa potongan kaca (' . implode(', ', $createdScraps) . ') otomatis masuk ke stok Kaca Sisa di ' . $rakLoc . '.';
+        }
+
+        return redirect()->back()->with('message', $successMsg);
     }
 
     /**

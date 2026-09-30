@@ -170,7 +170,7 @@ export default function NewOrderModal({
         (orderForm.custom_paid_amount !== '' && 
          orderForm.custom_paid_amount !== null && 
          orderForm.custom_paid_amount !== undefined && 
-         parseFloat(orderForm.custom_paid_amount) <= calcTotalPrice)
+         parseFloat(orderForm.custom_paid_amount) >= 0)
     );
 
     const isFormValid = isCustomerNameValid && isCustomerPhoneValid && isCustomerAddressValid && isDescriptionValid && isOrderDateValid && isDeadlineDateValid && isItemsValid && isPriorityValid && isPaymentValid && !hasScrapSizeError;
@@ -1292,9 +1292,6 @@ export default function NewOrderModal({
                                     value={formatRupiahInput(orderForm.custom_paid_amount)} 
                                     onChange={e => {
                                         let num = parseRupiahInput(e.target.value);
-                                        if (Number(num || 0) > calcTotalPrice) {
-                                            num = calcTotalPrice.toString();
-                                        }
                                         const pct = calcTotalPrice > 0 ? Math.round((Number(num || 0) / calcTotalPrice) * 100) : 50;
                                         setOrderForm(d => ({ ...d, custom_paid_amount: num, dp_percent: pct }));
                                     }} 
@@ -1340,19 +1337,41 @@ export default function NewOrderModal({
                             </div>
                         </div>
 
-                        {/* SISA PELUNASAN (COD) */}
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs shadow-xs">
-                            <span className="text-slate-500 text-[11px] font-semibold">Sisa Pelunasan (COD):</span>
-                            <span className="font-mono font-bold text-slate-800">
-                                {(() => {
-                                    const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                        ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                        : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                    const sisa = Math.max(0, calcTotalPrice - paid);
-                                    return sisa === 0 ? <span className="text-emerald-700 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`;
-                                })()}
-                            </span>
-                        </div>
+                        {/* SISA PELUNASAN (COD) & KEMBALIAN */}
+                        {(() => {
+                            const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
+                                ? (parseFloat(orderForm.custom_paid_amount) || 0)
+                                : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
+                            const sisa = Math.max(0, calcTotalPrice - paid);
+                            const kembalian = Math.max(0, paid - calcTotalPrice);
+
+                            return (
+                                <div className="space-y-2">
+                                    <div className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs shadow-xs">
+                                        <span className="text-slate-500 text-[11px] font-semibold">Sisa Pelunasan (COD):</span>
+                                        <span className="font-mono font-bold text-slate-800">
+                                            {sisa === 0 ? <span className="text-emerald-700 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`}
+                                        </span>
+                                    </div>
+                                    {kembalian > 0 && (
+                                        <div className="bg-emerald-50 border border-emerald-300 p-3 rounded-xl flex justify-between items-center text-xs shadow-xs animate-in fade-in text-emerald-900">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-emerald-900 font-bold block text-xs">Uang Kembalian Customer:</span>
+                                                    <span className="text-[10px] text-emerald-700 font-mono">Uang diterima melebihi total tagihan (LUNAS)</span>
+                                                </div>
+                                            </div>
+                                            <span className="font-mono font-black text-emerald-800 text-base">
+                                                Rp {kembalian.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* SECTION 7: RINCIAN STRUK ORDERAN */}
@@ -1556,7 +1575,7 @@ export default function NewOrderModal({
                                 {!isOrderDateValid && <li>Tanggal Order belum diisi</li>}
                                 {!isItemsValid && <li>Item Kaca belum lengkap (Jenis Kaca, Panjang, Lebar, Qty)</li>}
                                 {!isPriorityValid && <li>Nominal Fee Prioritas wajib diisi (&gt; 0)</li>}
-                                {!isPaymentValid && <li>Jumlah Uang Diterima / DP wajib diisi & tidak boleh melebihi Total Harga</li>}
+                                {!isPaymentValid && <li>Jumlah Uang Diterima / DP wajib diisi dengan angka valid</li>}
                             </ul>
                         </div>
                     )}

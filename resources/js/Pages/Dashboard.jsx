@@ -2313,6 +2313,18 @@ export default function Dashboard({
         }));
     };
 
+    const handleCancelRequestRestockStatus = (itemId) => {
+        setSheetGlasses(prev => prev.map(item => {
+            if (item.id === itemId) {
+                return {
+                    ...item,
+                    status: Number(item.qty || 0) <= Number(item.min_qty || 0) ? 'Menipis' : 'Aman'
+                };
+            }
+            return item;
+        }));
+    };
+
     const handleSearchChange = (val) => {
         setSearchTerm(val);
         setStockSearchTerm(val);
@@ -2423,7 +2435,12 @@ export default function Dashboard({
         else setActiveTab('orders');
     }, [userRole]);
 
-    // Sketch photo preview state
+    // Smooth scroll to top on active tab change
+    useEffect(() => {
+        if (mainContentRef.current) {
+            mainContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [activeTab]);
     const [sketchPreview, setSketchPreview] = useState(null);
 
     // Form Hooks (Inertia) - Multi Item Kaca Support
@@ -4231,6 +4248,7 @@ export default function Dashboard({
                                 handleOpenRestockModal={handleOpenRestockModal}
                                 handleOpenEditStockModal={handleOpenEditStockModal}
                                 handleRequestRestockStatus={handleRequestRestockStatus}
+                                handleCancelRequestRestockStatus={handleCancelRequestRestockStatus}
                                 setShowScrapModal={setShowScrapModal}
                                 handleDeleteStockItem={handleDeleteStockItem}
                                 handleOpenSketchLightbox={handleOpenSketchLightbox}

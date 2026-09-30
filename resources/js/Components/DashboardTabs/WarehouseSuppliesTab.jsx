@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
     Archive, Plus, Search, CheckCircle2, AlertTriangle, 
     ClipboardList, Send, FileText, Check, Clock, 
-    Box, MessageSquare, Package, User, Calendar
+    Box, MessageSquare, Package, User, Calendar,
+    Edit, Trash2, X
 } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import EditSupplyModal from '@/Components/Modals/EditSupplyModal';
 
 export default function WarehouseSuppliesTab({
     userRole,
@@ -21,6 +24,9 @@ export default function WarehouseSuppliesTab({
     handleCompleteRestockRequest,
     handleOpenSketchLightbox,
 }) {
+    const [showEditSupplyModal, setShowEditSupplyModal] = useState(false);
+    const [selectedSupplyToEdit, setSelectedSupplyToEdit] = useState(null);
+
     const needingRestockSupplies = warehouseSuppliesList.filter(s => s.status === 'Menipis' || s.status === 'Habis').length;
     const activeRestockRequests = supplyRestockRequests.filter(r => r.status !== 'Selesai Restok').length;
 
@@ -237,15 +243,39 @@ export default function WarehouseSuppliesTab({
                                             </span>
                                         </td>
                                         <td className="p-3 text-right">
-                                            {(userRole === 'admin_gudang' || userRole === 'owner') && (
-                                                <button
-                                                    onClick={() => handleOpenRequestRestockModal(s)}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ml-auto cursor-pointer ${s.status !== 'Aman' ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs'}`}
-                                                    title="Ajukan Restok Barang ini ke Admin Toko"
-                                                >
-                                                    <Send className="w-3.5 h-3.5" /> Ajukan Restok
-                                                </button>
-                                            )}
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                    <button
+                                                        onClick={() => handleOpenRequestRestockModal(s)}
+                                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${s.status !== 'Aman' ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs'}`}
+                                                        title="Ajukan Restok Barang ini ke Admin Toko"
+                                                    >
+                                                        <Send className="w-3.5 h-3.5" /> Restok
+                                                    </button>
+                                                )}
+                                                {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => { setSelectedSupplyToEdit(s); setShowEditSupplyModal(true); }}
+                                                            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-2 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                            title="Edit Perlengkapan"
+                                                        >
+                                                            <Edit className="w-3.5 h-3.5" /> Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm(`Yakin ingin menghapus perlengkapan "${s.name}"? Data yang dihapus tidak dapat dikembalikan.`)) {
+                                                                    router.delete(route('inventory.supplies.destroy', s.id), { preserveScroll: true });
+                                                                }
+                                                            }}
+                                                            className="bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 font-bold p-1.5 rounded-lg text-xs transition flex items-center justify-center cursor-pointer shadow-2xs"
+                                                            title="Hapus Perlengkapan"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -388,6 +418,20 @@ export default function WarehouseSuppliesTab({
                                                     </button>
                                                 )}
 
+                                                {req.status === 'Menunggu Persetujuan Admin Toko' && (userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (confirm(`Batalkan pengajuan restok "${req.item_name}"?`)) {
+                                                                router.delete(route('inventory.supplies.restock_cancel', req.id), { preserveScroll: true });
+                                                            }
+                                                        }}
+                                                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                                        title="Batalkan pengajuan restok barang ini (antisipasi salah klik)"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" /> Batal
+                                                    </button>
+                                                )}
+
                                                 {req.status === 'Disetujui & Dipesan' && (userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => handleCompleteRestockRequest(req)}
@@ -424,6 +468,16 @@ export default function WarehouseSuppliesTab({
                     </div>
                 </div>
             )}
+
+            {/* MODAL EDIT PERLENGKAPAN GUDANG */}
+            <EditSupplyModal
+                show={showEditSupplyModal}
+                onClose={() => {
+                    setShowEditSupplyModal(false);
+                    setSelectedSupplyToEdit(null);
+                }}
+                supply={selectedSupplyToEdit}
+            />
         </div>
     );
 }
