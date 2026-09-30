@@ -677,18 +677,32 @@ export default function ProductionTab({
                                         <div className="flex flex-wrap items-center gap-2 ml-auto">
                                             {isJobStarted ? (
                                                 <>
-                                                    <span className="text-xs text-slate-500 font-mono font-semibold hidden sm:inline-block">Teruskan ke:</span>
-                                                    <select
-                                                        value={activeCardNextDiv === 'QC_Ready' ? computeDefaultNextDiv(activeOngoingOrder) : activeCardNextDiv}
-                                                        onChange={(e) => setActiveCardNextDiv(e.target.value)}
-                                                        className="bg-white border border-slate-300 text-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:border-[#1b68b0] font-mono shadow-xs cursor-pointer"
-                                                    >
-                                                        <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
-                                                        <option value="divisi_ht">Teruskan ke Divisi Potong (HT & Bor)</option>
-                                                        <option value="divisi_gm">Teruskan ke Divisi GM (Gosok)</option>
-                                                        <option value="divisi_bv">Teruskan ke Divisi BV (Bevel)</option>
-                                                        <option value="divisi_etsa">Teruskan ke Divisi Etsa (Blur)</option>
-                                                    </select>
+                                                    {userRole === 'owner' ? (
+                                                        <>
+                                                            <span className="text-xs text-slate-500 font-mono font-semibold hidden sm:inline-block">Disposisi Owner:</span>
+                                                            <select
+                                                                value={activeCardNextDiv}
+                                                                onChange={(e) => setActiveCardNextDiv(e.target.value)}
+                                                                className="bg-white border border-slate-300 text-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:border-[#1b68b0] font-mono shadow-xs cursor-pointer"
+                                                            >
+                                                                <option value="auto">Alur Otomatis ({computeDefaultNextDiv(activeOngoingOrder) === 'QC_Ready' ? 'QC / Siap Kirim' : computeDefaultNextDiv(activeOngoingOrder).replace('divisi_', 'Divisi ').toUpperCase()})</option>
+                                                                <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
+                                                                <option value="divisi_ht">Teruskan ke Divisi Potong (HT & Bor)</option>
+                                                                <option value="divisi_gm">Teruskan ke Divisi GM (Gosok)</option>
+                                                                <option value="divisi_bv">Teruskan ke Divisi BV (Bevel)</option>
+                                                                <option value="divisi_etsa">Teruskan ke Divisi Etsa (Blur)</option>
+                                                            </select>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-[#1b68b0] px-3 py-1.5 rounded-xl text-xs font-bold font-mono">
+                                                            <span>Lanjut Otomatis:</span>
+                                                            <span className="bg-white px-2 py-0.5 rounded-md border border-blue-200 font-extrabold text-[#242222]">
+                                                                {computeDefaultNextDiv(activeOngoingOrder) === 'QC_Ready'
+                                                                    ? 'QC & Siap Kirim'
+                                                                    : computeDefaultNextDiv(activeOngoingOrder).replace('divisi_', 'Divisi ').toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                    )}
 
                                                     <button
                                                         type="button"
@@ -703,7 +717,9 @@ export default function ProductionTab({
                                                                     return;
                                                                 }
                                                             }
-                                                            const actualNext = activeCardNextDiv === 'QC_Ready' ? computeDefaultNextDiv(activeOngoingOrder) : activeCardNextDiv;
+                                                            const actualNext = userRole === 'owner'
+                                                                ? (activeCardNextDiv === 'auto' ? computeDefaultNextDiv(activeOngoingOrder) : activeCardNextDiv)
+                                                                : computeDefaultNextDiv(activeOngoingOrder);
                                                             handleFinishJobAction(activeOngoingOrder.id, actualNext);
                                                         }}
                                                         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#70b03c] hover:bg-[#5f9733] disabled:bg-slate-300 disabled:cursor-not-allowed shadow-xs hover:shadow-sm transition cursor-pointer"

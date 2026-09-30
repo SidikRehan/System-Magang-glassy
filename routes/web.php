@@ -41,6 +41,7 @@ Route::middleware(['auth'])->group(function () {
     // Scrap Glass & Rejection Operations
     Route::post('/scrap', [ScrapController::class, 'storeScrap'])->name('scrap.store');
     Route::post('/scrap/{id}/update', [ScrapController::class, 'updateScrap'])->name('scrap.update');
+    Route::delete('/scrap/{id}', [ScrapController::class, 'destroyScrap'])->name('scrap.destroy');
     Route::post('/orders/{id}/use-scrap', [SypOperationalController::class, 'useScrapRecommendation'])->name('orders.use_scrap');
     Route::post('/orders/{id}/reject-scrap', [SypOperationalController::class, 'rejectScrapRecommendation'])->name('orders.reject_scrap');
 
@@ -89,6 +90,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/inventory/supplies/{id}/use', [InventoryMasterController::class, 'useSupply'])->name('inventory.supplies.use');
     Route::post('/inventory/supplies/{id}/restock-request', [InventoryMasterController::class, 'requestRestockSupply'])->name('inventory.supplies.restock_request');
     Route::post('/inventory/supplies/restocks/{restockId}/approve', [InventoryMasterController::class, 'approveRestockSupply'])->name('inventory.supplies.restock_approve');
+    Route::delete('/inventory/supplies/restocks/{restockId}/cancel', [InventoryMasterController::class, 'cancelRestockSupply'])->name('inventory.supplies.restock_cancel');
     Route::delete('/inventory/supplies/{id}', [InventoryMasterController::class, 'destroySupply'])->name('inventory.supplies.destroy');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

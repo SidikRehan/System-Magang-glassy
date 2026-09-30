@@ -12,11 +12,11 @@ export default function ConfirmDeliveryModal({
     const isLunas = order.payment_status === 'Lunas';
     const sisaCod = Math.max(0, Number(order.total_price || 0) - Number(order.paid_amount || 0));
 
-    const [photoPreview, setPhotoPreview] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(order.proof_photo_path ? `/storage/${order.proof_photo_path}` : null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         proof_photo: null,
-        recipient_name: '',
+        recipient_name: order.recipient_name || '',
         mark_lunas: isLunas ? true : false,
     });
 
@@ -36,7 +36,7 @@ export default function ConfirmDeliveryModal({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!data.proof_photo) {
+        if (!data.proof_photo && !order.proof_photo_path) {
             alert('Mohon ambil/upload foto Surat Jalan yang telah ditandatangani penerima terlebih dahulu!');
             return;
         }
@@ -126,21 +126,22 @@ export default function ConfirmDeliveryModal({
                         <label className="block text-xs font-bold text-amber-900 flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
                                 <Camera className="w-4 h-4 text-amber-700" />
-                                <span>Foto Surat Jalan Tanda Tangan Penerima <span className="text-rose-500">*</span></span>
+                                <span>Foto Surat Jalan Tanda Tangan Penerima {order.proof_photo_path ? '(Tersedia)' : <span className="text-rose-500">*</span>}</span>
                             </span>
                             <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-300">
-                                WAJIB FOTO SJ
+                                {order.proof_photo_path ? 'BISA FOTO ULANG' : 'WAJIB FOTO SJ'}
                             </span>
                         </label>
 
                         <p className="text-[11px] text-amber-800 leading-relaxed">
-                            Ambil foto lembaran <strong>Surat Jalan</strong> asli yang sudah ditandatangani dan diberi nama jelas oleh penerima di lokasi pengiriman.
+                            Ambil foto lembaran <strong>Surat Jalan</strong> asli yang sudah ditandatangani dan diberi nama jelas oleh penerima di lokasi pengiriman (dapat langsung menggunakan kamera HP).
                         </p>
 
                         <input
                             type="file"
                             accept="image/*"
-                            required
+                            capture="environment"
+                            required={!order.proof_photo_path}
                             onChange={handlePhotoChange}
                             className="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#1b68b0] file:text-white hover:file:bg-[#15528c] cursor-pointer"
                         />
@@ -153,11 +154,13 @@ export default function ConfirmDeliveryModal({
                         {/* PREVIEW FOTO */}
                         {photoPreview && (
                             <div className="space-y-1.5 pt-1">
-                                <span className="text-[10px] text-slate-600 font-bold block">Pratinjau Foto Bukti SJ:</span>
+                                <span className="text-[10px] text-slate-600 font-bold block">
+                                    {data.proof_photo ? 'Pratinjau Foto Baru Siap Unggah:' : 'Foto Surat Jalan Tersimpan:'}
+                                </span>
                                 <div className="relative rounded-2xl overflow-hidden border border-slate-300 max-h-52 bg-slate-900 shadow-md">
                                     <img src={photoPreview} alt="Bukti Surat Jalan" className="w-full h-52 object-contain mx-auto" />
                                     <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow">
-                                        <Check className="w-3 h-3 text-white" /> Foto SJ Siap Diunggah
+                                        <Check className="w-3 h-3 text-white" /> {data.proof_photo ? 'Foto Baru Terpilih' : 'Foto Tersimpan di Sistem'}
                                     </div>
                                 </div>
                             </div>

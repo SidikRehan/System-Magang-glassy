@@ -250,22 +250,25 @@ export default function EditDraftOrderModal({
                             <h4 className="font-bold text-amber-900 text-xs flex items-center justify-between border-b border-amber-200/80 pb-2">
                                 <span className="flex items-center gap-2">
                                     <Bell className="w-4 h-4 text-amber-600" />
-                                    <span>Catatan / Alasan Perubahan Revisi (Untuk Divisi Produksi & Gudang)</span>
+                                    <span>
+                                        Catatan / Alasan Revisi ke-{(editingOrder.revision_count || 0) + 1} (Khusus Perubahan Terbaru)
+                                    </span>
                                 </span>
                                 {editingOrder.status === 'pengerjaan' && (
                                     <span className="text-[10px] bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full font-bold border border-rose-200 shadow-2xs">
-                                        *Wajib Diisi
+                                        *Wajib Diisi (Segar/Baru)
                                     </span>
                                 )}
                             </h4>
 
-                            {/* TAMPILKAN CATATAN REVISI SEBELUMNYA SEBAGAI REFERENSI (BACA SAJA) */}
+                            {/* TAMPILKAN CATATAN REVISI SEBELUMNYA HANYA SEBAGAI ARSIP SEJARAH (BACA SAJA) */}
                             {editingOrder.revision_notes && (
                                 <div className="bg-white/80 border border-amber-200 rounded-xl p-3 text-xs text-slate-800 space-y-1">
-                                    <span className="font-bold text-amber-900 text-[11px] block">
-                                        📜 Catatan Revisi Sebelumnya ({editingOrder.revision_count || 1}x Revisi):
+                                    <span className="font-bold text-amber-900 text-[11px] flex items-center justify-between">
+                                        <span>📜 Arsip Catatan Revisi Sebelumnya ({editingOrder.revision_count || 1}x):</span>
+                                        <span className="text-[10px] text-slate-400 font-normal italic">Hanya referensi arsip</span>
                                     </span>
-                                    <p className="text-slate-700 italic font-mono text-[11px] bg-amber-50/60 p-2 rounded-lg border border-amber-100/80">
+                                    <p className="text-slate-600 italic font-mono text-[11px] bg-amber-50/60 p-2 rounded-lg border border-amber-100/80">
                                         "{editingOrder.revision_notes}"
                                     </p>
                                 </div>
@@ -273,13 +276,13 @@ export default function EditDraftOrderModal({
 
                             <div>
                                 <label className="text-slate-700 block mb-1 font-semibold flex items-center justify-between">
-                                    <span>Catatan Alasan Perubahan Revisi Terbaru:</span>
+                                    <span>Deskripsi & Catatan Revisi Terbaru (Tanpa Catatan Lama):</span>
                                     {editingOrder.status === 'pengerjaan' && <span className="text-rose-600 font-extrabold text-[11px]">* Wajib Diisi Untuk Revisi Baru</span>}
                                 </label>
                                 <textarea 
                                     key={`revision_notes_${shakeKey}`}
                                     rows="2" 
-                                    placeholder="Masukkan catatan/alasan revisi TERBARU di sini... (Contoh: Konsumen minta ubah ukuran kaca dari 100x50 cm ke 100x60 cm)"
+                                    placeholder={`Masukkan catatan/instruksi revisi ke-${(editingOrder.revision_count || 0) + 1} TERBARU di sini... (Khusus revisi saat ini, tidak perlu menyertakan catatan revisi sebelumnya)`}
                                     value={orderForm.revision_notes || ''} 
                                     onChange={e => setOrderForm('revision_notes', e.target.value)} 
                                     className={getFieldClass(isRevisionNotesValid, "w-full bg-white border border-amber-300 rounded-xl p-2.5 text-slate-800 text-xs focus:border-amber-500 font-medium shadow-xs")}
@@ -291,7 +294,7 @@ export default function EditDraftOrderModal({
                                     </div>
                                 ) : (
                                     <span className="text-[10px] text-amber-800 block mt-1">
-                                        *Catatan revisi ini khusus untuk mencatat alasan perubahan terbaru dari konsumen dan akan dikirimkan ke Admin Gudang & Divisi Produksi.
+                                        *Catatan revisi ini khusus untuk mencatat perubahan TERBARU agar divisi produksi & gudang tidak membaca instruksi usang.
                                     </span>
                                 )}
                             </div>
@@ -1329,9 +1332,6 @@ export default function EditDraftOrderModal({
                                     value={formatRupiahInput(orderForm.custom_paid_amount)} 
                                     onChange={e => {
                                         let num = parseRupiahInput(e.target.value);
-                                        if (Number(num || 0) > calcTotalPrice) {
-                                            num = calcTotalPrice.toString();
-                                        }
                                         const pct = calcTotalPrice > 0 ? Math.round((Number(num || 0) / calcTotalPrice) * 100) : 50;
                                         setOrderForm(d => ({ ...d, custom_paid_amount: num, dp_percent: pct }));
                                     }} 
@@ -1377,19 +1377,41 @@ export default function EditDraftOrderModal({
                             </div>
                         </div>
 
-                        {/* SISA PELUNASAN (COD) */}
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs shadow-xs">
-                            <span className="text-slate-500 text-[11px] font-semibold">Sisa Pelunasan (COD):</span>
-                            <span className="font-mono font-bold text-slate-800">
-                                {(() => {
-                                    const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
-                                        ? (parseFloat(orderForm.custom_paid_amount) || 0)
-                                        : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
-                                    const sisa = Math.max(0, calcTotalPrice - paid);
-                                    return sisa === 0 ? <span className="text-emerald-700 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`;
-                                })()}
-                            </span>
-                        </div>
+                        {/* SISA PELUNASAN (COD) & KEMBALIAN */}
+                        {(() => {
+                            const paid = orderForm.custom_paid_amount !== '' && orderForm.custom_paid_amount !== null && orderForm.custom_paid_amount !== undefined
+                                ? (parseFloat(orderForm.custom_paid_amount) || 0)
+                                : Math.round(calcTotalPrice * ((orderForm.dp_percent || 50) / 100));
+                            const sisa = Math.max(0, calcTotalPrice - paid);
+                            const kembalian = Math.max(0, paid - calcTotalPrice);
+
+                            return (
+                                <div className="space-y-2">
+                                    <div className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs shadow-xs">
+                                        <span className="text-slate-500 text-[11px] font-semibold">Sisa Pelunasan (COD):</span>
+                                        <span className="font-mono font-bold text-slate-800">
+                                            {sisa === 0 ? <span className="text-emerald-700 font-extrabold">Rp 0 (LUNAS)</span> : `Rp ${sisa.toLocaleString()}`}
+                                        </span>
+                                    </div>
+                                    {kembalian > 0 && (
+                                        <div className="bg-emerald-50 border border-emerald-300 p-3 rounded-xl flex justify-between items-center text-xs shadow-xs animate-in fade-in text-emerald-900">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-emerald-900 font-bold block text-xs">Uang Kembalian Customer:</span>
+                                                    <span className="text-[10px] text-emerald-700 font-mono">Uang diterima melebihi total tagihan (LUNAS)</span>
+                                                </div>
+                                            </div>
+                                            <span className="font-mono font-black text-emerald-800 text-base">
+                                                Rp {kembalian.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* SECTION 7: RINCIAN STRUK ORDERAN */}

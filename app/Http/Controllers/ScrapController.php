@@ -78,4 +78,25 @@ class ScrapController extends Controller
 
         return redirect()->back()->with('message', '✅ Kaca Sisa ' . $scrap->scrap_code . ' berhasil diperbarui dan disimpan kembali di ' . $validated['rak_location'] . '!');
     }
+
+    /**
+     * Delete Scrap Glass
+     */
+    public function destroyScrap($id)
+    {
+        $scrap = ScrapGlass::findOrFail($id);
+        $code = $scrap->scrap_code;
+        $type = $scrap->glass_type;
+        $scrap->delete();
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Admin',
+            'action_type' => 'DELETE_SCRAP',
+            'target_user_name' => $code,
+            'description' => "Menghapus data kaca sisa {$code} ({$type}) dari rak storage.",
+        ]);
+
+        return redirect()->back()->with('message', "✅ Kaca Sisa {$code} ({$type}) berhasil dihapus dari rak storage!");
+    }
 }

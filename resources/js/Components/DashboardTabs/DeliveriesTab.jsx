@@ -610,7 +610,7 @@ export default function DeliveriesTab({
                                                                                     <CreditCard className="w-3 h-3" /> Setor COD
                                                                                 </button>
                                                                             )}
-                                                                            {!isFinished && (
+                                                                            {!isFinished ? (
                                                                                 <button
                                                                                     type="button"
                                                                                     onClick={() => {
@@ -623,10 +623,54 @@ export default function DeliveriesTab({
                                                                                         }
                                                                                     }}
                                                                                     className="bg-[#70b03c] hover:bg-[#5f9733] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-xs flex items-center gap-1 cursor-pointer"
-                                                                                    title="Upload foto Surat Jalan bertanda tangan penerima & konfirmasi terkirim"
+                                                                                    title="Ambil foto Surat Jalan & konfirmasi terkirim"
                                                                                 >
-                                                                                    <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Terkirim
+                                                                                    <Camera className="w-3.5 h-3.5" /> Foto & Konfirmasi Terkirim
                                                                                 </button>
+                                                                            ) : (
+                                                                                ord.proof_photo_path ? (
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        {handleOpenSketchLightbox && (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => handleOpenSketchLightbox('/storage/' + ord.proof_photo_path, ord.spo_number || ord.id, {
+                                                                                                    type: 'delivery_proof',
+                                                                                                    subtitle: `No. SPO: ${ord.spo_number || ord.id} • Penerima: ${ord.recipient_name || ord.customer_name || 'Pelanggan'}`,
+                                                                                                    badge: 'Bukti Serah Terima Surat Jalan',
+                                                                                                    description: `Dokumentasi foto fisik lembar surat jalan yang telah ditandatangani oleh penerima di lokasi pengantaran.`,
+                                                                                                    recipientName: ord.recipient_name || ord.customer_name,
+                                                                                                    customerName: ord.customer_name,
+                                                                                                    deliveredAt: ord.delivered_at,
+                                                                                                })}
+                                                                                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                                                title="Lihat Foto Bukti Surat Jalan"
+                                                                                            >
+                                                                                                <Camera className="w-3.5 h-3.5 text-emerald-600" /> Bukti SJ
+                                                                                            </button>
+                                                                                        )}
+                                                                                        {handleOpenConfirmDeliveryModal && (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => handleOpenConfirmDeliveryModal(ord)}
+                                                                                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                                                                                                title="Ambil ulang / ganti foto Surat Jalan"
+                                                                                            >
+                                                                                                <Camera className="w-3 h-3 text-slate-500" /> Foto Ulang
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    handleOpenConfirmDeliveryModal && (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleOpenConfirmDeliveryModal(ord)}
+                                                                                            className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                                            title="Ambil foto Surat Jalan bertanda tangan"
+                                                                                        >
+                                                                                            <Camera className="w-3.5 h-3.5 text-amber-600" /> + Foto Bukti SJ
+                                                                                        </button>
+                                                                                    )
+                                                                                )
                                                                             )}
                                                                             <button
                                                                                 onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
@@ -755,22 +799,47 @@ export default function DeliveriesTab({
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                                                                            {ord.proof_photo_path && handleOpenSketchLightbox && (
-                                                                                <button
-                                                                                    onClick={() => handleOpenSketchLightbox('/storage/' + ord.proof_photo_path, ord.spo_number || ord.id, {
-                                                                                        type: 'delivery_proof',
-                                                                                        subtitle: `No. SPO: ${ord.spo_number || ord.id} • Penerima: ${ord.recipient_name || ord.customer_name || 'Pelanggan'}`,
-                                                                                        badge: 'Bukti Serah Terima Surat Jalan',
-                                                                                        description: `Dokumentasi foto fisik lembar surat jalan yang telah ditandatangani dan/atau distempel oleh pihak penerima/pelanggan di alamat pengantaran. Berfungsi sebagai bukti sah serah terima barang telah tuntas.`,
-                                                                                        recipientName: ord.recipient_name || ord.customer_name,
-                                                                                        customerName: ord.customer_name,
-                                                                                        deliveredAt: ord.delivered_at,
-                                                                                    })}
-                                                                                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                                                                    title="Lihat Foto Surat Jalan Tanda Tangan Penerima"
-                                                                                >
-                                                                                    <Camera className="w-3.5 h-3.5 text-emerald-600" /> Bukti SJ
-                                                                                </button>
+                                                                            {ord.proof_photo_path ? (
+                                                                                <div className="flex items-center gap-1">
+                                                                                    {handleOpenSketchLightbox && (
+                                                                                        <button
+                                                                                            onClick={() => handleOpenSketchLightbox('/storage/' + ord.proof_photo_path, ord.spo_number || ord.id, {
+                                                                                                type: 'delivery_proof',
+                                                                                                subtitle: `No. SPO: ${ord.spo_number || ord.id} • Penerima: ${ord.recipient_name || ord.customer_name || 'Pelanggan'}`,
+                                                                                                badge: 'Bukti Serah Terima Surat Jalan',
+                                                                                                description: `Dokumentasi foto fisik lembar surat jalan yang telah ditandatangani dan/atau distempel oleh pihak penerima/pelanggan di alamat pengantaran. Berfungsi sebagai bukti sah serah terima barang telah tuntas.`,
+                                                                                                recipientName: ord.recipient_name || ord.customer_name,
+                                                                                                customerName: ord.customer_name,
+                                                                                                deliveredAt: ord.delivered_at,
+                                                                                            })}
+                                                                                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                                            title="Lihat Foto Surat Jalan Tanda Tangan Penerima"
+                                                                                        >
+                                                                                            <Camera className="w-3.5 h-3.5 text-emerald-600" /> Bukti SJ
+                                                                                        </button>
+                                                                                    )}
+                                                                                    {handleOpenConfirmDeliveryModal && (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleOpenConfirmDeliveryModal(ord)}
+                                                                                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                                                                                            title="Ambil ulang / ganti foto Surat Jalan"
+                                                                                        >
+                                                                                            <Camera className="w-3 h-3 text-slate-500" /> Foto Ulang
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : (
+                                                                                handleOpenConfirmDeliveryModal && (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleOpenConfirmDeliveryModal(ord)}
+                                                                                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                                        title="Ambil / Upload Bukti Foto Surat Jalan"
+                                                                                    >
+                                                                                        <Camera className="w-3.5 h-3.5 text-amber-600" /> + Ambil Foto SJ
+                                                                                    </button>
+                                                                                )
                                                                             )}
                                                                             <button
                                                                                 onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}

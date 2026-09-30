@@ -3,9 +3,11 @@ import {
     Boxes, Plus, Search, Eye, EyeOff, RefreshCw, 
     MessageSquare, Edit, Trash2, Calendar, Scissors, 
     Layers, CheckCircle2, AlertTriangle, Clock, ShieldCheck, 
-    Lock, Check, Package, Send, ZoomIn, X
+    Lock, Check, Package, Send, ZoomIn, X, Loader2
 } from 'lucide-react';
+import { router } from '@inertiajs/react';
 import { isMatchSearch } from '@/Utils/dashboardHelpers';
+import EditScrapModal from '@/Components/Modals/EditScrapModal';
 
 export default function ScrapTab({
     userRole,
@@ -28,12 +30,15 @@ export default function ScrapTab({
     handleOpenRestockModal,
     handleOpenEditStockModal,
     handleRequestRestockStatus,
+    handleCancelRequestRestockStatus,
     setShowScrapModal,
     handleDeleteStockItem,
     handleOpenSketchLightbox = () => {},
 }) {
     // Local search state for Scrap Glass (Kaca Sisa)
     const [scrapSearchTerm, setScrapSearchTerm] = useState('');
+    const [showEditScrapModal, setShowEditScrapModal] = useState(false);
+    const [selectedScrapToEdit, setSelectedScrapToEdit] = useState(null);
 
     // Filtered Kaca Sisa List
     const filteredScrapList = initialScrap.filter(s => {
@@ -149,8 +154,8 @@ export default function ScrapTab({
                     </div>
 
                     {/* BUTTON TAMBAH BARANG & RESTOK UMUM */}
-                    {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
-                        <div className="flex flex-wrap items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button
                                 onClick={() => setShowAddStockModal(true)}
                                 className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
@@ -158,6 +163,8 @@ export default function ScrapTab({
                                 <Plus className="w-4 h-4" />
                                 <span>Tambah Jenis Barang Baru</span>
                             </button>
+                        )}
+                        {(userRole === 'admin_toko' || userRole === 'owner') && (
                             <button
                                 onClick={() => handleOpenRestockModal(null)}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
@@ -166,8 +173,8 @@ export default function ScrapTab({
                                 <RefreshCw className="w-4 h-4" />
                                 <span>Restock Kaca (Pilih Barang)</span>
                             </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {/* TABLE HEADER & SEARCH BAR */}
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
@@ -378,7 +385,46 @@ export default function ScrapTab({
                                                                 >
                                                                     <RefreshCw className="w-3.5 h-3.5" /> Restock
                                                                 </button>
+                                                            </>
+                                                        )}
 
+                                                        {(userRole === 'admin_gudang' || userRole.startsWith('divisi_')) && (
+                                                            item.status === 'Pengajuan Proses Restock' ? (
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-bold">
+                                                                        Menunggu Toko
+                                                                    </span>
+                                                                    {(userRole === 'admin_gudang' || userRole === 'owner') && handleCancelRequestRestockStatus && (
+                                                                        <button
+                                                                            onClick={() => handleCancelRequestRestockStatus(item.id)}
+                                                                            className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-2 py-1 rounded-md text-[10px] transition cursor-pointer"
+                                                                            title="Batalkan pengajuan restok (antisipasi salah klik)"
+                                                                        >
+                                                                            Batal
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ) : item.status === 'Sedang Dipesan Supplier' ? (
+                                                                <button
+                                                                    onClick={() => handleOpenRestockModal(item)}
+                                                                    className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                    title="Validasi kedatangan fisik lembaran kaca"
+                                                                >
+                                                                    <Package className="w-3.5 h-3.5" /> Terima Fisik
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleRequestRestockStatus(item.id)}
+                                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                                    title="Ajukan kebutuhan restock barang ini"
+                                                                >
+                                                                    <Send className="w-3.5 h-3.5" /> Ajukan Stok
+                                                                </button>
+                                                            )
+                                                        )}
+
+                                                        {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                                                            <>
                                                                 <button
                                                                     onClick={() => handleOpenEditStockModal(item)}
                                                                     className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
@@ -397,30 +443,6 @@ export default function ScrapTab({
                                                                     </button>
                                                                 )}
                                                             </>
-                                                        )}
-
-                                                        {(userRole === 'admin_gudang' || userRole.startsWith('divisi_')) && (
-                                                            item.status === 'Pengajuan Proses Restock' ? (
-                                                                <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-bold">
-                                                                    Menunggu Toko
-                                                                </span>
-                                                            ) : item.status === 'Sedang Dipesan Supplier' ? (
-                                                                <button
-                                                                    onClick={() => handleOpenRestockModal(item)}
-                                                                    className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                                                    title="Validasi kedatangan fisik lembaran kaca"
-                                                                >
-                                                                    <Package className="w-3.5 h-3.5" /> Terima Fisik
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => handleRequestRestockStatus(item.id)}
-                                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                                                    title="Ajukan kebutuhan restock barang ini"
-                                                                >
-                                                                    <Send className="w-3.5 h-3.5" /> Ajukan Stok
-                                                                </button>
-                                                            )
                                                         )}
                                                     </div>
                                                 </td>
@@ -488,12 +510,13 @@ export default function ScrapTab({
                                         <th className="p-3 whitespace-nowrap">Ukuran (P x L)</th>
                                         <th className="p-3 whitespace-nowrap">Lokasi Rak Storage</th>
                                         <th className="p-3 text-center whitespace-nowrap">Status</th>
+                                        <th className="p-3 text-right whitespace-nowrap">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {filteredScrapList.length === 0 ? (
                                         <tr>
-                                            <td colSpan="5" className="p-8 text-center text-slate-400 text-xs italic">
+                                            <td colSpan="6" className="p-8 text-center text-slate-400 text-xs italic">
                                                 {scrapSearchTerm 
                                                     ? `Tidak ditemukan kaca sisa dengan kata kunci "${scrapSearchTerm}"` 
                                                     : 'Belum ada data kaca sisa potongan di rak storage.'}
@@ -515,6 +538,32 @@ export default function ScrapTab({
                                                         {s.status}
                                                     </span>
                                                 </td>
+                                                <td className="p-3 text-right whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner' || userRole === 'divisi_ht') && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => { setSelectedScrapToEdit(s); setShowEditScrapModal(true); }}
+                                                                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-2 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                                    title="Edit Ukuran & Lokasi Kaca Sisa"
+                                                                >
+                                                                    <Edit className="w-3.5 h-3.5" /> Edit
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (confirm(`Yakin ingin menghapus data kaca sisa ${s.scrap_code} (${s.glass_type})? Data yang dihapus tidak dapat dikembalikan.`)) {
+                                                                            router.delete(route('scrap.destroy', s.id), { preserveScroll: true });
+                                                                        }
+                                                                    }}
+                                                                    className="bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 font-bold p-1.5 rounded-lg text-xs transition flex items-center justify-center cursor-pointer shadow-2xs"
+                                                                    title="Hapus Kaca Sisa"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -524,6 +573,16 @@ export default function ScrapTab({
                     </div>
                 </div>
             )}
+
+            {/* MODAL EDIT KACA SISA */}
+            <EditScrapModal
+                show={showEditScrapModal}
+                onClose={() => {
+                    setShowEditScrapModal(false);
+                    setSelectedScrapToEdit(null);
+                }}
+                scrap={selectedScrapToEdit}
+            />
             </div>
         </div>
     );
