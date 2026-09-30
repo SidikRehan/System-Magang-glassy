@@ -163,7 +163,7 @@ export default function Dashboard({
     };
 
     const [activeTab, setActiveTab] = useState(
-        userRole === 'driver' ? 'deliveries' :
+        (userRole === 'driver' || userRole === 'satpam') ? 'deliveries' :
             (userRole.startsWith('divisi_') || userRole === 'admin_gudang') ? 'production' :
                 userRole === 'admin_toko' ? 'orders' :
                     userRole === 'hrd' ? 'employees' :
@@ -3268,7 +3268,9 @@ export default function Dashboard({
         divisi_gm: 'Divisi GM (Gosok)',
         divisi_bv: 'Divisi BV (Bevel)',
         divisi_etsa: 'Divisi Etsa (Blur)',
+        divisi_bor: 'Divisi Bor (Drilling)',
         driver: 'Armada Pengiriman (Driver)',
+        satpam: 'Satpam (Keamanan Gerbang)',
         owner: 'Owner & Direksi Utama',
         hrd: 'HRD (Personalia & SDM)',
         admin_finance: 'Finance & Akuntansi',
@@ -3546,12 +3548,13 @@ export default function Dashboard({
         if (procs.length === 0) procs = ['HT'];
         if (!procs.includes('HT')) procs.unshift('HT');
 
-        // Always sort procs according to physical factory sequence: HT (Potong) -> GM -> BV -> Etsa
-        const fixedOrder = ['HT', 'GM', 'BV', 'Etsa'];
+        // Always sort procs according to physical factory sequence: HT (Potong) -> Bor -> GM -> BV -> Etsa
+        const fixedOrder = ['HT', 'Bor', 'GM', 'BV', 'Etsa'];
         procs.sort((a, b) => fixedOrder.indexOf(a) - fixedOrder.indexOf(b));
 
         const divInfo = {
             'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong (HT & Bor)', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
+            'Bor': { key: 'divisi_bor', code: 'Bor', name: 'Divisi Bor (Drilling)', icon: '⚡', bg: 'bg-orange-500/10 text-orange-300 border-orange-500/30' },
             'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', icon: '✨', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
             'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', icon: '💎', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
             'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', icon: '🌫️', bg: 'bg-purple-500/10 text-purple-300 border-purple-500/30' }
@@ -3722,7 +3725,7 @@ export default function Dashboard({
                         )}
                     </button>
                 )}
-                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver' || userRole === 'satpam') && (
                     <button
                         onClick={() => setActiveTab('deliveries')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'deliveries' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3982,7 +3985,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver' || userRole === 'satpam') && (
                             <button onClick={() => setActiveTab('deliveries')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <div className="flex items-center gap-3">
                                     <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengiriman</span>

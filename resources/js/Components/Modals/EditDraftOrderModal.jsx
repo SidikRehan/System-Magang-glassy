@@ -751,9 +751,14 @@ export default function EditDraftOrderModal({
                                                                                                 <div className="space-y-0.5">
                                                                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                                                                         <span className="text-amber-800 font-mono font-bold">▪ {scrapCode}</span>
-                                                                                                        <span className="text-slate-500 font-mono">({m.scrap.rak_location})</span>
+                                                                                                        <span className="bg-blue-50 text-[#1b68b0] px-1.5 py-0.5 rounded text-[10px] font-semibold border border-blue-200">
+                                                                                                            Jenis: {m.scrap.glass_type || item.glass_type}
+                                                                                                        </span>
                                                                                                         <span className="bg-white text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-200">
-                                                                                                            Ukuran {m.scrap.length_cm} x {m.scrap.width_cm} cm
+                                                                                                            Ukuran: {m.scrap.length_cm} x {m.scrap.width_cm} cm
+                                                                                                        </span>
+                                                                                                        <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-mono border border-amber-200 font-bold">
+                                                                                                            Rak: {m.scrap.rak_location}
                                                                                                         </span>
                                                                                                     </div>
                                                                                                     <div className="font-mono text-slate-500 text-[10px]">

@@ -1036,22 +1036,26 @@ export default function DeliveriesTab({
                                                     )}
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5 justify-end">
-                                                    <button
-                                                        onClick={() => handleOpenEditTripModal(trip)}
-                                                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                                        title="Edit Penugasan Supir & Mobil Trip Ini"
-                                                    >
-                                                        <Edit3 className="w-3.5 h-3.5 text-amber-600" /> Edit Trip
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedBatchWaybillTrip(trip);
-                                                            setShowBatchWaybillModal(true);
-                                                        }}
-                                                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                                    >
-                                                        <Printer className="w-3.5 h-3.5 text-[#1b68b0]" /> Cetak Semua SJ
-                                                    </button>
+                                                    {userRole !== 'satpam' && (
+                                                        <button
+                                                            onClick={() => handleOpenEditTripModal(trip)}
+                                                            className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                            title="Edit Penugasan Supir & Mobil Trip Ini"
+                                                        >
+                                                            <Edit3 className="w-3.5 h-3.5 text-amber-600" /> Edit Trip
+                                                        </button>
+                                                    )}
+                                                    {userRole !== 'satpam' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedBatchWaybillTrip(trip);
+                                                                setShowBatchWaybillModal(true);
+                                                            }}
+                                                            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                        >
+                                                            <Printer className="w-3.5 h-3.5 text-[#1b68b0]" /> Cetak Semua SJ
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => {
                                                             setSelectedTripDataForModal(trip);
@@ -1078,6 +1082,20 @@ export default function DeliveriesTab({
                                                     >
                                                         <ClipboardList className="w-3.5 h-3.5 text-[#70b03c]" /> Gate Pass
                                                     </button>
+                                                    {(userRole === 'satpam' || userRole === 'owner') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                if(confirm('Apakah Anda yakin jumlah fisik barang & kaca di armada sudah sesuai dengan Surat Gate Pass?')) {
+                                                                    router.post(`/deliveries/${trip.trip_code}/gate-check`, {}, { preserveScroll: true });
+                                                                }
+                                                            }}
+                                                            disabled={trip.deliveries?.[0]?.delivery_status === 'Dalam Pengiriman' || trip.deliveries?.[0]?.delivery_status === 'Terkirim'}
+                                                            className="bg-[#70b03c] hover:bg-[#5f9733] text-white border border-[#70b03c] px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            <ShieldCheck className="w-3.5 h-3.5 text-white" /> 
+                                                            {trip.deliveries?.[0]?.delivery_status === 'Dalam Pengiriman' || trip.deliveries?.[0]?.delivery_status === 'Terkirim' ? 'Telah Keluar Gerbang' : 'Validasi Keluar'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -1123,6 +1141,7 @@ export default function DeliveriesTab({
                     </div>
 
                     {/* TABEL PILIHAN SPO & ALAMAT PENGIRIMAN DENGAN FORM PENUGASAN MOBIL TERPADU */}
+                    {userRole !== 'satpam' && (
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs">
                         {/* HEADER TABEL & PENCARIAN */}
                         <div className="flex flex-wrap justify-between items-start gap-4 border-b border-slate-100 pb-4">
@@ -1736,6 +1755,7 @@ export default function DeliveriesTab({
                             </table>
                         </div>
                     </div>
+                    )}
 
                     {/* MODAL PENUGASAN MOBIL PER SPO ORDER */}
                     <AssignVehicleModal

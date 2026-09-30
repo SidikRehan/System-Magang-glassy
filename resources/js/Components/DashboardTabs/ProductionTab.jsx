@@ -18,6 +18,7 @@ import {
     Clock,
     Eye,
     ArrowRight,
+    Zap,
     Search,
     Calendar,
     Phone,
@@ -175,6 +176,7 @@ export default function ProductionTab({
                     {[
                         { key: 'all', label: 'Semua Active', icon: Layers, count: initialOrders.filter(o => checkOrderDivisi(o, 'all')).length },
                         { key: 'divisi_ht', label: 'Divisi Potong (HT)', icon: Scissors, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_ht')).length },
+                        { key: 'divisi_bor', label: 'Divisi Bor (Drilling)', icon: Zap, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_bor')).length },
                         { key: 'divisi_gm', label: 'Divisi GM (Gosok)', icon: Sparkles, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_gm')).length },
                         { key: 'divisi_bv', label: 'Divisi BV (Bevel)', icon: Gem, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_bv')).length },
                         { key: 'divisi_etsa', label: 'Divisi Etsa (Blur)', icon: Paintbrush, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_etsa')).length },
@@ -687,7 +689,8 @@ export default function ProductionTab({
                                                             >
                                                                 <option value="auto">Alur Otomatis ({computeDefaultNextDiv(activeOngoingOrder) === 'QC_Ready' ? 'QC / Siap Kirim' : computeDefaultNextDiv(activeOngoingOrder).replace('divisi_', 'Divisi ').toUpperCase()})</option>
                                                                 <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
-                                                                <option value="divisi_ht">Teruskan ke Divisi Potong (HT & Bor)</option>
+                                                                <option value="divisi_ht">Teruskan ke Divisi Potong (HT)</option>
+                                                                <option value="divisi_bor">Teruskan ke Divisi Bor (Drilling)</option>
                                                                 <option value="divisi_gm">Teruskan ke Divisi GM (Gosok)</option>
                                                                 <option value="divisi_bv">Teruskan ke Divisi BV (Bevel)</option>
                                                                 <option value="divisi_etsa">Teruskan ke Divisi Etsa (Blur)</option>

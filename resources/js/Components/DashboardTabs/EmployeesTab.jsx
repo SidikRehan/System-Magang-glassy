@@ -133,7 +133,9 @@ export default function EmployeesTab({
                                 <option value="divisi_gm">Divisi GM ({employeesList.filter(u => u.role === 'divisi_gm').length})</option>
                                 <option value="divisi_bv">Divisi BV ({employeesList.filter(u => u.role === 'divisi_bv').length})</option>
                                 <option value="divisi_etsa">Divisi Etsa ({employeesList.filter(u => u.role === 'divisi_etsa').length})</option>
+                                <option value="divisi_bor">Divisi Bor ({employeesList.filter(u => u.role === 'divisi_bor').length})</option>
                                 <option value="admin_gudang">Admin Gudang ({employeesList.filter(u => u.role === 'admin_gudang').length})</option>
+                                <option value="satpam">Satpam / Gate Checker ({employeesList.filter(u => u.role === 'satpam').length})</option>
                                 <option value="admin_toko">Admin Toko ({employeesList.filter(u => u.role === 'admin_toko').length})</option>
                                 <option value="hrd">HRD Personalia ({employeesList.filter(u => u.role === 'hrd').length})</option>
                                 <option value="admin_finance">Finance & Akuntansi ({employeesList.filter(u => u.role === 'admin_finance' || u.role === 'finance').length})</option>

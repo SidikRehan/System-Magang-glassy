@@ -676,7 +676,7 @@ class SypOperationalController extends Controller
         }
 
         // Active production and internal prep divisions mean it is still being worked on
-        $workingDivisions = ['admin_toko', 'admin_gudang', 'divisi_ht', 'divisi_gm', 'divisi_bv', 'divisi_etsa'];
+        $workingDivisions = ['admin_toko', 'admin_gudang', 'divisi_ht', 'divisi_gm', 'divisi_bv', 'divisi_etsa', 'divisi_bor'];
         if (in_array($order->current_division, $workingDivisions)) {
             return false;
         }
@@ -699,6 +699,42 @@ class SypOperationalController extends Controller
         }
 
         return $order->status === 'pengiriman' || in_array($order->current_division, ['QC_Ready', 'pengiriman']);
+    }
+
+    /**
+     * Satpam / Gate Checker - Memverifikasi fisik barang dan mengizinkan truk keluar (Gate Pass Approved)
+     */
+    public function gateCheckDelivery(Request $request, $tripCode)
+    {
+        $userRole = auth()->user()->role ?? '';
+        if ($userRole !== 'satpam' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Hanya Satpam / Gate Checker yang berhak memvalidasi Surat Barang Keluar di gerbang pabrik!');
+        }
+
+        $deliveries = \App\Models\Delivery::where('trip_code', $tripCode)->get();
+        if ($deliveries->isEmpty()) {
+            return redirect()->back()->withErrors(['message' => 'Surat Barang Keluar tidak ditemukan!']);
+        }
+
+        foreach ($deliveries as $del) {
+            $del->gate_checked_by = auth()->id();
+            $del->gate_checked_at = now();
+            // Automatically mark as pengiriman/in transit if it was pending at gate
+            $del->delivery_status = 'Dalam Pengiriman';
+            $del->save();
+            
+            // Sync status ke order terkait
+            if ($del->order) {
+                $order = $del->order;
+                if ($order->status !== 'selesai' && $order->status !== 'pengiriman') {
+                    $order->status = 'pengiriman';
+                    $order->current_division = 'driver';
+                    $order->save();
+                }
+            }
+        }
+
+        return redirect()->back()->with('message', '✅ [GATE PASS APPROVED] Truk (Kode Trip: ' . $tripCode . ') telah diperiksa Satpam dan dizinkan meninggalkan pabrik.');
     }
 
     /**
@@ -764,7 +800,7 @@ class SypOperationalController extends Controller
                     'driver_name' => $driverName,
                     'vehicle_plate' => $vehiclePlate,
                     'waybill_color' => $waybillColor,
-                    'delivery_status' => 'Dalam Pengiriman',
+                    'delivery_status' => 'Menunggu Cek Satpam',
                     'delivery_date' => $deliveryDate,
                     'notes' => $notes,
                 ]
@@ -976,7 +1012,7 @@ class SypOperationalController extends Controller
             $curKey = strtoupper(str_replace('divisi_', '', $ord->current_division ?? ''));
             $curIdx = array_search($curKey, $reqCodes);
             if ($curIdx !== false && $curIdx < count($reqCodes) - 1) {
-                $map = ['HT' => 'divisi_ht', 'GM' => 'divisi_gm', 'BV' => 'divisi_bv', 'ETSA' => 'divisi_etsa'];
+                $map = ['HT' => 'divisi_ht', 'GM' => 'divisi_gm', 'BV' => 'divisi_bv', 'ETSA' => 'divisi_etsa', 'BOR' => 'divisi_bor'];
                 $nextKey = $reqCodes[$curIdx + 1];
                 return $map[$nextKey] ?? 'QC_Ready';
             }
@@ -1605,7 +1641,7 @@ class SypOperationalController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner,hrd,finance',
+            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,divisi_bor,driver,owner,hrd,finance,satpam',
             'password' => 'required|string|min:6',
         ]);
 
@@ -1654,7 +1690,7 @@ class SypOperationalController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
-            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,driver,owner,hrd,finance',
+            'role' => 'required|string|in:admin_toko,admin_gudang,divisi_ht,divisi_gm,divisi_bv,divisi_etsa,divisi_bor,driver,owner,hrd,finance,satpam',
             'password' => 'nullable|string|min:6',
         ]);
 

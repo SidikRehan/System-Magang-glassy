@@ -16,7 +16,8 @@ import {
     TrendingUp, 
     Users, 
     CreditCard, 
-    Zap 
+    Zap,
+    ShieldCheck
 } from 'lucide-react';
 
 export default function Login({ status, canResetPassword }) {
@@ -41,10 +42,12 @@ export default function Login({ status, canResetPassword }) {
     const demoAccounts = [
         { label: 'Admin Toko', email: 'toko@sypglass.co.id', icon: Store, iconColor: 'text-[#1b68b0]' },
         { label: 'Admin Gudang', email: 'gudang@sypglass.co.id', icon: Warehouse, iconColor: 'text-slate-600' },
+        { label: 'Satpam / Gate Checker', email: 'satpam@sypglass.co.id', icon: ShieldCheck, iconColor: 'text-slate-800' },
         { label: 'Divisi HT', email: 'ht@sypglass.co.id', icon: Scissors, iconColor: 'text-amber-600' },
         { label: 'Divisi GM', email: 'gm@sypglass.co.id', icon: Sparkles, iconColor: 'text-blue-500' },
         { label: 'Divisi BV', email: 'bv@sypglass.co.id', icon: Gem, iconColor: 'text-indigo-500' },
         { label: 'Divisi Etsa', email: 'etsa@sypglass.co.id', icon: Wind, iconColor: 'text-cyan-600' },
+        { label: 'Divisi Bor', email: 'bor@sypglass.co.id', icon: Zap, iconColor: 'text-orange-500' },
         { label: 'Supir 1 (Pak Budi)', email: 'driver@sypglass.co.id', icon: Truck, iconColor: 'text-emerald-600' },
         { label: 'Supir 2 (Pak Mulyadi)', email: 'mulyadi.driver@sypglass.co.id', icon: Truck, iconColor: 'text-emerald-600' },
         { label: 'Supir 3 (Pak Asep)', email: 'asep.driver@sypglass.co.id', icon: Truck, iconColor: 'text-emerald-600' },

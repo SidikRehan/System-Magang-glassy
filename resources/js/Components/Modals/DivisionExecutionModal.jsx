@@ -1995,7 +1995,8 @@ export default function DivisionExecutionModal({
                                             className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:border-[#1b68b0] focus:bg-white font-mono shadow-xs cursor-pointer"
                                         >
                                             <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
-                                            <option value="divisi_ht">Teruskan ke Divisi Potong (HT & Bor)</option>
+                                            <option value="divisi_ht">Teruskan ke Divisi Potong (HT)</option>
+                                            <option value="divisi_bor">Teruskan ke Divisi Bor (Drilling)</option>
                                             <option value="divisi_gm">Teruskan ke Divisi GM (Gosok Mesin)</option>
                                             <option value="divisi_bv">Teruskan ke Divisi BV (Beveling)</option>
                                             <option value="divisi_etsa">Teruskan ke Divisi Etsa (Sandblast Blur)</option>

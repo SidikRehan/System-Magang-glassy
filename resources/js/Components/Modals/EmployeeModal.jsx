@@ -144,7 +144,9 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, 
                             <option value="divisi_gm">Staff Divisi GM (Gosok Mesin/Slepan)</option>
                             <option value="divisi_bv">Staff Divisi BV (Bevel Dekoratif)</option>
                             <option value="divisi_etsa">Staff Divisi Etsa (Blur/Sandblasting)</option>
+                            <option value="divisi_bor">Staff Divisi Bor (Drilling Kaca)</option>
                             <option value="admin_gudang">Admin Gudang & Logistik</option>
+                            <option value="satpam">Satpam / Keamanan Gerbang</option>
                             <option value="admin_toko">Admin Toko & Kasir</option>
                             {isOwner && (
                                 <>
