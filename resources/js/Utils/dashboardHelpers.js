@@ -206,9 +206,13 @@ export const getOrderRelevantDivisions = (o) => {
 
 export const computeDefaultNextDiv = (ord) => {
     if (!ord) return 'QC_Ready';
-    const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
+    const fixedSeq = ['HT', 'GM', 'BV', 'ETSA', 'BOR'];
     const reqCodes = ['HT'];
-    const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
+    const addC = (p) => { 
+        if (!p) return;
+        const code = p.toUpperCase();
+        if (['GM', 'BV', 'ETSA', 'BOR'].includes(code) && !reqCodes.includes(code)) reqCodes.push(code); 
+    };
     if (Array.isArray(ord.processes)) ord.processes.forEach(addC);
     if (Array.isArray(ord.items)) {
         ord.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
@@ -217,7 +221,7 @@ export const computeDefaultNextDiv = (ord) => {
     const curKey = (ord.current_division || '').replace('divisi_', '').toUpperCase();
     const curIdx = reqCodes.indexOf(curKey);
     if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
-        const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
+        const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'ETSA': 'divisi_etsa', 'BOR': 'divisi_bor' };
         return map[reqCodes[curIdx + 1]] || 'QC_Ready';
     }
     return 'QC_Ready';

@@ -1337,6 +1337,9 @@ export default function EditDraftOrderModal({
                                     value={formatRupiahInput(orderForm.custom_paid_amount)} 
                                     onChange={e => {
                                         let num = parseRupiahInput(e.target.value);
+                                        if (calcTotalPrice > 0 && Number(num) > calcTotalPrice) {
+                                            num = calcTotalPrice;
+                                        }
                                         const pct = calcTotalPrice > 0 ? Math.round((Number(num || 0) / calcTotalPrice) * 100) : 50;
                                         setOrderForm(d => ({ ...d, custom_paid_amount: num, dp_percent: pct }));
                                     }} 

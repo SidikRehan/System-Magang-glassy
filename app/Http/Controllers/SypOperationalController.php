@@ -42,7 +42,7 @@ class SypOperationalController extends Controller
             'metrics'             => fn() => $this->computeDashboardMetrics(),
 
             // ── Props data pendukung: dievaluasi saat initial visit dan saat diminta partial reload ───────
-            'scrapGlasses'        => fn() => ScrapGlass::latest()->get(),
+            'scrapGlasses'        => fn() => ScrapGlass::where('status', '!=', 'Terpakai')->latest()->get(),
             'deliveries'          => fn() => Delivery::with('order')->latest()->get(),
             'users'               => fn() => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get(),
             'activityLogs'        => fn() => ActivityLog::latest()->take(100)->get(),
@@ -977,13 +977,13 @@ class SypOperationalController extends Controller
 
         $currentDiv = $order->current_division;
 
-        // Auto compute next division according to order's process sequence (HT -> GM -> BV -> ETSA -> QC_Ready)
+        // Auto compute next division according to order's process sequence (HT -> GM -> BV -> ETSA -> BOR -> QC_Ready)
         $autoNextDiv = function ($ord) {
-            $fixedSeq = ['HT', 'GM', 'BV', 'ETSA'];
+            $fixedSeq = ['HT', 'GM', 'BV', 'ETSA', 'BOR'];
             $reqCodes = ['HT'];
             $addProcess = function ($p) use (&$reqCodes) {
                 $code = strtoupper(trim((string)$p));
-                if (in_array($code, ['GM', 'BV', 'ETSA']) && !in_array($code, $reqCodes)) {
+                if (in_array($code, ['GM', 'BV', 'ETSA', 'BOR']) && !in_array($code, $reqCodes)) {
                     $reqCodes[] = $code;
                 }
             };

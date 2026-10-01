@@ -1465,10 +1465,10 @@ export default function DivisionExecutionModal({
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    const cur = parseInt(getRawSheetsForType()) || 1;
+                                                    const cur = parseInt(getRawSheetsForType() || 0);
                                                     updateRawSheetsForType(cur - 1);
                                                 }}
-                                                disabled={(parseInt(getRawSheetsForType()) || 0) <= (currentStockItem?.qty === 0 ? 0 : 1)}
+                                                disabled={(parseInt(getRawSheetsForType()) || 0) <= 0}
                                                 className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-200 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                 title="Kurangi 1 Lembar"
                                             >
@@ -1477,18 +1477,18 @@ export default function DivisionExecutionModal({
                                             <div className="flex items-center gap-1 px-2">
                                                 <input
                                                     type="number"
-                                                    min={currentStockItem?.qty === 0 ? 0 : 1}
+                                                    min={0}
                                                     max={currentStockItem ? currentStockItem.qty : undefined}
                                                     value={getRawSheetsForType()}
                                                     onChange={(e) => updateRawSheetsForType(e.target.value)}
                                                     onBlur={() => {
                                                         const curVal = getRawSheetsForType();
                                                         if (curVal === '') {
-                                                            updateRawSheetsForType(1);
+                                                            updateRawSheetsForType(0);
                                                         }
                                                     }}
                                                     className="w-16 bg-white text-center text-sm font-mono font-black text-[#1b68b0] border border-slate-200 rounded-lg py-1 focus:outline-none focus:border-[#1b68b0]"
-                                                    placeholder="1"
+                                                    placeholder="0"
                                                 />
                                                 <span className="text-xs font-mono text-slate-500 font-bold">Lembar</span>
                                             </div>
@@ -1521,7 +1521,7 @@ export default function DivisionExecutionModal({
                                                     ? 'Menyimpan...'
                                                     : (currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty)
                                                         ? `Stok Tidak Cukup (Sisa ${currentStockItem.qty} Lembar)`
-                                                        : `+ Catat (${parseInt(getRawSheetsForType()) || 1} Lembar ${rawGlassType})`
+                                                        : `+ Catat (${parseInt(getRawSheetsForType() || 0)} Lembar ${rawGlassType})`
                                                 }
                                             </span>
                                         </button>

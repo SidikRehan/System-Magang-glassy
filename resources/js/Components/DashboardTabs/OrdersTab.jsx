@@ -39,6 +39,7 @@ export default function OrdersTab({
             { key: 'GM', divKey: 'divisi_gm', label: 'GM' },
             { key: 'BV', divKey: 'divisi_bv', label: 'BV' },
             { key: 'Etsa', divKey: 'divisi_etsa', label: 'Etsa' },
+            { key: 'Bor', divKey: 'divisi_bor', label: 'Bor' },
         ];
 
         const activeIndex = divOrder.findIndex(d => d.divKey === currentDiv);
@@ -55,7 +56,7 @@ export default function OrdersTab({
                 <div className="flex flex-wrap items-center gap-1 pt-0.5">
                     {divOrder.map((d, idx) => {
                         const isRequired = procs.includes(d.key);
-                        const statusText = divProgress[d.key];
+                        const statusText = divProgress[d.key] || divProgress[d.key.toUpperCase()];
 
                         if (!isRequired && currentDiv !== d.divKey && statusText !== 'Selesai') {
                             return null;
