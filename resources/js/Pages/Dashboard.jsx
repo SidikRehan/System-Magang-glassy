@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import {
     BarChart3, FileText, Truck, Sliders, Boxes, Building2,
@@ -2874,27 +2874,39 @@ export default function Dashboard({
         setOrderForm('items', currentItems);
     };
 
-    const MASTER_ACCESSORY_STOCK = [
-        { id: 'spigot_304', name: 'Spigot Stainless 304 (Kanopi/Balkon)', price: 185000, unit: 'pcs', stock: 48, status: 'Aman' },
-        { id: 'hinge_gtg', name: 'Engsel Glass-to-Glass Heavy Duty', price: 240000, unit: 'set', stock: 24, status: 'Aman' },
-        { id: 'bracket_clamp', name: 'Bracket Clamp Stainless Steel', price: 65000, unit: 'pcs', stock: 60, status: 'Aman' },
-        { id: 'sealant_neutral', name: 'Silicone Sealant Neutral High Grade', price: 45000, unit: 'tube', stock: 15, status: 'Aman' },
-        { id: 'handle_tubular', name: 'Handle Pintu Stainless Tubular 40cm', price: 320000, unit: 'pasang', stock: 12, status: 'Aman' },
-        { id: 'floor_hinge_d', name: 'Floor Hinge Heavy Duty Dorma Style', price: 850000, unit: 'unit', stock: 5, status: 'Menipis' },
-        { id: 'lock_glass', name: 'Slot Kunci Kaca Stainless', price: 145000, unit: 'pcs', stock: 18, status: 'Aman' },
-        { id: 'alum_u_channel', name: 'List Alumunium U-Channel Profile', price: 110000, unit: 'batang', stock: 35, status: 'Aman' },
-        { id: 'gasket_weather', name: 'Karet Lis Gasket Weatherstrip', price: 15000, unit: 'meter', stock: 100, status: 'Aman' },
-        { id: 'patch_fitting', name: 'Patch Fitting Door Lock Set', price: 550000, unit: 'set', stock: 0, status: 'Habis' }
-    ];
+    const MASTER_ACCESSORY_STOCK = useMemo(() => {
+        if (accessoriesList && accessoriesList.length > 0) {
+            return accessoriesList.map(acc => ({
+                id: acc.id,
+                name: acc.name,
+                price: Number(acc.sell_price || 0),
+                unit: acc.unit || 'pcs',
+                stock: Number(acc.qty || 0),
+                status: acc.status || (Number(acc.qty) > 20 ? 'Aman' : (Number(acc.qty) > 0 ? 'Menipis' : 'Habis'))
+            }));
+        }
+        return [
+            { id: 1, name: 'Spigot Stainless 304 (Kanopi/Balkon)', price: 185000, unit: 'pcs', stock: 48, status: 'Aman' },
+            { id: 2, name: 'Engsel Glass-to-Glass Heavy Duty', price: 240000, unit: 'set', stock: 24, status: 'Aman' },
+            { id: 3, name: 'Bracket Clamp Stainless Steel', price: 65000, unit: 'pcs', stock: 60, status: 'Aman' },
+            { id: 4, name: 'Silicone Sealant Neutral High Grade', price: 45000, unit: 'tube', stock: 15, status: 'Aman' },
+            { id: 5, name: 'Handle Pintu Stainless Tubular 40cm', price: 320000, unit: 'pasang', stock: 12, status: 'Aman' },
+            { id: 6, name: 'Floor Hinge Heavy Duty Dorma Style', price: 850000, unit: 'unit', stock: 5, status: 'Menipis' },
+            { id: 7, name: 'Slot Kunci Kaca Stainless', price: 145000, unit: 'pcs', stock: 18, status: 'Aman' },
+            { id: 8, name: 'List Alumunium U-Channel Profile', price: 110000, unit: 'batang', stock: 35, status: 'Aman' },
+            { id: 9, name: 'Karet Lis Gasket Weatherstrip', price: 15000, unit: 'meter', stock: 100, status: 'Aman' },
+            { id: 10, name: 'Patch Fitting Door Lock Set', price: 550000, unit: 'set', stock: 0, status: 'Habis' }
+        ];
+    }, [accessoriesList]);
 
     const handleAddAccessoryFromStock = (stockItemId) => {
         if (!stockItemId) return;
-        const masterItem = MASTER_ACCESSORY_STOCK.find(item => item.id === stockItemId);
+        const masterItem = MASTER_ACCESSORY_STOCK.find(item => String(item.id) === String(stockItemId));
         if (!masterItem) return;
 
         const maxStock = masterItem.stock !== undefined ? parseInt(masterItem.stock) : 99999;
         const currentAccs = Array.isArray(orderForm.accessories) ? [...orderForm.accessories] : [];
-        const existingIdx = currentAccs.findIndex(a => typeof a === 'object' && a.id === masterItem.id);
+        const existingIdx = currentAccs.findIndex(a => typeof a === 'object' && String(a.id) === String(masterItem.id));
         if (existingIdx >= 0) {
             const currentQty = parseInt(currentAccs[existingIdx].qty) || 1;
             if (maxStock > 0 && currentQty >= maxStock) {
@@ -2929,7 +2941,7 @@ export default function Dashboard({
         const currentAccs = Array.isArray(orderForm.accessories) ? [...orderForm.accessories] : [];
         if (currentAccs[index] && typeof currentAccs[index] === 'object') {
             const item = currentAccs[index];
-            const masterItem = (MASTER_ACCESSORY_STOCK || []).find(m => m.id === item.id || m.name === item.name);
+            const masterItem = (MASTER_ACCESSORY_STOCK || []).find(m => String(m.id) === String(item.id) || m.name === item.name);
             const maxStock = masterItem && masterItem.stock !== undefined ? parseInt(masterItem.stock) : (item.stock !== undefined ? parseInt(item.stock) : 99999);
 
             let parsedQty = parseInt(qty) || 0;
@@ -3280,13 +3292,19 @@ export default function Dashboard({
         setShowPromoteModal(true);
     };
 
-    const handleConfirmPromote = (e) => {
+    const handleConfirmPromote = (e, orderFromModal, paymentData) => {
         if (e) e.preventDefault();
-        if (!targetPromoteOrder) return;
-        router.post(route('orders.promote', targetPromoteOrder.id), {
-            payment_option: promotePaymentOption,
-            dp_percent: promoteDpPercent,
-            custom_paid_amount: promotePaymentOption === 'custom' ? promoteCustomPaidAmount : null
+        const orderToPromote = orderFromModal || targetPromoteOrder;
+        if (!orderToPromote) return;
+
+        const option = paymentData?.payment_option || promotePaymentOption;
+        const dpPct = paymentData?.dp_percent !== undefined ? paymentData.dp_percent : promoteDpPercent;
+        const customAmt = paymentData?.custom_paid_amount !== undefined ? paymentData.custom_paid_amount : promoteCustomPaidAmount;
+
+        router.post(route('orders.promote', orderToPromote.id), {
+            payment_option: option,
+            dp_percent: dpPct,
+            custom_paid_amount: option === 'custom' ? customAmt : (option === 'lunas' ? orderToPromote.total_price : null)
         }, {
             onSuccess: () => {
                 setShowPromoteModal(false);

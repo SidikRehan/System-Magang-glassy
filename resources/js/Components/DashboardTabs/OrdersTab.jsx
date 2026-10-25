@@ -461,11 +461,11 @@ export default function OrdersTab({
                                             <td className="p-3.5 align-top whitespace-nowrap">
                                                 <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${o.payment_status === 'Lunas'
                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                    : o.payment_status === 'DP (50%)'
+                                                    : o.payment_status?.startsWith('DP')
                                                         ? 'bg-blue-50 text-[#1b68b0] border-blue-200'
                                                         : 'bg-slate-100 text-slate-600 border-slate-200'
                                                     }`}>
-                                                    {o.payment_status}
+                                                    {o.payment_status || 'Belum Lunas'}
                                                 </span>
                                             </td>
                                         )}

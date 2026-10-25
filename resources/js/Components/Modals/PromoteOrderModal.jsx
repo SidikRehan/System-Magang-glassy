@@ -25,7 +25,12 @@ export default function PromoteOrderModal({
     const handleSubmit = (e) => {
         e.preventDefault();
         const paidAmount = getPromotePaidAmount();
-        onConfirmPromote(e, targetPromoteOrder, paidAmount);
+        onConfirmPromote(e, targetPromoteOrder, {
+            payment_option: promotePaymentOption,
+            dp_percent: promoteDpPercent,
+            custom_paid_amount: promotePaymentOption === 'custom' ? promoteCustomPaidAmount : (promotePaymentOption === 'lunas' ? targetPromoteOrder.total_price : null),
+            paid_amount: paidAmount
+        });
     };
 
     return (
