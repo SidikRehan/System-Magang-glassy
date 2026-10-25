@@ -916,31 +916,27 @@ export default function Dashboard({
         e.preventDefault();
         if (!newToolForm.name) return;
 
-        const autoCode = newToolForm.tool_code || ('ALT-00' + (toolsList.length + 1));
-        const totalQty = parseInt(newToolForm.total_qty) || 1;
-
-        const newTool = {
-            id: Date.now(),
-            tool_code: autoCode,
+        router.post(route('inventory.tools.store'), {
             name: newToolForm.name,
-            category: newToolForm.category,
-            total_qty: totalQty,
-            available_qty: totalQty,
-            unit: newToolForm.unit || 'Unit',
-            condition: newToolForm.condition || 'Bagus',
-            location: newToolForm.location || 'Gudang Utama'
-        };
-
-        setToolsList(prev => [newTool, ...prev]);
-        setShowAddToolModal(false);
-        setNewToolForm({
-            tool_code: '',
-            name: '',
-            category: 'Mesin Bor & Potong',
-            total_qty: 1,
-            unit: 'Unit',
-            condition: 'Bagus',
-            location: 'Rak Utama'
+            category: newToolForm.category || 'Mesin Bor & Potong',
+            condition: newToolForm.condition || 'Baik',
+            location: newToolForm.location || 'Gudang Utama',
+            total_qty: parseInt(newToolForm.total_qty) || 1,
+            notes: 'Didaftarkan dari Form Tambah Alat'
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowAddToolModal(false);
+                setNewToolForm({
+                    tool_code: '',
+                    name: '',
+                    category: 'Mesin Bor & Potong',
+                    total_qty: 1,
+                    unit: 'Unit',
+                    condition: 'Bagus',
+                    location: 'Rak Utama'
+                });
+            }
         });
     };
 
@@ -964,47 +960,26 @@ export default function Dashboard({
             }
         }
 
-        const itemsList = validItems.map(item => {
-            const toolObj = toolsList.find(t => t.id === parseInt(item.tool_id));
-            return {
-                tool_id: toolObj.id,
-                tool_code: toolObj.tool_code,
-                tool_name: toolObj.name,
-                unit: toolObj.unit,
-                qty: parseInt(item.qty) || 1
-            };
-        });
-
-        setToolsList(prev => prev.map(t => {
-            const foundItem = itemsList.find(it => it.tool_id === t.id);
-            if (foundItem) {
-                return { ...t, available_qty: t.available_qty - foundItem.qty };
-            }
-            return t;
-        }));
-
-        const newBorrow = {
-            id: Date.now(),
-            items: itemsList,
-            tool_code: itemsList.map(i => i.tool_code).join(', '),
-            tool_name: itemsList.map(i => `${i.tool_name} (${i.qty} ${i.unit})`).join(', '),
+        const firstToolId = validItems[0].tool_id;
+        router.post(route('inventory.tools.borrow', firstToolId), {
             borrower_name: borrowToolForm.borrower_name,
-            purpose: borrowToolForm.purpose || 'Keperluan Pekerjaan Teknisi',
-            borrow_date: borrowToolForm.borrow_date,
-            expected_return: borrowToolForm.expected_return,
-            actual_return: null,
-            qty_borrowed: itemsList.reduce((sum, i) => sum + i.qty, 0),
-            status: 'Sedang Dipinjam'
-        };
-
-        setToolBorrowings(prev => [newBorrow, ...prev]);
-        setShowBorrowToolModal(false);
-        setBorrowToolForm({
-            borrower_name: '',
-            purpose: '',
-            borrow_date: new Date().toISOString().split('T')[0],
-            expected_return: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-            selected_items: [{ tool_id: '', qty: 1 }]
+            notes: borrowToolForm.purpose || 'Keperluan Pekerjaan Teknisi',
+            items: validItems.map(it => ({
+                tool_id: parseInt(it.tool_id),
+                qty: parseInt(it.qty) || 1
+            }))
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowBorrowToolModal(false);
+                setBorrowToolForm({
+                    borrower_name: '',
+                    purpose: '',
+                    borrow_date: new Date().toISOString().split('T')[0],
+                    expected_return: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+                    selected_items: [{ tool_id: '', qty: 1 }]
+                });
+            }
         });
     };
 
@@ -1093,78 +1068,46 @@ export default function Dashboard({
         e.preventDefault();
         if (!newSupplyForm.name) return;
 
-        const autoCode = newSupplyForm.item_code || ('PLK-00' + (warehouseSuppliesList.length + 1));
-        const stockQty = parseInt(newSupplyForm.stock_qty) || 0;
-        const minStock = parseInt(newSupplyForm.min_stock) || 5;
-
-        let status = 'Aman';
-        if (stockQty <= 0) status = 'Habis';
-        else if (stockQty <= minStock) status = 'Menipis';
-
-        const newItem = {
-            id: Date.now(),
-            item_code: autoCode,
+        router.post(route('inventory.supplies.store'), {
             name: newSupplyForm.name,
             category: newSupplyForm.category,
-            stock_qty: stockQty,
-            min_stock: minStock,
+            qty: parseInt(newSupplyForm.stock_qty) || 0,
+            min_stock: parseInt(newSupplyForm.min_stock) || 5,
             unit: newSupplyForm.unit || 'Pcs',
-            location: newSupplyForm.location || 'Gudang Utama',
-            status: status
-        };
-
-        setWarehouseSuppliesList(prev => [newItem, ...prev]);
-        setShowAddSupplyModal(false);
-        setNewSupplyForm({
-            item_code: '',
-            name: '',
-            category: 'APD & Keselamatan Kerja',
-            stock_qty: 10,
-            min_stock: 5,
-            unit: 'Pcs',
-            location: 'Gudang Utama'
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowAddSupplyModal(false);
+                setNewSupplyForm({
+                    item_code: '',
+                    name: '',
+                    category: 'APD & Keselamatan Kerja',
+                    stock_qty: 10,
+                    min_stock: 5,
+                    unit: 'Pcs',
+                    location: 'Gudang Utama'
+                });
+            }
         });
     };
 
     const handleUseSupplySubmit = (payload) => {
         if (!payload || !payload.taker_name || !payload.items || payload.items.length === 0) return;
 
-        let updatedSupplies = [...warehouseSuppliesList];
-        let newLogs = [];
-
-        for (const item of payload.items) {
-            const supplyObj = updatedSupplies.find(s => s.id === parseInt(item.supply_id));
-            const qtyToUse = parseInt(item.used_qty) || 1;
-
-            if (!supplyObj || qtyToUse > supplyObj.stock_qty) continue;
-
-            updatedSupplies = updatedSupplies.map(s => {
-                if (s.id === supplyObj.id) {
-                    const newQty = s.stock_qty - qtyToUse;
-                    let newStatus = 'Aman';
-                    if (newQty <= 0) newStatus = 'Habis';
-                    else if (newQty <= s.min_stock) newStatus = 'Menipis';
-                    return { ...s, stock_qty: newQty, status: newStatus };
-                }
-                return s;
-            });
-
-            newLogs.push({
-                id: Date.now() + Math.random(),
-                item_code: supplyObj.item_code,
-                item_name: supplyObj.name,
-                used_qty: qtyToUse,
-                unit: supplyObj.unit,
-                user_division: payload.user_division || 'Divisi Potong (HT)',
-                taker_name: payload.taker_name,
-                usage_date: new Date().toISOString().split('T')[0],
-                notes: payload.notes || 'Pemakaian operasional gudang/divisi'
-            });
-        }
-
-        setWarehouseSuppliesList(updatedSupplies);
-        setSupplyUsageLogs(prev => [...newLogs, ...prev]);
-        setShowUseSupplyModal(false);
+        router.post(route('inventory.supplies.batch_use'), {
+            user_name: payload.taker_name,
+            division: payload.user_division || 'HT (Potong)',
+            notes: payload.notes || 'Pemakaian operasional gudang/divisi',
+            items: payload.items.map(it => ({
+                supply_id: parseInt(it.supply_id),
+                qty: parseInt(it.used_qty) || 1
+            }))
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowUseSupplyModal(false);
+            }
+        });
     };
 
     // Warehouse Supply Restock Requests to Admin Toko State
@@ -1350,44 +1293,31 @@ export default function Dashboard({
 
         const tot = Math.max(0, parseInt(toolEditForm.total_qty) || 1);
         const dmg = Math.max(0, parseInt(toolEditForm.damaged_qty) || 0);
-        const lst = Math.max(0, parseInt(toolEditForm.lost_qty) || 0);
 
-        const currentlyBorrowed = (selectedToolForEdit.total_qty - selectedToolForEdit.available_qty - (selectedToolForEdit.damaged_qty || 0) - (selectedToolForEdit.lost_qty || 0));
-        const safeBorrowed = Math.max(0, currentlyBorrowed);
-
-        const newAvailable = Math.max(0, tot - safeBorrowed - dmg - lst);
-
-        setToolsList(prev => prev.map(t => {
-            if (t.id === selectedToolForEdit.id) {
-                return {
-                    ...t,
-                    total_qty: tot,
-                    damaged_qty: dmg,
-                    lost_qty: lst,
-                    available_qty: newAvailable,
-                    condition: toolEditForm.condition,
-                    condition_notes: toolEditForm.condition_notes,
-                    location: toolEditForm.location
-                };
+        router.post(route('inventory.tools.update', selectedToolForEdit.id), {
+            name: selectedToolForEdit.name,
+            category: selectedToolForEdit.category,
+            condition: toolEditForm.condition,
+            damaged_qty: dmg,
+            location: toolEditForm.location,
+            total_qty: tot,
+            notes: toolEditForm.condition_notes,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowEditToolModal(false);
+                setSelectedToolForEdit(null);
             }
-            return t;
-        }));
-
-        setShowEditToolModal(false);
-        setSelectedToolForEdit(null);
+        });
     };
 
     const handleStartRepair = (toolId) => {
-        setToolsList(prev => prev.map(t => {
-            if (t.id === toolId) {
-                return {
-                    ...t,
-                    repair_stage: 'Sedang Dalam Perbaikan',
-                    condition: 'Rusak Ringan'
-                };
-            }
-            return t;
-        }));
+        router.post(route('inventory.tools.repair', toolId), {
+            condition: 'Perlu Servis',
+            notes: 'Mulai pengerjaan servis teknisi'
+        }, {
+            preserveScroll: true
+        });
     };
 
     const handleOpenCompleteRepairModal = (tool) => {
@@ -1445,53 +1375,18 @@ export default function Dashboard({
 
         const isNewReturn = selectedReturnBorrow.status !== 'Sudah Dikembalikan';
 
-        const dmgQty = parseInt(returnDamagedQty) || 0;
-        const lstQty = parseInt(returnLostQty) || 0;
-
-        if (isNewReturn) {
-            setToolsList(prev => prev.map(t => {
-                let returnedQtyForItem = 0;
-                if (Array.isArray(selectedReturnBorrow.items)) {
-                    const found = selectedReturnBorrow.items.find(it => it.tool_id === t.id);
-                    if (found) returnedQtyForItem = found.qty;
-                } else if (t.id === selectedReturnBorrow.tool_id) {
-                    returnedQtyForItem = selectedReturnBorrow.qty_borrowed;
+        if (isNewReturn && selectedReturnBorrow && selectedReturnBorrow.id) {
+            router.post(route('inventory.tools.return', selectedReturnBorrow.id), {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowReturnToolModal(false);
+                    setSelectedReturnBorrow(null);
                 }
-
-                if (returnedQtyForItem > 0) {
-                    const netGoodReturned = Math.max(0, returnedQtyForItem - dmgQty - lstQty);
-                    const updatedDamaged = (t.damaged_qty || 0) + dmgQty;
-                    const updatedLost = (t.lost_qty || 0) + lstQty;
-
-                    return {
-                        ...t,
-                        available_qty: t.available_qty + netGoodReturned,
-                        damaged_qty: updatedDamaged,
-                        lost_qty: updatedLost,
-                        condition: (updatedLost > 0 && updatedLost >= t.total_qty) ? 'Hilang' : (updatedDamaged > 0) ? 'Rusak Ringan' : t.condition
-                    };
-                }
-                return t;
-            }));
+            });
+        } else {
+            setShowReturnToolModal(false);
+            setSelectedReturnBorrow(null);
         }
-
-        setToolBorrowings(prev => prev.map(b => {
-            if (b.id === selectedReturnBorrow.id) {
-                return {
-                    ...b,
-                    status: 'Sudah Dikembalikan',
-                    actual_return: actualReturnDate || new Date().toISOString().split('T')[0],
-                    return_notes: returnNotes,
-                    return_condition_status: returnConditionStatus,
-                    return_damaged_qty: dmgQty,
-                    return_lost_qty: lstQty
-                };
-            }
-            return b;
-        }));
-
-        setShowReturnToolModal(false);
-        setSelectedReturnBorrow(null);
     };
 
     // Accessories Management State
@@ -1603,30 +1498,25 @@ export default function Dashboard({
         e.preventDefault();
         if (!newAccForm.name) return;
 
-        const autoCode = newAccForm.acc_code || ('ACC-00' + (accessoriesList.length + 1));
-        const qty = parseInt(newAccForm.qty) || 0;
-        const status = qty > 15 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Habis');
-
-        const newAcc = {
-            id: Date.now(),
-            acc_code: autoCode,
+        router.post(route('inventory.accessories.store'), {
             name: newAccForm.name,
             buy_price: parseFloat(newAccForm.buy_price) || 0,
             sell_price: parseFloat(newAccForm.sell_price) || 0,
-            qty: qty,
-            unit: newAccForm.unit || 'Pcs',
-            status: status
-        };
-
-        setAccessoriesList(prev => [newAcc, ...prev]);
-        setShowAddAccModal(false);
-        setNewAccForm({
-            acc_code: '',
-            name: '',
-            buy_price: '',
-            sell_price: '',
-            qty: 0,
-            unit: 'Pcs'
+            qty: parseInt(newAccForm.qty) || 0,
+            unit: newAccForm.unit || 'Pcs'
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowAddAccModal(false);
+                setNewAccForm({
+                    acc_code: '',
+                    name: '',
+                    buy_price: '',
+                    sell_price: '',
+                    qty: 0,
+                    unit: 'Pcs'
+                });
+            }
         });
     };
 
@@ -1647,37 +1537,22 @@ export default function Dashboard({
         e.preventDefault();
         if (!editAccForm.name) return;
 
-        setAccessoriesList(prev => prev.map(acc => {
-            if (acc.id === editAccForm.id) {
-                const qty = parseInt(editAccForm.qty) || 0;
-                const status = qty > 15 ? 'Aman' : (qty > 0 ? 'Menipis' : 'Habis');
-                return {
-                    ...acc,
-                    acc_code: editAccForm.acc_code,
-                    name: editAccForm.name,
-                    buy_price: parseFloat(editAccForm.buy_price) || 0,
-                    sell_price: parseFloat(editAccForm.sell_price) || 0,
-                    qty: qty,
-                    unit: editAccForm.unit,
-                    status: status
-                };
-            }
-            return acc;
-        }));
-
-        setShowEditAccModal(false);
+        router.post(route('inventory.accessories.update', editAccForm.id), {
+            name: editAccForm.name,
+            buy_price: parseFloat(editAccForm.buy_price) || 0,
+            sell_price: parseFloat(editAccForm.sell_price) || 0,
+            qty: parseInt(editAccForm.qty) || 0,
+            unit: editAccForm.unit || 'Pcs'
+        }, {
+            preserveScroll: true,
+            onSuccess: () => setShowEditAccModal(false)
+        });
     };
 
     const handleDeleteAcc = (id) => {
         if (confirm('Apakah Anda yakin ingin menghapus aksesoris ini?')) {
             router.delete(route('inventory.accessories.destroy', id), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setAccessoriesList(prev => prev.filter(acc => acc.id !== id));
-                },
-                onError: () => {
-                    setAccessoriesList(prev => prev.filter(acc => acc.id !== id));
-                }
+                preserveScroll: true
             });
         }
     };
@@ -1687,33 +1562,15 @@ export default function Dashboard({
         if (!selectedAccItem) return;
 
         const addQty = parseInt(accRestockQty) || 0;
-        setAccessoriesList(prev => prev.map(acc => {
-            if (acc.id === selectedAccItem.id) {
-                const newQty = acc.qty + addQty;
-                const status = newQty > 15 ? 'Aman' : (newQty > 0 ? 'Menipis' : 'Habis');
-                return {
-                    ...acc,
-                    qty: newQty,
-                    status: status
-                };
+        router.post(route('inventory.accessories.restock', selectedAccItem.id), {
+            add_qty: addQty
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowRestockAccModal(false);
+                setSelectedAccItem(null);
             }
-            return acc;
-        }));
-
-        setShowRestockAccModal(false);
-        setSelectedAccItem(null);
-    };
-
-    const handleRequestAccRestockStatus = (accId) => {
-        setAccessoriesList(prev => prev.map(acc => {
-            if (acc.id === accId) {
-                return {
-                    ...acc,
-                    status: 'Pengajuan Restock'
-                };
-            }
-            return acc;
-        }));
+        });
     };
 
     const handleAddStockItemSubmit = (e) => {
@@ -2302,27 +2159,15 @@ export default function Dashboard({
     };
 
     const handleRequestRestockStatus = (itemId) => {
-        setSheetGlasses(prev => prev.map(item => {
-            if (item.id === itemId) {
-                return {
-                    ...item,
-                    status: 'Pengajuan Proses Restock'
-                };
-            }
-            return item;
-        }));
+        router.post(route('inventory.sheet_glasses.request_restock', itemId), {}, {
+            preserveScroll: true
+        });
     };
 
     const handleCancelRequestRestockStatus = (itemId) => {
-        setSheetGlasses(prev => prev.map(item => {
-            if (item.id === itemId) {
-                return {
-                    ...item,
-                    status: Number(item.qty || 0) <= Number(item.min_qty || 0) ? 'Menipis' : 'Aman'
-                };
-            }
-            return item;
-        }));
+        router.post(route('inventory.sheet_glasses.cancel_restock', itemId), {}, {
+            preserveScroll: true
+        });
     };
 
     const handleSearchChange = (val) => {

@@ -247,6 +247,17 @@ class SypOperationalController extends Controller
             'used_scrap_rak' => !empty(trim($validated['used_scrap_rak'] ?? '')) ? $validated['used_scrap_rak'] : '-',
         ]);
 
+        // Kunci / Cadangkan Kaca Sisa jika dipilih pada order baru
+        if (!empty($validated['used_scrap_rak']) && $validated['used_scrap_rak'] !== '-') {
+            preg_match('/(SCRAP-\d+|SCR-\d+-[A-Za-z0-9]+|SC-[A-Za-z0-9-]+)/i', $validated['used_scrap_rak'], $scMatch);
+            if (!empty($scMatch[1])) {
+                $scItem = ScrapGlass::where('scrap_code', $scMatch[1])->first();
+                if ($scItem && $scItem->status === 'Layak Pakai') {
+                    $scItem->update(['status' => 'Dicadangkan']);
+                }
+            }
+        }
+
         $message = $isDraft 
             ? 'Draft Order #' . $spoNumber . ' Berhasil Disimpan!' 
             : 'SPO Orderan Baru #' . $spoNumber . ' (' . $paymentStatus . ') Berhasil Diterbitkan ke Admin Gudang!';
@@ -822,7 +833,12 @@ class SypOperationalController extends Controller
             'rak_location' => 'required|string',
         ]);
 
-        $code = 'SCRAP-00' . (ScrapGlass::count() + 1);
+        $nextId = (ScrapGlass::max('id') ?? 0) + 1;
+        $code = 'SCRAP-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        while (ScrapGlass::where('scrap_code', $code)->exists()) {
+            $nextId++;
+            $code = 'SCRAP-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        }
 
         ScrapGlass::create([
             'scrap_code' => $code,
@@ -1096,18 +1112,49 @@ class SypOperationalController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Kurangi stok SheetGlass
+        // Kurangi stok SheetGlass dengan pencarian cerdas (Exact Match -> LIKE Match -> Ketebalan & Keyword)
         $sheetGlass = \App\Models\SheetGlass::where('name', $validated['glass_type'])->first();
-        
         if (!$sheetGlass) {
-            return redirect()->back()->with('message', '❌ Gagal: Tipe kaca "' . $validated['glass_type'] . '" tidak ditemukan di Master Stok Gudang! Pastikan nama kaca cocok dengan katalog.');
+            $sheetGlass = \App\Models\SheetGlass::where('name', 'like', '%' . $validated['glass_type'] . '%')->first();
+        }
+        if (!$sheetGlass) {
+            preg_match('/(\d+)\s*mm/i', $validated['glass_type'], $tm);
+            $thick = $tm[1] ?? null;
+            $gtLower = strtolower($validated['glass_type']);
+            $matchedKw = null;
+            foreach (['cermin', 'mirror', 'bening', 'clear', 'tempered', 'riben', 'etsa', 'laminated', 'bronze', 'grey'] as $k) {
+                if (str_contains($gtLower, $k)) { $matchedKw = $k; break; }
+            }
+            $query = \App\Models\SheetGlass::query();
+            if ($thick) {
+                $query->where('thickness_mm', (int)$thick);
+            }
+            if ($matchedKw) {
+                $query->where(function($q) use ($matchedKw) {
+                    $q->where('name', 'like', "%{$matchedKw}%")->orWhere('category', 'like', "%{$matchedKw}%");
+                });
+            }
+            $sheetGlass = $query->first();
         }
 
-        if ($sheetGlass->qty < $validated['sheets_used']) {
-            return redirect()->back()->with('message', '❌ Gagal: Stok lembaran kaca "' . $validated['glass_type'] . '" di Gudang tidak mencukupi (Sisa: ' . $sheetGlass->qty . ')!');
+        if (!$sheetGlass) {
+            $sheetGlass = \App\Models\SheetGlass::first();
         }
 
-        $sheetGlass->qty -= (int) $validated['sheets_used'];
+        if (!$sheetGlass) {
+            return redirect()->back()->with('message', '❌ Gagal: Katalog Master Stok Kaca di Gudang kosong! Harap tambahkan stok lembaran kaca terlebih dahulu.');
+        }
+
+        $sheetsUsed = (int) $validated['sheets_used'];
+        if ($sheetGlass->qty < $sheetsUsed) {
+            return redirect()->back()->with('message', '❌ Gagal: Stok lembaran kaca "' . $sheetGlass->name . '" di Gudang tidak mencukupi (Tersisa: ' . $sheetGlass->qty . ' lembar, Dibutuhkan: ' . $sheetsUsed . ' lembar)!');
+        }
+
+        // Kurangi kuantitas & perbarui status alert stok secara otomatis
+        $newQty = max(0, $sheetGlass->qty - $sheetsUsed);
+        $newStatus = $newQty > 10 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+        $sheetGlass->qty = $newQty;
+        $sheetGlass->status = $newStatus;
         $sheetGlass->save();
 
         // 10. Kaca lembaran baru yang dipakai otomatis masuk ke stok kaca sisa (ScrapGlass)
@@ -1157,10 +1204,11 @@ class SypOperationalController extends Controller
         $createdScraps = [];
 
         for ($i = 0; $i < $sheetsUsed; $i++) {
-            $scrapCount = \App\Models\ScrapGlass::count() + 1;
-            $scrapCode = 'SCRAP-' . str_pad($scrapCount, 4, '0', STR_PAD_LEFT);
-            if (\App\Models\ScrapGlass::where('scrap_code', $scrapCode)->exists()) {
-                $scrapCode = 'SCRAP-' . str_pad((\App\Models\ScrapGlass::max('id') ?? 0) + 1 + $i, 4, '0', STR_PAD_LEFT);
+            $maxScrapId = \App\Models\ScrapGlass::max('id') ?? 0;
+            $scrapCode = 'SCRAP-' . str_pad($maxScrapId + 1 + $i, 4, '0', STR_PAD_LEFT);
+            while (\App\Models\ScrapGlass::where('scrap_code', $scrapCode)->exists()) {
+                $maxScrapId++;
+                $scrapCode = 'SCRAP-' . str_pad($maxScrapId + 1 + $i, 4, '0', STR_PAD_LEFT);
             }
 
             \App\Models\ScrapGlass::create([
@@ -1239,8 +1287,8 @@ class SypOperationalController extends Controller
 
         if (!$scrapItem) {
             $scrapStr = $order->used_scrap_rak ?: '';
-            preg_match('/SCRAP-\d+/', $scrapStr, $matches);
-            $scrapCode = $matches[0] ?? null;
+            preg_match('/(SCRAP-\d+|SCR-\d+-[A-Za-z0-9]+|SC-[A-Za-z0-9-]+)/i', $scrapStr, $matches);
+            $scrapCode = $matches[1] ?? ($matches[0] ?? null);
 
             if ($scrapCode) {
                 $scrapItem = ScrapGlass::where('scrap_code', $scrapCode)->first();

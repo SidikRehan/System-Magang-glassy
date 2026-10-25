@@ -42,7 +42,12 @@ class InventoryMasterController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $itemCode = 'BRG-' . str_pad(SheetGlass::count() + 1, 3, '0', STR_PAD_LEFT);
+        $nextId = (SheetGlass::max('id') ?? 0) + 1;
+        $itemCode = 'BRG-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        while (SheetGlass::where('item_code', $itemCode)->exists()) {
+            $nextId++;
+            $itemCode = 'BRG-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        }
         $size = "{$validated['length_cm']} x {$validated['width_cm']} cm";
         $qty = (int) $validated['qty'];
         $status = $qty > 10 ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
@@ -208,6 +213,23 @@ class InventoryMasterController extends Controller
         return redirect()->back()->with('success', "Kaca {$name} berhasil dihapus dari database.");
     }
 
+    public function requestRestockSheetGlass($id)
+    {
+        $glass = SheetGlass::findOrFail($id);
+        $glass->update(['status' => 'Pengajuan Proses Restock']);
+
+        return redirect()->back()->with('success', "Pengajuan restok {$glass->name} berhasil dikirim ke Admin Toko!");
+    }
+
+    public function cancelRequestRestockSheetGlass($id)
+    {
+        $glass = SheetGlass::findOrFail($id);
+        $status = $glass->qty > 10 ? 'Aman' : ($glass->qty > 0 ? 'Menipis' : 'Habis');
+        $glass->update(['status' => $status]);
+
+        return redirect()->back()->with('success', "Pengajuan restok {$glass->name} dibatalkan.");
+    }
+
     // ==========================================
     // 2. MITRA SUPPLIER (SUPPLIERS)
     // ==========================================
@@ -275,7 +297,12 @@ class InventoryMasterController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $accCode = 'ACC-' . str_pad(Accessory::count() + 1, 3, '0', STR_PAD_LEFT);
+        $nextId = (Accessory::max('id') ?? 0) + 1;
+        $accCode = 'ACC-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        while (Accessory::where('acc_code', $accCode)->exists()) {
+            $nextId++;
+            $accCode = 'ACC-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        }
         $qty = (int) $validated['qty'];
         $status = $qty > 20 ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
 
@@ -414,7 +441,12 @@ class InventoryMasterController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $toolCode = 'ALT-' . str_pad(Tool::count() + 1, 3, '0', STR_PAD_LEFT);
+        $nextId = (Tool::max('id') ?? 0) + 1;
+        $toolCode = 'ALT-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        while (Tool::where('tool_code', $toolCode)->exists()) {
+            $nextId++;
+            $toolCode = 'ALT-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        }
         $totalQty = (int) $validated['total_qty'];
 
         $imagePath = null;
@@ -497,28 +529,40 @@ class InventoryMasterController extends Controller
             return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Pencatatan peminjaman alat dilakukan oleh Admin Gudang.');
         }
 
-        $tool = Tool::findOrFail($id);
-
         $validated = $request->validate([
             'borrower_name' => 'required|string|max:255',
-            'qty' => 'required|integer|min:1|max:' . $tool->available_qty,
+            'qty' => 'nullable|integer|min:1',
             'notes' => 'nullable|string|max:500',
+            'items' => 'nullable|array',
         ]);
 
-        DB::transaction(function () use ($tool, $validated) {
-            ToolBorrow::create([
-                'tool_id' => $tool->id,
-                'borrower_name' => $validated['borrower_name'],
-                'borrow_date' => now(),
-                'qty' => $validated['qty'],
-                'status' => 'Dipinjam',
-                'notes' => $validated['notes'] ?? null,
-            ]);
+        $items = $request->input('items', []);
+        if (empty($items)) {
+            $mainTool = Tool::findOrFail($id);
+            $items = [['tool_id' => $mainTool->id, 'qty' => (int)($validated['qty'] ?? 1)]];
+        }
 
-            $tool->decrement('available_qty', (int) $validated['qty']);
+        DB::transaction(function () use ($validated, $items) {
+            foreach ($items as $it) {
+                $toolId = $it['tool_id'] ?? null;
+                $tQty = (int)($it['qty'] ?? 1);
+                if (!$toolId || $tQty < 1) continue;
+
+                $tool = Tool::findOrFail($toolId);
+                ToolBorrow::create([
+                    'tool_id' => $tool->id,
+                    'borrower_name' => $validated['borrower_name'],
+                    'borrow_date' => now(),
+                    'qty' => $tQty,
+                    'status' => 'Dipinjam',
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+
+                $tool->decrement('available_qty', $tQty);
+            }
         });
 
-        return redirect()->back()->with('success', "Peminjaman {$tool->name} oleh {$validated['borrower_name']} berhasil dicatat!");
+        return redirect()->back()->with('success', "Peminjaman alat oleh {$validated['borrower_name']} berhasil dicatat!");
     }
 
     public function returnTool(Request $request, $borrowId)
@@ -593,7 +637,12 @@ class InventoryMasterController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $itemCode = 'SUP-' . str_pad(Supply::count() + 1, 3, '0', STR_PAD_LEFT);
+        $nextId = (Supply::max('id') ?? 0) + 1;
+        $itemCode = 'SUP-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        while (Supply::where('item_code', $itemCode)->exists()) {
+            $nextId++;
+            $itemCode = 'SUP-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        }
         $qty = (int) $validated['qty'];
         $min = (int) ($validated['min_stock'] ?? 5);
         $status = $qty > $min ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');

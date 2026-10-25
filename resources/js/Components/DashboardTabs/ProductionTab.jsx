@@ -713,11 +713,18 @@ export default function ProductionTab({
                                                         onClick={() => {
                                                             if (activeOngoingOrder.current_division === 'divisi_ht') {
                                                                 const hasLoggedRaw = Array.isArray(activeOngoingOrder.raw_materials_used) && activeOngoingOrder.raw_materials_used.length > 0;
-                                                                const hasLoggedScrap = activeOngoingOrder.used_scrap_rak && String(activeOngoingOrder.used_scrap_rak).includes('TERPAKAI DIVISI HT');
+                                                                const scrapVal = activeOngoingOrder.used_scrap_rak ? String(activeOngoingOrder.used_scrap_rak).trim() : '';
+                                                                const hasAssignedScrap = scrapVal !== '' && scrapVal !== '-' && !scrapVal.includes('DITOLAK');
+                                                                const hasLoggedScrap = scrapVal.includes('TERPAKAI DIVISI HT') || hasAssignedScrap;
                                                                 
                                                                 if (!hasLoggedRaw && !hasLoggedScrap) {
                                                                     alert('⚠️ WAJIB CATAT BAHAN: Anda belum mencatat pemakaian bahan lembaran kaca atau kaca sisa (scrap) untuk pekerjaan ini.\n\nSilakan klik tombol "Detail Lengkap" lalu isi jumlah lembaran yang dipakai pada bagian "Bahan Kaca" sebelum menyelesaikan pekerjaan.');
                                                                     return;
+                                                                }
+
+                                                                // Jika order ditugaskan memakai kaca sisa namun belum diklik konfirmasi, otomatis konfirmasi sekarang
+                                                                if (hasAssignedScrap && !scrapVal.includes('TERPAKAI DIVISI HT')) {
+                                                                    router.post(route('orders.use_scrap', activeOngoingOrder.id), {}, { preserveScroll: true });
                                                                 }
                                                             }
                                                             const actualNext = userRole === 'owner'
