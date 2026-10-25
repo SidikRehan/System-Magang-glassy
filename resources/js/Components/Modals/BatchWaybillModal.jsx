@@ -182,6 +182,7 @@ export default function BatchWaybillModal({
                         return selectedColors.map((colorKey) => {
                             const currentConfig = colorConfig[colorKey] || colorConfig.Putih;
                             const isLunas = ord.payment_status === 'Lunas';
+                            const remainingCOD = Math.max(0, Number(ord.total_price || 0) - Number(ord.paid_amount || 0));
                             const itemsList = Array.isArray(ord.items) && ord.items.length > 0
                                 ? ord.items
                                 : [{
@@ -232,7 +233,7 @@ export default function BatchWaybillModal({
                                             <div>
                                                 <strong>Status Pembayaran:</strong>{' '}
                                                 <span className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${isLunas ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`}>
-                                                    {ord.payment_status || 'DP 50%'} {colorKey === 'Merah' && !isLunas ? '— (WAJIB TAGIH COD)' : ''}
+                                                    {ord.payment_status || 'DP 50%'} {colorKey === 'Merah' && !isLunas ? `— (WAJIB TAGIH COD: Rp ${remainingCOD.toLocaleString('id-ID')})` : ''}
                                                 </span>
                                             </div>
                                         </div>

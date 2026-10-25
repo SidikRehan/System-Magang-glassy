@@ -156,9 +156,9 @@ export default function DashboardOverviewTab({
     return (
         <div className="space-y-6 animate-fade-in">
             {/* WELCOME BANNER & PERFORMANCE HIGHLIGHT */}
-            <div className="flex flex-wrap justify-between items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
                 <div>
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
                         <span className="text-xs bg-[#1b68b0]/10 text-[#1b68b0] font-extrabold px-3 py-0.5 rounded-full border border-[#1b68b0]/25">
                             EXECUTIVE DIRECTORS DASHBOARD
                         </span>
@@ -171,11 +171,11 @@ export default function DashboardOverviewTab({
                         Monitoring terpadu performa penjualan pabrik kaca, kepatuhan SLA divisi pengerjaan, dan realisasi profitabilitas usaha.
                     </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
                     <button
                         type="button"
                         onClick={() => setActiveTab('orders')}
-                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Orderan Baru</span>
@@ -183,7 +183,7 @@ export default function DashboardOverviewTab({
                     <button
                         type="button"
                         onClick={() => setActiveTab('finance')}
-                        className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                        className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                     >
                         <DollarSign className="w-4 h-4" />
                         <span>Laporan Laba/Rugi (P&L)</span>
@@ -532,7 +532,7 @@ export default function DashboardOverviewTab({
                             <span>Status Beban Kerja Divisi Pabrik</span>
                             <span className="text-[#1b68b0] font-mono font-bold">{inProcessOrders.length} Order Aktif</span>
                         </h4>
-                        <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] font-mono">
                             <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
                                 <span className="text-slate-600 font-sans font-medium">Divisi HT</span>
                                 <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-2 py-0.5 rounded-full font-bold">
@@ -540,15 +540,27 @@ export default function DashboardOverviewTab({
                                 </span>
                             </div>
                             <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
-                                <span className="text-slate-600 font-sans font-medium">Gudang & QC</span>
-                                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-                                    {gudangCount} SPO
+                                <span className="text-slate-600 font-sans font-medium">Divisi GM</span>
+                                <span className="bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 rounded-full font-bold">
+                                    {divGmCount} SPO
                                 </span>
                             </div>
                             <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
                                 <span className="text-slate-600 font-sans font-medium">Divisi Bevel</span>
                                 <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-bold">
                                     {divBvCount} SPO
+                                </span>
+                            </div>
+                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
+                                <span className="text-slate-600 font-sans font-medium">Divisi Etsa</span>
+                                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-bold">
+                                    {divEtsaCount} SPO
+                                </span>
+                            </div>
+                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
+                                <span className="text-slate-600 font-sans font-medium">Gudang & QC</span>
+                                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
+                                    {gudangCount} SPO
                                 </span>
                             </div>
                             <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">

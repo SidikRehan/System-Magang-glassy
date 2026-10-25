@@ -19,7 +19,12 @@ class ScrapController extends Controller
             'rak_location' => 'required|string',
         ]);
 
-        $code = 'SCRAP-00' . (ScrapGlass::count() + 1);
+        $nextId = (ScrapGlass::max('id') ?? 0) + 1;
+        $code = 'SCRAP-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        while (ScrapGlass::where('scrap_code', $code)->exists()) {
+            $nextId++;
+            $code = 'SCRAP-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        }
 
         ScrapGlass::create([
             'scrap_code' => $code,

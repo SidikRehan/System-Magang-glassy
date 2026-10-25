@@ -314,7 +314,7 @@ export default function ScrapTab({
                                                         <div className="space-y-0.5 font-mono">
                                                             <div>
                                                                 <span className="text-emerald-700 font-black text-xs">Rp {Number(item.sell_price || 0).toLocaleString('id-ID')}</span>
-                                                                <span className="text-[10px] text-slate-400 font-sans"> /lbr</span>
+                                                                <span className="text-[10px] text-slate-400 font-sans"> /m²</span>
                                                             </div>
                                                             {showTablePricingInfo && (
                                                                 <div className="text-slate-500 text-[11px] pt-0.5 border-t border-slate-100">

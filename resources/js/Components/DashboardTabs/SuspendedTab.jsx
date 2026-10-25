@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { roleTitles } from "@/Utils/dashboardHelpers";
 import {
     PauseCircle, AlertTriangle, CheckCircle2,
@@ -86,7 +86,7 @@ export default function SuspendedTab({
 
                     return (
                         <div key={order.id} className="bg-white border-2 border-amber-300 rounded-2xl shadow-sm overflow-hidden">
-                            <div className="bg-amber-50 border-b border-amber-200 p-4 flex flex-wrap items-center justify-between gap-3">
+                            <div className="bg-amber-50 border-b border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
                                         <PauseCircle className="w-5 h-5 text-amber-600" />
@@ -99,11 +99,11 @@ export default function SuspendedTab({
                                         <p className="text-xs text-slate-500 mt-0.5">{order.customer_name}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                                     <button
                                         type="button"
                                         onClick={() => setExpandedId(isExpanded ? null : order.id)}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 transition cursor-pointer"
+                                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 transition cursor-pointer"
                                     >
                                         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                                         {isExpanded ? "Tutup" : "Lihat Detail"}
@@ -112,7 +112,7 @@ export default function SuspendedTab({
                                         <button
                                             type="button"
                                             onClick={() => handleOpenDecisionModal(order)}
-                                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-black text-white bg-[#1b68b0] hover:bg-[#15528c] transition shadow-xs cursor-pointer"
+                                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-black text-white bg-[#1b68b0] hover:bg-[#15528c] transition shadow-xs cursor-pointer"
                                         >
                                             <RefreshCw className="w-3.5 h-3.5" />
                                             Beri Keputusan

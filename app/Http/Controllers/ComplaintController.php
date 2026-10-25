@@ -138,8 +138,14 @@ class ComplaintController extends Controller
 
             // 4. Buat Order Baru (Khusus Kaca Ganti)
             if (count($newOrderItems) > 0) {
-                $newOrder = $order->replicate();
-                $newOrder->spo_number = $order->spo_number . '-GANTI';
+                $baseSpo = $order->spo_number . '-GANTI';
+                $uniqueSpo = $baseSpo;
+                $counter = 1;
+                while (\App\Models\Order::where('spo_number', $uniqueSpo)->exists()) {
+                    $counter++;
+                    $uniqueSpo = $baseSpo . '-' . $counter;
+                }
+                $newOrder->spo_number = $uniqueSpo;
                 $newOrder->items = $newOrderItems;
                 $newOrder->subtotal = 0;
                 $newOrder->total_price = 0;

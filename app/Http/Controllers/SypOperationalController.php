@@ -67,16 +67,34 @@ class SypOperationalController extends Controller
         $paidRevenue        = (float) (clone $activeOrders)->sum('paid_amount') + $otherRevenue;
         $pendingCODTotal    = (float) (clone $activeOrders)->where('payment_status', '!=', 'Lunas')->sum('total_price');
         $pendingCODPaid     = (float) (clone $activeOrders)->where('payment_status', '!=', 'Lunas')->sum('paid_amount');
-        $pendingCOD         = ($pendingCODTotal - $pendingCODPaid) > 0
-                                ? ($pendingCODTotal - $pendingCODPaid)
-                                : $pendingCODTotal;
+        $pendingCOD         = max(0, (float)($pendingCODTotal - $pendingCODPaid));
 
         $cogsPurchases      = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['pembelian_bahan', 'pembelian_aksesoris'])->sum('amount');
         $opexExpenses       = (float) FinanceTransaction::where('approval_status', 'approved')->whereIn('type', ['biaya_operasional', 'pembelian_alat'])->sum('amount');
         $totalExpenses      = $cogsPurchases + $opexExpenses;
         $grossProfit        = $totalRevenue - $cogsPurchases;
         $netProfit          = $totalRevenue - $totalExpenses;
-        $scrapGlassLoss     = (float) ScrapGlass::where('status', 'Layak Pakai')->count() * 125000;
+        
+        // Valuasi riil potensi penghematan HPP dari kaca sisa rak (Scrap Glass) berdasarkan luas m2 & katalog harga jual
+        $usableScraps       = ScrapGlass::where('status', 'Layak Pakai')->get();
+        $sheetGlassesCatalog = SheetGlass::all()->keyBy(fn($g) => strtolower($g->name));
+        $scrapGlassLoss     = 0;
+        foreach ($usableScraps as $sc) {
+            $scArea = ((float)$sc->length_cm * (float)$sc->width_cm) / 10000;
+            $scNameLower = strtolower($sc->glass_type ?? '');
+            $matchedSheet = $sheetGlassesCatalog->get($scNameLower);
+            if (!$matchedSheet) {
+                foreach ($sheetGlassesCatalog as $name => $sg) {
+                    if (str_contains($scNameLower, $name) || str_contains($name, $scNameLower)) {
+                        $matchedSheet = $sg;
+                        break;
+                    }
+                }
+            }
+            $pricePerM2 = $matchedSheet && $matchedSheet->sell_price > 0 ? (float)$matchedSheet->sell_price : 380000;
+            $scrapGlassLoss += ($scArea * $pricePerM2);
+        }
+        $scrapGlassLoss = round($scrapGlassLoss);
         $pendingApprovalCount = FinanceTransaction::where('approval_status', 'pending')->count();
 
         return [
@@ -127,11 +145,13 @@ class SypOperationalController extends Controller
             'custom_fee' => 'nullable|numeric',
             'deadline_date' => 'nullable|date',
             'used_scrap_rak' => 'nullable|string',
+            'is_company_use' => 'nullable|boolean',
             'status' => 'nullable|string|in:draft,pengerjaan',
         ]);
 
         $targetStatus = $validated['status'] ?? 'pengerjaan';
         $isDraft = ($targetStatus === 'draft');
+        $isCompanyUse = (bool) $request->input('is_company_use', false);
 
         $latestOrder = Order::orderBy('id', 'desc')->first();
         $nextId = $latestOrder ? ($latestOrder->id + 1) : 1;
@@ -139,7 +159,7 @@ class SypOperationalController extends Controller
 
         $rawItems = $request->input('items');
         $items = [];
-        $subtotal = 0;
+        $itemsSubtotal = 0;
 
         if (is_array($rawItems) && count($rawItems) > 0) {
             $dimensionErr = $this->validateItemGlassDimensions($rawItems);
@@ -147,8 +167,8 @@ class SypOperationalController extends Controller
                 return redirect()->back()->withErrors(['message' => $dimensionErr]);
             }
             foreach ($rawItems as $it) {
-                $calc = $this->calculateItemPricing($it);
-                $subtotal += $calc['subtotal'];
+                $calc = $this->calculateItemPricing($it, $isCompanyUse);
+                $itemsSubtotal += $calc['subtotal'];
                 $items[] = $calc;
             }
         } else {
@@ -160,16 +180,16 @@ class SypOperationalController extends Controller
                 'qty' => 1,
                 'processes' => $validated['processes'] ?? ['HT']
             ];
-            $calc = $this->calculateItemPricing($defaultIt);
-            $subtotal = $calc['subtotal'];
+            $calc = $this->calculateItemPricing($defaultIt, $isCompanyUse);
+            $itemsSubtotal = $calc['subtotal'];
             $items[] = $calc;
         }
 
-        $priorityFee = $validated['priority_status'] === 'Prioritas' 
+        $priorityFee = ($validated['priority_status'] === 'Prioritas' && !$isCompanyUse)
             ? (float) $request->input('priority_fee', 0) 
             : 0;
 
-        $customFee = $request->filled('custom_fee') ? (float) $request->input('custom_fee') : 0;
+        $customFee = (!$isCompanyUse && $request->filled('custom_fee')) ? (float) $request->input('custom_fee') : 0;
         
         // Calculate dynamic accessory costs
         $accessoryFee = 0;
@@ -184,7 +204,9 @@ class SypOperationalController extends Controller
             }
         }
 
-        $totalPrice = $subtotal + $accessoryFee + $priorityFee + $customFee;
+        // Subtotal = Nilai Barang & Jasa (Kaca + Jasa Proses + Aksesoris)
+        $subtotal = $itemsSubtotal + $accessoryFee;
+        $totalPrice = $subtotal + $priorityFee + $customFee;
 
         // Summary glass_type for primary view
         $primaryItem = $items[0];
@@ -241,11 +263,47 @@ class SypOperationalController extends Controller
             'paid_amount' => $paidAmount,
             'payment_status' => $paymentStatus,
             'status' => $targetStatus,
+            'is_company_use' => $isCompanyUse,
             'current_division' => $isDraft ? 'admin_toko' : 'admin_gudang',
             'gudang_released_at' => $isDraft ? null : now(),
             'division_progress' => $this->buildDivisionProgress($items, $validated['processes'] ?? []),
             'used_scrap_rak' => !empty(trim($validated['used_scrap_rak'] ?? '')) ? $validated['used_scrap_rak'] : '-',
         ]);
+
+        // Potong stok master aksesoris gudang bila order langsung masuk antrean pengerjaan
+        if (!$isDraft && is_array($validated['accessories'] ?? null)) {
+            foreach ($validated['accessories'] as $acc) {
+                if (is_array($acc)) {
+                    $accId = $acc['id'] ?? null;
+                    $accName = $acc['name'] ?? null;
+                    $accQty = max(1, (int)($acc['qty'] ?? 1));
+                    $accModel = null;
+                    if ($accId && is_numeric($accId)) {
+                        $accModel = \App\Models\Accessory::find($accId);
+                    }
+                    if (!$accModel && $accName) {
+                        $accModel = \App\Models\Accessory::where('name', $accName)->first();
+                    }
+                    if ($accModel) {
+                        $accModel->decrement('qty', min($accModel->qty, $accQty));
+                        $accModel->update([
+                            'status' => $accModel->qty > 20 ? 'Aman' : ($accModel->qty > 0 ? 'Menipis' : 'Habis')
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Kunci / Cadangkan Kaca Sisa jika dipilih pada order baru
+        if (!empty($validated['used_scrap_rak']) && $validated['used_scrap_rak'] !== '-') {
+            preg_match('/(SCRAP-\d+|SCR-\d+-[A-Za-z0-9]+|SC-[A-Za-z0-9-]+)/i', $validated['used_scrap_rak'], $scMatch);
+            if (!empty($scMatch[1])) {
+                $scItem = ScrapGlass::where('scrap_code', $scMatch[1])->first();
+                if ($scItem && $scItem->status === 'Layak Pakai') {
+                    $scItem->update(['status' => 'Dicadangkan']);
+                }
+            }
+        }
 
         $message = $isDraft 
             ? 'Draft Order #' . $spoNumber . ' Berhasil Disimpan!' 
@@ -281,15 +339,20 @@ class SypOperationalController extends Controller
             'custom_fee' => 'nullable|numeric',
             'deadline_date' => 'nullable|date',
             'used_scrap_rak' => 'nullable|string',
+            'is_company_use' => 'nullable|boolean',
             'status' => 'nullable|string|in:draft,pengerjaan',
             'payment_option' => 'nullable|string',
             'dp_percent' => 'nullable|numeric',
             'custom_paid_amount' => 'nullable|numeric',
         ]);
 
+        $isCompanyUse = $request->has('is_company_use') 
+            ? (bool)$request->input('is_company_use') 
+            : (bool)$order->is_company_use;
+
         $rawItems = $request->input('items');
         $items = [];
-        $subtotal = 0;
+        $itemsSubtotal = 0;
 
         if (is_array($rawItems) && count($rawItems) > 0) {
             $dimensionErr = $this->validateItemGlassDimensions($rawItems);
@@ -297,8 +360,8 @@ class SypOperationalController extends Controller
                 return redirect()->back()->withErrors(['message' => $dimensionErr]);
             }
             foreach ($rawItems as $it) {
-                $calc = $this->calculateItemPricing($it);
-                $subtotal += $calc['subtotal'];
+                $calc = $this->calculateItemPricing($it, $isCompanyUse);
+                $itemsSubtotal += $calc['subtotal'];
                 $items[] = $calc;
             }
         } else {
@@ -310,16 +373,16 @@ class SypOperationalController extends Controller
                 'qty' => 1,
                 'processes' => $validated['processes'] ?? ['HT']
             ];
-            $calc = $this->calculateItemPricing($defaultIt);
-            $subtotal = $calc['subtotal'];
+            $calc = $this->calculateItemPricing($defaultIt, $isCompanyUse);
+            $itemsSubtotal = $calc['subtotal'];
             $items[] = $calc;
         }
 
-        $priorityFee = $validated['priority_status'] === 'Prioritas' 
+        $priorityFee = ($validated['priority_status'] === 'Prioritas' && !$isCompanyUse)
             ? (float) $request->input('priority_fee', 0) 
             : 0;
 
-        $customFee = $request->filled('custom_fee') ? (float) $request->input('custom_fee') : 0;
+        $customFee = (!$isCompanyUse && $request->filled('custom_fee')) ? (float) $request->input('custom_fee') : 0;
 
         // Calculate dynamic accessory costs
         $accessoryFee = 0;
@@ -334,7 +397,9 @@ class SypOperationalController extends Controller
             }
         }
 
-        $totalPrice = $subtotal + $accessoryFee + $priorityFee + $customFee;
+        // Subtotal = Nilai Barang & Jasa (Kaca + Jasa Proses + Aksesoris)
+        $subtotal = $itemsSubtotal + $accessoryFee;
+        $totalPrice = $subtotal + $priorityFee + $customFee;
 
         $primaryItem = $items[0];
         $summaryGlassType = count($items) > 1 
@@ -376,6 +441,7 @@ class SypOperationalController extends Controller
         $order->priority_fee = $priorityFee;
         $order->custom_fee = $customFee;
         $order->total_price = $totalPrice;
+        $order->is_company_use = $isCompanyUse;
 
         if ($isRevisionUpdate) {
             $order->is_revised = true;
@@ -520,11 +586,21 @@ class SypOperationalController extends Controller
         } else {
             if ($paymentOption === 'custom' && $request->filled('custom_paid_amount') && (float)$request->input('custom_paid_amount') > 0) {
                 $paidAmount = (float)$request->input('custom_paid_amount');
-                $calcPct = round(($paidAmount / max(1, $totalPrice)) * 100);
-                $paymentStatus = 'DP (' . $calcPct . '%)';
+                if ($paidAmount >= $totalPrice && $totalPrice > 0) {
+                    $paidAmount = $totalPrice;
+                    $paymentStatus = 'Lunas';
+                } else {
+                    $calcPct = round(($paidAmount / max(1, $totalPrice)) * 100);
+                    $paymentStatus = 'DP (' . $calcPct . '%)';
+                }
             } else {
                 $paidAmount = round(($totalPrice * $dpPercent) / 100);
-                $paymentStatus = 'DP (' . round($dpPercent) . '%)';
+                if ($paidAmount >= $totalPrice && $totalPrice > 0) {
+                    $paidAmount = $totalPrice;
+                    $paymentStatus = 'Lunas';
+                } else {
+                    $paymentStatus = 'DP (' . round($dpPercent) . '%)';
+                }
             }
         }
 
@@ -536,6 +612,31 @@ class SypOperationalController extends Controller
         $order->division_progress = array_merge((array)$order->division_progress, [
             'HT' => 'Menunggu Dispatch Admin Gudang'
         ]);
+
+        // Potong stok master aksesoris gudang saat order deal & masuk pengerjaan
+        if (is_array($order->accessories)) {
+            foreach ($order->accessories as $acc) {
+                if (is_array($acc)) {
+                    $accId = $acc['id'] ?? null;
+                    $accName = $acc['name'] ?? null;
+                    $accQty = max(1, (int)($acc['qty'] ?? 1));
+                    $accModel = null;
+                    if ($accId && is_numeric($accId)) {
+                        $accModel = \App\Models\Accessory::find($accId);
+                    }
+                    if (!$accModel && $accName) {
+                        $accModel = \App\Models\Accessory::where('name', $accName)->first();
+                    }
+                    if ($accModel) {
+                        $accModel->decrement('qty', min($accModel->qty, $accQty));
+                        $accModel->update([
+                            'status' => $accModel->qty > 20 ? 'Aman' : ($accModel->qty > 0 ? 'Menipis' : 'Habis')
+                        ]);
+                    }
+                }
+            }
+        }
+
         $order->save();
 
         return redirect()->back()->with('message', 'Order Draft #' . $order->spo_number . ' Berhasil Deal (' . $paymentStatus . ') & Dikirim ke Admin Gudang!');
@@ -822,7 +923,12 @@ class SypOperationalController extends Controller
             'rak_location' => 'required|string',
         ]);
 
-        $code = 'SCRAP-00' . (ScrapGlass::count() + 1);
+        $nextId = (ScrapGlass::max('id') ?? 0) + 1;
+        $code = 'SCRAP-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        while (ScrapGlass::where('scrap_code', $code)->exists()) {
+            $nextId++;
+            $code = 'SCRAP-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        }
 
         ScrapGlass::create([
             'scrap_code' => $code,
@@ -1096,18 +1202,49 @@ class SypOperationalController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Kurangi stok SheetGlass
+        // Kurangi stok SheetGlass dengan pencarian cerdas (Exact Match -> LIKE Match -> Ketebalan & Keyword)
         $sheetGlass = \App\Models\SheetGlass::where('name', $validated['glass_type'])->first();
-        
         if (!$sheetGlass) {
-            return redirect()->back()->with('message', '❌ Gagal: Tipe kaca "' . $validated['glass_type'] . '" tidak ditemukan di Master Stok Gudang! Pastikan nama kaca cocok dengan katalog.');
+            $sheetGlass = \App\Models\SheetGlass::where('name', 'like', '%' . $validated['glass_type'] . '%')->first();
+        }
+        if (!$sheetGlass) {
+            preg_match('/(\d+)\s*mm/i', $validated['glass_type'], $tm);
+            $thick = $tm[1] ?? null;
+            $gtLower = strtolower($validated['glass_type']);
+            $matchedKw = null;
+            foreach (['cermin', 'mirror', 'bening', 'clear', 'tempered', 'riben', 'etsa', 'laminated', 'bronze', 'grey'] as $k) {
+                if (str_contains($gtLower, $k)) { $matchedKw = $k; break; }
+            }
+            $query = \App\Models\SheetGlass::query();
+            if ($thick) {
+                $query->where('thickness_mm', (int)$thick);
+            }
+            if ($matchedKw) {
+                $query->where(function($q) use ($matchedKw) {
+                    $q->where('name', 'like', "%{$matchedKw}%")->orWhere('category', 'like', "%{$matchedKw}%");
+                });
+            }
+            $sheetGlass = $query->first();
         }
 
-        if ($sheetGlass->qty < $validated['sheets_used']) {
-            return redirect()->back()->with('message', '❌ Gagal: Stok lembaran kaca "' . $validated['glass_type'] . '" di Gudang tidak mencukupi (Sisa: ' . $sheetGlass->qty . ')!');
+        if (!$sheetGlass) {
+            $sheetGlass = \App\Models\SheetGlass::first();
         }
 
-        $sheetGlass->qty -= (int) $validated['sheets_used'];
+        if (!$sheetGlass) {
+            return redirect()->back()->with('message', '❌ Gagal: Katalog Master Stok Kaca di Gudang kosong! Harap tambahkan stok lembaran kaca terlebih dahulu.');
+        }
+
+        $sheetsUsed = (int) $validated['sheets_used'];
+        if ($sheetGlass->qty < $sheetsUsed) {
+            return redirect()->back()->with('message', '❌ Gagal: Stok lembaran kaca "' . $sheetGlass->name . '" di Gudang tidak mencukupi (Tersisa: ' . $sheetGlass->qty . ' lembar, Dibutuhkan: ' . $sheetsUsed . ' lembar)!');
+        }
+
+        // Kurangi kuantitas & perbarui status alert stok secara otomatis
+        $newQty = max(0, $sheetGlass->qty - $sheetsUsed);
+        $newStatus = $newQty > 10 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+        $sheetGlass->qty = $newQty;
+        $sheetGlass->status = $newStatus;
         $sheetGlass->save();
 
         // 10. Kaca lembaran baru yang dipakai otomatis masuk ke stok kaca sisa (ScrapGlass)
@@ -1157,10 +1294,11 @@ class SypOperationalController extends Controller
         $createdScraps = [];
 
         for ($i = 0; $i < $sheetsUsed; $i++) {
-            $scrapCount = \App\Models\ScrapGlass::count() + 1;
-            $scrapCode = 'SCRAP-' . str_pad($scrapCount, 4, '0', STR_PAD_LEFT);
-            if (\App\Models\ScrapGlass::where('scrap_code', $scrapCode)->exists()) {
-                $scrapCode = 'SCRAP-' . str_pad((\App\Models\ScrapGlass::max('id') ?? 0) + 1 + $i, 4, '0', STR_PAD_LEFT);
+            $maxScrapId = \App\Models\ScrapGlass::max('id') ?? 0;
+            $scrapCode = 'SCRAP-' . str_pad($maxScrapId + 1 + $i, 4, '0', STR_PAD_LEFT);
+            while (\App\Models\ScrapGlass::where('scrap_code', $scrapCode)->exists()) {
+                $maxScrapId++;
+                $scrapCode = 'SCRAP-' . str_pad($maxScrapId + 1 + $i, 4, '0', STR_PAD_LEFT);
             }
 
             \App\Models\ScrapGlass::create([
@@ -1239,8 +1377,8 @@ class SypOperationalController extends Controller
 
         if (!$scrapItem) {
             $scrapStr = $order->used_scrap_rak ?: '';
-            preg_match('/SCRAP-\d+/', $scrapStr, $matches);
-            $scrapCode = $matches[0] ?? null;
+            preg_match('/(SCRAP-\d+|SCR-\d+-[A-Za-z0-9]+|SC-[A-Za-z0-9-]+)/i', $scrapStr, $matches);
+            $scrapCode = $matches[1] ?? ($matches[0] ?? null);
 
             if ($scrapCode) {
                 $scrapItem = ScrapGlass::where('scrap_code', $scrapCode)->first();
@@ -1459,7 +1597,7 @@ class SypOperationalController extends Controller
     /**
      * Calculate Item Glass & Process Option Pricing
      */
-    private function calculateItemPricing(array $it): array
+    private function calculateItemPricing(array $it, bool $isCompanyUse = false): array
     {
         $lRaw = str_replace(',', '.', (string)($it['length_cm'] ?? 100));
         $wRaw = str_replace(',', '.', (string)($it['width_cm'] ?? 100));
@@ -1486,14 +1624,22 @@ class SypOperationalController extends Controller
         // 2. Harga Dasar Kaca (per m2 proporsional sesuai katalog jenis kaca)
         $pricePerM2 = (float)($it['price_per_m2'] ?? 0);
         if ($pricePerM2 <= 0) {
-            if ($t >= 12) $pricePerM2 = 950000;
-            elseif ($t >= 10) $pricePerM2 = 720000;
-            elseif ($t >= 8) $pricePerM2 = 450000;
-            else $pricePerM2 = 380000;
+            $sheet = SheetGlass::where('name', $gt)->first();
+            if ($sheet && (float)$sheet->sell_price > 0) {
+                $pricePerM2 = (float)$sheet->sell_price;
+            } elseif ($t >= 12) {
+                $pricePerM2 = 950000;
+            } elseif ($t >= 10) {
+                $pricePerM2 = 720000;
+            } elseif ($t >= 8) {
+                $pricePerM2 = 450000;
+            } else {
+                $pricePerM2 = 380000;
+            }
         }
         $rawBasePrice = round($areaM2 * $pricePerM2);
         // Harga dasar kaca murni proporsional luas area m2
-        $baseGlassPrice = $rawBasePrice * $q;
+        $baseGlassPrice = $isCompanyUse ? 0 : ($rawBasePrice * $q);
 
         // 3. Biaya GM, HT, BV, Etsa dengan tarif kustom per jenis kaca (dengan fallback default)
         $rateGM = (float)($it['rate_gm'] ?? 10000);
@@ -1502,14 +1648,14 @@ class SypOperationalController extends Controller
         $rateEtsa = (float)($it['rate_etsa'] ?? 50000);
 
         // 3. Biaya GM (Gosok Mesin)
-        $feeGM = in_array('GM', $procs) ? round($perimeterM * $rateGM) * $q : 0;
+        $feeGM = (!$isCompanyUse && in_array('GM', $procs)) ? round($perimeterM * $rateGM) * $q : 0;
 
         // 4. Biaya HT (Gosok HT / Halus Tepi)
-        $feeHT = in_array('HT', $procs) ? round($perimeterM * $rateHT) * $q : 0;
+        $feeHT = (!$isCompanyUse && in_array('HT', $procs)) ? round($perimeterM * $rateHT) * $q : 0;
 
         // 5. Biaya BV (Beveling)
         $bevelWidthCm = (float)str_replace(',', '.', (string)($it['bevel_width_cm'] ?? 1));
-        $feeBV = in_array('BV', $procs) ? round(($perimeterM * $rateBV) + ($bevelWidthCm * 10000)) * $q : 0;
+        $feeBV = (!$isCompanyUse && in_array('BV', $procs)) ? round(($perimeterM * $rateBV) + ($bevelWidthCm * 10000)) * $q : 0;
 
         // 6. Biaya Bor (Coakan): Keliling ruas lubang cm * Rp 2.500 * jumlah lubang (Mendukung multi-lubang)
         $feeBor = 0;
@@ -1521,7 +1667,9 @@ class SypOperationalController extends Controller
                     $hw = (float)str_replace(',', '.', (string)($h['hole_width_cm'] ?? $h['width_cm'] ?? 2));
                     $hq = max(1, (int)($h['hole_qty'] ?? $h['qty'] ?? 1));
                     $ruas = 2 * ($hl + $hw);
-                    $feeBor += round($ruas * 2500) * $hq * $q;
+                    if (!$isCompanyUse) {
+                        $feeBor += round($ruas * 2500) * $hq * $q;
+                    }
                     $holesSpecs[] = [
                         'hole_length_cm' => $hl,
                         'hole_width_cm' => $hw,
@@ -1533,7 +1681,9 @@ class SypOperationalController extends Controller
                 $holeWCm = (float)str_replace(',', '.', (string)($it['hole_width_cm'] ?? 2));
                 $holeQty = max(1, (int)($it['hole_qty'] ?? 1));
                 $holeRuasCm = 2 * ($holeLCm + $holeWCm);
-                $feeBor = round($holeRuasCm * 2500) * $holeQty * $q;
+                if (!$isCompanyUse) {
+                    $feeBor = round($holeRuasCm * 2500) * $holeQty * $q;
+                }
                 $holesSpecs[] = [
                     'hole_length_cm' => $holeLCm,
                     'hole_width_cm' => $holeWCm,
@@ -1552,14 +1702,14 @@ class SypOperationalController extends Controller
         $etsaAreaM2 = ($etsaLCm * $etsaWCm) / 10000;
 
         $feeEtsa = 0;
-        if (in_array('Etsa', $procs)) {
+        if (!$isCompanyUse && in_array('Etsa', $procs)) {
             $feeEtsa = round($etsaAreaM2 * $etsaQty * $rateEtsa) * $q;
             // Batas minimum biaya etsa (setengah tarif per m2) per unit
             $feeEtsa = max(($rateEtsa / 2) * $q, $feeEtsa);
         }
 
         // Total Item Subtotal
-        $itemSubtotal = $baseGlassPrice + $feeGM + $feeHT + $feeBV + $feeBor + $feeEtsa;
+        $itemSubtotal = $isCompanyUse ? 0 : ($baseGlassPrice + $feeGM + $feeHT + $feeBV + $feeBor + $feeEtsa);
 
         return [
             'glass_type' => $gt,

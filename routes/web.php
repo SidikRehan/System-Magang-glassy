@@ -63,6 +63,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/inventory/sheet-glasses', [InventoryMasterController::class, 'storeSheetGlass'])->name('inventory.sheet_glasses.store');
     Route::post('/inventory/sheet-glasses/{id}', [InventoryMasterController::class, 'updateSheetGlass'])->name('inventory.sheet_glasses.update');
     Route::post('/inventory/sheet-glasses/{id}/restock', [InventoryMasterController::class, 'restockSheetGlass'])->name('inventory.sheet_glasses.restock');
+    Route::post('/inventory/sheet-glasses/{id}/request-restock', [InventoryMasterController::class, 'requestRestockSheetGlass'])->name('inventory.sheet_glasses.request_restock');
+    Route::post('/inventory/sheet-glasses/{id}/cancel-restock', [InventoryMasterController::class, 'cancelRequestRestockSheetGlass'])->name('inventory.sheet_glasses.cancel_restock');
     Route::delete('/inventory/sheet-glasses/{id}', [InventoryMasterController::class, 'destroySheetGlass'])->name('inventory.sheet_glasses.destroy');
 
     // 2. Suppliers
