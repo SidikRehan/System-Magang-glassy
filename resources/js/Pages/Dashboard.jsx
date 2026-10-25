@@ -3586,6 +3586,23 @@ export default function Dashboard({
                         <Sliders className="w-3.5 h-3.5" /> Disposisi
                     </button>
                 )}
+                {(userRole.startsWith('divisi_') || userRole === 'owner') && (() => {
+                    const suspendedCount = (initialOrders || []).filter(o => o && o.complaint_status === 'pending_gudang').length;
+                    return (
+                        <button
+                            onClick={() => setActiveTab('suspended')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'suspended' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
+                        >
+                            <PauseCircle className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Suspend</span>
+                            {suspendedCount > 0 && (
+                                <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded-full font-mono">
+                                    {suspendedCount}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })()}
                 {(userRole === 'divisi_ht' || userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                     <button
                         onClick={() => setActiveTab('scrap')}

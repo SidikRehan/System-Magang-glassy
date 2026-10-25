@@ -130,18 +130,18 @@ export default function ProductionTab({
 
             {/* WORKSTATION DIVISION SUB-TAB FILTER */}
             {isDivisionWorker ? (
-                <div className="flex flex-wrap items-center bg-slate-100 border border-slate-200 p-1.5 rounded-2xl gap-2 shadow-xs">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center bg-slate-100 border border-slate-200 p-1.5 rounded-2xl gap-2 shadow-xs w-full sm:w-auto">
                     <button
                         onClick={() => setProductionSubTab(`${userRole}_active`)}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto ${
                             productionSubTab === `${userRole}_active`
                                 ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200'
                                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                         }`}
                     >
                         <Hammer className="w-4 h-4 text-[#1b68b0]" />
-                        <span>Active Pengerjaan {roleTitles[userRole]}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-extrabold ${
+                        <span className="truncate">Active {roleTitles[userRole]}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-extrabold shrink-0 ${
                             productionSubTab === `${userRole}_active` ? 'bg-blue-50 text-[#1b68b0] border border-blue-200' : 'bg-slate-200 text-slate-600'
                         }`}>
                             {initialOrders.filter(o => o.current_division === userRole).length}
@@ -150,15 +150,15 @@ export default function ProductionTab({
 
                     <button
                         onClick={() => setProductionSubTab(`${userRole}_history`)}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto ${
                             productionSubTab === `${userRole}_history`
                                 ? 'bg-white text-emerald-700 shadow-xs border border-slate-200'
                                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                         }`}
                     >
                         <History className="w-4 h-4 text-emerald-600" />
-                        <span>Riwayat Selesai {roleTitles[userRole]}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-extrabold ${
+                        <span className="truncate">Riwayat Selesai</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-extrabold shrink-0 ${
                             productionSubTab === `${userRole}_history` ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'
                         }`}>
                             {(() => {
@@ -172,7 +172,7 @@ export default function ProductionTab({
                     </button>
                 </div>
             ) : (
-                <div className="flex flex-wrap items-center bg-slate-100 border border-slate-200 p-1.5 rounded-2xl gap-1.5 shadow-xs">
+                <div className="flex items-center bg-slate-100 border border-slate-200 p-1.5 rounded-2xl gap-1.5 shadow-xs overflow-x-auto w-full scrollbar-none">
                     {[
                         { key: 'all', label: 'Semua Active', icon: Layers, count: initialOrders.filter(o => checkOrderDivisi(o, 'all')).length },
                         { key: 'divisi_ht', label: 'Divisi Potong (HT)', icon: Scissors, count: initialOrders.filter(o => checkOrderDivisi(o, 'divisi_ht')).length },
@@ -189,7 +189,7 @@ export default function ProductionTab({
                             <button
                                 key={tab.key}
                                 onClick={() => setProductionSubTab(tab.key)}
-                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                                     isActive
                                         ? 'bg-white text-[#1b68b0] shadow-xs border border-slate-200'
                                         : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
@@ -444,8 +444,8 @@ export default function ProductionTab({
                             {activeOngoingOrder ? (
                                 <div className="relative overflow-hidden rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-white via-blue-50/20 to-slate-50 p-6 sm:p-7 shadow-sm space-y-5">
                                     {/* CARD TOP HEADER */}
-                                    <div className="relative z-10 flex flex-wrap justify-between items-center gap-3 border-b border-slate-200 pb-4">
-                                        <div className="flex flex-wrap items-center gap-2.5">
+                                    <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-200 pb-4">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             <span className="relative flex h-3 w-3">
                                                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isJobStarted ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
                                                 <span className={`relative inline-flex rounded-full h-3 w-3 ${isJobStarted ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
@@ -453,12 +453,12 @@ export default function ProductionTab({
                                             <span className={`text-xs font-bold uppercase tracking-wider font-mono flex items-center gap-1.5 ${isJobStarted ? 'text-emerald-700' : 'text-amber-700'}`}>
                                                 <span>{isJobStarted ? 'PROSES SEDANG BERLANGSUNG DI MEJA KERJA' : 'ANTREAN MASUK DI MEJA KERJA (Belum Dimulai)'}</span>
                                             </span>
-                                            <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-50 text-[#1b68b0] border border-blue-200 font-mono shadow-xs">
+                                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1b68b0] border border-blue-200 font-mono shadow-xs">
                                                 Workstation {roleTitles[activeOngoingOrder.current_division] || activeOngoingOrder.current_division}
                                             </span>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                                             {activeOngoingOrder.priority_status === 'Prioritas' ? (
                                                 <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
                                                     <span>🔥 PRIORITAS TINGGI</span>
@@ -562,7 +562,7 @@ export default function ProductionTab({
                                                 </div>
 
                                                 {Array.isArray(activeOngoingOrder.items) && activeOngoingOrder.items.length > 0 ? (
-                                                    <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                                                    <div className="space-y-2 max-h-60 sm:max-h-48 overflow-y-auto pr-1">
                                                         {activeOngoingOrder.items.map((it, idx) => (
                                                             <div key={idx} className="bg-slate-50/80 hover:bg-slate-50 p-3 rounded-xl border border-slate-200 transition flex flex-wrap items-center justify-between gap-2 shadow-xs">
                                                                 <div className="space-y-1 flex-1 min-w-[200px]">
@@ -651,12 +651,12 @@ export default function ProductionTab({
                                     </div>
 
                                     {/* CARD BOTTOM ACTION FOOTER */}
-                                    <div className="relative z-10 flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-slate-200">
-                                        <div className="flex items-center gap-2">
+                                    <div className="relative z-10 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-3 border-t border-slate-200">
+                                        <div className="flex items-center gap-2 w-full sm:w-auto">
                                             <button
                                                 type="button"
                                                 onClick={() => handleOpenDetailModal(activeOngoingOrder)}
-                                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition shadow-xs cursor-pointer"
+                                                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition shadow-xs cursor-pointer"
                                                 title="Buka Modal Detail Lengkap, Sketsa & Histori"
                                             >
                                                 <Eye className="w-3.5 h-3.5 text-slate-500" />
@@ -667,7 +667,7 @@ export default function ProductionTab({
                                                 <button
                                                     type="button"
                                                     onClick={() => handleOpenComplaintModal(activeOngoingOrder)}
-                                                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer shadow-xs"
+                                                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer shadow-xs"
                                                 >
                                                     <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                                                     <span>Lapor Cacat</span>
@@ -676,16 +676,16 @@ export default function ProductionTab({
                                         </div>
 
                                         {/* ACTION SELESAI / MULAI */}
-                                        <div className="flex flex-wrap items-center gap-2 ml-auto">
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                                             {isJobStarted ? (
                                                 <>
                                                     {userRole === 'owner' ? (
-                                                        <>
-                                                            <span className="text-xs text-slate-500 font-mono font-semibold hidden sm:inline-block">Disposisi Owner:</span>
+                                                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                            <span className="text-xs text-slate-500 font-mono font-semibold hidden lg:inline-block">Disposisi Owner:</span>
                                                             <select
                                                                 value={activeCardNextDiv}
                                                                 onChange={(e) => setActiveCardNextDiv(e.target.value)}
-                                                                className="bg-white border border-slate-300 text-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:border-[#1b68b0] font-mono shadow-xs cursor-pointer"
+                                                                className="w-full sm:w-auto bg-white border border-slate-300 text-slate-800 rounded-xl px-3 py-2 text-xs font-semibold focus:border-[#1b68b0] font-mono shadow-xs cursor-pointer"
                                                             >
                                                                 <option value="auto">Alur Otomatis ({computeDefaultNextDiv(activeOngoingOrder) === 'QC_Ready' ? 'QC / Siap Kirim' : computeDefaultNextDiv(activeOngoingOrder).replace('divisi_', 'Divisi ').toUpperCase()})</option>
                                                                 <option value="QC_Ready">Selesai & Lolos QC (Siap Kirim)</option>
@@ -695,9 +695,9 @@ export default function ProductionTab({
                                                                 <option value="divisi_bv">Teruskan ke Divisi BV (Bevel)</option>
                                                                 <option value="divisi_etsa">Teruskan ke Divisi Etsa (Blur)</option>
                                                             </select>
-                                                        </>
+                                                        </div>
                                                     ) : (
-                                                        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-[#1b68b0] px-3 py-1.5 rounded-xl text-xs font-bold font-mono">
+                                                        <div className="flex items-center justify-between sm:justify-start gap-1.5 bg-blue-50 border border-blue-200 text-[#1b68b0] px-3 py-2 sm:py-1.5 rounded-xl text-xs font-bold font-mono">
                                                             <span>Lanjut Otomatis:</span>
                                                             <span className="bg-white px-2 py-0.5 rounded-md border border-blue-200 font-extrabold text-[#242222]">
                                                                 {computeDefaultNextDiv(activeOngoingOrder) === 'QC_Ready'
@@ -732,7 +732,7 @@ export default function ProductionTab({
                                                                 : computeDefaultNextDiv(activeOngoingOrder);
                                                             handleFinishJobAction(activeOngoingOrder.id, actualNext);
                                                         }}
-                                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#70b03c] hover:bg-[#5f9733] disabled:bg-slate-300 disabled:cursor-not-allowed shadow-xs hover:shadow-sm transition cursor-pointer"
+                                                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 rounded-xl font-bold text-xs text-white bg-[#70b03c] hover:bg-[#5f9733] disabled:bg-slate-300 disabled:cursor-not-allowed shadow-xs hover:shadow-sm transition cursor-pointer"
                                                     >
                                                         {finishingOrderId === activeOngoingOrder.id ? (
                                                             <>
@@ -753,7 +753,7 @@ export default function ProductionTab({
                                                     type="button"
                                                     disabled={startingOrderId === activeOngoingOrder.id}
                                                     onClick={() => handleStartJobAction(activeOngoingOrder.id)}
-                                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#1b68b0] hover:bg-[#15528c] disabled:bg-slate-400 disabled:cursor-not-allowed shadow-xs hover:shadow-sm transition cursor-pointer"
+                                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 rounded-xl font-bold text-xs text-white bg-[#1b68b0] hover:bg-[#15528c] disabled:bg-slate-400 disabled:cursor-not-allowed shadow-xs hover:shadow-sm transition cursor-pointer"
                                                 >
                                                     {startingOrderId === activeOngoingOrder.id ? (
                                                         <>
@@ -1003,8 +1003,221 @@ export default function ProductionTab({
                         })();
 
                         return (
-                            <div className="overflow-x-auto rounded-xl border border-slate-200">
-                                <table className="w-full text-left text-xs">
+                            <>
+                                {/* TAMPILAN MOBILE: KARTU WORKSTATION RESPONSIF (< md) */}
+                                <div className="space-y-3 block md:hidden">
+                                    {sortedWorkstationOrders.map(o => {
+                                        const isRevision = isDivisionWorker && o.revision_status === 'pending_division';
+                                        const isPriority = o.priority_status === 'Prioritas';
+                                        const isCurrentlyActiveInCard = isDivisionWorker && activeOngoingId === o.id;
+                                        const isHistoryRow = productionSubTab.endsWith('_history') ||
+                                            productionSubTab === 'QC_Ready' ||
+                                            (isDivisionWorker && o.current_division !== userRole);
+
+                                        return (
+                                            <div
+                                                key={o.id}
+                                                className={`p-4 rounded-2xl border transition space-y-3 ${
+                                                    isCurrentlyActiveInCard
+                                                        ? 'bg-blue-50/50 border-[#1b68b0] ring-2 ring-[#1b68b0]/20 shadow-xs'
+                                                        : isRevision
+                                                            ? 'bg-rose-50/50 border-rose-300 shadow-xs'
+                                                            : isPriority
+                                                                ? 'bg-amber-50/50 border-amber-300 shadow-xs'
+                                                                : 'bg-white border-slate-200 shadow-xs'
+                                                }`}
+                                            >
+                                                {/* HEADER BARIS MOBILE */}
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <div>
+                                                        <div className="flex flex-wrap items-center gap-1.5 font-mono">
+                                                            <span className="font-extrabold text-[#1b68b0] text-sm">{o.spo_number}</span>
+                                                            {isCurrentlyActiveInCard && (
+                                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#1b68b0] border border-blue-200">
+                                                                    ● DI MEJA KERJA
+                                                                </span>
+                                                            )}
+                                                            {isRevision && (
+                                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                                                                    <span>REVISI TOKO</span>
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[#242222] font-bold text-xs mt-0.5">{o.customer_name || 'Pelanggan'}</div>
+                                                    </div>
+
+                                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
+                                                        isPriority ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                                                    }`}>
+                                                        {isPriority ? '🔥 PRIORITAS' : 'Biasa'}
+                                                    </span>
+                                                </div>
+
+                                                {/* TANGGAL ORDER & DEADLINE */}
+                                                <div className="flex flex-wrap justify-between items-center text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-200/80 font-mono">
+                                                    <span>Order: {formatIndonesianDate(o.order_date)}</span>
+                                                    <span className="text-amber-800 font-bold">Deadline: {formatIndonesianDate(o.deadline_date)}</span>
+                                                </div>
+
+                                                {/* SPESIFIKASI KACA */}
+                                                <div className="space-y-1.5 text-xs">
+                                                    {Array.isArray(o.items) && o.items.length > 0 ? (
+                                                        o.items.map((it, idx) => (
+                                                            <div key={idx} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px] space-y-0.5">
+                                                                <div className="font-bold text-[#242222]">#{idx + 1}. {it.glass_type}</div>
+                                                                <div className="text-slate-600 font-mono flex flex-wrap gap-2">
+                                                                    <span>{it.length_cm} × {it.width_cm} cm ({it.thickness_mm}mm)</span>
+                                                                    <strong className="text-emerald-700">Qty: {it.qty || 1} Pcs</strong>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px]">
+                                                            <div className="font-bold text-[#242222]">{o.glass_type}</div>
+                                                            <div className="text-slate-600 font-mono">{o.length_cm} × {o.width_cm} cm ({o.thickness_mm}mm)</div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* REKOMENDASI SCRAP */}
+                                                    {o.used_scrap_rak && o.used_scrap_rak !== '-' && o.used_scrap_rak.trim() !== '' && (
+                                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-2 text-[10px] font-mono text-amber-800">
+                                                            <strong>Scrap:</strong> {o.used_scrap_rak}
+                                                        </div>
+                                                    )}
+
+                                                    {/* THUMBNAIL SKETSA */}
+                                                    {o.sketch_photo_path && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenSketchLightbox(o.sketch_photo_path, o.spo_number, {
+                                                                type: 'production',
+                                                                subtitle: `No. SPO: ${o.spo_number}`,
+                                                                badge: 'Sketsa Produksi SPK',
+                                                                description: `Gambar acuan teknis pengerjaan pola dan instruksi proses operator divisi pabrik untuk SPO #${o.spo_number}.`,
+                                                                customerName: o.customer_name,
+                                                            })}
+                                                            className="w-full bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 rounded-xl p-2 flex items-center justify-between text-xs transition cursor-pointer"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <img
+                                                                    src={o.sketch_photo_path.startsWith('http') || o.sketch_photo_path.startsWith('/') ? o.sketch_photo_path : `/storage/${o.sketch_photo_path}`}
+                                                                    alt="Sketsa"
+                                                                    className="w-6 h-6 rounded object-cover border border-blue-200 bg-white"
+                                                                />
+                                                                <span className="font-bold text-[11px]">Lihat Gambar Sketsa Kaca</span>
+                                                            </div>
+                                                            <span className="text-[10px] bg-white text-[#1b68b0] px-2 py-0.5 rounded font-mono font-bold border border-blue-200">Buka</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* ALUR PROSES WORKFLOW BADGES */}
+                                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                                    {(() => {
+                                                        const activeProcs = ['HT', 'GM', 'BV', 'Etsa'];
+                                                        return activeProcs.map(proc => {
+                                                            const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
+                                                            const isDone = status === 'Selesai';
+                                                            const isWorking = status === 'Sedang Dikerjakan';
+                                                            const isNA = status === 'N/A';
+                                                            return (
+                                                                <span
+                                                                    key={proc}
+                                                                    className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono border flex items-center gap-1 ${
+                                                                        isDone
+                                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                            : isWorking
+                                                                                ? 'bg-blue-50 text-[#1b68b0] border-blue-300 animate-pulse'
+                                                                                : isNA
+                                                                                    ? 'bg-slate-100 text-slate-400 border-slate-200'
+                                                                                    : 'bg-white text-slate-500 border-slate-200'
+                                                                    }`}
+                                                                >
+                                                                    {proc}: {status}
+                                                                </span>
+                                                            );
+                                                        });
+                                                    })()}
+                                                </div>
+
+                                                {/* PERINGATAN REVISI / CACAT */}
+                                                {o.revision_status === 'pending_division' && (
+                                                    <div className="bg-rose-50 border-2 border-rose-300 rounded-xl p-2.5 text-rose-900 space-y-1">
+                                                        <div className="flex justify-between items-center text-[10px] font-bold">
+                                                            <span className="flex items-center gap-1 text-rose-700">
+                                                                <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
+                                                                <span>ADA REVISI TOKO</span>
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenRevisionDetailModal ? handleOpenRevisionDetailModal(o) : handleAcknowledgeRevision(o.id)}
+                                                                className="bg-rose-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer"
+                                                            >
+                                                                Lihat Revisi
+                                                            </button>
+                                                        </div>
+                                                        {o.revision_notes && (
+                                                            <div className="text-[10px] font-mono text-amber-900 bg-white p-1.5 rounded border border-rose-200">
+                                                                Catatan: "{o.revision_notes}"
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* AKSI TOMBOL MOBILE */}
+                                                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenDetailModal(o)}
+                                                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-xs cursor-pointer"
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                                        <span>Detail</span>
+                                                    </button>
+
+                                                    {isDivisionWorker && !isHistoryRow && (
+                                                        isCurrentlyActiveInCard ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    document.getElementById('active-workstation-card')?.scrollIntoView({ behavior: 'smooth' });
+                                                                }}
+                                                                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs text-[#1b68b0] bg-blue-50 border border-blue-200 shadow-xs cursor-pointer font-mono"
+                                                            >
+                                                                <span className="w-2 h-2 rounded-full bg-[#1b68b0] animate-pulse"></span>
+                                                                <span>Di Meja Kerja</span>
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                disabled={startingOrderId === o.id}
+                                                                onClick={() => handleStartWorkstationJob(o)}
+                                                                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#1b68b0] hover:bg-[#15528c] disabled:bg-slate-400 shadow-xs cursor-pointer"
+                                                            >
+                                                                {startingOrderId === o.id ? (
+                                                                    <>
+                                                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                                                                        <span>Memproses...</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Hammer className="w-3.5 h-3.5" />
+                                                                        <span>Mulai Kerjakan</span>
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* TAMPILAN DESKTOP & TABLET: TABEL RESIK DENGAN HOVER (>= md) */}
+                                <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200">
+                                    <table className="w-full text-left text-xs">
                                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[11px] font-bold">
                                         <tr>
                                             <th className="p-3">No SPO & Prioritas</th>
@@ -1302,6 +1515,7 @@ export default function ProductionTab({
                                     </tbody>
                                 </table>
                             </div>
+                            </>
                         );
                     })()}
                 </div>
