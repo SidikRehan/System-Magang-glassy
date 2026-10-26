@@ -208,14 +208,39 @@ export const computeDefaultNextDiv = (ord) => {
     if (!ord) return 'QC_Ready';
     const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
     const reqCodes = ['HT'];
-    const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
+    const addC = (p) => {
+        if (!p) return;
+        const code = typeof p === 'string' ? p.trim() : (p?.id || p?.code || '');
+        const upper = code.toUpperCase();
+        const mapCode = {
+            'HT': 'HT',
+            'GM': 'GM',
+            'GOSOK': 'GM',
+            'BV': 'BV',
+            'BEVEL': 'BV',
+            'BEVELING': 'BV',
+            'ETSA': 'Etsa',
+            'BLUR': 'Etsa',
+            'SANDBLAST': 'Etsa'
+        };
+        const standardCode = mapCode[upper] || (['GM', 'BV', 'Etsa'].includes(code) ? code : null);
+        if (standardCode && ['GM', 'BV', 'Etsa'].includes(standardCode) && !reqCodes.includes(standardCode)) {
+            reqCodes.push(standardCode);
+        }
+    };
+
     if (Array.isArray(ord.processes)) ord.processes.forEach(addC);
     if (Array.isArray(ord.items)) {
-        ord.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
+        ord.items.forEach(it => {
+            if (Array.isArray(it.processes)) it.processes.forEach(addC);
+        });
     }
+
     reqCodes.sort((a, b) => fixedSeq.indexOf(a) - fixedSeq.indexOf(b));
     const curKey = (ord.current_division || '').replace('divisi_', '').toUpperCase();
-    const curIdx = reqCodes.indexOf(curKey);
+    const curKeyNormalized = curKey === 'ETSA' ? 'Etsa' : curKey;
+    const curIdx = reqCodes.indexOf(curKeyNormalized);
+
     if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
         const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
         return map[reqCodes[curIdx + 1]] || 'QC_Ready';

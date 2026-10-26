@@ -1045,6 +1045,9 @@ class SypOperationalController extends Controller
 
         if ($currentDivKey) {
             $progress[$currentDivKey] = 'Sedang Dikerjakan';
+            if ($currentDivKey === 'ETSA') {
+                $progress['Etsa'] = 'Sedang Dikerjakan';
+            }
             if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
                 $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
             }
@@ -1138,6 +1141,9 @@ class SypOperationalController extends Controller
 
         if ($currentDivKey) {
             $progress[$currentDivKey] = 'Selesai';
+            if ($currentDivKey === 'ETSA') {
+                $progress['Etsa'] = 'Selesai';
+            }
             if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
                 $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
             }
@@ -1647,15 +1653,32 @@ class SypOperationalController extends Controller
         $rateBV = (float)($it['rate_bv'] ?? 15000);
         $rateEtsa = (float)($it['rate_etsa'] ?? 50000);
 
-        // 3. Biaya GM (Gosok Mesin)
-        $feeGM = (!$isCompanyUse && in_array('GM', $procs)) ? round($perimeterM * $rateGM) * $q : 0;
+        // Keliling penuh kaca kotak 4 sisi (cm)
+        $fullPerimeterCm = (float)(2 * ($l + $w));
+
+        // 3. Biaya GM (Gosok Mesin) - dihitung proporsional panjang sisi cm yang di-GM
+        $gmLengthCm = (isset($it['gm_length_cm']) && $it['gm_length_cm'] !== '' && $it['gm_length_cm'] !== null)
+            ? (float)str_replace(',', '.', (string)$it['gm_length_cm'])
+            : $fullPerimeterCm;
+        if ($gmLengthCm <= 0 && $fullPerimeterCm > 0) {
+            $gmLengthCm = $fullPerimeterCm;
+        }
+        $gmLengthM = $gmLengthCm / 100;
+        $feeGM = (!$isCompanyUse && in_array('GM', $procs)) ? round($gmLengthM * $rateGM) * $q : 0;
 
         // 4. Biaya HT (Gosok HT / Halus Tepi)
         $feeHT = (!$isCompanyUse && in_array('HT', $procs)) ? round($perimeterM * $rateHT) * $q : 0;
 
-        // 5. Biaya BV (Beveling)
+        // 5. Biaya BV (Beveling) - dihitung proporsional panjang sisi cm yang di-BV + lebar bevel
+        $bvLengthCm = (isset($it['bv_length_cm']) && $it['bv_length_cm'] !== '' && $it['bv_length_cm'] !== null)
+            ? (float)str_replace(',', '.', (string)$it['bv_length_cm'])
+            : $fullPerimeterCm;
+        if ($bvLengthCm <= 0 && $fullPerimeterCm > 0) {
+            $bvLengthCm = $fullPerimeterCm;
+        }
+        $bvLengthM = $bvLengthCm / 100;
         $bevelWidthCm = (float)str_replace(',', '.', (string)($it['bevel_width_cm'] ?? 1));
-        $feeBV = (!$isCompanyUse && in_array('BV', $procs)) ? round(($perimeterM * $rateBV) + ($bevelWidthCm * 10000)) * $q : 0;
+        $feeBV = (!$isCompanyUse && in_array('BV', $procs)) ? round(($bvLengthM * $rateBV) + ($bevelWidthCm * 10000)) * $q : 0;
 
         // 6. Biaya Bor (Coakan): Keliling ruas lubang cm * Rp 2.500 * jumlah lubang (Mendukung multi-lubang)
         $feeBor = 0;
@@ -1718,6 +1741,8 @@ class SypOperationalController extends Controller
             'thickness_mm' => $t,
             'qty' => $q,
             'processes' => $procs,
+            'gm_length_cm' => $gmLengthCm,
+            'bv_length_cm' => $bvLengthCm,
             'bevel_width_cm' => $bevelWidthCm,
             'holes' => $holesSpecs,
             'hole_length_cm' => $primaryHoleL,

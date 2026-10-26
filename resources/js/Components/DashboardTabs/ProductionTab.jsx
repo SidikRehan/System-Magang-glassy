@@ -415,25 +415,22 @@ export default function ProductionTab({
             {/* SECTION B: WORKSTATION ACTIVE PENGERJAAN & DISPOSISI LAYOUT */}
             <div className="space-y-6">
                 {/* ACTIVE MEJA KERJA WORKSTATION CARD (HT, GM, BV, ETSA) */}
-                {isDivisionWorker && (() => {
-                    const activeDivKey = userRole.replace('divisi_', '').toUpperCase();
+                {(isDivisionWorker || productionSubTab.startsWith('divisi_')) && (() => {
+                    const currentWorkstationDiv = isDivisionWorker ? userRole : productionSubTab;
+                    const activeDivKey = currentWorkstationDiv.replace('divisi_', '').toUpperCase();
 
                     const activeOngoingOrder = (() => {
                         if (activeWorkingOrderId) {
                             const found = initialOrders.find(o => o.id === activeWorkingOrderId);
-                            if (found) return found;
+                            if (found && found.current_division === currentWorkstationDiv) return found;
                         }
                         return initialOrders.find(o => {
                             if (o.complaint_status === 'pending_gudang') return false;
                             
-                            if (isDivisionWorker) {
-                                return o.current_division === userRole && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
-                            }
-                            if (productionSubTab.startsWith('divisi_')) {
-                                return o.current_division === productionSubTab &&
-                                    ['Sedang Dikerjakan', 'Menunggu Pengerjaan', 'Belum', 'Menunggu Dispatch'].includes(o.division_progress?.[activeDivKey] || '');
-                            }
-                            return false;
+                            return o.current_division === currentWorkstationDiv && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
+                        }) || initialOrders.find(o => {
+                            if (o.complaint_status === 'pending_gudang') return false;
+                            return o.current_division === currentWorkstationDiv && o.status === 'pengerjaan';
                         }) || null;
                     })();
 
@@ -578,6 +575,21 @@ export default function ProductionTab({
                                                                             Tebal: {it.thickness_mm} mm
                                                                         </span>
                                                                     </div>
+                                                                    {Array.isArray(it.processes) && (
+                                                                        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-mono">
+                                                                            <span className="text-[#1b68b0] font-bold">Proses: {it.processes.join(', ')}</span>
+                                                                            {it.processes.includes('GM') && (
+                                                                                <span className="bg-white text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                                                                    GM: {it.gm_length_cm ? `${it.gm_length_cm} cm` : 'Keliling'}
+                                                                                </span>
+                                                                            )}
+                                                                            {it.processes.includes('BV') && (
+                                                                                <span className="bg-white text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                                                                    BV: {it.bv_length_cm ? `${it.bv_length_cm} cm` : 'Keliling'} (L: {it.bevel_width_cm || 1} cm)
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 <div className="shrink-0">
                                                                     <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl font-mono text-xs font-black shadow-xs flex items-center gap-1">

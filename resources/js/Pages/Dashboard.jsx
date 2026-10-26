@@ -351,7 +351,7 @@ export default function Dashboard({
     const [activeWorkingOrderId, setActiveWorkingOrderId] = useState(null);
     const [localStartTimes, setLocalStartTimes] = useState({});
     const [timerTick, setTimerTick] = useState(Date.now());
-    const [activeCardNextDiv, setActiveCardNextDiv] = useState('QC_Ready');
+    const [activeCardNextDiv, setActiveCardNextDiv] = useState('auto');
     const [showExecutionModal, setShowExecutionModal] = useState(false);
     const [selectedExecutionOrder, setSelectedExecutionOrder] = useState(null);
     const [showScrapPopupModal, setShowScrapPopupModal] = useState(false);
@@ -2677,6 +2677,8 @@ export default function Dashboard({
             thickness_mm: 5,
             qty: 1,
             processes: ['HT'],
+            gm_length_cm: '',
+            bv_length_cm: '',
             bevel_width_cm: 1,
             hole_length_cm: 2,
             hole_width_cm: 2,
@@ -2725,6 +2727,8 @@ export default function Dashboard({
             thickness_mm: targetType ? extractThickness(targetType) : 5,
             qty: 1,
             processes: lastMatching?.processes ? [...lastMatching.processes] : ['HT'],
+            gm_length_cm: '',
+            bv_length_cm: '',
             bevel_width_cm: 1,
             hole_length_cm: 2,
             hole_width_cm: 2,
@@ -2748,6 +2752,8 @@ export default function Dashboard({
             thickness_mm: 5,
             qty: 1,
             processes: ['HT'],
+            gm_length_cm: '',
+            bv_length_cm: '',
             bevel_width_cm: 1,
             hole_length_cm: 2,
             hole_width_cm: 2,
@@ -2865,6 +2871,20 @@ export default function Dashboard({
             existingProcs.splice(procIndex, 1);
         } else {
             existingProcs.push(procId);
+            const l = parseDim(item.length_cm) || 0;
+            const w = parseDim(item.width_cm) || 0;
+            const fullPerimeter = (l > 0 && w > 0) ? (2 * (l + w)) : '';
+            if (procId === 'GM' && (!item.gm_length_cm || item.gm_length_cm === '')) {
+                item.gm_length_cm = fullPerimeter;
+            }
+            if (procId === 'BV') {
+                if (!item.bv_length_cm || item.bv_length_cm === '') {
+                    item.bv_length_cm = fullPerimeter;
+                }
+                if (!item.bevel_width_cm || item.bevel_width_cm === '') {
+                    item.bevel_width_cm = 1;
+                }
+            }
         }
 
         currentItems[itemIndex] = {
@@ -3018,11 +3038,25 @@ export default function Dashboard({
         const rawBasePrice = Math.round(areaM2 * pricePerM2);
         const baseGlassPrice = orderForm.is_company_use ? 0 : ((l > 0 && w > 0) ? rawBasePrice * q : 0);
 
-        let feeGM = procs.includes('GM') ? Math.round(perimeterM * rateGM) * q : 0;
+        // Keliling penuh default (cm)
+        const fullPerimeterCm = (l > 0 && w > 0) ? (2 * (l + w)) : 0;
+
+        // GM Length (cm): jika diisi, gunakan nilainya; jika kosong/null, fallback ke keliling penuh
+        const gmLengthCm = (it.gm_length_cm !== undefined && it.gm_length_cm !== '' && it.gm_length_cm !== null)
+            ? (parseDim(it.gm_length_cm) || fullPerimeterCm)
+            : fullPerimeterCm;
+        const gmLengthM = gmLengthCm / 100;
+        let feeGM = procs.includes('GM') ? Math.round(gmLengthM * rateGM) * q : 0;
+
         let feeHT = procs.includes('HT') ? Math.round(perimeterM * rateHT) * q : 0;
 
+        // BV Length (cm): jika diisi, gunakan nilainya; jika kosong/null, fallback ke keliling penuh
+        const bvLengthCm = (it.bv_length_cm !== undefined && it.bv_length_cm !== '' && it.bv_length_cm !== null)
+            ? (parseDim(it.bv_length_cm) || fullPerimeterCm)
+            : fullPerimeterCm;
+        const bvLengthM = bvLengthCm / 100;
         const bevelWidthCm = parseDim(it.bevel_width_cm) || 1;
-        let feeBV = procs.includes('BV') ? Math.round((perimeterM * rateBV) + (bevelWidthCm * 10000)) * q : 0;
+        let feeBV = procs.includes('BV') ? Math.round((bvLengthM * rateBV) + (bevelWidthCm * 10000)) * q : 0;
 
         let feeBor = 0;
         let holeRuasCm = 0;
@@ -3077,6 +3111,10 @@ export default function Dashboard({
             rate_etsa: rateEtsa,
             areaM2,
             perimeterM,
+            fullPerimeterCm,
+            gm_length_cm: it.gm_length_cm !== undefined && it.gm_length_cm !== '' ? it.gm_length_cm : (fullPerimeterCm || ''),
+            bv_length_cm: it.bv_length_cm !== undefined && it.bv_length_cm !== '' ? it.bv_length_cm : (fullPerimeterCm || ''),
+            bevel_width_cm: bevelWidthCm,
             baseGlassPrice,
             feeGM,
             feeHT,
@@ -3194,7 +3232,17 @@ export default function Dashboard({
                 width_cm: it.width_cm || 120,
                 thickness_mm: it.thickness_mm || 5,
                 qty: it.qty || 1,
-                processes: Array.isArray(it.processes) ? it.processes : ['HT']
+                processes: Array.isArray(it.processes) ? it.processes : ['HT'],
+                gm_length_cm: it.gm_length_cm ?? '',
+                bv_length_cm: it.bv_length_cm ?? '',
+                bevel_width_cm: it.bevel_width_cm ?? 1,
+                holes: it.holes || [],
+                hole_length_cm: it.hole_length_cm || 2,
+                hole_width_cm: it.hole_width_cm || 2,
+                hole_qty: it.hole_qty || 1,
+                etsa_length_cm: it.etsa_length_cm ?? it.length_cm,
+                etsa_width_cm: it.etsa_width_cm ?? it.width_cm,
+                etsa_qty: it.etsa_qty ?? 1
             }))
             : [{
                 id: 1,
@@ -3203,7 +3251,17 @@ export default function Dashboard({
                 width_cm: order.width_cm || 120,
                 thickness_mm: order.thickness_mm || 5,
                 qty: 1,
-                processes: Array.isArray(order.processes) ? order.processes : ['HT']
+                processes: Array.isArray(order.processes) ? order.processes : ['HT'],
+                gm_length_cm: order.gm_length_cm ?? '',
+                bv_length_cm: order.bv_length_cm ?? '',
+                bevel_width_cm: order.bevel_width_cm ?? 1,
+                holes: order.holes || [],
+                hole_length_cm: order.hole_length_cm || 2,
+                hole_width_cm: order.hole_width_cm || 2,
+                hole_qty: order.hole_qty || 1,
+                etsa_length_cm: order.etsa_length_cm ?? order.length_cm,
+                etsa_width_cm: order.etsa_width_cm ?? order.width_cm,
+                etsa_qty: order.etsa_qty ?? 1
             }];
 
         const isLunas = order.payment_status === 'Lunas';

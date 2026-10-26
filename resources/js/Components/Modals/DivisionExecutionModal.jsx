@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { router } from '@inertiajs/react';
-import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight, Phone, MapPin, Calendar, Clock, FileText, Layers, Box, Sparkles, Plus, Minus, Edit3, Trash2, Search, RotateCcw, Info, Check, ShieldAlert, FileCheck, Layers3, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight, Phone, MapPin, Calendar, Clock, FileText, Layers, Box, Sparkles, Plus, Minus, Edit3, Trash2, Search, RotateCcw, Info, Check, ShieldAlert, FileCheck, Layers3, AlertCircle, Loader2, ChevronDown, Gem } from 'lucide-react';
+import { computeDefaultNextDiv } from '@/Utils/dashboardHelpers';
 
 function SearchableScrapSelect({
     scrapGlasses = [],
@@ -411,31 +412,12 @@ export default function DivisionExecutionModal({
     // State penanda lembar terpotong per item (1, 2, 3 ... Qty)
     const [cutTracker, setCutTracker] = useState({});
 
-    // Calculate recommended next division
-    const computeDefaultNextDiv = React.useCallback((ord) => {
-        if (!ord) return 'QC_Ready';
-        const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
-        const reqCodes = ['HT'];
-        const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
-        if (Array.isArray(ord.processes)) ord.processes.forEach(addC);
-        if (Array.isArray(ord.items)) {
-            ord.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
-        }
-        reqCodes.sort((a, b) => fixedSeq.indexOf(a) - fixedSeq.indexOf(b));
-        const curKey = (ord.current_division || '').replace('divisi_', '').toUpperCase();
-        const curIdx = reqCodes.indexOf(curKey);
-        if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
-            const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
-            return map[reqCodes[curIdx + 1]] || 'QC_Ready';
-        }
-        return 'QC_Ready';
-    }, []);
-
+    // Next Division recommendation synchronized with global dashboard workflow
     const [selectedNextDiv, setSelectedNextDiv] = useState(() => computeDefaultNextDiv(selectedExecutionOrder));
 
     React.useEffect(() => {
         setSelectedNextDiv(computeDefaultNextDiv(selectedExecutionOrder));
-    }, [selectedExecutionOrder, computeDefaultNextDiv]);
+    }, [selectedExecutionOrder]);
 
     const getCutCount = (itemIdx) => {
         const itemState = cutTracker[itemIdx] || {};
@@ -1266,8 +1248,22 @@ export default function DivisionExecutionModal({
                                             <span>Tebal: <strong className="text-amber-800 font-bold">{it.thickness_mm} mm</strong></span>
                                         </div>
                                         {Array.isArray(it.processes) && (
-                                            <div className="text-xs text-slate-500 pt-0.5">
-                                                Proses Divisi: <span className="text-[#1b68b0] font-mono font-bold">{it.processes.join(', ')}</span>
+                                            <div className="text-xs text-slate-500 pt-0.5 space-y-0.5">
+                                                <div>
+                                                    Proses Divisi: <span className="text-[#1b68b0] font-mono font-bold">{it.processes.join(', ')}</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 text-[11px] font-mono text-slate-600">
+                                                    {it.processes.includes('GM') && (
+                                                        <span className="bg-white px-2 py-0.5 rounded border border-slate-200">
+                                                            GM: <strong>{it.gm_length_cm ? `${it.gm_length_cm} cm` : 'Keliling (Penuh)'}</strong>
+                                                        </span>
+                                                    )}
+                                                    {it.processes.includes('BV') && (
+                                                        <span className="bg-white px-2 py-0.5 rounded border border-slate-200">
+                                                            BV: <strong>{it.bv_length_cm ? `${it.bv_length_cm} cm` : 'Keliling (Penuh)'}</strong> (Lebar {it.bevel_width_cm || 1} cm)
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>

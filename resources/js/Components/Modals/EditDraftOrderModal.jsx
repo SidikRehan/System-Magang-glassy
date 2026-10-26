@@ -26,7 +26,8 @@ import {
     Loader2,
     Building2,
     Scissors,
-    Search
+    Search,
+    Gem
 } from 'lucide-react';
 import SearchableSelect from '@/Components/SearchableSelect';
 
@@ -853,22 +854,246 @@ export default function EditDraftOrderModal({
                                                             </div>
                                                         </div>
 
+                                                        {/* CONDITIONAL PARAMETERS FOR GM (GOSOK MESIN) */}
+                                                        {(item.processes || []).includes('GM') && (() => {
+                                                            const l = parseFloat(String(item.length_cm).replace(',', '.')) || 0;
+                                                            const w = parseFloat(String(item.width_cm).replace(',', '.')) || 0;
+                                                            const kll = 2 * (l + w);
+                                                            const p2 = 2 * l;
+                                                            const l2 = 2 * w;
+                                                            const p1 = l;
+                                                            const l1 = w;
+
+                                                            return (
+                                                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                                                                    <div className="flex flex-wrap justify-between items-center gap-1">
+                                                                        <label className="text-[11px] text-slate-700 font-bold flex items-center gap-1.5">
+                                                                            <Sparkles className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                                            <span>Parameter Gosok Mesin (GM) — Panjang Sisi (cm):</span>
+                                                                        </label>
+                                                                        <span className="text-[10px] text-slate-500 font-mono">
+                                                                            *Tarif: Rp {Number(item.rate_gm || 10000).toLocaleString('id-ID')}/m
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {/* QUICK PRESET BUTTONS GM */}
+                                                                    {l > 0 && w > 0 && (
+                                                                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleItemChange(idx, 'gm_length_cm', kll)}
+                                                                                className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                    String(item.gm_length_cm) === String(kll) || !item.gm_length_cm
+                                                                                        ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                }`}
+                                                                                title="Gosok mesin keliling 4 sisi penuh"
+                                                                            >
+                                                                                4 Sisi (Keliling: {kll} cm)
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleItemChange(idx, 'gm_length_cm', p2)}
+                                                                                className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                    String(item.gm_length_cm) === String(p2)
+                                                                                        ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                }`}
+                                                                                title="Gosok 2 sisi panjang saja"
+                                                                            >
+                                                                                2 Sisi P ({p2} cm)
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleItemChange(idx, 'gm_length_cm', l2)}
+                                                                                className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                    String(item.gm_length_cm) === String(l2)
+                                                                                        ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                }`}
+                                                                                title="Gosok 2 sisi lebar saja"
+                                                                            >
+                                                                                2 Sisi L ({l2} cm)
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleItemChange(idx, 'gm_length_cm', p1)}
+                                                                                className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                    String(item.gm_length_cm) === String(p1)
+                                                                                        ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                }`}
+                                                                                title="Gosok 1 sisi panjang saja"
+                                                                            >
+                                                                                1 Sisi P ({p1} cm)
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleItemChange(idx, 'gm_length_cm', l1)}
+                                                                                className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                    String(item.gm_length_cm) === String(l1)
+                                                                                        ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                }`}
+                                                                                title="Gosok 1 sisi lebar saja"
+                                                                            >
+                                                                                1 Sisi L ({l1} cm)
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="flex items-center gap-2">
+                                                                        <input 
+                                                                            type="text" 
+                                                                            inputMode="decimal" 
+                                                                            value={item.gm_length_cm ?? ''} 
+                                                                            placeholder={kll > 0 ? String(kll) : 'Contoh: 150'}
+                                                                            onChange={e => handleItemChange(idx, 'gm_length_cm', e.target.value)} 
+                                                                            onFocus={e => e.target.select()}
+                                                                            className="w-36 bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
+                                                                        />
+                                                                        <span className="text-[11px] text-slate-600 font-mono">cm</span>
+                                                                        <span className="text-[10px] text-slate-400 italic">
+                                                                            (Kosongkan jika di-GM keliling 4 sisi penuh)
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+
                                                         {/* CONDITIONAL PARAMETERS FOR BEVEL & BOR */}
-                                                        {(item.processes || []).includes('BV') && (
-                                                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                                                                <label className="text-[11px] text-slate-700 font-semibold block">
-                                                                    Lebar Bevel (cm): <span className="text-[10px] text-slate-500 font-mono">(Biaya: Keliling × Rp 15.000 + Lebar cm × Rp 10.000)</span>
-                                                                </label>
-                                                                <input 
-                                                                    type="text" 
-                                                                    inputMode="decimal"
-                                                                    value={item.bevel_width_cm ?? ''} 
-                                                                    onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
-                                                                    onFocus={e => e.target.select()}
-                                                                    className="w-36 bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
-                                                                />
-                                                            </div>
-                                                        )}
+                                                        {(item.processes || []).includes('BV') && (() => {
+                                                            const l = parseFloat(String(item.length_cm).replace(',', '.')) || 0;
+                                                            const w = parseFloat(String(item.width_cm).replace(',', '.')) || 0;
+                                                            const kll = 2 * (l + w);
+                                                            const p2 = 2 * l;
+                                                            const l2 = 2 * w;
+                                                            const p1 = l;
+                                                            const l1 = w;
+
+                                                            return (
+                                                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                                                                    <div className="flex flex-wrap justify-between items-center gap-1">
+                                                                        <label className="text-[11px] text-slate-700 font-bold flex items-center gap-1.5">
+                                                                            <Gem className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                                            <span>Parameter Beveling (BV):</span>
+                                                                        </label>
+                                                                        <span className="text-[10px] text-slate-500 font-mono">
+                                                                            *Tarif: (Panjang BV cm / 100 × Rp {Number(item.rate_bv || 15000).toLocaleString('id-ID')}) + (Lebar cm × Rp 10.000)
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {/* FIELD 1: PANJANG BV (CM) + PRESETS */}
+                                                                    <div className="space-y-1.5">
+                                                                        <label className="text-[10px] text-slate-600 font-semibold block">
+                                                                            Panjang Sisi yang di-BV (cm):
+                                                                        </label>
+                                                                        {l > 0 && w > 0 && (
+                                                                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleItemChange(idx, 'bv_length_cm', kll)}
+                                                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                        String(item.bv_length_cm) === String(kll) || !item.bv_length_cm
+                                                                                            ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                    }`}
+                                                                                    title="Bevel keliling 4 sisi penuh"
+                                                                                >
+                                                                                    4 Sisi (Keliling: {kll} cm)
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleItemChange(idx, 'bv_length_cm', p2)}
+                                                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                        String(item.bv_length_cm) === String(p2)
+                                                                                            ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                    }`}
+                                                                                    title="Bevel 2 sisi panjang saja"
+                                                                                >
+                                                                                    2 Sisi P ({p2} cm)
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleItemChange(idx, 'bv_length_cm', l2)}
+                                                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                        String(item.bv_length_cm) === String(l2)
+                                                                                            ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                    }`}
+                                                                                    title="Bevel 2 sisi lebar saja"
+                                                                                >
+                                                                                    2 Sisi L ({l2} cm)
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleItemChange(idx, 'bv_length_cm', p1)}
+                                                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                        String(item.bv_length_cm) === String(p1)
+                                                                                            ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                    }`}
+                                                                                    title="Bevel 1 sisi panjang saja"
+                                                                                >
+                                                                                    1 Sisi P ({p1} cm)
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleItemChange(idx, 'bv_length_cm', l1)}
+                                                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                                                                                        String(item.bv_length_cm) === String(l1)
+                                                                                            ? 'bg-blue-100 text-[#1b68b0] border-[#1b68b0]'
+                                                                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                                    }`}
+                                                                                    title="Bevel 1 sisi lebar saja"
+                                                                                >
+                                                                                    1 Sisi L ({l1} cm)
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+
+                                                                        <div className="flex items-center gap-2">
+                                                                            <input 
+                                                                                type="text" 
+                                                                                inputMode="decimal" 
+                                                                                value={item.bv_length_cm ?? ''} 
+                                                                                placeholder={kll > 0 ? String(kll) : 'Contoh: 150'}
+                                                                                onChange={e => handleItemChange(idx, 'bv_length_cm', e.target.value)} 
+                                                                                onFocus={e => e.target.select()}
+                                                                                className="w-36 bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
+                                                                            />
+                                                                            <span className="text-[11px] text-slate-600 font-mono">cm</span>
+                                                                            <span className="text-[10px] text-slate-400 italic">
+                                                                                (Kosongkan jika di-BV keliling 4 sisi penuh)
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* FIELD 2: LEBAR BEVEL (CM) */}
+                                                                    <div className="space-y-1 pt-1 border-t border-slate-200">
+                                                                        <label className="text-[10px] text-slate-600 font-semibold block">
+                                                                            Lebar Kemiringan Bevel (cm):
+                                                                        </label>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <input 
+                                                                                type="text" 
+                                                                                inputMode="decimal" 
+                                                                                value={item.bevel_width_cm ?? ''} 
+                                                                                placeholder="1"
+                                                                                onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
+                                                                                onFocus={e => e.target.select()}
+                                                                                className="w-36 bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
+                                                                            />
+                                                                            <span className="text-[11px] text-slate-600 font-mono">cm</span>
+                                                                            <span className="text-[10px] text-slate-400 italic">
+                                                                                (Standar pabrik: 1 cm, 1.5 cm, 2 cm, dst.)
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
 
                                                         {(item.processes || []).includes('Bor') && (
                                                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
@@ -1462,13 +1687,13 @@ export default function EditDraftOrderModal({
                                                 )}
                                                 {it.processes && it.processes.includes('GM') && (
                                                     <div className="flex justify-between text-[10px] text-slate-500">
-                                                        <span>• Gosok Mesin (GM)</span>
+                                                        <span>• Gosok Mesin ({it.gm_length_cm ? `GM ${it.gm_length_cm} cm` : 'GM Keliling'})</span>
                                                         <span>+ Rp {(it.feeGM || 0).toLocaleString()}</span>
                                                     </div>
                                                 )}
                                                 {it.processes && it.processes.includes('BV') && (
                                                     <div className="flex justify-between text-[10px] text-slate-500">
-                                                        <span>• Beveling (BV {it.bevel_width_cm || 1} cm)</span>
+                                                        <span>• Beveling ({it.bv_length_cm ? `BV ${it.bv_length_cm} cm` : 'BV Keliling'}, Lebar {it.bevel_width_cm || 1} cm)</span>
                                                         <span>+ Rp {(it.feeBV || 0).toLocaleString()}</span>
                                                     </div>
                                                 )}

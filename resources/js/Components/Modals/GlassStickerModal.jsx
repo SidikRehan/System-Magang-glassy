@@ -30,10 +30,26 @@ export default function GlassStickerModal({
         const hasBor = procs.some(p => typeof p === 'string' ? p.toUpperCase().includes('BOR') : (p.id === 'BOR' || p.code === 'BOR'));
         const hasEtsa = procs.some(p => typeof p === 'string' ? p.toUpperCase().includes('ETSA') || p.toUpperCase().includes('BLUR') : (p.id === 'ETSA' || p.code === 'ETSA'));
 
-        if (hasGM) procCodes.push('GMKLL');
+        const l = parseFloat(String(item.length_cm || 0).replace(',', '.')) || 0;
+        const w = parseFloat(String(item.width_cm || 0).replace(',', '.')) || 0;
+        const fullPerimeter = 2 * (l + w);
+
+        if (hasGM) {
+            const gmL = item.gm_length_cm ? parseFloat(String(item.gm_length_cm).replace(',', '.')) : 0;
+            if (gmL > 0 && fullPerimeter > 0 && gmL < fullPerimeter) {
+                procCodes.push(`GM ${gmL}CM`);
+            } else {
+                procCodes.push('GMKLL');
+            }
+        }
         if (hasBV) {
             const widthCm = item.bevel_width_cm || 1;
-            procCodes.push(`+BVKLL ${widthCm} CM`);
+            const bvL = item.bv_length_cm ? parseFloat(String(item.bv_length_cm).replace(',', '.')) : 0;
+            if (bvL > 0 && fullPerimeter > 0 && bvL < fullPerimeter) {
+                procCodes.push(`+BV ${bvL}CM ${widthCm}CM`);
+            } else {
+                procCodes.push(`+BVKLL ${widthCm} CM`);
+            }
         }
         if (hasHT) procCodes.push('HT');
         if (hasBor) procCodes.push('BOR');
