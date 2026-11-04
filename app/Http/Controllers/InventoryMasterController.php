@@ -413,6 +413,14 @@ class InventoryMasterController extends Controller
         return redirect()->back()->with('success', $msg);
     }
 
+    public function requestRestockAccessory($id)
+    {
+        $acc = Accessory::findOrFail($id);
+        $acc->update(['status' => 'Pengajuan Restock']);
+
+        return redirect()->back()->with('success', "Pengajuan restock aksesoris {$acc->name} berhasil dikirim.");
+    }
+
     public function destroyAccessory($id)
     {
         $acc = Accessory::findOrFail($id);

@@ -1497,6 +1497,35 @@ export default function DeliveriesTab({
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        {(() => {
+                                                            const isPrio = ord.priority_status === 'Prioritas';
+                                                            if (!ord.deadline_date) {
+                                                                return (
+                                                                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                                                        {isPrio ? 'Prioritas' : 'Biasa'} • Deadline: -
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            const today = new Date(); today.setHours(0, 0, 0, 0);
+                                                            const dl = new Date(String(ord.deadline_date).substring(0, 10) + 'T00:00:00');
+                                                            const diff = Math.round((dl - today) / 86400000);
+                                                            const isDelivered = ['selesai', 'terkirim'].includes(String(ord.status || '').toLowerCase()) || Boolean(ord.delivered_at);
+                                                            let tone = isPrio ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-slate-50 text-slate-700 border-slate-200';
+                                                            let note = diff > 0 ? `${diff} hari lagi` : diff === 0 ? 'Hari ini' : `Lewat ${Math.abs(diff)} hari`;
+                                                            if (isDelivered) note = 'Terkirim';
+                                                            else if (diff < 0) tone = 'bg-rose-50 text-rose-700 border-rose-200';
+                                                            else if (diff <= 1) tone = 'bg-orange-50 text-orange-700 border-orange-200';
+                                                            return (
+                                                                <div className={`mt-1 inline-flex flex-col gap-0.5 px-2 py-1 rounded-lg border text-[10px] font-mono ${tone}`}>
+                                                                    <span className="flex items-center gap-1 font-bold">
+                                                                        <Clock className="w-3 h-3 shrink-0" />
+                                                                        Deadline {isPrio ? 'Prioritas' : 'Biasa'}
+                                                                    </span>
+                                                                    <span className="font-extrabold">{formatIndonesianDate(ord.deadline_date)}</span>
+                                                                    <span className="font-semibold opacity-80">{note}</span>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                         {ord.trip_code ? (
                                                             <div className="text-[10px] text-slate-500 font-mono mt-0.5 space-y-0.5">
                                                                 <div>Trip: <strong className="text-slate-700">{ord.trip_code}</strong></div>

@@ -1,0 +1,14 @@
+flowchart TD
+    S((Mulai)) --> A["Admin Toko: input pesanan (draft)"]
+    A --> B["Sistem hitung luas & harga"]
+    B --> C["Admin Toko: promote ke pengerjaan"]
+    C --> D["Gudang: cek stok / rekomendasi kaca sisa"]
+    D --> E["Divisi: mulai & selesai proses"]
+    E --> F{"Ada revisi / komplain?"}
+    F -- Ya --> D
+    F -- Tidak --> G["Gudang: rilis barang"]
+    G --> H["Admin: tugaskan kendaraan & surat jalan"]
+    H --> I["Satpam: gate check"]
+    I --> J["Driver: kirim & unggah bukti"]
+    J --> K["Finance: pelunasan / COD"]
+    K --> Z((Selesai))

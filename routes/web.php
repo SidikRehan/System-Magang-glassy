@@ -76,6 +76,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/inventory/accessories', [InventoryMasterController::class, 'storeAccessory'])->name('inventory.accessories.store');
     Route::post('/inventory/accessories/{id}', [InventoryMasterController::class, 'updateAccessory'])->name('inventory.accessories.update');
     Route::post('/inventory/accessories/{id}/restock', [InventoryMasterController::class, 'restockAccessory'])->name('inventory.accessories.restock');
+    Route::post('/inventory/accessories/{id}/request-restock', [InventoryMasterController::class, 'requestRestockAccessory'])->name('inventory.accessories.request_restock');
     Route::delete('/inventory/accessories/{id}', [InventoryMasterController::class, 'destroyAccessory'])->name('inventory.accessories.destroy');
 
     // 4. Tools & Borrows

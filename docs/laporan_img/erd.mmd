@@ -1,0 +1,69 @@
+erDiagram
+    USERS ||--o{ ACTIVITY_LOGS : mencatat
+    USERS ||--o{ FINANCE_TRANSACTIONS : menginput
+    USERS ||--o{ FINANCE_TRANSACTIONS : menyetujui
+    USERS ||--o{ DELIVERIES : gate_check
+    ORDERS ||--o{ DELIVERIES : dikirim
+    TOOLS ||--o{ TOOL_BORROWS : dipinjam
+    SUPPLIES ||--o{ SUPPLY_USAGES : dipakai
+    SUPPLIES ||--o{ SUPPLY_RESTOCKS : direstock
+    SUPPLIERS ||..o{ SHEET_GLASSES : memasok
+    USERS { bigint id PK
+      string name
+      string email UK
+      string role }
+    ORDERS { bigint id PK
+      string spo_number UK
+      string customer_name
+      json items
+      decimal total_price
+      enum status
+      string payment_status }
+    DELIVERIES { bigint id PK
+      string waybill_number UK
+      bigint order_id FK
+      string trip_code
+      enum delivery_status
+      bigint gate_checked_by FK }
+    SCRAP_GLASSES { bigint id PK
+      string scrap_code UK
+      string rak_location
+      string status }
+    SHEET_GLASSES { bigint id PK
+      string item_code UK
+      string name
+      int qty
+      string supplier_name }
+    SUPPLIERS { bigint id PK
+      string name
+      string phone }
+    ACCESSORIES { bigint id PK
+      string acc_code UK
+      int qty }
+    TOOLS { bigint id PK
+      string tool_code UK
+      int available_qty
+      int damaged_qty }
+    TOOL_BORROWS { bigint id PK
+      bigint tool_id FK
+      string status }
+    SUPPLIES { bigint id PK
+      string item_code UK
+      int qty
+      int min_stock }
+    SUPPLY_USAGES { bigint id PK
+      bigint supply_id FK
+      int qty }
+    SUPPLY_RESTOCKS { bigint id PK
+      bigint supply_id FK
+      int request_qty
+      string status }
+    FINANCE_TRANSACTIONS { bigint id PK
+      string transaction_code UK
+      decimal amount
+      bigint user_id FK
+      bigint approved_by_user_id FK
+      string approval_status }
+    ACTIVITY_LOGS { bigint id PK
+      bigint user_id FK
+      string action_type }

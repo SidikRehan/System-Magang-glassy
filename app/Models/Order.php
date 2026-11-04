@@ -89,4 +89,43 @@ class Order extends Model
     {
         return $this->hasMany(Delivery::class);
     }
+
+    /**
+     * Normalisasi key division_progress / division_timestamps.
+     * Controller menulis key via strtoupper() sehingga Etsa tersimpan sebagai 'ETSA',
+     * sedangkan default & frontend memakai 'Etsa'. Key 'ETSA' (hasil kerja divisi) diprioritaskan.
+     */
+    protected static function normalizeDivisionKeys(Order $order): void
+    {
+        foreach (['division_progress', 'division_timestamps'] as $attr) {
+            $data = $order->{$attr};
+            if (!is_array($data) || !array_key_exists('ETSA', $data)) {
+                continue;
+            }
+            $new = $data['ETSA'];
+            $old = $data['Etsa'] ?? null;
+            if (is_array($new) && is_array($old)) {
+                foreach ($old as $k => $v) {
+                    if (empty($new[$k]) && !empty($v)) {
+                        $new[$k] = $v;
+                    }
+                }
+            }
+            $data['Etsa'] = $new;
+            unset($data['ETSA']);
+            $order->{$attr} = $data;
+        }
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Order $order) {
+            static::normalizeDivisionKeys($order);
+        });
+
+        static::retrieved(function (Order $order) {
+            static::normalizeDivisionKeys($order);
+            $order->syncOriginalAttributes(['division_progress', 'division_timestamps']);
+        });
+    }
 }

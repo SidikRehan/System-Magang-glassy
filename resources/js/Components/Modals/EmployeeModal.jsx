@@ -140,7 +140,7 @@ export default function EmployeeModal({ isOpen, onClose, employeeToEdit = null, 
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
                         >
                             <option value="driver">Supir / Driver Armada</option>
-                            <option value="divisi_ht">Staff Divisi HT (Potong & Bor)</option>
+                            <option value="divisi_ht">Staff Divisi Potong</option>
                             <option value="divisi_gm">Staff Divisi GM (Gosok Mesin/Slepan)</option>
                             <option value="divisi_bv">Staff Divisi BV (Bevel Dekoratif)</option>
                             <option value="divisi_etsa">Staff Divisi Etsa (Blur/Sandblasting)</option>

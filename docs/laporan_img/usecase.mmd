@@ -1,0 +1,16 @@
+flowchart LR
+    OW(("Owner")); AT(("Admin Toko")); DV(("Divisi Produksi")); AG(("Admin Gudang")); DR(("Driver")); SP(("Satpam")); FN(("Finance"))
+    subgraph S["Aplikasi Operasional Gudang"]
+      U0(["Login"]); U1(["Kelola Pesanan"]); U2(["Kelola Revisi"]); U3(["Kerjakan Produksi"]); U4(["Ajukan Komplain"])
+      U5(["Kelola Stok Kaca & Supplier"]); U6(["Kelola Kaca Sisa"]); U7(["Kelola Aksesoris"]); U8(["Kelola Alat & Peminjaman"])
+      U9(["Kelola Bahan Habis Pakai"]); U10(["Kelola Pengiriman"]); U11(["Gate Check"]); U12(["Konfirmasi Terkirim"])
+      U13(["Kelola Transaksi Keuangan"]); U14(["Pelunasan COD"]); U15(["Kelola Karyawan"]); U16(["Lihat Dashboard & Laporan"])
+    end
+    AT --> U1 & U2 & U10
+    DV --> U3 & U4
+    AG --> U5 & U6 & U7 & U8 & U9
+    DR --> U12
+    SP --> U11
+    FN --> U13 & U14
+    OW --> U15 & U16 & U13
+    AT & DV & AG & DR & SP & FN & OW --> U0

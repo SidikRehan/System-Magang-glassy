@@ -1,0 +1,8 @@
+flowchart LR
+    U["Pengguna (Browser)"] --> V["View: React + Tailwind"]
+    V -- "router.post / useForm" --> I["Inertia.js"]
+    I --> R["Laravel Routes"]
+    R --> C["Controller"]
+    C --> M["Model Eloquent"]
+    M --> DB[("MySQL")]
+    C -- "Inertia::render + props" --> V

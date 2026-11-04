@@ -1,4 +1,5 @@
 import React from 'react';
+import GmSidesSelector from '@/Components/GmSidesSelector';
 import {
     ShoppingBag,
     Calendar,
@@ -813,21 +814,25 @@ export default function NewOrderModal({
                                                             </div>
                                                         </div>
 
+                                                        {(item.processes || []).includes('GM') && (
+                                                            <GmSidesSelector item={item} idx={idx} handleItemChange={handleItemChange} />
+                                                        )}
+
                                                         {/* CONDITIONAL PARAMETERS FOR BEVEL & BOR */}
                                                         {(item.processes || []).includes('BV') && (
-                                                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                                                                <label className="text-[11px] text-slate-700 font-semibold block">
-                                                                    Lebar Bevel (cm): <span className="text-[10px] text-slate-500 font-mono">(Biaya: Keliling × Rp 15.000 + Lebar cm × Rp 10.000)</span>
-                                                                </label>
-                                                                <input 
-                                                                    type="text" 
-                                                                    inputMode="decimal" 
-                                                                    value={item.bevel_width_cm ?? ''} 
-                                                                    onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
-                                                                    onFocus={e => e.target.select()}
-                                                                    className="w-36 bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0]" 
-                                                                />
-                                                            </div>
+                                                            <GmSidesSelector item={item} idx={idx} handleItemChange={handleItemChange} prefix="bv" title="Beveling (BV) — Lebar & Sisi Bevel" rateLabel="tarif BV + Lebar cm × Rp 10.000">
+                                                                <div className="space-y-1">
+                                                                    <span className="text-[11px] text-slate-700 font-semibold block">Lebar Bevel (cm)</span>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        inputMode="decimal" 
+                                                                        value={item.bevel_width_cm ?? ''} 
+                                                                        onChange={e => handleItemChange(idx, 'bevel_width_cm', e.target.value)} 
+                                                                        onFocus={e => e.target.select()}
+                                                                        className="w-24 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15" 
+                                                                    />
+                                                                </div>
+                                                            </GmSidesSelector>
                                                         )}
 
                                                         {(item.processes || []).includes('Bor') && (

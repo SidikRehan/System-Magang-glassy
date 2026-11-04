@@ -1557,6 +1557,14 @@ export default function Dashboard({
         }
     };
 
+    const handleRequestAccRestockStatus = (id) => {
+        if (confirm('Ajukan kebutuhan restock untuk aksesoris ini?')) {
+            router.post(route('inventory.accessories.request_restock', id), {}, {
+                preserveScroll: true
+            });
+        }
+    };
+
     const handleConfirmAccRestock = (e) => {
         e.preventDefault();
         if (!selectedAccItem) return;
@@ -3018,11 +3026,18 @@ export default function Dashboard({
         const rawBasePrice = Math.round(areaM2 * pricePerM2);
         const baseGlassPrice = orderForm.is_company_use ? 0 : ((l > 0 && w > 0) ? rawBasePrice * q : 0);
 
-        let feeGM = procs.includes('GM') ? Math.round(perimeterM * rateGM) * q : 0;
+        // GM hanya dihitung dari sisi yang dipilih (default: 2 sisi panjang + 2 sisi lebar)
+        const gmSidesL = Number.isNaN(parseInt(it.gm_sides_length)) ? 2 : Math.min(2, Math.max(0, parseInt(it.gm_sides_length)));
+        const gmSidesW = Number.isNaN(parseInt(it.gm_sides_width)) ? 2 : Math.min(2, Math.max(0, parseInt(it.gm_sides_width)));
+        const gmLengthM = ((gmSidesL * l) + (gmSidesW * w)) / 100;
+        let feeGM = procs.includes('GM') ? Math.round(gmLengthM * rateGM) * q : 0;
         let feeHT = procs.includes('HT') ? Math.round(perimeterM * rateHT) * q : 0;
 
         const bevelWidthCm = parseDim(it.bevel_width_cm) || 1;
-        let feeBV = procs.includes('BV') ? Math.round((perimeterM * rateBV) + (bevelWidthCm * 10000)) * q : 0;
+        const bvSidesL = Number.isNaN(parseInt(it.bv_sides_length)) ? 2 : Math.min(2, Math.max(0, parseInt(it.bv_sides_length)));
+        const bvSidesW = Number.isNaN(parseInt(it.bv_sides_width)) ? 2 : Math.min(2, Math.max(0, parseInt(it.bv_sides_width)));
+        const bvLengthM = ((bvSidesL * l) + (bvSidesW * w)) / 100;
+        let feeBV = procs.includes('BV') ? Math.round((bvLengthM * rateBV) + (bevelWidthCm * 10000)) * q : 0;
 
         let feeBor = 0;
         let holeRuasCm = 0;
@@ -3417,7 +3432,7 @@ export default function Dashboard({
         procs.sort((a, b) => fixedOrder.indexOf(a) - fixedOrder.indexOf(b));
 
         const divInfo = {
-            'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong (HT & Bor)', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
+            'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
             'Bor': { key: 'divisi_bor', code: 'Bor', name: 'Divisi Bor (Drilling)', icon: '⚡', bg: 'bg-orange-500/10 text-orange-300 border-orange-500/30' },
             'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', icon: '✨', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
             'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', icon: '💎', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },

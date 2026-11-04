@@ -1648,14 +1648,21 @@ class SypOperationalController extends Controller
         $rateEtsa = (float)($it['rate_etsa'] ?? 50000);
 
         // 3. Biaya GM (Gosok Mesin)
-        $feeGM = (!$isCompanyUse && in_array('GM', $procs)) ? round($perimeterM * $rateGM) * $q : 0;
+        // GM hanya dihitung dari sisi yang dipilih (default 2 sisi panjang + 2 sisi lebar)
+        $gmSidesL = isset($it['gm_sides_length']) && $it['gm_sides_length'] !== '' ? min(2, max(0, (int)$it['gm_sides_length'])) : 2;
+        $gmSidesW = isset($it['gm_sides_width']) && $it['gm_sides_width'] !== '' ? min(2, max(0, (int)$it['gm_sides_width'])) : 2;
+        $gmLengthM = (($gmSidesL * $l) + ($gmSidesW * $w)) / 100;
+        $feeGM = (!$isCompanyUse && in_array('GM', $procs)) ? round($gmLengthM * $rateGM) * $q : 0;
 
         // 4. Biaya HT (Gosok HT / Halus Tepi)
         $feeHT = (!$isCompanyUse && in_array('HT', $procs)) ? round($perimeterM * $rateHT) * $q : 0;
 
         // 5. Biaya BV (Beveling)
         $bevelWidthCm = (float)str_replace(',', '.', (string)($it['bevel_width_cm'] ?? 1));
-        $feeBV = (!$isCompanyUse && in_array('BV', $procs)) ? round(($perimeterM * $rateBV) + ($bevelWidthCm * 10000)) * $q : 0;
+        $bvSidesL = isset($it['bv_sides_length']) && $it['bv_sides_length'] !== '' ? min(2, max(0, (int)$it['bv_sides_length'])) : 2;
+        $bvSidesW = isset($it['bv_sides_width']) && $it['bv_sides_width'] !== '' ? min(2, max(0, (int)$it['bv_sides_width'])) : 2;
+        $bvLengthM = (($bvSidesL * $l) + ($bvSidesW * $w)) / 100;
+        $feeBV = (!$isCompanyUse && in_array('BV', $procs)) ? round(($bvLengthM * $rateBV) + ($bevelWidthCm * 10000)) * $q : 0;
 
         // 6. Biaya Bor (Coakan): Keliling ruas lubang cm * Rp 2.500 * jumlah lubang (Mendukung multi-lubang)
         $feeBor = 0;
@@ -1719,6 +1726,10 @@ class SypOperationalController extends Controller
             'qty' => $q,
             'processes' => $procs,
             'bevel_width_cm' => $bevelWidthCm,
+            'gm_sides_length' => $gmSidesL,
+            'gm_sides_width' => $gmSidesW,
+            'bv_sides_length' => $bvSidesL,
+            'bv_sides_width' => $bvSidesW,
             'holes' => $holesSpecs,
             'hole_length_cm' => $primaryHoleL,
             'hole_width_cm' => $primaryHoleW,

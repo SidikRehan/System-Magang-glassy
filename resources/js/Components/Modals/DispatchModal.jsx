@@ -21,7 +21,7 @@ export default function DispatchModal({
     const currentDivObj = relevantDivisions.find(d => d.key === targetDivChoice) || relevantDivisions[0] || {
         key: 'divisi_ht',
         code: 'HT',
-        name: 'Divisi Potong (HT & Bor)',
+        name: 'Divisi Potong',
         icon: '✂️',
         bg: 'bg-rose-50 text-rose-700 border-rose-200'
     };

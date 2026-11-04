@@ -175,7 +175,7 @@ export const isMatchSearch = (item, customTerm = null, fallbackTerm = '') => {
 export const fixedFactoryProcessOrder = ['HT', 'GM', 'BV', 'Etsa'];
 
 export const divisionInfo = {
-    'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong (HT & Bor)', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
+    'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
     'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', icon: '✨', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
     'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', icon: '💎', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
     'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', icon: '🌫️', bg: 'bg-purple-500/10 text-purple-300 border-purple-500/30' }

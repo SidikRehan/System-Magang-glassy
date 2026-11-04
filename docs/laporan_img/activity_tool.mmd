@@ -1,0 +1,10 @@
+flowchart TD
+    S((Mulai)) --> A["Karyawan meminta alat"]
+    A --> B["Admin Gudang pilih alat & jumlah"]
+    B --> C{"available_qty cukup?"}
+    C -- Tidak --> X["Tolak peminjaman"] --> Z((Selesai))
+    C -- Ya --> D["Simpan tool_borrows (Dipinjam), kurangi available_qty"]
+    D --> E["Alat dikembalikan"]
+    E --> F["Catat jumlah rusak (damaged_qty)"]
+    F --> G["Update status Dikembalikan, tambah available_qty"]
+    G --> Z
