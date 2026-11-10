@@ -1,0 +1,524 @@
+================================================================================
+DOKUMENTASI TEKNIS & ARSITEKTUR SISTEM SECARA MENYELURUH
+NAMA PROYEK : SYP (System Operasional Pabrik & Toko Kaca - CV Cahya Karunia Jaya)
+INSTITUSI   : Kerja Praktik (KP) - Universitas Teknologi Bandung (UTB)
+REPOSITORY  : System-Magang-glassy
+================================================================================
+
+DAFTAR ISI:
+1. GAMBARAN UMUM PROYEK (PROJECT OVERVIEW)
+2. TECH STACK, FRAMEWORK, & VERSI (BACKEND & FRONTEND)
+3. DAFTAR LIBRARY, PACKAGE, & TOOLS TAMBAHAN
+4. ARSITEKTUR DATABASE, JUMLAH TABEL, & STRUKTUR SKEMA LENGKAP
+5. ARSITEKTUR SISTEM BACKEND (MODELS, CONTROLLERS, ROUTES, RBAC)
+6. ARSITEKTUR SISTEM FRONTEND (PAGES, MODULAR TABS, MODALS, UTILS)
+7. ALUR BISNIS & FITUR UTAMA END-TO-END
+8. STANDAR DESAIN UI/UX (UTB CLEAN WHITE ENTERPRISE SAAS)
+
+================================================================================
+1. GAMBARAN UMUM PROYEK (PROJECT OVERVIEW)
+================================================================================
+Proyek ini adalah aplikasi Enterprise Resource Planning (ERP) dan Sistem Informasi
+Manajemen Operasional terpadu yang dirancang khusus untuk mendigitalisasi alur bisnis
+pabrik pengolahan kaca dan toko kaca (studi kasus PRD: CV Cahya Karunia Jaya).
+
+Masalah utama yang diselesaikan oleh sistem ini meliputi:
+a. Menghilangkan pencatatan manual berbasis kertas SPO (Surat Potong Orderan) yang
+   rawan salah tulis (human error), hilang, atau sulit dilacak.
+b. Melacak progres produksi kaca secara real-time lintas 4 divisi pengerjaan:
+   - Divisi HT (Gosok Kasar Manual Batu / Potong & Bor)
+   - Divisi GM (Gosok Mesin / Pinggiran Halus)
+   - Divisi BV (Bevel Pinggir Permukaan)
+   - Divisi Etsa (Sandblast / Blur Kaca)
+c. Mengoptimalkan pemanfaatan Kaca Sisa (Scrap Glass) hasil potongan di rak gudang
+   melalui fitur Smart Scrap Recommendation saat kasir/admin toko membuat order baru.
+d. Mengelola siklus inventori (Kaca Lembaran Utama, Aksesoris, Bahan Habis Pakai /
+   Supplies, Peminjaman & Servis Alat/Mesin Kerja, serta Data Supplier).
+e. Mengatur pengiriman armada, pencetakan Surat Jalan 3/4 rangkap warna (Putih,
+   Merah, Kuning), Surat Barang Keluar (Gate Pass Satpam), konfirmasi foto bukti
+   pengiriman oleh Supir, hingga penyetoran uang tagihan COD.
+f. Mengelola pembukuan keuangan (Laporan Laba Rugi / P&L, HPP, OPEX, Klaim Bensin/Tol
+   Supir) serta manajemen akun karyawan & log aktivitas (HRD).
+
+================================================================================
+2. TECH STACK, FRAMEWORK, & VERSI (BACKEND & FRONTEND)
+================================================================================
+Aplikasi ini dibangun menggunakan arsitektur Modern Monolith (Single-Page Application
+tanpa perlu membuat REST API terpisah menggunakan jembatan protokol Inertia.js):
+
+A. Bahasa Pemrograman:
+   - Backend  : PHP ^8.2
+   - Frontend : JavaScript (ES6+ / JSX React)
+   - Styling  : CSS3 (Utility-first via TailwindCSS)
+   - Query    : SQL (MySQL / SQLite via Laravel Eloquent ORM)
+
+B. Framework Utama:
+   - Backend Framework  : Laravel Framework ^12.0 (struktur kompatibel Laravel 11/12)
+   - Frontend Library   : React ^18.2.0 + React DOM ^18.2.0
+   - Fullstack Adapter  : Inertia.js (`inertiajs/inertia-laravel` ^2.0 & `@inertiajs/react` ^2.0.0)
+   - CSS Framework      : TailwindCSS ^3.2.1
+   - Module Bundler     : Vite ^7.0.7
+
+================================================================================
+3. DAFTAR LIBRARY, PACKAGE, & TOOLS TAMBAHAN
+================================================================================
+A. Backend Packages (`composer.json`):
+   1. `laravel/framework` (^12.0)       : Core framework PHP (Routing, ORM, Validation, Storage).
+   2. `inertiajs/inertia-laravel` (^2.0): Adapter server-side untuk merender komponen React
+                                          langsung dari Controller Laravel sebagai pengganti Blade.
+   3. `tightenco/ziggy` (^2.0)          : Menghubungkan named routes Laravel (`route('orders.store')`)
+                                          agar bisa dipanggil langsung di dalam file JavaScript/React.
+   4. `laravel/sanctum` (^4.0)          : Sistem autentikasi sesi & keamanan token SPA.
+   5. `laravel/breeze` (^2.4 - dev)     : Starter kit autentikasi (Login, Register, Reset Password, Profile).
+   6. `laravel/pint` (^1.24 - dev)      : Code style fixer otomatis standar PSR-12 untuk PHP.
+   7. `laravel/pail` (^1.2.2 - dev)     : Tool pemantau log Laravel secara real-time di terminal.
+   8. `phpunit/phpunit` (^11.5 - dev)   : Framework pengujian otomatis (unit & feature testing).
+
+B. Frontend Libraries & Build Tools (`package.json`):
+   1. `react` & `react-dom` (^18.2.0)   : Library UI berbasis komponen untuk halaman interaktif.
+   2. `@inertiajs/react` (^2.0.0)       : Client-side adapter Inertia (`useForm`, `router`, `usePage`, `Link`, `Head`).
+   3. `lucide-react` (^1.31.0)          : Satu-satunya library ikon vektor SVG resmi pada proyek ini.
+   4. `@headlessui/react` (^2.0.0)      : Komponen UI aksesibel tanpa gaya bawaan (Modal, Transition, Dropdown).
+   5. `@tailwindcss/forms` (^0.5.3)     : Plugin Tailwind untuk mereset dan merapikan tampilan form input/select.
+   6. `axios` (^1.11.0)                 : HTTP client untuk komunikasi jaringan asinkron.
+   7. `vite` (^7.0.7) & `laravel-vite-plugin` (^2.0.0) & `@vitejs/plugin-react` (^4.2.0):
+                                          Mesin kompilasi aset frontend super cepat (HMR & Production Build).
+   8. `postcss` (^8.4.31) & `autoprefixer` (^10.4.12): Pemroses CSS kompatibilitas lintas browser.
+   9. `concurrently` (^9.0.1)           : Menjalankan server PHP, queue listener, log, dan Vite secara bersamaan.
+
+================================================================================
+4. ARSITEKTUR DATABASE, JUMLAH TABEL, & STRUKTUR SKEMA LENGKAP
+================================================================================
+A. Mesin Database (DBMS):
+   - Mendukung penuh **MySQL / MariaDB** (`driver: mysql`, port `3306`, charset `utf8mb4`)
+     untuk lingkungan produksi/server, serta **SQLite** (`database/database.sqlite`)
+     untuk kemudahan pengujian lokal (dikonfigurasi melalui variabel `DB_CONNECTION` di `.env`).
+   - Jumlah Database: **1 Database Terpusat** (Single Relational Database).
+
+B. Jumlah Tabel:
+   Total terdapat **22 Tabel** di dalam database (dibentuk dari 24 file migrasi), yang
+   terbagi menjadi:
+   - **13 Tabel Bisnis & Operasional Utama**
+   - **9 Tabel Infrastruktur, Autentikasi & Sistem Bawaan Laravel**
+
+C. Rincian Struktur Setiap Tabel Database:
+
+   -----------------------------------------------------------------------------
+   KELOMPOK 1: TABEL INTI OPERASIONAL & TRANSAKSI BISNIS (13 TABEL)
+   -----------------------------------------------------------------------------
+
+   1. Tabel `users` (Data Pengguna & Multi-Role Karyawan)
+      - `id` (BIGINT, Primary Key, Auto Increment)
+      - `name` (VARCHAR) : Nama lengkap pengguna/staf
+      - `email` (VARCHAR, Unique) : Email login
+      - `role` (VARCHAR, Default: 'admin_toko') : Role pengguna (`admin_toko`, `admin_gudang`,
+        `divisi_ht`, `divisi_gm`, `divisi_bv`, `divisi_etsa`, `driver`, `satpam`, `owner`, `hrd`, `finance`)
+      - `email_verified_at` (TIMESTAMP, Nullable)
+      - `password` (VARCHAR) : Hash password Bcrypt
+      - `remember_token` (VARCHAR, Nullable)
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   2. Tabel `orders` (Tabel Utama Pesanan / SPO Customer & Penggunaan Internal)
+      - `id` (BIGINT, Primary Key)
+      - `order_date` (DATE) : Tanggal pesanan dibuat
+      - `spo_number` (VARCHAR, Unique) : Nomor Surat Potong Orderan (contoh: `SPO-0001`)
+      - `customer_name` (VARCHAR) : Nama pemesan
+      - `customer_phone` (VARCHAR) : Nomor telepon/WhatsApp pemesan
+      - `customer_address` (TEXT) : Alamat pengiriman
+      - `glass_type` (VARCHAR) : Ringkasan jenis kaca utama
+      - `length_cm` (DECIMAL 8,2) : Panjang kaca utama (cm)
+      - `width_cm` (DECIMAL 8,2) : Lebar kaca utama (cm)
+      - `thickness_mm` (INT) : Ketebalan kaca (mm)
+      - `processes` (JSON) : Daftar proses pengerjaan (`['HT', 'GM', 'BV', 'Etsa', 'Bor']`)
+      - `accessories` (JSON, Nullable) : Daftar aksesoris tambahan beserta qty & harga
+      - `items` (JSON, Nullable) : Detail multi-item kaca dalam 1 SPO (ukuran, qty, proses, sisi GM, subtotal)
+      - `description` (TEXT, Nullable) : Catatan/instruksi khusus pesanan
+      - `sketch_photo_path` (VARCHAR, Nullable) : Path file foto sketsa kaca
+      - `priority_status` (ENUM: `'Biasa'`, `'Prioritas'`)
+      - `deadline_date` (DATE, Nullable) : Target tanggal selesai
+      - `subtotal` (DECIMAL 12,2) : Subtotal nilai kaca + jasa proses + aksesoris
+      - `priority_fee` (DECIMAL 12,2) : Biaya tambahan layanan prioritas/ekspres
+      - `custom_fee` (DECIMAL 12,2) : Biaya tambahan kustom dari admin toko
+      - `total_price` (DECIMAL 12,2) : Total tagihan akhir
+      - `paid_amount` (DECIMAL 12,2) : Jumlah uang yang sudah dibayarkan (DP / Lunas)
+      - `payment_status` (VARCHAR, Indexed) : `'Belum Lunas'`, `'DP (50%)'`, `'Lunas'`, dll.
+      - `status` (ENUM, Indexed) : `'draft'`, `'pengerjaan'`, `'pengiriman'`, `'pembayaran'`, `'selesai'`
+      - `assigned_driver` (VARCHAR, Nullable) : Nama supir yang ditugaskan
+      - `assigned_vehicle` (VARCHAR, Nullable) : Kendaraan & plat nomor pengiriman
+      - `trip_code` (VARCHAR, Nullable) : Kode grup keberangkatan pengiriman (Batch Delivery)
+      - `current_division` (VARCHAR) : Posisi order saat ini (`admin_toko`, `admin_gudang`, `divisi_ht`, `divisi_gm`, `divisi_bv`, `divisi_etsa`, `ready_ship`)
+      - `division_progress` (JSON, Nullable) : Status pengerjaan tiap divisi (`selesai`, `proses`, `menunggu`)
+      - `division_timestamps` (JSON, Nullable) : Waktu mulai (`started_at`) & selesai (`completed_at`) tiap divisi
+      - `used_scrap_rak` (VARCHAR, Nullable) : Kode/lokasi rak kaca sisa yang digunakan
+      - `is_company_use` (BOOLEAN, Default: false) : Penanda jika order untuk keperluan internal pabrik/toko
+      - `raw_materials_used` (JSON, Nullable) : Catatan pemakaian kaca lembaran baru oleh Divisi HT
+      - `gudang_released_at` (TIMESTAMP, Nullable) : Waktu Admin Gudang menurunkan order ke produksi
+      - `execution_completed_at` (TIMESTAMP, Nullable) : Waktu seluruh divisi selesai memproduksi kaca
+      - `shipped_at` (TIMESTAMP, Nullable) : Waktu barang diberangkatkan
+      - `delivery_date` (DATE, Nullable) : Tanggal jadwal pengiriman
+      - `delivered_at` (TIMESTAMP, Nullable) : Waktu barang tiba di tujuan
+      - `proof_photo_path` (VARCHAR, Nullable) : Foto bukti surat jalan bertanda tangan
+      - `recipient_name` (VARCHAR, Nullable) : Nama penerima barang di lokasi tujuan
+      - `revision_notes` (TEXT, Nullable) : Catatan revisi order
+      - `is_revised` (BOOLEAN, Default: false) : Flag apakah order pernah direvisi
+      - `revision_status` (VARCHAR) : `'none'`, `'locked_by_toko'`, `'pending_gudang'`, `'pending_division'`, `'acknowledged'`, `'resolved'`
+      - `revision_count` (INT, Default: 0) : Jumlah berapa kali direvisi
+      - `revision_history` (JSON, Nullable) : Riwayat perubahan spesifikasi sebelum & sesudah revisi
+      - `complaint_status` (VARCHAR) : `'none'`, `'pending_gudang'`, `'re_cut_needed'`, `'resolved'`
+      - `complaint_data` (JSON, Nullable) : Detail laporan kaca cacat/pecah saat produksi beserta foto bukti
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   3. Tabel `scrap_glasses` (Stok Kaca Sisa / Potongan di Rak Gudang)
+      - `id` (BIGINT, Primary Key)
+      - `scrap_code` (VARCHAR, Unique) : Kode unik kaca sisa (contoh: `SCR-001`)
+      - `glass_type` (VARCHAR) : Jenis & ketebalan kaca sisa
+      - `length_cm` (DECIMAL 8,2) : Panjang sisa kaca (cm)
+      - `width_cm` (DECIMAL 8,2) : Lebar sisa kaca (cm)
+      - `rak_location` (VARCHAR) : Lokasi penyimpanan rak (contoh: `Rak A3`, `Rak F7`)
+      - `status` (VARCHAR, Default: 'Layak Pakai') : `'Layak Pakai'`, `'Terpakai'`, `'Rusak/Daur Ulang'`
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   4. Tabel `deliveries` (Pengiriman, Rute Batch, Surat Jalan 4 Warna, & Gate Check Satpam)
+      - `id` (BIGINT, Primary Key)
+      - `waybill_number` (VARCHAR, Unique) : Nomor Surat Jalan (contoh: `SJ-202609-001`)
+      - `trip_code` (VARCHAR, Nullable) : Kode kloter pengiriman multi-alamat
+      - `stop_order` (INT, Default: 1) : Urutan titik pemberhentian pengiriman
+      - `order_id` (BIGINT, Foreign Key -> `orders.id` ON DELETE CASCADE)
+      - `driver_name` (VARCHAR) : Nama supir pengirim
+      - `vehicle_plate` (VARCHAR) : Nama armada & nomor polisi
+      - `waybill_color` (ENUM: `'Putih'`, `'Merah'`, `'Kuning'`) : Warna surat jalan sesuai status lunas/tagihan
+      - `delivery_status` (ENUM: `'Dalam Pengiriman'`, `'Selesai Terkirim'`, `'Dibatalkan'`)
+      - `gate_checked_by` (BIGINT, Nullable, Foreign Key -> `users.id` ON DELETE SET NULL) : Petugas satpam pemeriksa
+      - `gate_checked_at` (TIMESTAMP, Nullable) : Waktu verifikasi barang keluar di pos satpam
+      - `proof_photo_path` (VARCHAR, Nullable) : Path foto bukti surat jalan yang ditandatangani penerima
+      - `notes` (TEXT, Nullable) : Catatan pengiriman
+      - `delivery_date` (DATE, Nullable) : Tanggal pengiriman
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   5. Tabel `sheet_glasses` (Master Katalog & Stok Kaca Lembaran Utama)
+      - `id` (BIGINT, Primary Key)
+      - `item_code` (VARCHAR, Unique) : Kode barang (contoh: `BRG-001`)
+      - `name` (VARCHAR) : Nama lengkap jenis kaca lembaran
+      - `image_path` (VARCHAR, Nullable) : Foto sampel kaca
+      - `category` (VARCHAR) : Kategori (`Kaca Cermin`, `Kaca Bening / Clear`, `Kaca Tempered`, dll.)
+      - `length_cm` (DECIMAL 8,2) : Panjang standar 1 lembar (misal 183 cm / 244 cm)
+      - `width_cm` (DECIMAL 8,2) : Lebar standar 1 lembar (misal 244 cm / 366 cm)
+      - `size` (VARCHAR) : Label ukuran standar (`183 x 244 cm`)
+      - `thickness_mm` (INT) : Ketebalan kaca (mm)
+      - `buy_price` (DECIMAL 12,2) : Harga beli per lembar dari supplier
+      - `sell_price` (DECIMAL 12,2) : Harga jual dasar per meter persegi (m2) ke konsumen
+      - `rate_gm`, `rate_ht`, `rate_bv`, `rate_etsa` (DECIMAL 10,2) : Tarif jasa proses pengerjaan kaca
+      - `qty` (INT) : Jumlah stok tersedia (lembar)
+      - `unit` (VARCHAR, Default: 'Lembar')
+      - `supplier_name`, `supplier_phone`, `supplier_pic` (VARCHAR, Nullable) : Info supplier terkait
+      - `last_restock` (DATE, Nullable) : Tanggal terakhir barang masuk
+      - `status` (VARCHAR) : `'Aman'`, `'Menipis'`, `'Habis'`, `'Pengajuan Proses Restock'`
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   6. Tabel `suppliers` (Data Mitra Pemasok / Pabrik Kaca)
+      - `id` (BIGINT, Primary Key)
+      - `name` (VARCHAR) : Nama perusahaan supplier
+      - `category` (VARCHAR) : Spesialisasi pasokan kaca
+      - `phone` (VARCHAR) : Nomor telepon / WhatsApp pemesanan
+      - `pic` (VARCHAR) : Nama penanggung jawab (Sales PIC)
+      - `address` (TEXT, Nullable) : Alamat gudang/pabrik supplier
+      - `status` (VARCHAR) : `'Mitra Utama'`, `'Mitra Aktif'`, `'Mitra Impor'`, `'Mitra Lokal'`
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   7. Tabel `accessories` (Stok Aksesoris & Hardware Kaca)
+      - `id` (BIGINT, Primary Key)
+      - `acc_code` (VARCHAR, Unique) : Kode aksesoris (`ACC-001`)
+      - `name` (VARCHAR) : Nama aksesoris (Engsel, Handle Pintu, Sealant, Spigot, List Alumunium, dll.)
+      - `image_path` (VARCHAR, Nullable) : Foto produk aksesoris
+      - `buy_price` (DECIMAL 12,2) : Harga beli dari supplier
+      - `sell_price` (DECIMAL 12,2) : Harga jual satuan ke customer
+      - `qty` (INT) : Jumlah stok
+      - `unit` (VARCHAR) : Satuan (`Pcs`, `Set`, `Tube`, `Pasang`, `Batang`, `Meter`)
+      - `status` (VARCHAR) : `'Aman'`, `'Menipis'`, `'Habis'`
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   8. Tabel `tools` (Inventaris Alat Kerja & Mesin Produksi)
+      - `id` (BIGINT, Primary Key)
+      - `tool_code` (VARCHAR, Unique) : Kode alat (`ALT-001`)
+      - `name` (VARCHAR) : Nama alat/mesin (Glass Cutter Toyo, Suction Cup, Mesin Bor, Polisher, dll.)
+      - `image_path` (VARCHAR, Nullable) : Foto alat
+      - `category` (VARCHAR) : Kategori alat
+      - `condition` (VARCHAR) : `'Baik'`, `'Perlu Servis'`, `'Rusak'`
+      - `location` (VARCHAR) : Lokasi penempatan di workshop/gudang
+      - `total_qty` (INT) : Total unit dimiliki
+      - `available_qty` (INT) : Unit siap pakai (tidak sedang dipinjam/rusak)
+      - `damaged_qty` (INT, Default: 0) : Jumlah unit yang sedang rusak/diservis
+      - `notes` (TEXT, Nullable) : Keterangan kondisi alat
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   9. Tabel `tool_borrows` (Riwayat Peminjaman & Pengembalian Alat Kerja oleh Teknisi/Divisi)
+      - `id` (BIGINT, Primary Key)
+      - `tool_id` (BIGINT, Foreign Key -> `tools.id` ON DELETE CASCADE)
+      - `borrower_name` (VARCHAR) : Nama staf peminjam
+      - `borrow_date` (DATETIME) : Waktu pinjam
+      - `return_date` (DATETIME, Nullable) : Waktu kembali
+      - `qty` (INT) : Jumlah unit dipinjam
+      - `status` (VARCHAR) : `'Dipinjam'`, `'Dikembalikan'`
+      - `notes` (TEXT, Nullable) : Keperluan peminjaman
+      - `created_at`, `updated_at` (TIMESTAMP)
+
+   10. Tabel `supplies` (Bahan Habis Pakai / Konsumabel Gudang Produksi)
+       - `id` (BIGINT, Primary Key)
+       - `item_code` (VARCHAR, Unique) : Kode barang (`PLK-001`)
+       - `name` (VARCHAR) : Nama bahan (Minyak Tanah Potong, Cerium Oxide, Sarung Tangan Kevlar, Pasir Silika, dll.)
+       - `image_path` (VARCHAR, Nullable) : Foto bahan
+       - `category` (VARCHAR) : Kategori konsumabel
+       - `qty` (INT) : Stok saat ini
+       - `unit` (VARCHAR) : Satuan (`Liter`, `Kg`, `Pasang`, `Roll`, `Karung`)
+       - `min_stock` (INT) : Ambang batas stok minimum untuk alert peringatan
+       - `status` (VARCHAR) : `'Aman'`, `'Menipis'`, `'Habis'`
+       - `created_at`, `updated_at` (TIMESTAMP)
+
+   11. Tabel `supply_usages` (Log Pengeluaran / Pemakaian Bahan Habis Pakai Harian)
+       - `id` (BIGINT, Primary Key)
+       - `supply_id` (BIGINT, Foreign Key -> `supplies.id` ON DELETE CASCADE)
+       - `user_name` (VARCHAR) : Nama staf yang mengambil
+       - `qty` (INT) : Jumlah yang dipakai
+       - `division` (VARCHAR) : Divisi pemakai (`HT (Potong)`, `GM`, `BV`, `Etsa`, dll.)
+       - `notes` (TEXT, Nullable) : Deskripsi penggunaan
+       - `created_at`, `updated_at` (TIMESTAMP)
+
+   12. Tabel `supply_restocks` (Pengajuan Restock Bahan Habis Pakai dari Gudang ke Toko)
+       - `id` (BIGINT, Primary Key)
+       - `supply_id` (BIGINT, Foreign Key -> `supplies.id` ON DELETE CASCADE)
+       - `request_qty` (INT) : Jumlah permintaan restock
+       - `notes` (TEXT, Nullable) : Catatan pengajuan
+       - `status` (VARCHAR) : `'Menunggu Persetujuan'`, `'Disetujui'`, `'Selesai Restok'`, `'Ditolak'`
+       - `created_at`, `updated_at` (TIMESTAMP)
+
+   13. Tabel `finance_transactions` (Jurnal Keuangan, Pembelian Bahan, OPEX, & Klaim Supir)
+       - `id` (BIGINT, Primary Key)
+       - `transaction_code` (VARCHAR, Unique) : Nomor transaksi (`TRX-202609-001`)
+       - `type` (VARCHAR, Indexed) : `'pembelian_bahan'`, `'pembelian_aksesoris'`, `'pembelian_alat'`,
+         `'biaya_operasional'`, `'pemasukan_lain'`
+       - `category` (VARCHAR) : Sub-kategori akuntansi
+       - `title` (VARCHAR) : Judul/deskripsi singkat transaksi
+       - `amount` (DECIMAL 15,2) : Nominal uang (Rp)
+       - `supplier_name` (VARCHAR, Nullable) : Nama vendor/supplier terkait
+       - `invoice_number` (VARCHAR, Nullable) : Nomor nota/faktur
+       - `payment_method` (VARCHAR) : Metode bayar (`Transfer Bank BCA`, `Kas Tunai`, `QRIS`, dll.)
+       - `payment_status` (VARCHAR) : `'Lunas'`, `'Tempo'`, `'DP'`
+       - `approval_status` (VARCHAR, Indexed) : `'approved'`, `'pending'`, `'rejected'`
+       - `source_role` (VARCHAR, Nullable) : Role pengaju (`driver`, `admin_toko`, `admin_gudang`, `owner`)
+       - `vehicle_plate` (VARCHAR, Nullable) : Nomor plat kendaraan (khusus klaim BBM/Tol supir)
+       - `transaction_date` (DATE) : Tanggal transaksi
+       - `due_date` (DATE, Nullable) : Jatuh tempo (jika tempo)
+       - `notes` (TEXT, Nullable) : Catatan detail
+       - `receipt_photo_path` (VARCHAR, Nullable) : Foto struk/nota bukti transaksi
+       - `user_id` (BIGINT, Nullable, Foreign Key -> `users.id` ON DELETE SET NULL) : Pembuat transaksi
+       - `approved_by_user_id` (BIGINT, Nullable, Foreign Key -> `users.id` ON DELETE SET NULL) : Penyetuju
+       - `approved_at` (TIMESTAMP, Nullable) : Waktu disetujui
+       - `rejection_reason` (VARCHAR, Nullable) : Alasan penolakan klaim
+       - `created_at`, `updated_at` (TIMESTAMP)
+
+   14. Tabel `activity_logs` (Audit Trail / Riwayat Manajemen Akun & Keamanan)
+       - `id` (BIGINT, Primary Key)
+       - `user_id` (BIGINT, Nullable, Foreign Key -> `users.id` ON DELETE SET NULL)
+       - `admin_name` (VARCHAR) : Nama admin/HRD pelaku aksi
+       - `action_type` (VARCHAR) : `'BUAT_AKUN'`, `'EDIT_AKUN'`, `'RESET_PASSWORD'`, `'HAPUS_AKUN'`
+       - `target_user_name` (VARCHAR, Nullable) : Nama akun karyawan yang diubah
+       - `description` (TEXT) : Rincian perubahan
+       - `created_at`, `updated_at` (TIMESTAMP)
+
+   *(Catatan: Bersama `users`, total tabel domain aplikasi adalah 14 tabel).*
+
+   -----------------------------------------------------------------------------
+   KELOMPOK 2: TABEL INFRASTRUKTUR & SISTEM LARAVEL (8 TABEL)
+   -----------------------------------------------------------------------------
+   15. `migrations`            : Menyimpan riwayat eksekusi file migrasi database.
+   16. `password_reset_tokens` : Menyimpan token permintaan reset password pengguna.
+   17. `sessions`              : Menyimpan data sesi login aktif apabila driver session = database.
+   18. `cache`                 : Menyimpan data cache aplikasi.
+   19. `cache_locks`           : Menyimpan kunci konkurensi (atomic locks) pada cache.
+   20. `jobs`                  : Menyimpan antrean tugas latar belakang (background queue).
+   21. `job_batches`           : Menyimpan informasi pengelompokan batch job.
+   22. `failed_jobs`           : Menyimpan log antrean job yang gagal dieksekusi.
+
+================================================================================
+5. ARSITEKTUR SISTEM BACKEND (MODELS, CONTROLLERS, ROUTES, RBAC)
+================================================================================
+Backend dibangun di atas pola MVC (Model-View-Controller) menggunakan Laravel 12 dan
+mengirimkan state langsung sebagai JSON props ke komponen React melalui `Inertia::render()`.
+
+A. Daftar Eloquent Models (`app/Models/` - 14 Model):
+   1. `User.php`               : Mengelola autentikasi dan atribut role karyawan.
+   2. `Order.php`              : Model utama SPO dengan automatic casting JSON (`processes`,
+                                 `accessories`, `items`, `division_progress`, `division_timestamps`,
+                                 `raw_materials_used`, `revision_history`, `complaint_data`) dan relasi
+                                 `hasMany(Delivery::class)`.
+   3. `ScrapGlass.php`         : Model stok kaca sisa per rak.
+   4. `Delivery.php`           : Model pengiriman & surat jalan, berelasi `belongsTo(Order::class)`
+                                 dan `belongsTo(User::class, 'gate_checked_by')`.
+   5. `SheetGlass.php`         : Model katalog & stok kaca lembaran baru.
+   6. `Supplier.php`           : Model data pemasok kaca.
+   7. `Accessory.php`          : Model stok aksesoris kaca.
+   8. `Tool.php`               : Model inventaris alat kerja, berelasi `hasMany(ToolBorrow::class)`.
+   9. `ToolBorrow.php`         : Model transaksi peminjaman alat kerja.
+   10. `Supply.php`            : Model bahan habis pakai, berelasi `hasMany(SupplyUsage::class)`
+                                 dan `hasMany(SupplyRestock::class)`.
+   11. `SupplyUsage.php`       : Model riwayat pemakaian bahan habis pakai.
+   12. `SupplyRestock.php`     : Model tiket pengajuan restock bahan habis pakai.
+   13. `FinanceTransaction.php`: Model jurnal keuangan & klaim operasional, berelasi ke `User`
+                                 (`user` & `approver`).
+   14. `ActivityLog.php`       : Model pencatat audit log aktivitas sistem.
+
+B. Daftar Controllers (`app/Http/Controllers/`):
+   1. `SypOperationalController.php` :
+      Controller orkestrator utama yang menangani:
+      - `welcome()` : Merender landing page publik beserta statistik ringkas.
+      - `dashboard()` : Mengirimkan seluruh data prop ke `Dashboard.jsx` menggunakan Lazy Evaluation
+        Closure (`fn() => ...`) agar fitur Partial Reload Inertia berjalan sangat cepat dan hemat memori.
+      - `computeDashboardMetrics()` : Menghitung omzet, piutang COD, HPP (COGS), biaya operasional (OPEX),
+        laba kotor/bersih, margin persentase, dan valuasi penghematan kaca sisa secara real-time.
+      - Siklus Order : `storeOrder()`, `updateOrder()`, `promoteDraftToPengerjaan()`,
+        `dispatchOrderToDivision()`, `startDivisionJob()`, `finishDivisionJob()`, `recordRawMaterialUsage()`.
+      - Sistem Revisi : `submitRevision()`, `lockRevisionEdit()`, `cancelRevisionLock()`, `acknowledgeRevision()`.
+      - Pengiriman & COD : `assignBatchDelivery()`, `completeDelivery()`, `gateCheckDelivery()`, `settleCodHandover()`.
+      - Manajemen User & Keuangan : CRUD User + Activity Log, serta CRUD & Approval `FinanceTransaction`.
+   2. `InventoryMasterController.php` :
+      Menangani seluruh operasi CRUD, restock, pengajuan restock, peminjaman alat, perbaikan alat,
+      dan pemakaian bahan habis pakai untuk 5 entitas master (`SheetGlass`, `Supplier`, `Accessory`,
+      `Tool`, dan `Supply`).
+   3. `ComplaintController.php` :
+      Menangani pelaporan kaca cacat/pecah dari divisi produksi (`submitGlassComplaint`) dan
+      keputusan penyelesaian/potong ulang oleh Admin Gudang (`resolveGlassComplaint`).
+   4. `ScrapController.php` :
+      Menangani penambahan, pengeditan, dan penghapusan stok kaca sisa (`ScrapGlass`).
+   5. `OrderController.php`, `OrderExecutionController.php`, `OrderRevisionController.php`, `ProfileController.php`,
+      serta `Auth/*` Controllers (Breeze Authentication).
+
+C. Sistem Hak Akses Multi-Role (RBAC - 11 Peran Pengguna):
+   1. `admin_toko`   : Kasir & Sales. Membuat order/draf, mengatur harga, mencetak surat jalan,
+                       menyetujui pengajuan restock gudang, menerima setoran COD supir.
+   2. `admin_gudang` : Kepala Produksi & Logistik. Mendistribusikan SPO ke 4 divisi, memantau antrean
+                       produksi, memutuskan komplain kaca cacat, mengatur supir/kendaraan, mengajukan
+                       restock barang yang menipis, mengelola alat & supplies.
+   3. `divisi_ht`    : Staf Potong & Bor Kaca. Menerima tugas SPO, menginput pemakaian kaca lembaran
+                       baru, menginput sisa potongan kaca layak pakai ke rak (`ScrapGlass`), melapor jika kaca cacat.
+   4. `divisi_gm`    : Staf Gosok Mesin (penghalusan tepi kaca). Mengeksekusi antrean kerja GM.
+   5. `divisi_bv`    : Staf Bevel (pembuatan kemiringan tepi kaca dekoratif). Mengeksekusi antrean BV.
+   6. `divisi_etsa`  : Staf Etsa/Sandblast (pembuatan efek buram/motif kaca). Mengeksekusi antrean Etsa.
+   7. `driver`       : Supir Pengiriman. Melihat daftar surat jalan miliknya, mengubah status kirim,
+                       mengunggah foto bukti surat jalan bertanda tangan, mengajukan klaim uang bensin/tol,
+                       dan menyetorkan uang tagihan COD.
+   8. `satpam`       : Petugas Keamanan Gerbang. Memeriksa kesesuaian fisik muatan mobil dengan Surat
+                       Barang Keluar (Gate Pass Check).
+   9. `finance`      : Staf Akuntansi & Keuangan. Mengelola jurnal pemasukan/pengeluaran, menyetujui klaim
+                       biaya operasional, dan mencetak laporan keuangan resmi.
+   10. `hrd`         : Staf Personalia. Mengelola akun karyawan (tambah, edit role, reset password, hapus)
+                       dan memantau log aktivitas.
+   11. `owner`       : Pemilik Perusahaan / Direktur. Memiliki akses penuh ke Dashboard Eksekutif,
+                       analisis grafik keuangan, persetujuan transaksi, dan pemantauan seluruh divisi.
+
+   *(Catatan Keamanan Harga: Sesuai PRD, informasi harga order dan nilai rupiah disembunyikan dari
+   role Gudang, Divisi Produksi, Supir, dan Satpam melalui guard `canViewPricing`).*
+
+================================================================================
+6. ARSITEKTUR SISTEM FRONTEND (PAGES, MODULAR TABS, MODALS, UTILS)
+================================================================================
+Frontend menganut prinsip **Anti-Monolitik (Modular Component Architecture)** di mana
+setiap halaman, tab konten, dan pop-up modal dipisahkan ke dalam file tersendiri:
+
+A. Halaman Utama (`resources/js/Pages/`):
+   1. `Welcome.jsx`   : Landing page korporat publik yang dilengkapi fitur interaktif
+                        Simulasi Ukuran Kaca & Kalkulator Estimasi Harga bagi pengunjung.
+   2. `Dashboard.jsx` : Orkestrator state utama setelah login, mengatur navigasi sidebar dinamis
+                        sesuai role user, header profil, notifikasi, dan perutean ke 12 Tab.
+   3. `Auth/*` & `Profile/*` : Halaman Login, Register, Forgot Password, Reset Password, dan Edit Profil.
+
+B. 12 Komponen Tab Dashboard (`resources/js/Components/DashboardTabs/`):
+   1. `DashboardOverviewTab.jsx` : Ringkasan KPI eksekutif, grafik pendapatan/pengeluaran, distribusi
+                                   penjualan per jenis kaca, dan pantauan cepat operasional.
+   2. `OrdersTab.jsx`            : Halaman manajemen SPO dengan 4 kartu filter dinamis (Draf, Pengerjaan,
+                                   Pengiriman, Pembayaran), pencarian, filter tanggal, dan aksi order.
+   3. `ProductionTab.jsx`        : Ruang kerja produksi untuk Admin Gudang dan 4 Divisi (HT, GM, BV, Etsa),
+                                   dilengkapi kartu "Sedang Dikerjakan", tabel antrean, dan indikator progres.
+   4. `SuspendedTab.jsx`         : Panel khusus pemantauan order yang tertunda karena sedang direvisi
+                                   atau mengalami komplain kaca cacat/pecah.
+   5. `ScrapTab.jsx`             : Manajemen inventori ganda: Katalog Stok Kaca Lembaran Utama (`SheetGlass`)
+                                   dan Stok Kaca Sisa Potongan per Rak (`ScrapGlass`).
+   6. `DeliveriesTab.jsx`        : Manajemen ekspedisi, penugasan armada multi-alamat (Batch Trip),
+                                   cetak Surat Jalan & Gate Pass Satpam, serta riwayat bukti foto pengiriman.
+   7. `AccessoriesTab.jsx`       : Manajemen katalog dan stok aksesoris/hardware kaca.
+   8. `WarehouseSuppliesTab.jsx` : Manajemen bahan habis pakai gudang, log pemakaian harian, dan tiket restock.
+   9. `ToolsTab.jsx`             : Manajemen inventaris mesin & alat kerja, peminjaman teknisi, dan status servis.
+   10. `SuppliersTab.jsx`        : Direktori mitra supplier kaca beserta fitur pesan langsung via WhatsApp.
+   11. `FinanceTab.jsx`          : Modul akuntansi lengkap (Laporan Laba Rugi / P&L, Buku Besar Transaksi,
+                                   Persetujuan Klaim Supir/Gudang, dan Rekap Penjualan).
+   12. `EmployeesTab.jsx`        : Modul HRD untuk manajemen akun staf lintas role dan tabel Audit Activity Log.
+
+C. 44 Komponen Pop-up Modal (`resources/js/Components/Modals/`):
+   - Siklus Order & Produksi:
+     `NewOrderModal.jsx`, `EditDraftOrderModal.jsx`, `PromoteOrderModal.jsx`, `DispatchModal.jsx`,
+     `DivisionExecutionModal.jsx`, `GlassStickerModal.jsx`, `RevisionDetailModal.jsx`,
+     `ComplaintModal.jsx`, `GudangDecisionModal.jsx`, `ScrapPopupModal.jsx`.
+   - Siklus Pengiriman & Armada:
+     `AssignVehicleModal.jsx`, `WaybillModal.jsx`, `MultiAddressWaybillModal.jsx`,
+     `BatchWaybillModal.jsx`, `GatePassModal.jsx`, `EditTripModal.jsx`, `ConfirmDeliveryModal.jsx`,
+     `CodSettlementModal.jsx`, `DriverClaimModal.jsx`.
+   - Siklus Inventori, Alat, & Supplier:
+     `AddStockModal.jsx`, `EditStockModal.jsx`, `RestockStockModal.jsx`, `AddScrapModal.jsx`,
+     `EditScrapModal.jsx`, `AddAccessoryModal.jsx`, `EditAccessoryModal.jsx`, `RestockAccessoryModal.jsx`,
+     `AddSupplyModal.jsx`, `EditSupplyModal.jsx`, `UseSupplyModal.jsx`, `RequestRestockSupplyModal.jsx`,
+     `AddToolModal.jsx`, `EditToolModal.jsx`, `BorrowToolModal.jsx`, `ReturnToolModal.jsx`,
+     `CompleteRepairModal.jsx`, `AddSupplierModal.jsx`, `EditSupplierModal.jsx`, `SupplierWaModal.jsx`.
+   - Siklus Keuangan, HRD, & Utilitas:
+     `FinanceTransactionModal.jsx`, `PrintFinancialReportModal.jsx`, `SalesRekapModal.jsx`,
+     `EmployeeModal.jsx`, `ImageLightboxModal.jsx`.
+
+D. Komponen Pendukung & Utilitas:
+   - `resources/js/Components/GmSidesSelector.jsx` : Pemilih interaktif sisi kaca (1-4 sisi) yang akan digosok mesin (GM).
+   - `resources/js/Components/Charts/CandlestickChart.jsx` : Visualisasi grafik performa finansial.
+   - `resources/js/Utils/dashboardHelpers.js` : Fungsi-fungsi murni (pure functions) untuk kalkulasi luas kaca,
+     format mata uang Rupiah, pencocokan ukuran kaca sisa (scrap matching), dan pemformatan tanggal Indonesia.
+
+================================================================================
+7. ALUR BISNIS & FITUR UTAMA END-TO-END
+================================================================================
+1. PENERIMAAN ORDER & DETEKSI KACA SISA:
+   Customer memesan kaca -> `admin_toko` menginput ukuran, ketebalan, opsi proses (HT, GM, BV, Etsa),
+   dan aksesoris di `NewOrderModal` -> Sistem otomatis mengecek apakah ada Kaca Sisa (`ScrapGlass`)
+   di rak yang cocok -> Jika masih belum deal disimpan sebagai `draft`, jika sudah deal/DP masuk ke
+   status `pengerjaan`.
+
+2. DISTRIBUSI & EKSEKUSI 4 DIVISI PRODUKSI:
+   Order berstatus `pengerjaan` muncul di dashboard `admin_gudang` -> Admin Gudang menekan tombol
+   Distribusi ke divisi pertama (`divisi_ht`) -> Staf Divisi HT menekan "Mulai Kerjakan", memotong kaca,
+   mencatat jumlah lembar kaca bahan yang terpakai serta menginput ukuran potongan sisa kaca baru ke
+   rak melalui `DivisionExecutionModal` -> Setelah HT selesai, order otomatis mengalir ke divisi
+   berikutnya sesuai opsi pesanan (`divisi_gm` -> `divisi_bv` -> `divisi_etsa`).
+
+3. PENANGANAN REVISI & KOMPLAIN KACA CACAT:
+   - Jika customer meminta perubahan ukuran/spesifikasi saat kaca sedang diproduksi, `admin_toko`
+     mengirimkan Revisi -> sistem mengunci order sementara dan memberi notifikasi prioritas ke divisi
+     tempat kaca tersebut berada saat ini.
+   - Jika staf divisi menemukan kaca baret/pecah/gagal produksi, staf menekan tombol Masalah Kaca
+     (`ComplaintModal`) dan mengunggah foto bukti -> `admin_gudang` memeriksa di `GudangDecisionModal`
+     untuk menyetujui potong ulang (Re-cut kembali ke Divisi HT) dan memindahkan kaca cacat ke stok sisa.
+
+4. PENGIRIMAN, SURAT JALAN 4 WARNA, GATE PASS, & PELUNASAN COD:
+   Setelah seluruh divisi selesai (`ready_ship`), `admin_toko` / `admin_gudang` menjadwalkan pengiriman,
+   memilih supir & kendaraan, serta mencetak Surat Jalan (`WaybillModal` / `BatchWaybillModal`) dengan
+   ketentuan warna:
+   - Lembar PUTIH  : Untuk konsumen jika sudah Lunas (atau dibawa penagih/DC jika belum lunas).
+   - Lembar KUNING : Untuk arsip Admin Gudang.
+   - Lembar MERAH  : Diserahkan ke konsumen sebagai tanda terima sementara jika belum lunas (COD).
+   Petugas `satpam` memverifikasi barang keluar di pos gerbang (`GatePassModal`) -> `driver` mengantar
+   barang, memfoto surat jalan yang sudah ditandatangani penerima (`ConfirmDeliveryModal`), dan jika
+   ada pembayaran COD di tempat, supir menyetorkannya ke kasir toko (`CodSettlementModal`).
+
+================================================================================
+8. STANDAR DESAIN UI/UX (UTB CLEAN WHITE ENTERPRISE SAAS)
+================================================================================
+Seluruh tampilan aplikasi mematuhi standar desain korporat Universitas Teknologi Bandung (UTB):
+- Tema Visual     : Clean White Enterprise SaaS / ERP (tanpa dark mode pada area kerja operasional).
+- Primary Color   : UTB Blue (`#1b68b0`, hover `#15528c`).
+- Secondary Color : UTB Green (`#70b03c`, hover `#5f9733`) untuk aksi sukses, deal order, dan status lunas.
+- Tipografi       : Kontras tinggi menggunakan Dark Slate (`#242222` / `text-slate-800`).
+- Ikonografi      : Menggunakan ikon vektor SVG dari `lucide-react` secara konsisten (tanpa raw text emoji).
+================================================================================
