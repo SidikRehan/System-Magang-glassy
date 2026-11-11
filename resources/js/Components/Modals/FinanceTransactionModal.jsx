@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { CreditCard, Wallet, X, FileText, CheckCircle2, Save, Package, Wrench, Zap, Loader2 } from 'lucide-react';
+import { CreditCard, X, CheckCircle2, Save, Loader2 } from 'lucide-react';
 
 export default function FinanceTransactionModal({
     isOpen,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, Printer, X, ClipboardList, MapPin, User, Phone, Package } from 'lucide-react';
+import { Truck, Printer, X, ClipboardList, MapPin, User, Phone, Package, FileText } from 'lucide-react';
 
 export default function MultiAddressWaybillModal({
     show,

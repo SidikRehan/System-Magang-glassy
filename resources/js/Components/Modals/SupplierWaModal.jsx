@@ -8,10 +8,8 @@ export default function SupplierWaModal({
     suppliersList = [],
     onApproveSuccess
 }) {
-    if (!show || !selectedWaStockItem) return null;
-
-    const [supplierName, setSupplierName] = useState(selectedWaStockItem.supplier_name || 'PT Asahimas Flat Glass (Supplier Utama)');
-    const [supplierPhone, setSupplierPhone] = useState(selectedWaStockItem.supplier_phone || '6281234567890');
+    const [supplierName, setSupplierName] = useState(selectedWaStockItem?.supplier_name || 'PT Asahimas Flat Glass (Supplier Utama)');
+    const [supplierPhone, setSupplierPhone] = useState(selectedWaStockItem?.supplier_phone || '6281234567890');
     const [waOrderQty, setWaOrderQty] = useState(20);
 
     useEffect(() => {
@@ -20,6 +18,8 @@ export default function SupplierWaModal({
             setSupplierPhone(selectedWaStockItem.supplier_phone || (suppliersList[0]?.phone || '6281234567890'));
         }
     }, [selectedWaStockItem, suppliersList]);
+
+    if (!show || !selectedWaStockItem) return null;
 
     const handleSendWaOrder = (e) => {
         e.preventDefault();

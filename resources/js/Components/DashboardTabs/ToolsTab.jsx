@@ -1,9 +1,8 @@
 import React from 'react';
 import { 
-    Wrench, User, Calendar, MapPin, CheckCircle2, 
-    Clock, AlertTriangle, Search, Plus, ClipboardList, 
-    Check, Edit, RefreshCw, XCircle, ShieldAlert, 
-    Layers, ArrowRightLeft, PenTool, Info
+    Wrench, User, MapPin, CheckCircle2, 
+    AlertTriangle, Search, Plus, ClipboardList, 
+    Check, Edit, RefreshCw, PenTool, Info
 } from 'lucide-react';
 
 export default function ToolsTab({
@@ -34,7 +33,7 @@ export default function ToolsTab({
     const totalReadyUnits = toolsList.reduce((sum, t) => sum + Math.max(0, Number(t.available_qty) || 0), 0);
 
     // 3. Unit Sedang Dipinjam (dari active borrowings atau item borrows)
-    const activeBorrowingsList = toolBorrowings.filter(b => b.status === 'Sedang Dipinjam');
+    const activeBorrowingsList = toolBorrowings.filter(b => b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam');
     const activeBorrowingsCount = activeBorrowingsList.length;
     const totalBorrowedUnits = activeBorrowingsList.reduce((sum, b) => {
         if (Array.isArray(b.items) && b.items.length > 0) {
@@ -327,7 +326,7 @@ export default function ToolsTab({
                                         <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5 text-xs space-y-1">
                                             {(Number(t.damaged_qty) || 0) > 0 && (
                                                 <div className="flex items-center justify-between text-amber-800 font-bold text-[11px]">
-                                                    <span>⚠️ {t.condition === 'Perlu Servis' ? 'Perlu Servis' : 'Rusak'}:</span>
+                                                    <span className="flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> {t.condition === 'Perlu Servis' ? 'Perlu Servis' : 'Rusak'}:</span>
                                                     <span className="font-mono">{t.damaged_qty} {t.unit || 'Unit'}</span>
                                                 </div>
                                             )}
@@ -499,8 +498,8 @@ export default function ToolsTab({
                                             </div>
                                             <span className="font-extrabold text-[#242222] text-xs">{b.borrower_name}</span>
                                         </div>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${b.status === 'Sedang Dipinjam' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                                            {b.status}
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                            {b.status === 'Dipinjam' ? 'Sedang Dipinjam' : b.status}
                                         </span>
                                     </div>
 
@@ -518,24 +517,24 @@ export default function ToolsTab({
                                             <div className="bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200/80 text-xs">
                                                 <span className="font-extrabold text-[#1b68b0] font-mono text-xs mr-2">{b.tool_code}</span>
                                                 <span className="font-bold text-[#242222]">{b.tool_name}</span>
-                                                <span className="font-mono font-bold text-amber-700 ml-2">({b.qty_borrowed} Unit)</span>
+                                                <span className="font-mono font-bold text-amber-700 ml-2">({b.qty_borrowed ?? b.qty ?? 1} Unit)</span>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Purpose & Dates */}
                                     <div className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-100 text-xs space-y-1.5">
-                                        <div className="text-slate-600 line-clamp-2 hover:line-clamp-none cursor-pointer" title={b.purpose}>
+                                        <div className="text-slate-600 line-clamp-2 hover:line-clamp-none cursor-pointer" title={b.purpose || b.notes}>
                                             <span className="text-slate-400 font-semibold mr-1">Tujuan:</span>
-                                            <span>{b.purpose || '-'}</span>
+                                            <span>{b.purpose || b.notes || '-'}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-[11px] font-mono text-slate-500 pt-1 border-t border-slate-200/60">
                                             <span>Pinjam: {b.borrow_date}</span>
-                                            <span className="text-[#1b68b0] font-bold">Est: {b.expected_return}</span>
+                                            <span className="text-[#1b68b0] font-bold">Est: {b.expected_return || b.borrow_date}</span>
                                         </div>
                                     </div>
 
-                                    {b.status === 'Sedang Dipinjam' ? (
+                                    {(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? (
                                         (userRole === 'admin_gudang' || userRole === 'owner') && (
                                             <button
                                                 onClick={() => handleOpenReturnModal(b)}
@@ -547,14 +546,14 @@ export default function ToolsTab({
                                     ) : (
                                         <div className="flex items-center justify-between text-xs pt-1">
                                             <span className="text-emerald-700 font-bold font-mono">
-                                                Selesai ({b.actual_return})
+                                                Selesai ({b.actual_return || b.return_date || 'Dikembalikan'})
                                             </span>
                                             {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                 <button
                                                     onClick={() => handleOpenReturnModal(b)}
                                                     className="text-[11px] text-[#1b68b0] hover:underline font-semibold cursor-pointer"
                                                 >
-                                                    Edit Tgl
+                                                    Detail
                                                 </button>
                                             )}
                                         </div>
@@ -616,21 +615,21 @@ export default function ToolsTab({
                                             <td className="p-3 text-xs text-slate-600 max-w-[240px]">
                                                 <div 
                                                     className="line-clamp-2 hover:line-clamp-none transition-all duration-200 cursor-pointer bg-slate-50/70 hover:bg-white p-1.5 rounded-lg border border-slate-100 hover:border-[#1b68b0]/30"
-                                                    title={b.purpose}
+                                                    title={b.purpose || b.notes}
                                                 >
-                                                    {b.purpose}
+                                                    {b.purpose || b.notes || '-'}
                                                 </div>
                                             </td>
-                                            <td className="p-3 text-center font-mono font-bold text-amber-700">{b.qty_borrowed} Unit</td>
+                                            <td className="p-3 text-center font-mono font-bold text-amber-700">{b.qty_borrowed ?? b.qty ?? 1} Unit</td>
                                             <td className="p-3 text-xs text-slate-500 font-mono">{b.borrow_date}</td>
-                                            <td className="p-3 text-xs font-mono text-[#1b68b0] font-bold">{b.expected_return}</td>
+                                            <td className="p-3 text-xs font-mono text-[#1b68b0] font-bold">{b.expected_return || b.borrow_date}</td>
                                             <td className="p-3 text-center">
-                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${b.status === 'Sedang Dipinjam' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                                                    {b.status}
+                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                                    {b.status === 'Dipinjam' ? 'Sedang Dipinjam' : b.status}
                                                 </span>
                                             </td>
                                             <td className="p-3 text-right">
-                                                {b.status === 'Sedang Dipinjam' ? (
+                                                {(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? (
                                                     (userRole === 'admin_gudang' || userRole === 'owner') && (
                                                         <button
                                                             onClick={() => handleOpenReturnModal(b)}
@@ -642,14 +641,14 @@ export default function ToolsTab({
                                                 ) : (
                                                     <div className="flex flex-col items-end gap-1">
                                                         <span className="text-xs text-emerald-700 font-bold font-mono">
-                                                            Selesai ({b.actual_return})
+                                                            Selesai ({b.actual_return || b.return_date || 'Dikembalikan'})
                                                         </span>
                                                         {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                             <button
                                                                 onClick={() => handleOpenReturnModal(b)}
                                                                 className="text-[10px] text-[#1b68b0] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer"
                                                             >
-                                                                Edit Tgl
+                                                                Detail
                                                             </button>
                                                         )}
                                                     </div>
@@ -786,7 +785,7 @@ export default function ToolsTab({
                                     {/* Action Buttons for Mobile */}
                                     {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                         <div className="pt-1 space-y-2">
-                                            {(!t.repair_stage || t.repair_stage === 'Perlu Perbaikan') && (Number(t.damaged_qty) || 0) > 0 && (
+                                            {t.condition !== 'Perlu Servis' && t.repair_stage !== 'Sedang Dalam Perbaikan' && ((Number(t.damaged_qty) || 0) > 0 || t.condition === 'Rusak') && (
                                                 <button
                                                     onClick={() => handleStartRepair(t.id)}
                                                     className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-3 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
@@ -795,7 +794,7 @@ export default function ToolsTab({
                                                 </button>
                                             )}
 
-                                            {t.repair_stage === 'Sedang Dalam Perbaikan' && (
+                                            {(t.repair_stage === 'Sedang Dalam Perbaikan' || t.condition === 'Perlu Servis' || (Number(t.damaged_qty) || 0) > 0) && (
                                                 <button
                                                     onClick={() => handleOpenCompleteRepairModal(t)}
                                                     className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold py-2 px-3 rounded-xl text-xs transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
@@ -804,7 +803,7 @@ export default function ToolsTab({
                                                 </button>
                                             )}
 
-                                            {t.repair_stage === 'Selesai' && (
+                                            {t.repair_stage === 'Selesai' && (Number(t.damaged_qty) || 0) === 0 && t.condition !== 'Perlu Servis' && (
                                                 <button
                                                     onClick={() => handleOpenCompleteRepairModal(t)}
                                                     className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold py-1.5 px-3 rounded-xl text-xs transition border border-slate-200 flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
@@ -917,7 +916,7 @@ export default function ToolsTab({
                                                 {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                     <>
                                                         {/* TAHAP 1: PERLU PERBAIKAN */}
-                                                        {(!t.repair_stage || t.repair_stage === 'Perlu Perbaikan') && (Number(t.damaged_qty) || 0) > 0 && (
+                                                        {t.condition !== 'Perlu Servis' && t.repair_stage !== 'Sedang Dalam Perbaikan' && ((Number(t.damaged_qty) || 0) > 0 || t.condition === 'Rusak') && (
                                                             <button
                                                                 onClick={() => handleStartRepair(t.id)}
                                                                 className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
@@ -926,12 +925,14 @@ export default function ToolsTab({
                                                             </button>
                                                         )}
 
-                                                        {/* TAHAP 2: SEDANG DALAM PERBAIKAN */}
-                                                        {t.repair_stage === 'Sedang Dalam Perbaikan' && (
+                                                        {/* TAHAP 2: SEDANG DALAM PERBAIKAN ATAU SIAP DISELESAIKAN */}
+                                                        {(t.repair_stage === 'Sedang Dalam Perbaikan' || t.condition === 'Perlu Servis' || (Number(t.damaged_qty) || 0) > 0) && (
                                                             <div className="space-y-1.5">
-                                                                <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-md block text-center">
-                                                                    Sedang Servis
-                                                                </span>
+                                                                {(t.repair_stage === 'Sedang Dalam Perbaikan' || t.condition === 'Perlu Servis') && (
+                                                                    <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-md block text-center">
+                                                                        Sedang Servis
+                                                                    </span>
+                                                                )}
                                                                 <button
                                                                     onClick={() => handleOpenCompleteRepairModal(t)}
                                                                     className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
@@ -942,7 +943,7 @@ export default function ToolsTab({
                                                         )}
 
                                                         {/* TAHAP 3: PERBAIKAN SELESAI */}
-                                                        {t.repair_stage === 'Selesai' && (
+                                                        {t.repair_stage === 'Selesai' && (Number(t.damaged_qty) || 0) === 0 && t.condition !== 'Perlu Servis' && (
                                                             <div className="space-y-1.5">
                                                                 <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md block text-center">
                                                                     Selesai

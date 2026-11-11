@@ -7,7 +7,9 @@ export const roleTitles = {
     divisi_gm: 'Divisi GM (Gosok)',
     divisi_bv: 'Divisi BV (Bevel)',
     divisi_etsa: 'Divisi Etsa (Blur)',
+    divisi_bor: 'Divisi Bor (Drilling)',
     driver: 'Armada Pengiriman (Driver)',
+    satpam: 'Satpam (Keamanan Gerbang)',
     owner: 'Owner & Direksi Utama',
     hrd: 'HRD & Personalia',
     finance: 'Finance & Akuntansi',
@@ -172,27 +174,48 @@ export const isMatchSearch = (item, customTerm = null, fallbackTerm = '') => {
     return false;
 };
 
-export const fixedFactoryProcessOrder = ['HT', 'GM', 'BV', 'Etsa'];
+export const fixedFactoryProcessOrder = ['HT', 'GM', 'BV', 'Etsa', 'Bor'];
+
+export const normalizeProcessCode = (p) => {
+    if (!p) return '';
+    const u = String(p).replace('divisi_', '').trim().toUpperCase();
+    if (u === 'ETSA') return 'Etsa';
+    if (u === 'BOR') return 'Bor';
+    return u;
+};
 
 export const divisionInfo = {
-    'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
-    'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', icon: '✨', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
-    'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', icon: '💎', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
-    'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', icon: '🌫️', bg: 'bg-purple-500/10 text-purple-300 border-purple-500/30' }
+    'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+    'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', bg: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+    'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+    'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', bg: 'bg-purple-50 text-purple-700 border-purple-200' },
+    'Bor': { key: 'divisi_bor', code: 'Bor', name: 'Divisi Bor (Drilling)', bg: 'bg-orange-50 text-orange-700 border-orange-200' }
 };
 
 export const getOrderRelevantDivisions = (o) => {
     if (!o) return [];
     let procs = [];
+    const addProc = (p) => {
+        const norm = normalizeProcessCode(p);
+        if (norm && !procs.includes(norm)) {
+            procs.push(norm);
+        }
+    };
     if (Array.isArray(o.processes) && o.processes.length > 0) {
-        procs = [...o.processes];
+        o.processes.forEach(addProc);
     }
     if (Array.isArray(o.items)) {
         o.items.forEach(it => {
             if (Array.isArray(it.processes)) {
-                it.processes.forEach(p => {
-                    if (!procs.includes(p)) procs.push(p);
-                });
+                it.processes.forEach(addProc);
+            }
+        });
+    }
+    if (o.division_progress && typeof o.division_progress === 'object') {
+        ['HT', 'GM', 'BV', 'Etsa', 'Bor'].forEach(code => {
+            const st = getDivisionProgressStatus(o, code);
+            if (st && st !== 'N/A' && !procs.includes(code)) {
+                procs.push(code);
             }
         });
     }
@@ -227,6 +250,28 @@ export const computeDefaultNextDiv = (ord) => {
     return 'QC_Ready';
 };
 
+export const getDivisionProgressStatus = (order, divKeyOrCode) => {
+    if (!order || !order.division_progress) return 'Belum';
+    const raw = String(divKeyOrCode || '').replace('divisi_', '').trim();
+    if (!raw) return 'Belum';
+    const upper = raw.toUpperCase();
+    const title = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    const lower = raw.toLowerCase();
+    const p = order.division_progress;
+    return p[title] || p[upper] || p[lower] || p[raw] || 'Belum';
+};
+
+export const getDivisionTimestampObj = (order, divKeyOrCode) => {
+    if (!order || !order.division_timestamps) return {};
+    const raw = String(divKeyOrCode || '').replace('divisi_', '').trim();
+    if (!raw) return {};
+    const upper = raw.toUpperCase();
+    const title = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    const lower = raw.toLowerCase();
+    const ts = order.division_timestamps;
+    return ts[title] || ts[upper] || ts[lower] || ts[raw] || {};
+};
+
 export const checkOrderDivisi = (o, divKey) => {
     if (!o) return false;
     
@@ -237,18 +282,19 @@ export const checkOrderDivisi = (o, divKey) => {
     if (divKey === 'all') return (o.status === 'pengerjaan' || o.current_division === 'QC_Ready') && o.current_division !== 'admin_gudang';
     if (o.current_division === divKey) return true;
 
-    const code = divKey.replace('divisi_', '').toUpperCase();
-    const p = o.division_progress || {};
-    return p[code] === 'Selesai' || p[code] === 'Sedang Dikerjakan';
+    const status = getDivisionProgressStatus(o, divKey);
+    return status === 'Selesai' || status === 'Sedang Dikerjakan';
 };
 
 export const isOrderExecutionFinished = (o) => {
     if (!o) return false;
-    if (o.status === 'selesai') return true;
+    if (o.status === 'selesai' || o.status === 'pengiriman' || o.current_division === 'QC_Ready' || o.current_division === 'pengiriman' || o.current_division === 'driver') {
+        return true;
+    }
     if (o.status === 'draft') return false;
 
     // Working divisions that mean order is still actively in workstation production or internal prep
-    const workingDivisions = ['admin_toko', 'admin_gudang', 'divisi_ht', 'divisi_gm', 'divisi_bv', 'divisi_etsa'];
+    const workingDivisions = ['admin_toko', 'admin_gudang', 'divisi_ht', 'divisi_gm', 'divisi_bv', 'divisi_etsa', 'divisi_bor'];
     if (workingDivisions.includes(o.current_division)) {
         return false;
     }
@@ -260,17 +306,17 @@ export const isOrderExecutionFinished = (o) => {
     const progress = o.division_progress || {};
     const relevantDivs = getOrderRelevantDivisions(o);
     if (relevantDivs.length > 0) {
-        const allDone = relevantDivs.every(div => progress[div.code] === 'Selesai');
+        const allDone = relevantDivs.every(div => getDivisionProgressStatus(o, div.code) === 'Selesai');
         if (!allDone) return false;
     } else {
         const keys = Object.keys(progress);
         for (const k of keys) {
-            if (progress[k] !== 'N/A' && progress[k] !== 'Selesai') {
+            if (progress[k] !== 'N/A' && getDivisionProgressStatus(o, k) !== 'Selesai') {
                 return false;
             }
         }
     }
 
-    return o.status === 'pengiriman' || o.current_division === 'QC_Ready' || o.current_division === 'pengiriman';
+    return true;
 };
 

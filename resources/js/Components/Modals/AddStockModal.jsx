@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Building2, Sliders, Check, Ruler, Info, Loader2, Camera } from 'lucide-react';
+import { Plus, X, Building2, Sliders, Check, Ruler, Loader2, Camera } from 'lucide-react';
 
 export default function AddStockModal({
     show,

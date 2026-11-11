@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, X, Check } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
@@ -6,15 +6,24 @@ export default function BorrowToolModal({
     show,
     onClose,
     toolsList = [],
+    prefillForm = null,
     onSuccess
 }) {
-    if (!show) return null;
-
     const [toolId, setToolId] = useState('');
     const [qty, setQty] = useState(1);
     const [borrowerName, setBorrowerName] = useState('');
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (show) {
+            setBorrowerName(prefillForm?.borrower_name || '');
+            setNotes(prefillForm?.purpose || '');
+            setQty(1);
+        }
+    }, [show, prefillForm]);
+
+    if (!show) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();

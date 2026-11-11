@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, X, CheckCircle2, MessageSquare, Layers, Calendar, User, Clock, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Bell, X, CheckCircle2, MessageSquare, Layers, Clock, AlertTriangle } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 export default function RevisionDetailModal({
@@ -8,9 +8,9 @@ export default function RevisionDetailModal({
     order,
     onAcknowledge
 }) {
-    if (!show || !order) return null;
-
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show || !order) return null;
 
     const handleConfirmAcknowledge = () => {
         setIsSubmitting(true);

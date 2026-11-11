@@ -10,23 +10,34 @@ export default function SalesRekapModal({
     formatIndonesianDate,
     isDateInTimeRange
 }) {
-    if (!show) return null;
-
     const [statTimeRange, setStatTimeRange] = useState('today');
 
+    if (!show) return null;
+
     const curKey = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'HT';
+    const getStatusForKey = (o, key) => {
+        if (!o || !o.division_progress) return 'Belum';
+        const title = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+        return o.division_progress[title] || o.division_progress[key] || o.division_progress[key.toLowerCase()] || 'Belum';
+    };
+    const getTsForKey = (o, key) => {
+        if (!o || !o.division_timestamps) return {};
+        const title = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+        return o.division_timestamps[title] || o.division_timestamps[key] || o.division_timestamps[key.toLowerCase()] || {};
+    };
 
     const enteredList = orders.filter(o => {
-        const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+        const ts = getTsForKey(o, curKey);
         const dateToCheck = ts.started_at || ts.created_at || o.created_at || o.order_date;
-        const matchDiv = isDivisionWorker ? (o.current_division === userRole || (o.division_progress?.[curKey] && o.division_progress?.[curKey] !== 'N/A' && o.division_progress?.[curKey] !== 'Belum')) : true;
+        const status = getStatusForKey(o, curKey);
+        const matchDiv = isDivisionWorker ? (o.current_division === userRole || (status && status !== 'N/A' && status !== 'Belum')) : true;
         return matchDiv && (isDateInTimeRange ? isDateInTimeRange(dateToCheck, statTimeRange) : true);
     });
 
     const completedList = orders.filter(o => {
-        const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+        const ts = getTsForKey(o, curKey);
         const dateToCheck = ts.completed_at || o.execution_completed_at;
-        const matchDiv = (o.division_progress && o.division_progress[curKey] === 'Selesai');
+        const matchDiv = getStatusForKey(o, curKey) === 'Selesai';
         return matchDiv && (isDateInTimeRange ? isDateInTimeRange(dateToCheck, statTimeRange) : true);
     });
 
@@ -35,7 +46,7 @@ export default function SalesRekapModal({
     // Group by date YYYY-MM-DD
     const dateGroupMap = {};
     enteredList.forEach(o => {
-        const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+        const ts = getTsForKey(o, curKey);
         const dStr = (ts.started_at || ts.created_at || o.created_at || o.order_date || '').split('T')[0].split(' ')[0];
         if (dStr) {
             if (!dateGroupMap[dStr]) dateGroupMap[dStr] = { date: dStr, entered: [], completed: [] };
@@ -43,7 +54,7 @@ export default function SalesRekapModal({
         }
     });
     completedList.forEach(o => {
-        const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+        const ts = getTsForKey(o, curKey);
         const dStr = (ts.completed_at || o.execution_completed_at || '').split('T')[0].split(' ')[0];
         if (dStr) {
             if (!dateGroupMap[dStr]) dateGroupMap[dStr] = { date: dStr, entered: [], completed: [] };

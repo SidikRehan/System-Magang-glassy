@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { 
-    Shield, 
     Layers, 
     Wrench, 
-    Package, 
     Truck, 
     Calculator, 
     Activity, 
     ArrowRight, 
     CheckCircle2, 
     Sparkles, 
-    Database, 
-    BarChart3, 
     HelpCircle, 
     FileText, 
     ChevronDown, 
@@ -22,24 +18,9 @@ import {
     Maximize2, 
     Boxes, 
     Factory, 
-    ArrowUpRight,
-    Lock,
     Menu,
     X,
-    ShieldCheck,
-    LogOut,
-    Cpu,
-    TrendingUp,
-    Sliders,
-    Eye,
-    Clock,
-    CreditCard,
-    Building2,
-    Users,
-    QrCode,
-    ChevronRight,
-    Award,
-    CheckCircle
+    Sliders
 } from 'lucide-react';
 
 export default function Welcome({ scrapCount = 14, totalOrders = 86 }) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, Printer, Copy, Check, X, SlidersHorizontal, Eye } from 'lucide-react';
+import { Tag, Printer, Copy, Check, X, Eye } from 'lucide-react';
 
 export default function GlassStickerModal({
     show,
@@ -9,8 +9,6 @@ export default function GlassStickerModal({
     userName
 }) {
     const activeOrder = order || selectedOrder;
-
-    if (!show || !activeOrder) return null;
 
     // Config options
     const [layoutMode, setLayoutMode] = useState('a4_grid'); // 'a4_grid' (3 cols x N rows) or 'thermal_single' (100x75mm roll)
@@ -95,6 +93,8 @@ export default function GlassStickerModal({
 
         setStickerItems(generated);
     }, [activeOrder, expandByQty]);
+
+    if (!show || !activeOrder) return null;
 
     const handleUpdateStickerItem = (index, field, value) => {
         setStickerItems(prev => {

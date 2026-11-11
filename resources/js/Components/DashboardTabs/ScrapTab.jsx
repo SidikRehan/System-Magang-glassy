@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { 
     Boxes, Plus, Search, Eye, EyeOff, RefreshCw, 
     MessageSquare, Edit, Trash2, Calendar, Scissors, 
-    Layers, CheckCircle2, AlertTriangle, Clock, ShieldCheck, 
-    Lock, Check, Package, Send, ZoomIn, X, Loader2
+    CheckCircle2, AlertTriangle, Clock, 
+    Lock, Package, Send, ZoomIn, X
 } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import { isMatchSearch } from '@/Utils/dashboardHelpers';

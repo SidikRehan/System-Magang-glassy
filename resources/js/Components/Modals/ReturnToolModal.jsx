@@ -8,9 +8,9 @@ export default function ReturnToolModal({
     selectedReturnBorrow,
     onSuccess
 }) {
-    if (!show || !selectedReturnBorrow) return null;
-
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show || !selectedReturnBorrow) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -64,16 +64,16 @@ export default function ReturnToolModal({
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-slate-500 font-medium">Jumlah Dipinjam:</span>
-                            <span className="font-mono text-amber-700 font-bold">{selectedReturnBorrow.qty} Unit</span>
+                            <span className="font-mono text-amber-700 font-bold">{selectedReturnBorrow.qty ?? selectedReturnBorrow.qty_borrowed ?? 1} Unit</span>
                         </div>
                         <div className="flex justify-between items-center border-t border-slate-200 pt-2">
                             <span className="text-slate-500">Tanggal Pinjam:</span>
                             <span className="font-mono text-slate-700">{selectedReturnBorrow.borrow_date ? new Date(selectedReturnBorrow.borrow_date).toLocaleDateString('id-ID') : '-'}</span>
                         </div>
-                        {selectedReturnBorrow.notes && (
+                        {(selectedReturnBorrow.notes || selectedReturnBorrow.purpose) && (
                             <div className="flex justify-between items-center border-t border-slate-200 pt-2">
                                 <span className="text-slate-500">Catatan:</span>
-                                <span className="text-slate-700">{selectedReturnBorrow.notes}</span>
+                                <span className="text-slate-700">{selectedReturnBorrow.notes || selectedReturnBorrow.purpose}</span>
                             </div>
                         )}
                     </div>

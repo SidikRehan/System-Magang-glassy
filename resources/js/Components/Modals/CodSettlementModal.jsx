@@ -3,14 +3,14 @@ import { useForm } from '@inertiajs/react';
 import { CreditCard, X, Truck, CheckCircle2, Wallet } from 'lucide-react';
 
 export default function CodSettlementModal({ isOpen, onClose, order = null, driverName = 'Pak Budi' }) {
-    if (!isOpen || !order) return null;
-
-    const sisaCod = Math.max(0, Number(order.total_price || 0) - Number(order.paid_amount || 0));
-
     const { post, processing } = useForm({
         destination: 'Kas Tunai Toko',
         notes: `Pelunasan COD Surat Jalan Merah oleh ${driverName}`
     });
+
+    if (!isOpen || !order) return null;
+
+    const sisaCod = Math.max(0, Number(order.total_price || 0) - Number(order.paid_amount || 0));
 
     const handleConfirm = (e) => {
         e.preventDefault();

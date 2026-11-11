@@ -7,8 +7,6 @@ export default function AddSupplyModal({
     onClose,
     onSuccess
 }) {
-    if (!show) return null;
-
     const [form, setForm] = useState({
         name: '',
         category: 'APD & Keselamatan Kerja',
@@ -19,6 +17,8 @@ export default function AddSupplyModal({
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show) return null;
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];

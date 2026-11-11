@@ -610,10 +610,19 @@ class InventoryMasterController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $tool->update([
-            'condition' => $validated['condition'],
+        $newCondition = $validated['condition'];
+        $updateData = [
+            'condition' => $newCondition,
             'notes' => $validated['notes'] ?? $tool->notes,
-        ]);
+        ];
+
+        if ($newCondition === 'Baik') {
+            $borrowedQty = ToolBorrow::where('tool_id', $tool->id)->where('status', 'Dipinjam')->sum('qty');
+            $updateData['damaged_qty'] = 0;
+            $updateData['available_qty'] = max(0, (int) $tool->total_qty - (int) $borrowedQty);
+        }
+
+        $tool->update($updateData);
 
         return redirect()->back()->with('success', "Status kondisi {$tool->name} diperbarui menjadi {$validated['condition']}!");
     }

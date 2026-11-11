@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, X, FileText } from 'lucide-react';
+import { Printer, FileText } from 'lucide-react';
 
 export default function PrintFinancialReportModal({
     isOpen,
@@ -10,8 +10,6 @@ export default function PrintFinancialReportModal({
     ordersList = [],
     currentUserName = 'Tim Finance & Akuntansi'
 }) {
-    if (!isOpen) return null;
-
     const [selectedReportType, setSelectedReportType] = useState(initialReportType);
 
     useEffect(() => {
@@ -19,6 +17,8 @@ export default function PrintFinancialReportModal({
             setSelectedReportType(initialReportType);
         }
     }, [initialReportType, isOpen]);
+
+    if (!isOpen) return null;
 
     const totalRev = Number(metrics.totalRevenue || 0);
     const otherRev = Number(metrics.otherRevenue || 0);

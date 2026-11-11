@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, X, Check, Boxes, CheckCircle2, Package, MapPin } from 'lucide-react';
+import { AlertTriangle, X, Check, Boxes, CheckCircle2, MapPin } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 export default function RequestRestockSupplyModal({
@@ -9,8 +9,6 @@ export default function RequestRestockSupplyModal({
     prefillSupply = null,
     onSuccess
 }) {
-    if (!show) return null;
-
     const isFocused = !!prefillSupply;
     const [supplyId, setSupplyId] = useState(prefillSupply ? String(prefillSupply.id) : '');
     const [requestQty, setRequestQty] = useState(
@@ -40,6 +38,8 @@ export default function RequestRestockSupplyModal({
             setNotes('');
         }
     }, [prefillSupply, show]);
+
+    if (!show) return null;
 
     const activeSupply = isFocused 
         ? prefillSupply 

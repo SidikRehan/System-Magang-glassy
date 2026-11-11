@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Printer, X, Check, Layers, Sparkles } from 'lucide-react';
+import { Printer, X, Layers } from 'lucide-react';
 
 export default function BatchWaybillModal({
     show,
@@ -7,10 +7,10 @@ export default function BatchWaybillModal({
     tripData,
     userName
 }) {
-    if (!show || !tripData) return null;
-
     // Multi-select color checkboxes array: e.g. ['Putih', 'Merah']
     const [selectedColors, setSelectedColors] = useState(['Putih', 'Merah']);
+
+    if (!show || !tripData) return null;
 
     const {
         trip_code = 'TRIP-20260909-001',

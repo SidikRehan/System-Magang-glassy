@@ -8,13 +8,11 @@ export default function EditScrapModal({
     scrap,
     onSuccess
 }) {
-    if (!show || !scrap) return null;
-
     const [form, setForm] = useState({
-        length_cm: scrap.length_cm || '',
-        width_cm: scrap.width_cm || '',
-        rak_location: scrap.rak_location || 'Rak A01',
-        status: scrap.status || 'Layak Pakai',
+        length_cm: scrap?.length_cm || '',
+        width_cm: scrap?.width_cm || '',
+        rak_location: scrap?.rak_location || 'Rak A01',
+        status: scrap?.status || 'Layak Pakai',
         notes: ''
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +28,8 @@ export default function EditScrapModal({
             });
         }
     }, [scrap]);
+
+    if (!show || !scrap) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();

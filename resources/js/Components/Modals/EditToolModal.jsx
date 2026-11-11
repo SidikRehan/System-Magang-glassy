@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wrench, X, Check, Trash2, AlertTriangle, CheckCircle2, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Wrench, X, Check, Trash2, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 export default function EditToolModal({
@@ -8,8 +8,6 @@ export default function EditToolModal({
     tool,
     onSuccess
 }) {
-    if (!show || !tool) return null;
-
     const [form, setForm] = useState({
         name: '',
         category: 'Mesin Bor & Potong',
@@ -45,6 +43,8 @@ export default function EditToolModal({
             setErrorMessage(null);
         }
     }, [tool]);
+
+    if (!show || !tool) return null;
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];

@@ -1,24 +1,25 @@
 import React, { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { X, CheckCircle2, Camera, User, MapPin, FileText, CreditCard, Loader2, Check } from 'lucide-react';
+import { X, CheckCircle2, Camera, User, MapPin, CreditCard, Loader2, Check } from 'lucide-react';
 
 export default function ConfirmDeliveryModal({
     isOpen,
     onClose,
     order,
 }) {
-    if (!isOpen || !order) return null;
+    const isLunas = order?.payment_status === 'Lunas';
 
-    const isLunas = order.payment_status === 'Lunas';
-    const sisaCod = Math.max(0, Number(order.total_price || 0) - Number(order.paid_amount || 0));
-
-    const [photoPreview, setPhotoPreview] = useState(order.proof_photo_path ? `/storage/${order.proof_photo_path}` : null);
+    const [photoPreview, setPhotoPreview] = useState(order?.proof_photo_path ? `/storage/${order.proof_photo_path}` : null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         proof_photo: null,
-        recipient_name: order.recipient_name || '',
+        recipient_name: order?.recipient_name || '',
         mark_lunas: isLunas ? true : false,
     });
+
+    if (!isOpen || !order) return null;
+
+    const sisaCod = Math.max(0, Number(order.total_price || 0) - Number(order.paid_amount || 0));
 
     const handlePhotoChange = (e) => {
         const file = e.target.files[0];

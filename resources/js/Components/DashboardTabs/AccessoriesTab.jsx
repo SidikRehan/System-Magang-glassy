@@ -1,8 +1,7 @@
 import React from 'react';
 import { 
     Plug, Plus, Search, RefreshCw, Send, 
-    Edit, Trash2, AlertTriangle, CheckCircle2, 
-    Lock, Package, AlertCircle, ZoomIn
+    Edit, Trash2, Lock, ZoomIn
 } from 'lucide-react';
 
 export default function AccessoriesTab({

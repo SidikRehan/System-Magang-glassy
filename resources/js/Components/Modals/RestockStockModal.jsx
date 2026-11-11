@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, X, Check, Boxes, CheckCircle2, AlertCircle } from 'lucide-react';
+import { RotateCcw, X, Check, Boxes, CheckCircle2 } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 export default function RestockStockModal({
@@ -9,8 +9,6 @@ export default function RestockStockModal({
     sheetGlasses = [],
     onRestockSuccess
 }) {
-    if (!show) return null;
-
     const isFocused = !!selectedStockItem;
     const [selectedId, setSelectedId] = useState(selectedStockItem ? String(selectedStockItem.id) : '');
     const [addQty, setAddQty] = useState(10);
@@ -29,6 +27,8 @@ export default function RestockStockModal({
             setNotes('');
         }
     }, [selectedStockItem, show]);
+
+    if (!show) return null;
 
     const activeItem = isFocused 
         ? selectedStockItem 

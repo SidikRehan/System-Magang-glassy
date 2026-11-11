@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Archive, X, Check, Loader2, Camera } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
@@ -8,17 +9,15 @@ export default function EditSupplyModal({
     supply,
     onSuccess
 }) {
-    if (!show || !supply) return null;
-
     const [form, setForm] = useState({
-        name: supply.name || '',
-        category: supply.category || 'APD & Keselamatan Kerja',
-        qty: supply.stock_qty ?? supply.qty ?? 0,
-        min_stock: supply.min_stock ?? 5,
-        unit: supply.unit || 'Pcs'
+        name: supply?.name || '',
+        category: supply?.category || 'APD & Keselamatan Kerja',
+        qty: supply?.stock_qty ?? supply?.qty ?? 0,
+        min_stock: supply?.min_stock ?? 5,
+        unit: supply?.unit || 'Pcs'
     });
     const [imageFile, setImageFile] = useState(null);
-    const [imagePreview, setImagePreview] = useState(supply.image_path ? `/storage/${supply.image_path}` : null);
+    const [imagePreview, setImagePreview] = useState(supply?.image_path ? `/storage/${supply.image_path}` : null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -34,6 +33,8 @@ export default function EditSupplyModal({
             setImageFile(null);
         }
     }, [supply]);
+
+    if (!show || !supply) return null;
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -74,7 +75,7 @@ export default function EditSupplyModal({
         });
     };
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
             <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
@@ -209,6 +210,7 @@ export default function EditSupplyModal({
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

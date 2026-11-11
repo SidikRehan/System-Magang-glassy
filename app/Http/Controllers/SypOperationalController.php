@@ -239,6 +239,25 @@ class SypOperationalController extends Controller
             }
         }
 
+        // Merge all required processes across all items in standard sequence
+        $allProcs = [];
+        foreach ($items as $it) {
+            if (!empty($it['processes']) && is_array($it['processes'])) {
+                foreach ($it['processes'] as $p) {
+                    $norm = $this->normalizeDivisionKey((string) $p);
+                    if ($norm && !in_array($norm, $allProcs)) {
+                        $allProcs[] = $norm;
+                    }
+                }
+            }
+        }
+        if (empty($allProcs)) {
+            $allProcs = ['HT'];
+        }
+        if (!in_array('HT', $allProcs)) {
+            array_unshift($allProcs, 'HT');
+        }
+
         $order = Order::create([
             'order_date' => $validated['order_date'] ?? now()->toDateString(),
             'spo_number' => $spoNumber,
@@ -249,7 +268,7 @@ class SypOperationalController extends Controller
             'length_cm' => $primaryItem['length_cm'],
             'width_cm' => $primaryItem['width_cm'],
             'thickness_mm' => $primaryItem['thickness_mm'],
-            'processes' => $primaryItem['processes'],
+            'processes' => $allProcs,
             'accessories' => $validated['accessories'] ?? [],
             'items' => $items,
             'description' => !empty(trim($validated['description'] ?? '')) ? $validated['description'] : '-',
@@ -266,7 +285,7 @@ class SypOperationalController extends Controller
             'is_company_use' => $isCompanyUse,
             'current_division' => $isDraft ? 'admin_toko' : 'admin_gudang',
             'gudang_released_at' => $isDraft ? null : now(),
-            'division_progress' => $this->buildDivisionProgress($items, $validated['processes'] ?? []),
+            'division_progress' => $this->buildDivisionProgress($items, $allProcs),
             'used_scrap_rak' => !empty(trim($validated['used_scrap_rak'] ?? '')) ? $validated['used_scrap_rak'] : '-',
         ]);
 
@@ -423,6 +442,24 @@ class SypOperationalController extends Controller
         $paymentOption = $request->input('payment_option', 'dp');
         $dpPercent = (float)$request->input('dp_percent', 50);
 
+        $allProcs = [];
+        foreach ($items as $it) {
+            if (!empty($it['processes']) && is_array($it['processes'])) {
+                foreach ($it['processes'] as $p) {
+                    $norm = $this->normalizeDivisionKey((string) $p);
+                    if ($norm && !in_array($norm, $allProcs)) {
+                        $allProcs[] = $norm;
+                    }
+                }
+            }
+        }
+        if (empty($allProcs)) {
+            $allProcs = ['HT'];
+        }
+        if (!in_array('HT', $allProcs)) {
+            array_unshift($allProcs, 'HT');
+        }
+
         $order->order_date = $validated['order_date'] ?? $order->order_date;
         $order->customer_name = !empty(trim($validated['customer_name'] ?? '')) ? $validated['customer_name'] : '-';
         $order->customer_phone = !empty(trim($validated['customer_phone'] ?? '')) ? $validated['customer_phone'] : '-';
@@ -431,7 +468,7 @@ class SypOperationalController extends Controller
         $order->length_cm = $primaryItem['length_cm'];
         $order->width_cm = $primaryItem['width_cm'];
         $order->thickness_mm = $primaryItem['thickness_mm'];
-        $order->processes = $primaryItem['processes'];
+        $order->processes = $allProcs;
         $order->accessories = $validated['accessories'] ?? [];
         $order->items = $items;
         $order->description = !empty(trim($validated['description'] ?? '')) ? $validated['description'] : '-';
@@ -543,16 +580,23 @@ class SypOperationalController extends Controller
             if ($isPromoted) {
                 $order->current_division = 'admin_gudang';
                 $order->gudang_released_at = $order->gudang_released_at ?? now();
-                $order->division_progress = [
-                    'HT' => 'Menunggu Dispatch',
-                    'GM' => 'Belum',
-                    'BV' => 'N/A',
-                    'Etsa' => 'N/A'
-                ];
+                $freshProgress = $this->buildDivisionProgress($items, $allProcs);
+                $freshProgress['HT'] = 'Menunggu Dispatch';
+                $order->division_progress = $freshProgress;
+            } else {
+                $existingProgress = (array) ($order->division_progress ?? []);
+                $freshProgress = $this->buildDivisionProgress($items, $allProcs);
+                foreach ($freshProgress as $code => $status) {
+                    if ($status !== 'N/A' && (!isset($existingProgress[$code]) || $existingProgress[$code] === 'N/A')) {
+                        $existingProgress[$code] = 'Belum';
+                    }
+                }
+                $order->division_progress = $existingProgress;
             }
         } else if ($order->status === 'draft') {
             $order->paid_amount = $request->filled('custom_paid_amount') ? (float)$request->input('custom_paid_amount') : 0;
             $order->payment_status = 'Belum Lunas';
+            $order->division_progress = $this->buildDivisionProgress($items, $allProcs);
         }
 
         $order->save();
@@ -609,9 +653,17 @@ class SypOperationalController extends Controller
         $order->paid_amount = $paidAmount;
         $order->current_division = 'admin_gudang';
         $order->gudang_released_at = $order->gudang_released_at ?? now();
-        $order->division_progress = array_merge((array)$order->division_progress, [
-            'HT' => 'Menunggu Dispatch Admin Gudang'
-        ]);
+        $freshProgress = $this->buildDivisionProgress((array)($order->items ?? []), (array)($order->processes ?? []));
+        $existingProgress = (array)$order->division_progress;
+        foreach ($freshProgress as $code => $status) {
+            if ($status !== 'N/A' && (!isset($existingProgress[$code]) || $existingProgress[$code] === 'N/A')) {
+                $existingProgress[$code] = 'Belum';
+            } elseif (!isset($existingProgress[$code])) {
+                $existingProgress[$code] = $status;
+            }
+        }
+        $existingProgress['HT'] = 'Menunggu Dispatch Admin Gudang';
+        $order->division_progress = $existingProgress;
 
         // Potong stok master aksesoris gudang saat order deal & masuk pengerjaan
         if (is_array($order->accessories)) {
@@ -681,19 +733,22 @@ class SypOperationalController extends Controller
         $order->current_division = $targetDiv;
         $order->gudang_released_at = $order->gudang_released_at ?? now();
         
-        $currentDivKey = strtoupper(str_replace('divisi_', '', $targetDiv));
+        $currentDivKey = $this->normalizeDivisionKey($targetDiv);
         $progress = (array) ($order->division_progress ?? []);
 
         // Ensure all required divisions are set in progress tracker
-        $divCodes = ['HT', 'GM', 'BV', 'Etsa'];
+        $divCodes = ['HT', 'GM', 'BV', 'Etsa', 'Bor'];
         foreach ($divCodes as $code) {
-            if (in_array($code, $procs)) {
+            if (in_array($code, $procs) || in_array(strtoupper($code), array_map('strtoupper', $procs))) {
                 if (!isset($progress[$code]) || $progress[$code] === 'N/A') {
                     $progress[$code] = 'Belum';
                 }
             }
         }
         $progress[$currentDivKey] = 'Menunggu Pengerjaan';
+        if ($currentDivKey !== strtoupper($currentDivKey)) {
+            $progress[strtoupper($currentDivKey)] = 'Menunggu Pengerjaan';
+        }
 
         $timestamps = (array) ($order->division_timestamps ?? []);
         if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
@@ -705,13 +760,15 @@ class SypOperationalController extends Controller
         $order->save();
 
         $divNames = array_map(function($p) {
+            $norm = $this->normalizeDivisionKey((string) $p);
             $labels = [
                 'HT' => 'Divisi HT (Potong)',
                 'GM' => 'Divisi GM (Gosok)',
                 'BV' => 'Divisi BV (Bevel)',
                 'Etsa' => 'Divisi Etsa (Blur)',
+                'Bor' => 'Divisi Bor (Drilling)',
             ];
-            return $labels[$p] ?? ('Divisi ' . $p);
+            return $labels[$norm] ?? ($labels[$p] ?? ('Divisi ' . $p));
         }, $procs);
 
         return redirect()->back()->with('message', '🚀 Order #' . $order->spo_number . ' Berhasil Dikirim ke Divisi Bersangkutan: ' . implode(', ', $divNames) . '!');
@@ -768,7 +825,7 @@ class SypOperationalController extends Controller
      */
     protected function isOrderExecutionFinished(Order $order): bool
     {
-        if ($order->status === 'selesai') {
+        if (in_array($order->status, ['selesai', 'pengiriman']) || in_array($order->current_division, ['QC_Ready', 'pengiriman', 'driver'])) {
             return true;
         }
 
@@ -793,13 +850,16 @@ class SypOperationalController extends Controller
                 if ($status === 'N/A') {
                     continue;
                 }
-                if ($status !== 'Selesai') {
+                $normKey = $this->normalizeDivisionKey((string) $divCode);
+                $upperKey = strtoupper((string) $divCode);
+                $effectiveStatus = ($progress[$normKey] ?? null) === 'Selesai' || ($progress[$upperKey] ?? null) === 'Selesai' ? 'Selesai' : $status;
+                if ($effectiveStatus !== 'Selesai') {
                     return false;
                 }
             }
         }
 
-        return $order->status === 'pengiriman' || in_array($order->current_division, ['QC_Ready', 'pengiriman']);
+        return false;
     }
 
     /**
@@ -843,14 +903,17 @@ class SypOperationalController extends Controller
      */
     public function assignBatchDelivery(Request $request)
     {
+        $isEditingTrip = !empty($request->input('trip_code'));
+
         $validated = $request->validate([
-            'order_ids' => 'required|array|min:1',
+            'order_ids' => $isEditingTrip ? 'nullable|array' : 'required|array|min:1',
             'order_ids.*' => 'required|exists:orders,id',
             'driver_name' => 'required|string',
             'vehicle_plate' => 'required|string',
             'delivery_date' => 'nullable|date',
-            'notes' => 'required|string',
+            'notes' => $isEditingTrip ? 'nullable|string' : 'required|string',
             'trip_code' => 'nullable|string',
+            'order_updates' => 'nullable|array',
         ], [
             'notes.required' => '⚠️ Catatan Rute & Barang Penunjang Gudang WAJIB diisi sebelum menugaskan mobil armada!',
         ]);
@@ -859,9 +922,140 @@ class SypOperationalController extends Controller
         $driverName = $validated['driver_name'];
         $vehiclePlate = $validated['vehicle_plate'];
         $deliveryDate = !empty($validated['delivery_date']) ? $validated['delivery_date'] : date('Y-m-d');
-        $notes = $validated['notes'] ?? null;
+        $rawNotes = isset($validated['notes']) ? trim((string) $validated['notes']) : '';
+        $notes = $rawNotes !== '' ? $rawNotes : null;
+        $orderUpdates = is_array($validated['order_updates'] ?? null) ? $validated['order_updates'] : [];
 
-        $orders = Order::whereIn('id', $validated['order_ids'])->get();
+        // If order_updates is provided (advanced Edit Trip modal), process per-order address/customer/vehicle changes
+        if ($isEditingTrip && !empty($orderUpdates)) {
+            $keptOrderIds = [];
+            $stopCounterByTrip = [];
+
+            foreach ($orderUpdates as $item) {
+                $ordId = $item['id'] ?? null;
+                if (!$ordId) {
+                    continue;
+                }
+                $order = Order::find($ordId);
+                if (!$order) {
+                    continue;
+                }
+
+                // Update customer name, phone, and delivery address if edited
+                if (array_key_exists('customer_name', $item) && trim((string) $item['customer_name']) !== '') {
+                    $order->customer_name = trim((string) $item['customer_name']);
+                }
+                if (array_key_exists('customer_phone', $item) && trim((string) $item['customer_phone']) !== '') {
+                    $order->customer_phone = trim((string) $item['customer_phone']);
+                }
+                if (array_key_exists('customer_address', $item) && trim((string) $item['customer_address']) !== '') {
+                    $order->customer_address = trim((string) $item['customer_address']);
+                }
+
+                $action = $item['action'] ?? 'keep'; // 'keep' | 'move_vehicle' | 'unassign'
+
+                if ($action === 'unassign') {
+                    $order->assigned_driver = null;
+                    $order->assigned_vehicle = null;
+                    $order->trip_code = null;
+                    $order->delivery_date = null;
+                    if ($order->status !== 'selesai') {
+                        $order->status = 'pengiriman';
+                        $order->current_division = 'QC_Ready';
+                    }
+                    $order->save();
+
+                    Delivery::where('order_id', $order->id)->delete();
+                    continue;
+                }
+
+                // Determine target vehicle, driver, date, and trip_code for this order
+                $targetVehicle = !empty($item['target_vehicle']) ? $item['target_vehicle'] : $vehiclePlate;
+                $targetDriver = !empty($item['target_driver']) ? $item['target_driver'] : $driverName;
+                $targetDate = !empty($item['target_date']) ? $item['target_date'] : $deliveryDate;
+
+                if ($action === 'move_vehicle' && $targetVehicle !== $vehiclePlate) {
+                    // Check if there is already an active trip for $targetVehicle on $targetDate
+                    $existingTargetDelivery = Delivery::where('vehicle_plate', $targetVehicle)
+                        ->where('delivery_date', $targetDate)
+                        ->where('trip_code', '!=', $tripCode)
+                        ->first();
+
+                    if ($existingTargetDelivery && !empty($existingTargetDelivery->trip_code)) {
+                        $targetTripCode = $existingTargetDelivery->trip_code;
+                        if (empty($item['target_driver']) && !empty($existingTargetDelivery->driver_name)) {
+                            $targetDriver = $existingTargetDelivery->driver_name;
+                        }
+                    } else {
+                        $dateCompact = str_replace('-', '', $targetDate);
+                        $targetTripCode = !empty($item['target_trip_code'])
+                            ? $item['target_trip_code']
+                            : ('TRIP-' . $dateCompact . '-' . rand(1000, 9999));
+                    }
+                } else {
+                    $targetTripCode = $tripCode;
+                    $targetVehicle = $vehiclePlate;
+                    $targetDriver = $driverName;
+                    $targetDate = $deliveryDate;
+                    $keptOrderIds[] = $order->id;
+                }
+
+                if (!isset($stopCounterByTrip[$targetTripCode])) {
+                    $stopCounterByTrip[$targetTripCode] = 0;
+                }
+                $stopCounterByTrip[$targetTripCode]++;
+                $stopOrder = $stopCounterByTrip[$targetTripCode];
+
+                $order->assigned_driver = $targetDriver;
+                $order->assigned_vehicle = $targetVehicle;
+                $order->trip_code = $targetTripCode;
+                $order->delivery_date = $targetDate;
+                if ($order->status !== 'selesai') {
+                    $order->status = 'pengiriman';
+                    $order->current_division = 'pengiriman';
+                }
+                $order->shipped_at = $order->shipped_at ?? now();
+                $order->save();
+
+                $waybillColor = $order->payment_status === 'Lunas' ? 'Putih' : 'Merah';
+                $existingDelivery = Delivery::where('order_id', $order->id)->first();
+                $effectiveNotes = $notes ?? ($existingDelivery?->notes ?? 'Penugasan Pengiriman Armada');
+                $effectiveStatus = $existingDelivery?->delivery_status ?? 'Menunggu Cek Satpam';
+
+                Delivery::updateOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'waybill_number' => 'SJ-' . ($order->spo_number ?? $order->id),
+                        'trip_code' => $targetTripCode,
+                        'stop_order' => $stopOrder,
+                        'driver_name' => $targetDriver,
+                        'vehicle_plate' => $targetVehicle,
+                        'waybill_color' => $waybillColor,
+                        'delivery_status' => $effectiveStatus,
+                        'delivery_date' => $targetDate,
+                        'notes' => $effectiveNotes,
+                    ]
+                );
+            }
+
+            // Also sync any remaining deliveries in the main tripCode if orders stayed
+            if (!empty($keptOrderIds)) {
+                $tripUpdatePayload = [
+                    'driver_name' => $driverName,
+                    'vehicle_plate' => $vehiclePlate,
+                    'delivery_date' => $deliveryDate,
+                ];
+                if ($notes !== null) {
+                    $tripUpdatePayload['notes'] = $notes;
+                }
+                Delivery::where('trip_code', $tripCode)->whereIn('order_id', $keptOrderIds)->update($tripUpdatePayload);
+            }
+
+            return redirect()->back()->with('message', '🚚 Data Rute, Alamat Kiriman, & Penugasan Mobil pada Trip #' . $tripCode . ' berhasil diperbarui!');
+        }
+
+        $orderIds = $validated['order_ids'] ?? [];
+        $orders = Order::whereIn('id', $orderIds)->get();
 
         // Strict Validation: Ensure all selected orders have completely finished execution through the last division
         $unreadyOrders = [];
@@ -892,6 +1086,10 @@ class SypOperationalController extends Controller
             $order->save();
 
             $waybillColor = $order->payment_status === 'Lunas' ? 'Putih' : 'Merah';
+            $existingDelivery = Delivery::where('order_id', $order->id)->first();
+            $effectiveNotes = $notes ?? ($existingDelivery?->notes ?? 'Penugasan Pengiriman Armada');
+            $effectiveStatus = $existingDelivery?->delivery_status ?? 'Menunggu Cek Satpam';
+
             Delivery::updateOrCreate(
                 ['order_id' => $order->id],
                 [
@@ -901,14 +1099,164 @@ class SypOperationalController extends Controller
                     'driver_name' => $driverName,
                     'vehicle_plate' => $vehiclePlate,
                     'waybill_color' => $waybillColor,
-                    'delivery_status' => 'Menunggu Cek Satpam',
+                    'delivery_status' => $effectiveStatus,
                     'delivery_date' => $deliveryDate,
-                    'notes' => $notes,
+                    'notes' => $effectiveNotes,
                 ]
             );
         }
 
+        if ($isEditingTrip) {
+            $tripUpdatePayload = [
+                'driver_name' => $driverName,
+                'vehicle_plate' => $vehiclePlate,
+                'delivery_date' => $deliveryDate,
+            ];
+            if ($notes !== null) {
+                $tripUpdatePayload['notes'] = $notes;
+            }
+            Delivery::where('trip_code', $tripCode)->update($tripUpdatePayload);
+        }
+
         return redirect()->back()->with('message', '🚚 Rute Pengiriman Armada #' . $tripCode . ' Berhasil Ditetapkan (' . $driverName . ' — ' . $vehiclePlate . ')! Otomatis masuk ke Admin Gudang (Siap Cetak SJ 4 Warna & Gate Pass) & terbit di Tugas Pengiriman Divisi Supir.');
+    }
+
+    /**
+     * Store Special Pickup / Fetching Order (Surat Perintah Pengambilan Barang Armada)
+     */
+    public function storePickupDispatch(Request $request)
+    {
+        $validated = $request->validate([
+            'driver_name' => 'required|string',
+            'vehicle_plate' => 'required|string',
+            'delivery_date' => 'nullable|date',
+            'notes' => 'nullable|string',
+            'merge_existing_trip' => 'nullable|boolean',
+            'stops' => 'required|array|min:1',
+            'stops.*.location_name' => 'required|string',
+            'stops.*.contact_phone' => 'nullable|string',
+            'stops.*.address' => 'required|string',
+            'stops.*.item_description' => 'required|string',
+            'stops.*.qty' => 'nullable|numeric|min:1',
+            'stops.*.unit' => 'nullable|string',
+        ], [
+            'stops.required' => '⚠️ Minimal masukkan 1 alamat pengambilan barang!',
+            'stops.*.location_name.required' => '⚠️ Nama lokasi / toko / supplier tempat pengambilan wajib diisi!',
+            'stops.*.address.required' => '⚠️ Alamat lokasi pengambilan wajib diisi!',
+            'stops.*.item_description.required' => '⚠️ Nama barang yang akan diambil wajib diisi!',
+        ]);
+
+        $driverName = $validated['driver_name'];
+        $vehiclePlate = $validated['vehicle_plate'];
+        $deliveryDate = !empty($validated['delivery_date']) ? $validated['delivery_date'] : date('Y-m-d');
+        $rawNotes = isset($validated['notes']) ? trim((string) $validated['notes']) : '';
+        $notes = $rawNotes !== '' ? $rawNotes : 'Surat Perintah Tugas Pengambilan Barang / Material oleh Armada Pabrik.';
+        $mergeExisting = (bool) ($validated['merge_existing_trip'] ?? false);
+
+        $tripCode = null;
+        $startingStopOrder = 0;
+
+        if ($mergeExisting) {
+            $existingTripDel = Delivery::where('vehicle_plate', $vehiclePlate)
+                ->where('delivery_date', $deliveryDate)
+                ->first();
+            if ($existingTripDel && !empty($existingTripDel->trip_code)) {
+                $tripCode = $existingTripDel->trip_code;
+                $startingStopOrder = (int) Delivery::where('trip_code', $tripCode)->max('stop_order');
+            }
+        }
+
+        if (!$tripCode) {
+            $dateCompact = str_replace('-', '', $deliveryDate);
+            $tripCode = 'TRIP-AMBIL-' . $dateCompact . '-' . rand(100, 999);
+        }
+
+        $createdSpos = [];
+
+        foreach ($validated['stops'] as $idx => $stop) {
+            $stopOrder = $startingStopOrder + $idx + 1;
+            $nextId = (Order::max('id') ?? 0) + 1;
+            $spbNumber = 'SPB-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+            while (Order::where('spo_number', $spbNumber)->exists()) {
+                $nextId++;
+                $spbNumber = 'SPB-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+            }
+
+            $qty = isset($stop['qty']) && (float) $stop['qty'] > 0 ? (int) $stop['qty'] : 1;
+            $unit = !empty($stop['unit']) ? trim((string) $stop['unit']) : 'Unit/Pcs';
+            $itemDesc = trim((string) $stop['item_description']);
+            $itemLabel = '[AMBIL BARANG] ' . $itemDesc . ' (' . $qty . ' ' . $unit . ')';
+
+            $order = Order::create([
+                'order_date' => $deliveryDate,
+                'spo_number' => $spbNumber,
+                'customer_name' => trim((string) $stop['location_name']),
+                'customer_phone' => !empty($stop['contact_phone']) ? trim((string) $stop['contact_phone']) : '-',
+                'customer_address' => trim((string) $stop['address']),
+                'glass_type' => $itemLabel,
+                'length_cm' => 0,
+                'width_cm' => 0,
+                'thickness_mm' => 0,
+                'processes' => ['HT'],
+                'accessories' => [],
+                'items' => [
+                    [
+                        'glass_type' => $itemLabel,
+                        'length_cm' => 0,
+                        'width_cm' => 0,
+                        'thickness_mm' => 0,
+                        'qty' => $qty,
+                        'unit' => $unit,
+                        'is_pickup_task' => true,
+                        'processes' => [],
+                        'subtotal' => 0,
+                    ]
+                ],
+                'description' => 'SURAT PERINTAH PENGAMBILAN BARANG: Ambil ' . $itemDesc . ' (' . $qty . ' ' . $unit . ') di ' . trim((string) $stop['location_name']),
+                'priority_status' => 'Prioritas',
+                'deadline_date' => $deliveryDate,
+                'subtotal' => 0,
+                'priority_fee' => 0,
+                'custom_fee' => 0,
+                'total_price' => 0,
+                'paid_amount' => 0,
+                'payment_status' => 'Lunas',
+                'status' => 'pengiriman',
+                'assigned_driver' => $driverName,
+                'assigned_vehicle' => $vehiclePlate,
+                'trip_code' => $tripCode,
+                'current_division' => 'pengiriman',
+                'division_progress' => [
+                    'HT' => 'Selesai',
+                    'GM' => 'N/A',
+                    'BV' => 'N/A',
+                    'Etsa' => 'N/A',
+                    'Bor' => 'N/A',
+                ],
+                'is_company_use' => true,
+                'gudang_released_at' => now(),
+                'execution_completed_at' => now(),
+                'shipped_at' => now(),
+                'delivery_date' => $deliveryDate,
+            ]);
+
+            Delivery::create([
+                'waybill_number' => 'SJ-' . $spbNumber,
+                'trip_code' => $tripCode,
+                'stop_order' => $stopOrder,
+                'order_id' => $order->id,
+                'driver_name' => $driverName,
+                'vehicle_plate' => $vehiclePlate,
+                'waybill_color' => 'Kuning',
+                'delivery_status' => 'Menunggu Cek Satpam',
+                'delivery_date' => $deliveryDate,
+                'notes' => '[PERINTAH AMBIL BARANG] ' . $notes,
+            ]);
+
+            $createdSpos[] = $spbNumber;
+        }
+
+        return redirect()->back()->with('message', '📋 Surat Perintah Pengambilan Barang (' . implode(', ', $createdSpos) . ') pada Trip #' . $tripCode . ' (' . $driverName . ' — ' . $vehiclePlate . ') berhasil diterbitkan! Anda dapat langsung mencetak Surat Perintah Jalan & Gate Pass.');
     }
 
     /**
@@ -1039,17 +1387,22 @@ class SypOperationalController extends Controller
         }
 
         $currentDiv = $order->current_division;
-        $currentDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
+        $currentDivKey = $this->normalizeDivisionKey($currentDiv);
+        $upperDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
         $progress = (array) ($order->division_progress ?? []);
         $timestamps = (array) ($order->division_timestamps ?? []);
 
         if ($currentDivKey) {
             $progress[$currentDivKey] = 'Sedang Dikerjakan';
-            if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
-                $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
-            }
-            if (empty($timestamps[$currentDivKey]['started_at'])) {
-                $timestamps[$currentDivKey]['started_at'] = now()->toDateTimeString();
+            $progress[$upperDivKey] = 'Sedang Dikerjakan';
+            $startedAt = now()->toDateTimeString();
+            foreach (array_unique([$currentDivKey, $upperDivKey]) as $k) {
+                if (!isset($timestamps[$k]) || !is_array($timestamps[$k])) {
+                    $timestamps[$k] = ['started_at' => null, 'completed_at' => null];
+                }
+                if (empty($timestamps[$k]['started_at'])) {
+                    $timestamps[$k]['started_at'] = $startedAt;
+                }
             }
         }
 
@@ -1132,19 +1485,24 @@ class SypOperationalController extends Controller
             $nextDiv = $autoNextDiv($order);
         }
 
-        $currentDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
+        $currentDivKey = $this->normalizeDivisionKey($currentDiv);
+        $upperDivKey = strtoupper(str_replace('divisi_', '', $currentDiv));
         $progress = (array) ($order->division_progress ?? []);
         $timestamps = (array) ($order->division_timestamps ?? []);
 
         if ($currentDivKey) {
             $progress[$currentDivKey] = 'Selesai';
-            if (!isset($timestamps[$currentDivKey]) || !is_array($timestamps[$currentDivKey])) {
-                $timestamps[$currentDivKey] = ['started_at' => null, 'completed_at' => null];
+            $progress[$upperDivKey] = 'Selesai';
+            $nowStr = now()->toDateTimeString();
+            foreach (array_unique([$currentDivKey, $upperDivKey]) as $k) {
+                if (!isset($timestamps[$k]) || !is_array($timestamps[$k])) {
+                    $timestamps[$k] = ['started_at' => null, 'completed_at' => null];
+                }
+                if (empty($timestamps[$k]['started_at'])) {
+                    $timestamps[$k]['started_at'] = $nowStr;
+                }
+                $timestamps[$k]['completed_at'] = $nowStr;
             }
-            if (empty($timestamps[$currentDivKey]['started_at'])) {
-                $timestamps[$currentDivKey]['started_at'] = now()->toDateTimeString();
-            }
-            $timestamps[$currentDivKey]['completed_at'] = now()->toDateTimeString();
         }
 
         if ($order->is_revised) {
@@ -1165,10 +1523,14 @@ class SypOperationalController extends Controller
             $order->save();
             $msg = 'Pekerjaan Divisi untuk #' . $order->spo_number . ' Selesai & Lolos QC! Siap Dikirim ke Driver.';
         } else {
-            $nextDivKey = strtoupper(str_replace('divisi_', '', $nextDiv));
+            $nextDivKey = $this->normalizeDivisionKey($nextDiv);
+            $nextUpperKey = strtoupper(str_replace('divisi_', '', $nextDiv));
             $progress[$nextDivKey] = 'Menunggu Pengerjaan';
-            if (!isset($timestamps[$nextDivKey]) || !is_array($timestamps[$nextDivKey])) {
-                $timestamps[$nextDivKey] = ['started_at' => null, 'completed_at' => null];
+            $progress[$nextUpperKey] = 'Menunggu Pengerjaan';
+            foreach (array_unique([$nextDivKey, $nextUpperKey]) as $nk) {
+                if (!isset($timestamps[$nk]) || !is_array($timestamps[$nk])) {
+                    $timestamps[$nk] = ['started_at' => null, 'completed_at' => null];
+                }
             }
 
             $order->status = 'pengerjaan';
@@ -1754,6 +2116,19 @@ class SypOperationalController extends Controller
     }
 
     /**
+     * Normalize division role/code into standard progress key ('HT', 'GM', 'BV', 'Etsa', 'Bor')
+     */
+    protected function normalizeDivisionKey(?string $div): string
+    {
+        $raw = strtoupper(trim(str_replace('divisi_', '', (string) $div)));
+        return match ($raw) {
+            'ETSA' => 'Etsa',
+            'BOR'  => 'Bor',
+            default => $raw,
+        };
+    }
+
+    /**
      * Helper to dynamically generate division_progress array based on required item processes
      */
     protected function buildDivisionProgress($items = [], $processes = [])
@@ -1774,7 +2149,7 @@ class SypOperationalController extends Controller
             }
         }
 
-        $divKeys = ['HT', 'GM', 'BV', 'Etsa'];
+        $divKeys = ['HT', 'GM', 'BV', 'Etsa', 'Bor'];
         $progress = [];
         foreach ($divKeys as $code) {
             $upperCode = strtoupper($code);

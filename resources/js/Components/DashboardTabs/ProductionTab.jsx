@@ -1,6 +1,6 @@
 import React from 'react';
 import { router } from '@inertiajs/react';
-import { roleTitles, formatIndonesianDate, checkOrderDivisi, isDateInTimeRange, computeDefaultNextDiv } from '@/Utils/dashboardHelpers';
+import { roleTitles, formatIndonesianDate, checkOrderDivisi, isDateInTimeRange, computeDefaultNextDiv, getDivisionProgressStatus, getDivisionTimestampObj } from '@/Utils/dashboardHelpers';
 import {
     Factory,
     Hammer,
@@ -19,7 +19,6 @@ import {
     Eye,
     ArrowRight,
     Zap,
-    Search,
     Calendar,
     Phone,
     MapPin,
@@ -30,7 +29,6 @@ import {
     Check,
     Lock,
     Scale,
-    Maximize2,
     Bell,
     Loader2
 } from 'lucide-react';
@@ -71,8 +69,7 @@ export default function ProductionTab({
         if (setActiveWorkingOrderId) {
             setActiveWorkingOrderId(order.id);
         }
-        const cKey = order.current_division.replace('divisi_', '').toUpperCase();
-        const cStatus = (order.division_progress && order.division_progress[cKey]) ? order.division_progress[cKey] : 'Belum';
+        const cStatus = getDivisionProgressStatus(order, order.current_division);
         if (cStatus !== 'Sedang Dikerjakan' && cStatus !== 'Selesai') {
             setStartingOrderId(order.id);
             router.post(route('orders.start', order.id), {}, {
@@ -162,10 +159,8 @@ export default function ProductionTab({
                             productionSubTab === `${userRole}_history` ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'
                         }`}>
                             {(() => {
-                                const code = userRole.replace('divisi_', '').toUpperCase();
                                 return initialOrders.filter(o => {
-                                    const p = o.division_progress || {};
-                                    return o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai');
+                                    return o.current_division !== userRole && getDivisionProgressStatus(o, userRole) === 'Selesai';
                                 }).length;
                             })()}
                         </span>
@@ -331,9 +326,36 @@ export default function ProductionTab({
                                             {o.priority_status === 'Prioritas' ? '🔥 PRIORITAS' : 'Biasa'}
                                         </span>
                                     </div>
-                                    <div className="text-xs text-slate-700 bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                                    <div className="text-xs text-slate-700 bg-white p-3 rounded-xl border border-slate-200 space-y-1.5">
                                         <div className="font-bold text-[#242222]">Kaca: {o.glass_type}</div>
                                         <div className="text-slate-600 font-mono">Ukuran: {o.length_cm} x {o.width_cm} cm ({o.thickness_mm}mm)</div>
+                                        {(() => {
+                                            const reqSet = new Set(['HT']);
+                                            if (Array.isArray(o.processes)) o.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                            if (Array.isArray(o.items)) {
+                                                o.items.forEach(it => {
+                                                    if (Array.isArray(it.processes)) it.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                                });
+                                            }
+                                            const procsList = ['HT', 'GM', 'BV', 'Etsa', 'Bor'].filter(proc => {
+                                                if (proc === 'HT') return true;
+                                                const st = getDivisionProgressStatus(o, proc);
+                                                return (o.division_progress && st && st !== 'N/A') || reqSet.has(proc.toUpperCase());
+                                            });
+                                            return (
+                                                <div className="flex flex-wrap items-center gap-1 pt-1">
+                                                    <span className="text-[10px] font-bold text-slate-500 mr-0.5">Alur Divisi:</span>
+                                                    {procsList.map((proc, pIdx) => (
+                                                        <React.Fragment key={proc}>
+                                                            {pIdx > 0 && <span className="text-slate-300 text-[10px] font-bold">→</span>}
+                                                            <span className="text-[10px] px-2 py-0.5 rounded-md font-bold font-mono bg-blue-50 text-[#1b68b0] border border-blue-200">
+                                                                {proc}
+                                                            </span>
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
                                         <div className="text-[11px] text-[#1b68b0] font-mono pt-1.5 border-t border-slate-100 flex items-center gap-1.5">
                                             <Calendar className="w-3 h-3 text-slate-400" />
                                             <span>Pembuatan Order: <strong>{formatIndonesianDate(o.order_date)}</strong></span>
@@ -423,21 +445,27 @@ export default function ProductionTab({
                             const found = initialOrders.find(o => o.id === activeWorkingOrderId);
                             if (found) return found;
                         }
-                        return initialOrders.find(o => {
+                        const startedMatch = initialOrders.find(o => {
                             if (o.complaint_status === 'pending_gudang') return false;
                             
                             if (isDivisionWorker) {
-                                return o.current_division === userRole && o.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
+                                return o.current_division === userRole && getDivisionProgressStatus(o, activeDivKey) === 'Sedang Dikerjakan';
                             }
                             if (productionSubTab.startsWith('divisi_')) {
                                 return o.current_division === productionSubTab &&
-                                    ['Sedang Dikerjakan', 'Menunggu Pengerjaan', 'Belum', 'Menunggu Dispatch'].includes(o.division_progress?.[activeDivKey] || '');
+                                    ['Sedang Dikerjakan', 'Menunggu Pengerjaan', 'Belum', 'Menunggu Dispatch'].includes(getDivisionProgressStatus(o, activeDivKey));
                             }
                             return false;
-                        }) || null;
+                        });
+                        if (startedMatch) return startedMatch;
+
+                        if (isDivisionWorker) {
+                            return initialOrders.find(o => o.complaint_status !== 'pending_gudang' && o.current_division === userRole) || null;
+                        }
+                        return null;
                     })();
 
-                    const isJobStarted = activeOngoingOrder && activeOngoingOrder.division_progress?.[activeDivKey] === 'Sedang Dikerjakan';
+                    const isJobStarted = activeOngoingOrder && getDivisionProgressStatus(activeOngoingOrder, activeDivKey) === 'Sedang Dikerjakan';
 
                     return (
                         <div id="active-workstation-card" className="transition-all duration-300">
@@ -577,6 +605,11 @@ export default function ProductionTab({
                                                                         <span className="text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                                                                             Tebal: {it.thickness_mm} mm
                                                                         </span>
+                                                                        {Array.isArray(it.processes) && it.processes.length > 0 && (
+                                                                            <span className="text-[#1b68b0] font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                                                                Proses: {it.processes.join(', ')}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                                 <div className="shrink-0">
@@ -818,17 +851,18 @@ export default function ProductionTab({
 
                                 const enteredRangeList = initialOrders.filter(o => {
                                     if (productionSubTab === 'selesai_global') return o.status === 'selesai' && isDateInTimeRange(o.created_at || o.order_date, isHistorySubTab ? statTimeRange : 'today');
-                                    const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                    const ts = getDivisionTimestampObj(o, curKey);
                                     const dateToCheck = ts.started_at || ts.created_at || o.created_at || o.order_date;
-                                    const matchDiv = isDivisionWorker ? (o.current_division === userRole || (o.division_progress?.[curKey] && o.division_progress?.[curKey] !== 'N/A' && o.division_progress?.[curKey] !== 'Belum')) : true;
+                                    const divStatus = getDivisionProgressStatus(o, curKey);
+                                    const matchDiv = isDivisionWorker ? (o.current_division === userRole || (divStatus && divStatus !== 'N/A' && divStatus !== 'Belum')) : true;
                                     return matchDiv && isDateInTimeRange(dateToCheck, isHistorySubTab ? statTimeRange : 'today');
                                 });
 
                                 const completedRangeList = initialOrders.filter(o => {
                                     if (productionSubTab === 'selesai_global') return o.status === 'selesai' && isDateInTimeRange(o.updated_at || o.execution_completed_at, isHistorySubTab ? statTimeRange : 'today');
-                                    const ts = (o.division_timestamps && o.division_timestamps[curKey]) ? o.division_timestamps[curKey] : {};
+                                    const ts = getDivisionTimestampObj(o, curKey);
                                     const dateToCheck = ts.completed_at || o.execution_completed_at;
-                                    const matchDiv = (o.division_progress && o.division_progress[curKey] === 'Selesai');
+                                    const matchDiv = getDivisionProgressStatus(o, curKey) === 'Selesai';
                                     return matchDiv && isDateInTimeRange(dateToCheck, isHistorySubTab ? statTimeRange : 'today');
                                 });
 
@@ -939,16 +973,14 @@ export default function ProductionTab({
                             if (isHistorySubTab) {
                                 if (productionSubTab === 'selesai_global' && o.status !== 'selesai') return false;
                                 if (productionSubTab !== 'selesai_global') {
-                                    const code = userRole.replace('divisi_', '').toUpperCase();
-                                    const p = o.division_progress || {};
                                     const isBaseHistoryMatch = isDivisionWorker
-                                        ? (o.current_division !== userRole && (p[code] === 'Selesai' || p[code.toLowerCase()] === 'Selesai'))
+                                        ? (o.current_division !== userRole && getDivisionProgressStatus(o, userRole) === 'Selesai')
                                         : checkOrderDivisi(o, productionSubTab);
 
                                     if (!isBaseHistoryMatch) return false;
                                 }
 
-                                const ts = (o.division_timestamps && o.division_timestamps[curDivKey]) ? o.division_timestamps[curDivKey] : {};
+                                const ts = getDivisionTimestampObj(o, curDivKey);
                                 const dateEntered = ts.started_at || ts.created_at || o.created_at || o.order_date;
                                 const dateCompleted = ts.completed_at || o.execution_completed_at || o.updated_at;
 
@@ -992,10 +1024,10 @@ export default function ProductionTab({
                                 if (o.complaint_status === 'pending_gudang') return false;
                                 
                                 if (isDivisionWorker) {
-                                    return o.current_division === userRole && o.division_progress?.[curDivKey] === 'Sedang Dikerjakan';
+                                    return o.current_division === userRole && getDivisionProgressStatus(o, curDivKey) === 'Sedang Dikerjakan';
                                 }
                                 if (productionSubTab.startsWith('divisi_')) {
-                                    return o.current_division === productionSubTab && o.division_progress?.[curDivKey] === 'Sedang Dikerjakan';
+                                    return o.current_division === productionSubTab && getDivisionProgressStatus(o, curDivKey) === 'Sedang Dikerjakan';
                                 }
                                 return false;
                             });
@@ -1115,9 +1147,23 @@ export default function ProductionTab({
                                                 {/* ALUR PROSES WORKFLOW BADGES */}
                                                 <div className="flex flex-wrap gap-1.5 pt-1">
                                                     {(() => {
-                                                        const activeProcs = ['HT', 'GM', 'BV', 'Etsa'];
-                                                        return activeProcs.map(proc => {
-                                                            const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
+                                                        const reqSet = new Set(['HT']);
+                                                        if (Array.isArray(o.processes)) o.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                                        if (Array.isArray(o.items)) {
+                                                            o.items.forEach(it => {
+                                                                if (Array.isArray(it.processes)) it.processes.forEach(p => reqSet.add(String(p).toUpperCase()));
+                                                            });
+                                                        }
+                                                        const activeProcs = ['HT', 'GM', 'BV', 'Etsa', 'Bor'].filter(proc => {
+                                                            if (proc === 'HT') return true;
+                                                            const status = getDivisionProgressStatus(o, proc);
+                                                            if (o.division_progress && status && status !== 'N/A') return true;
+                                                            if (reqSet.has(proc.toUpperCase())) return true;
+                                                            return false;
+                                                        });
+                                                        const renderList = activeProcs.length > 0 ? activeProcs : ['HT', 'GM', 'BV', 'Etsa', 'Bor'];
+                                                        return renderList.map(proc => {
+                                                            const status = getDivisionProgressStatus(o, proc);
                                                             const isDone = status === 'Selesai';
                                                             const isWorking = status === 'Sedang Dikerjakan';
                                                             const isNA = status === 'N/A';
@@ -1389,23 +1435,23 @@ export default function ProductionTab({
                                                                     });
                                                                 }
 
-                                                                const activeProcs = ['HT', 'GM', 'BV', 'Etsa'].filter(proc => {
+                                                                const activeProcs = ['HT', 'GM', 'BV', 'Etsa', 'Bor'].filter(proc => {
                                                                     if (proc === 'HT') return true;
-                                                                    const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
-                                                                    if (status !== 'N/A') return true;
+                                                                    const status = getDivisionProgressStatus(o, proc);
+                                                                    if (o.division_progress && status && status !== 'N/A') return true;
                                                                     if (reqSet.has(proc.toUpperCase())) return true;
                                                                     return false;
                                                                 });
 
-                                                                const renderList = activeProcs.length > 0 ? activeProcs : ['HT', 'GM', 'BV', 'Etsa'];
+                                                                const renderList = activeProcs.length > 0 ? activeProcs : ['HT', 'GM', 'BV', 'Etsa', 'Bor'];
 
                                                                 return renderList.map(proc => {
-                                                                    const status = (o.division_progress && o.division_progress[proc]) ? o.division_progress[proc] : 'Belum';
+                                                                    const status = getDivisionProgressStatus(o, proc);
                                                                     const isDone = status === 'Selesai';
                                                                     const isWorking = status === 'Sedang Dikerjakan';
                                                                     const isNA = status === 'N/A';
 
-                                                                    const ts = (o.division_timestamps && o.division_timestamps[proc]) ? o.division_timestamps[proc] : {};
+                                                                    const ts = getDivisionTimestampObj(o, proc);
                                                                     const timeStr = isDone && ts.completed_at
                                                                         ? formatIndonesianDate(ts.completed_at)
                                                                         : (isWorking || ts.started_at)

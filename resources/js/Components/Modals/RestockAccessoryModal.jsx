@@ -8,11 +8,11 @@ export default function RestockAccessoryModal({
     selectedAccItem,
     onSuccess
 }) {
-    if (!show || !selectedAccItem) return null;
-
     const [addQty, setAddQty] = useState(10);
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show || !selectedAccItem) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();

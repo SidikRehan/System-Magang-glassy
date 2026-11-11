@@ -7,8 +7,6 @@ export default function AddSupplierModal({
     onClose,
     onSuccess
 }) {
-    if (!show) return null;
-
     const [form, setForm] = useState({
         name: '',
         category: 'Kaca Cermin & Bening',
@@ -18,6 +16,8 @@ export default function AddSupplierModal({
         status: 'Mitra Aktif'
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();

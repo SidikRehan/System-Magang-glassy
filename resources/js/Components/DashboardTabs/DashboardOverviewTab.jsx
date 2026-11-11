@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
-    BarChart3, Plus, FileText, TrendingUp, DollarSign, 
-    Activity, Award, PieChart, CheckCircle2, ShieldCheck, 
-    Boxes, Wrench, Scissors, Sparkles, Truck, Clock,
-    AlertTriangle, ChevronRight, ArrowRight, CreditCard,
-    Check, Users, Layers
+    Plus, FileText, DollarSign, 
+    PieChart, Boxes, Truck, Clock,
+    ChevronRight
 } from 'lucide-react';
 import CandlestickChart from '@/Components/Charts/CandlestickChart';
 

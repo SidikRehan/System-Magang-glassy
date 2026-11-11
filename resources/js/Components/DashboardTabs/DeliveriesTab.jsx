@@ -1,15 +1,60 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import { 
     Truck, User, Calendar, MapPin, ClipboardList, 
     Printer, Fuel, CreditCard, CheckSquare, XSquare, 
-    Plus, AlertCircle, FileText, CheckCircle2, Phone, 
-    ShieldCheck, Sparkles, Send, Clock, Camera, Edit3,
-    Search, Lock, X, Layers, Filter, Check, History, Wrench, Loader2
+    Plus, AlertCircle, FileText, CheckCircle2, 
+    ShieldCheck, Send, Clock, Camera, Edit3,
+    Search, Lock, X, Layers, Check, History, Loader2
 } from 'lucide-react';
 import { isDriverMatch, isOrderExecutionFinished, getOrderRelevantDivisions, formatIndonesianDate, formatIndonesianDateTime } from '@/Utils/dashboardHelpers';
 import AssignVehicleModal from '@/Components/Modals/AssignVehicleModal';
 import EditTripModal from '@/Components/Modals/EditTripModal';
+import PickupDispatchModal from '@/Components/Modals/PickupDispatchModal';
+
+const FLEET_VEHICLES = [
+    {
+        id: 'engkel_box',
+        plate: 'Engkel Box (D 8472 AB)',
+        shortName: 'Engkel Box',
+        plateNo: 'D 8472 AB',
+        defaultDriver: 'Pak Budi (Supir Utama DC)',
+        capacityInfo: 'Kapasitas Besar • Box Tertutup'
+    },
+    {
+        id: 'engkel_long',
+        plate: 'Truck Engkel Long (D 8011 GH)',
+        shortName: 'Truck Engkel Long',
+        plateNo: 'D 8011 GH',
+        defaultDriver: 'Pak Mulyadi (Driver Engkel)',
+        capacityInfo: 'Kapasitas Jumbo • Rak Kaca Panjang'
+    },
+    {
+        id: 'l300',
+        plate: 'Pick Up L300 (D 8192 XY)',
+        shortName: 'Pick Up L300',
+        plateNo: 'D 8192 XY',
+        defaultDriver: 'Pak Asep (Driver L300)',
+        capacityInfo: 'Rute Cepat Dalam Kota • Akses Gang'
+    },
+    {
+        id: 'subcon',
+        plate: 'Armada Subcon (B 9920 FK)',
+        shortName: 'Armada Subcon',
+        plateNo: 'B 9920 FK',
+        defaultDriver: 'Pak Hendra (Driver Subcon)',
+        capacityInfo: 'Ekspedisi Luar Kota & Cadangan'
+    }
+];
+
+const getDateOffsetStr = (offsetDays = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+};
 
 export default function DeliveriesTab({
     userRole,
@@ -132,10 +177,10 @@ export default function DeliveriesTab({
             if (d.driver_name && grouped[tripCode].driver_name === 'Belum Ditugaskan') {
                 grouped[tripCode].driver_name = d.driver_name;
             }
-            if (d.vehicle_plate && (!grouped[tripCode].vehicle_plate || grouped[tripCode].vehicle_plate === 'Engkel Box (D 8472 AB)')) {
+            if (d.vehicle_plate && !grouped[tripCode].vehicle_plate) {
                 grouped[tripCode].vehicle_plate = d.vehicle_plate;
             }
-            if (d.delivery_date) {
+            if (d.delivery_date && !grouped[tripCode].delivery_date) {
                 grouped[tripCode].delivery_date = d.delivery_date;
             }
             if (d.notes && (!grouped[tripCode].notes || grouped[tripCode].notes === '')) {
@@ -171,6 +216,114 @@ export default function DeliveriesTab({
     const activeAdminTrips = useMemo(() => {
         return allGroupedTrips.filter(t => t.orders.some(o => o.status !== 'selesai'));
     }, [allGroupedTrips]);
+
+    // Master Fleet Vehicles & Date Availability Logic
+    const todayStr = useMemo(() => getDateOffsetStr(0), []);
+    const tomorrowStr = useMemo(() => getDateOffsetStr(1), []);
+    const dayAfterTomorrowStr = useMemo(() => getDateOffsetStr(2), []);
+
+    const [fleetScheduleDate, setFleetScheduleDate] = useState(() => getDateOffsetStr(0));
+    const [tripDateFilterMode, setTripDateFilterMode] = useState('all'); // 'all' | 'today' | 'tomorrow' | 'future' | 'selected_date'
+
+    const getNormalizedTripDate = useCallback((trip) => {
+        const raw = trip?.delivery_date || trip?.orders?.[0]?.delivery_date || trip?.deliveries?.[0]?.delivery_date;
+        if (!raw) return todayStr;
+        return String(raw).split('T')[0];
+    }, [todayStr]);
+
+    // Quick next 7 days date strip for fleet schedule board
+    const upcomingSevenDays = useMemo(() => {
+        return Array.from({ length: 7 }, (_, i) => {
+            const dateVal = getDateOffsetStr(i);
+            const dObj = new Date(`${dateVal}T00:00:00`);
+            const dayLabel = i === 0 ? 'Hari Ini' : i === 1 ? 'Besok' : i === 2 ? 'Lusa' : dObj.toLocaleDateString('id-ID', { weekday: 'short' });
+            const shortDate = dObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+            // Count how many distinct vehicles have active trips on this date
+            const busyVehiclesSet = new Set();
+            allGroupedTrips.forEach(t => {
+                const tDate = getNormalizedTripDate(t);
+                const hasOrders = Array.isArray(t.orders) && t.orders.length > 0;
+                if (tDate === dateVal && hasOrders && t.vehicle_plate) {
+                    busyVehiclesSet.add(t.vehicle_plate);
+                }
+            });
+
+            return {
+                dateVal,
+                dayLabel,
+                shortDate,
+                busyCount: busyVehiclesSet.size,
+                availableCount: Math.max(0, FLEET_VEHICLES.length - busyVehiclesSet.size)
+            };
+        });
+    }, [allGroupedTrips, getNormalizedTripDate]);
+
+    // Fleet status cards for the currently selected schedule date (fleetScheduleDate)
+    const fleetStatusOnSelectedDate = useMemo(() => {
+        return FLEET_VEHICLES.map(v => {
+            const tripsForVehicle = allGroupedTrips.filter(t => {
+                const tDate = getNormalizedTripDate(t);
+                return t.vehicle_plate === v.plate && tDate === fleetScheduleDate;
+            });
+
+            const activeStops = [];
+            tripsForVehicle.forEach(t => {
+                if (Array.isArray(t.orders)) {
+                    t.orders.forEach(o => {
+                        if (!activeStops.some(ex => ex.id === o.id)) {
+                            activeStops.push(o);
+                        }
+                    });
+                }
+            });
+
+            const isAllCompleted = activeStops.length > 0 && activeStops.every(o => o.status === 'selesai');
+            const isScheduled = tripsForVehicle.length > 0;
+            const assignedDriver = tripsForVehicle[0]?.driver_name || v.defaultDriver;
+
+            return {
+                ...v,
+                isScheduled,
+                isAllCompleted,
+                trips: tripsForVehicle,
+                stops: activeStops,
+                assignedDriver
+            };
+        });
+    }, [allGroupedTrips, fleetScheduleDate, getNormalizedTripDate]);
+
+    // Availability helper for batch dispatch form date (dispatchDateInput)
+    const batchDispatchFleetAvailability = useMemo(() => {
+        const targetDate = dispatchDateInput ? String(dispatchDateInput).split('T')[0] : todayStr;
+        const map = {};
+        FLEET_VEHICLES.forEach(v => {
+            const tripsOnDate = allGroupedTrips.filter(t => {
+                const tDate = getNormalizedTripDate(t);
+                const hasActive = Array.isArray(t.orders) && t.orders.some(o => o.status !== 'selesai');
+                return t.vehicle_plate === v.plate && tDate === targetDate && hasActive;
+            });
+            map[v.plate] = {
+                isBusy: tripsOnDate.length > 0,
+                totalStops: tripsOnDate.reduce((acc, t) => acc + (t.orders?.length || 0), 0),
+                driver: tripsOnDate[0]?.driver_name || v.defaultDriver
+            };
+        });
+        return map;
+    }, [allGroupedTrips, dispatchDateInput, todayStr, getNormalizedTripDate]);
+
+    // Filtered activeAdminTrips by date tab
+    const filteredActiveAdminTrips = useMemo(() => {
+        return activeAdminTrips.filter(t => {
+            const tDate = getNormalizedTripDate(t);
+            if (tripDateFilterMode === 'today') return tDate === todayStr;
+            if (tripDateFilterMode === 'tomorrow') return tDate === tomorrowStr;
+            if (tripDateFilterMode === 'future') return tDate > tomorrowStr;
+            if (tripDateFilterMode === 'selected_date') return tDate === fleetScheduleDate;
+            return true; // 'all'
+        });
+    }, [activeAdminTrips, tripDateFilterMode, todayStr, tomorrowStr, fleetScheduleDate, getNormalizedTripDate]);
+
 
     // Categorize orders based on division execution completion
     const finishedOrders = useMemo(() => {
@@ -231,13 +384,15 @@ export default function DeliveriesTab({
         setSelectedAssignOrder(order);
         if (order.assigned_driver) setAssignDriver(order.assigned_driver);
         if (order.assigned_vehicle) setAssignVehicle(order.assigned_vehicle);
-        setAssignDate(order.delivery_date || new Date().toISOString().split('T')[0]);
-        setAssignNotes(order.delivery_notes || '');
+        const existingDel = safeDeliveries.find(d => d && (d.order_id === order.id || (order.trip_code && d.trip_code === order.trip_code)));
+        const rawDate = order.delivery_date || existingDel?.delivery_date || new Date().toISOString().split('T')[0];
+        setAssignDate(String(rawDate).split('T')[0]);
+        setAssignNotes(order.delivery_notes || existingDel?.notes || '');
         setShowAssignVehicleModal(true);
     };
 
-    const handleSingleAssignSubmit = (e) => {
-        e.preventDefault();
+    const handleSingleAssignSubmit = (e, extraData = {}) => {
+        if (e && e.preventDefault) e.preventDefault();
         if (!selectedAssignOrder) return;
         if (!isOrderExecutionFinished(selectedAssignOrder)) {
             alert(`⚠️ Orderan SPO #${selectedAssignOrder.spo_number} belum selesai dieksekusi oleh divisi terakhir!`);
@@ -245,17 +400,43 @@ export default function DeliveriesTab({
         }
         setIsSubmittingVehicle(true);
 
+        const targetDate = assignDate || new Date().toISOString().split('T')[0];
+        const matchingTripOnVehicle = allGroupedTrips.find(
+            t => t.vehicle_plate === assignVehicle && getNormalizedTripDate(t) === String(targetDate).split('T')[0]
+        );
+        const resolvedTripCode = matchingTripOnVehicle
+            ? matchingTripOnVehicle.trip_code
+            : (selectedAssignOrder.assigned_vehicle === assignVehicle ? (selectedAssignOrder.trip_code || null) : null);
+
+        const orderUpdatePayload = [{
+            id: selectedAssignOrder.id,
+            customer_name: extraData.customer_name !== undefined ? extraData.customer_name : selectedAssignOrder.customer_name,
+            customer_phone: extraData.customer_phone !== undefined ? extraData.customer_phone : selectedAssignOrder.customer_phone,
+            customer_address: extraData.customer_address !== undefined ? extraData.customer_address : selectedAssignOrder.customer_address,
+            action: 'keep',
+            target_vehicle: assignVehicle,
+            target_driver: assignDriver,
+            target_date: targetDate
+        }];
+
         router.post('/orders/batch-delivery', {
             order_ids: [selectedAssignOrder.id],
             driver_name: assignDriver,
             vehicle_plate: assignVehicle,
-            delivery_date: assignDate,
-            notes: assignNotes
+            delivery_date: targetDate,
+            notes: assignNotes || 'Penugasan Pengiriman Armada',
+            trip_code: resolvedTripCode || ('TRIP-' + String(targetDate).replace(/-/g, '') + '-' + Math.floor(1000 + Math.random() * 9000)),
+            order_updates: orderUpdatePayload
         }, {
+            preserveScroll: true,
             onSuccess: () => {
                 setShowAssignVehicleModal(false);
                 setSelectedAssignOrder(null);
                 setAssignNotes('');
+            },
+            onError: (errs) => {
+                const msg = Object.values(errs || {}).flat().join('\n') || 'Gagal menyimpan penugasan mobil armada.';
+                alert(msg);
             },
             onFinish: () => {
                 setIsSubmittingVehicle(false);
@@ -271,34 +452,57 @@ export default function DeliveriesTab({
     const [editTripNotes, setEditTripNotes] = useState('');
     const [isSubmittingEditTrip, setIsSubmittingEditTrip] = useState(false);
 
+    const [showPickupModal, setShowPickupModal] = useState(false);
+    const [pickupInitVehicle, setPickupInitVehicle] = useState('Engkel Box (D 8472 AB)');
+    const [pickupInitDriver, setPickupInitDriver] = useState('Pak Budi (Supir Utama DC)');
+    const [pickupInitDate, setPickupInitDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+    const handleOpenPickupModal = (vehiclePlate = null, driverName = null, dateStr = null) => {
+        setPickupInitVehicle(vehiclePlate || dispatchVehicleInput || 'Engkel Box (D 8472 AB)');
+        setPickupInitDriver(driverName || dispatchDriverInput || 'Pak Budi (Supir Utama DC)');
+        setPickupInitDate(dateStr || fleetScheduleDate || new Date().toISOString().split('T')[0]);
+        setShowPickupModal(true);
+    };
+
     const handleOpenEditTripModal = (trip) => {
+        if (!trip) return;
         setEditingTripData(trip);
         setEditTripDriver(trip.driver_name || 'Pak Budi (Supir Utama DC)');
         setEditTripVehicle(trip.vehicle_plate || 'Engkel Box (D 8472 AB)');
-        setEditTripDate(trip.delivery_date || trip.orders?.[0]?.delivery_date || trip.deliveries?.[0]?.delivery_date || new Date().toISOString().split('T')[0]);
-        const firstOrderNotes = trip.orders?.[0]?.delivery_notes || trip.deliveries?.[0]?.notes || '';
-        setEditTripNotes(firstOrderNotes);
+        const rawDate = trip.delivery_date || trip.orders?.[0]?.delivery_date || trip.deliveries?.[0]?.delivery_date || new Date().toISOString().split('T')[0];
+        setEditTripDate(String(rawDate).split('T')[0]);
+        const existingNotes = trip.notes || trip.deliveries?.[0]?.notes || trip.orders?.[0]?.delivery_notes || trip.orders?.[0]?.notes || '';
+        setEditTripNotes(existingNotes);
         setShowEditTripModal(true);
     };
 
-    const handleEditTripSubmit = (e) => {
-        e.preventDefault();
+    const handleEditTripSubmit = (e, orderUpdates = []) => {
+        if (e && e.preventDefault) e.preventDefault();
         if (!editingTripData) return;
+        const orderIds = Array.isArray(editingTripData.orders) ? editingTripData.orders.map(o => o.id).filter(Boolean) : [];
+        if (orderIds.length === 0) {
+            alert('Tidak ada orderan dalam trip ini untuk diperbarui.');
+            return;
+        }
         setIsSubmittingEditTrip(true);
-
-        const orderIds = editingTripData.orders ? editingTripData.orders.map(o => o.id) : [];
 
         router.post('/orders/batch-delivery', {
             order_ids: orderIds,
             driver_name: editTripDriver,
             vehicle_plate: editTripVehicle,
             delivery_date: editTripDate,
-            notes: editTripNotes,
-            trip_code: editingTripData.trip_code
+            notes: editTripNotes || 'Penugasan Pengiriman Armada',
+            trip_code: editingTripData.trip_code,
+            order_updates: Array.isArray(orderUpdates) ? orderUpdates : []
         }, {
+            preserveScroll: true,
             onSuccess: () => {
                 setShowEditTripModal(false);
                 setEditingTripData(null);
+            },
+            onError: (errs) => {
+                const msg = Object.values(errs || {}).flat().join('\n') || 'Gagal memperbarui jadwal trip armada.';
+                alert(msg);
             },
             onFinish: () => {
                 setIsSubmittingEditTrip(false);
@@ -380,7 +584,7 @@ export default function DeliveriesTab({
         if (typeof pathStr === 'string' && pathStr.trim().startsWith('[')) {
             try {
                 return JSON.parse(pathStr);
-            } catch (e) {
+            } catch {
                 return [pathStr];
             }
         }
@@ -510,14 +714,31 @@ export default function DeliveriesTab({
                                                     <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 relative">
                                                         <div className="flex flex-wrap justify-between items-start border-b border-slate-100 pb-3 gap-2">
                                                             <div>
-                                                                <div className="flex items-center gap-2">
+                                                                <div className="flex flex-wrap items-center gap-2">
                                                                     <span className="bg-blue-50 text-[#1b68b0] font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
                                                                         {trip.trip_code}
                                                                     </span>
-                                                                    <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">
-                                                                        <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                                                                        <span>{formatIndonesianDate(trip.delivery_date || trip.orders?.[0]?.delivery_date || trip.deliveries?.[0]?.delivery_date)}</span>
-                                                                    </span>
+                                                                    {(() => {
+                                                                        const tDate = getNormalizedTripDate(trip);
+                                                                        const relBadge = tDate === todayStr ? 'JADWAL HARI INI' : tDate === tomorrowStr ? 'JADWAL BESOK' : tDate === dayAfterTomorrowStr ? 'JADWAL LUSA' : null;
+                                                                        return (
+                                                                            <>
+                                                                                {relBadge && (
+                                                                                    <span className={`font-black text-[10px] px-2 py-0.5 rounded-md border ${
+                                                                                        tDate === todayStr
+                                                                                            ? 'bg-[#1b68b0] text-white border-[#1b68b0]'
+                                                                                            : 'bg-amber-100 text-amber-800 border-amber-300'
+                                                                                    }`}>
+                                                                                        {relBadge}
+                                                                                    </span>
+                                                                                )}
+                                                                                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                                                                                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                                                                                    <span>{formatIndonesianDate(tDate)}</span>
+                                                                                </span>
+                                                                            </>
+                                                                        );
+                                                                    })()}
                                                                     <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
                                                                         <User className="w-3.5 h-3.5 text-slate-500" />
                                                                         <span>{trip.driver_name}</span>
@@ -540,6 +761,7 @@ export default function DeliveriesTab({
                                                             </div>
                                                             <div className="flex flex-wrap gap-1.5 justify-end">
                                                                 <button
+                                                                    type="button"
                                                                     onClick={() => handleOpenEditTripModal(trip)}
                                                                     className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                                                     title="Edit Penugasan Supir & Mobil Trip Ini"
@@ -973,6 +1195,298 @@ export default function DeliveriesTab({
             ) : (
                 /* NON-DRIVER ADMIN & WMS VIEW (ADMIN TOKO / GUDANG / OWNER / FINANCE) */
                 <>
+                    {/* PAPAN JADWAL & KETERSEDIAAN MOBIL ARMADA (HARI INI, BESOK & SETERUSNYA) */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                        <div className="flex flex-wrap justify-between items-start gap-3 border-b border-slate-100 pb-3.5">
+                            <div>
+                                <h3 className="text-base font-black text-[#242222] flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-[#1b68b0]" />
+                                    <span>Jadwal & Status Ketersediaan Mobil Armada</span>
+                                </h3>
+                                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                    Pantau mobil armada mana saja yang akan jalan hari ini, besok, dan seterusnya beserta status ketersediaan unit.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                                {userRole !== 'satpam' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenPickupModal(null, null, fleetScheduleDate)}
+                                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                                        title="Buat Surat Perintah untuk menyuruh mobil kosong mengambil barang ke alamat/supplier tertentu"
+                                    >
+                                        <ClipboardList className="w-4 h-4 text-white" />
+                                        <span>+ Buat Surat Perintah Ambil Barang</span>
+                                    </button>
+                                )}
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-4 h-4 text-[#70b03c]" />
+                                    <span>Tersedia: <strong>{fleetStatusOnSelectedDate.filter(f => !f.isScheduled).length} Mobil</strong></span>
+                                </span>
+                                <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+                                    <Truck className="w-4 h-4 text-[#1b68b0]" />
+                                    <span>Terjadwal Jalan: <strong>{fleetStatusOnSelectedDate.filter(f => f.isScheduled).length} Mobil</strong></span>
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* NAVIGASI TANGGAL CEPAT (HARI INI, BESOK, LUSA, 7 HARI KE DEPAN & CUSTOM DATE PICKER) */}
+                        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-slate-50/80 border border-slate-200 p-3 rounded-2xl">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {upcomingSevenDays.map((dayItem) => {
+                                    const isSelected = fleetScheduleDate === dayItem.dateVal;
+                                    return (
+                                        <button
+                                            key={dayItem.dateVal}
+                                            type="button"
+                                            onClick={() => {
+                                                setFleetScheduleDate(dayItem.dateVal);
+                                                setDispatchDateInput(dayItem.dateVal);
+                                            }}
+                                            className={`px-3 py-2 rounded-xl text-xs transition flex flex-col items-start min-w-[95px] border cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-[#1b68b0] text-white border-[#1b68b0] shadow-xs'
+                                                    : 'bg-white hover:bg-slate-100/80 text-slate-700 border-slate-200'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between w-full gap-1.5">
+                                                <span className={`font-black text-[11px] uppercase tracking-tight ${isSelected ? 'text-white' : 'text-[#242222]'}`}>
+                                                    {dayItem.dayLabel}
+                                                </span>
+                                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                                                    isSelected
+                                                        ? 'bg-white/20 text-white'
+                                                        : dayItem.busyCount > 0
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                }`}>
+                                                    {dayItem.busyCount}/{FLEET_VEHICLES.length} Jalan
+                                                </span>
+                                            </div>
+                                            <span className={`text-[11px] font-medium mt-0.5 ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                                                {dayItem.shortDate}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 border-t xl:border-t-0 pt-2 xl:pt-0 border-slate-200">
+                                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 shrink-0">
+                                    <Calendar className="w-4 h-4 text-[#1b68b0]" />
+                                    <span>Pilih Tanggal Lain:</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={fleetScheduleDate}
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            setFleetScheduleDate(e.target.value);
+                                            setDispatchDateInput(e.target.value);
+                                        }
+                                    }}
+                                    className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 cursor-pointer"
+                                />
+                            </div>
+                        </div>
+
+                        {/* INFO TANGGAL YANG SEDANG DILIHAT */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                            <div className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                                <span>Status Armada untuk Tanggal:</span>
+                                <span className="bg-blue-50 text-[#1b68b0] border border-blue-200 px-2.5 py-0.5 rounded-lg font-extrabold">
+                                    {formatIndonesianDate(fleetScheduleDate)}
+                                    {fleetScheduleDate === todayStr ? ' (Hari Ini)' : fleetScheduleDate === tomorrowStr ? ' (Besok)' : fleetScheduleDate === dayAfterTomorrowStr ? ' (Lusa)' : ''}
+                                </span>
+                            </div>
+                            <span className="text-[11px] text-slate-500">
+                                Klik tombol <strong>"Pilih Mobil Ini"</strong> pada kartu armada yang tersedia untuk langsung mengisi form penugasan di bawah.
+                            </span>
+                        </div>
+
+                        {/* 4 KARTU ARMADA MOBIL */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                            {fleetStatusOnSelectedDate.map((fleet) => {
+                                const isSelectedInForm = dispatchVehicleInput === fleet.plate && dispatchDateInput === fleetScheduleDate;
+                                return (
+                                    <div
+                                        key={fleet.id}
+                                        className={`rounded-2xl p-4 border transition flex flex-col justify-between gap-3 relative ${
+                                            fleet.isScheduled
+                                                ? fleet.isAllCompleted
+                                                    ? 'bg-slate-50 border-slate-200'
+                                                    : 'bg-amber-50/40 border-amber-300 shadow-xs'
+                                                : isSelectedInForm
+                                                    ? 'bg-blue-50/40 border-[#1b68b0] ring-2 ring-[#1b68b0]/15 shadow-xs'
+                                                    : 'bg-white border-emerald-200 hover:border-emerald-300 shadow-2xs'
+                                        }`}
+                                    >
+                                        <div className="space-y-2.5">
+                                            {/* TOP BADGE & PLATE */}
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                                                        fleet.isScheduled
+                                                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                                            : 'bg-emerald-50 text-[#70b03c] border-emerald-200'
+                                                    }`}>
+                                                        <Truck className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-black text-[#242222] text-xs leading-tight">
+                                                            {fleet.shortName}
+                                                        </h4>
+                                                        <span className="font-mono font-bold text-[11px] text-[#1b68b0] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 inline-block mt-0.5">
+                                                            {fleet.plateNo}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {fleet.isScheduled ? (
+                                                    fleet.isAllCompleted ? (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shrink-0">
+                                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selesai Jalan
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shrink-0">
+                                                            <Clock className="w-3 h-3 text-amber-700" /> Terjadwal Jalan
+                                                        </span>
+                                                    )
+                                                ) : (
+                                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shrink-0">
+                                                        <CheckCircle2 className="w-3 h-3 text-[#70b03c]" /> Tersedia
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* DRIVER & CAPACITY */}
+                                            <div className="text-[11px] text-slate-600 bg-slate-50/90 border border-slate-200/80 rounded-xl p-2.5 space-y-1">
+                                                <div className="flex items-center gap-1.5 font-bold text-[#242222]">
+                                                    <User className="w-3.5 h-3.5 text-[#1b68b0] shrink-0" />
+                                                    <span className="truncate">{fleet.assignedDriver}</span>
+                                                </div>
+                                                <div className="text-[10px] text-slate-500 pl-5">
+                                                    {fleet.capacityInfo}
+                                                </div>
+                                            </div>
+
+                                            {/* SCHEDULED TRIPS / STOPS LIST OR AVAILABLE MESSAGE */}
+                                            {fleet.isScheduled ? (
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center justify-between text-[11px] font-bold text-amber-900 px-0.5">
+                                                        <span>Rute Terjadwal ({fleet.stops.length} Alamat):</span>
+                                                        <span className="font-mono text-[10px] bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                                                            {fleet.trips.map(t => t.trip_code).join(', ')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1 max-h-28 overflow-y-auto pr-0.5">
+                                                        {fleet.stops.map((ord, sIdx) => (
+                                                            <div key={ord.id || sIdx} className="bg-white border border-amber-200/90 rounded-lg p-2 text-[11px] flex items-start justify-between gap-1.5">
+                                                                <div className="min-w-0">
+                                                                    <div className="font-bold text-[#242222] truncate">
+                                                                        #{sIdx + 1}. {ord.spo_number} — {ord.customer_name}
+                                                                    </div>
+                                                                    <div className="text-[10px] text-slate-500 truncate flex items-center gap-1 mt-0.5">
+                                                                        <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                                                                        <span>{ord.customer_address || '-'}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                                                                    ord.status === 'selesai'
+                                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                        : 'bg-blue-50 text-[#1b68b0] border border-blue-200'
+                                                                }`}>
+                                                                    {ord.status === 'selesai' ? 'Terkirim' : 'Aktif'}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3 text-center space-y-1">
+                                                    <div className="text-xs font-extrabold text-emerald-900">
+                                                        Unit Mobil Standby & Siap Pakai
+                                                    </div>
+                                                    <p className="text-[10px] text-emerald-700 leading-relaxed">
+                                                        Tidak ada jadwal pengiriman pada tanggal ini. Siap ditugaskan untuk pengiriman baru.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* ACTION FOOTER ON FLEET CARD */}
+                                        {userRole !== 'satpam' && (
+                                            <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                                                {fleet.isScheduled ? (
+                                                    <div className="flex items-center justify-between gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (fleet.trips[0]) handleOpenEditTripModal(fleet.trips[0]);
+                                                            }}
+                                                            className="flex-1 bg-white hover:bg-amber-50 text-amber-800 border border-amber-300 py-1.5 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                                                        >
+                                                            <Edit3 className="w-3 h-3" /> Edit Trip
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenPickupModal(fleet.plate, fleet.assignedDriver, fleetScheduleDate)}
+                                                            className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 py-1.5 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                                                            title="Suruh mobil ini sekalian mengambil barang di alamat lain"
+                                                        >
+                                                            <ClipboardList className="w-3 h-3" /> + Ambil Barang
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setDispatchDateInput(fleetScheduleDate);
+                                                                setDispatchVehicleInput(fleet.plate);
+                                                                setDispatchDriverInput(fleet.assignedDriver);
+                                                            }}
+                                                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer"
+                                                            title="Tambah order searah ke mobil ini pada form bawah"
+                                                        >
+                                                            + Rute
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setDispatchDateInput(fleetScheduleDate);
+                                                                setDispatchVehicleInput(fleet.plate);
+                                                                setDispatchDriverInput(fleet.defaultDriver);
+                                                            }}
+                                                            className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                                isSelectedInForm
+                                                                    ? 'bg-[#1b68b0] text-white shadow-xs'
+                                                                    : 'bg-[#70b03c] hover:bg-[#5f9733] text-white shadow-2xs'
+                                                            }`}
+                                                        >
+                                                            <Check className="w-3.5 h-3.5" />
+                                                            <span>{isSelectedInForm ? 'Terpilih di Form Kirim' : 'Gunakan Kirim Order'}</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenPickupModal(fleet.plate, fleet.defaultDriver, fleetScheduleDate)}
+                                                            className="w-full py-1.5 px-3 rounded-xl text-[11px] font-bold bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                                            title="Buat Surat Perintah Jalan untuk menyuruh mobil kosong ini mengambil barang ke Alamat A / Supplier"
+                                                        >
+                                                            <ClipboardList className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                            <span>Suruh Ambil Barang (Buat SPB)</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     {/* SECTION DAFTAR TRIP MOBIL AKTIF & RUTE MANIFEST MULTI-STOP */}
                     <div className="space-y-4">
                         <div className="flex flex-wrap justify-between items-center gap-2">
@@ -980,23 +1494,43 @@ export default function DeliveriesTab({
                                 <Truck className="w-5 h-5 text-[#1b68b0]" />
                                 <span>Daftar Trip Armada Mobil & Rute Alamat Tujuan Aktif</span>
                             </h3>
-                            <div className="flex flex-wrap gap-2 text-xs">
-                                <span className="bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                                    Admin Gudang: Siap Cetak SJ & Gate Pass
-                                </span>
-                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                                    Divisi Supir: Terbit di Tugas Driver
-                                </span>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                {[
+                                    { key: 'all', label: `Semua Jadwal (${activeAdminTrips.length})` },
+                                    { key: 'today', label: `Jalan Hari Ini (${activeAdminTrips.filter(t => getNormalizedTripDate(t) === todayStr).length})` },
+                                    { key: 'tomorrow', label: `Jalan Besok (${activeAdminTrips.filter(t => getNormalizedTripDate(t) === tomorrowStr).length})` },
+                                    { key: 'future', label: `Lusa & Seterusnya (${activeAdminTrips.filter(t => getNormalizedTripDate(t) > tomorrowStr).length})` },
+                                    { key: 'selected_date', label: `Tgl Dipilih (${formatIndonesianDate(fleetScheduleDate).split(',')[0]})` }
+                                ].map(tab => (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        onClick={() => setTripDateFilterMode(tab.key)}
+                                        className={`px-2.5 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                                            tripDateFilterMode === tab.key
+                                                ? 'bg-white text-[#1b68b0] shadow-2xs border border-slate-200/80'
+                                                : 'text-slate-600 hover:text-slate-900'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
                         {(() => {
-                            const trips = activeAdminTrips;
+                            const trips = filteredActiveAdminTrips;
 
                             if (trips.length === 0) {
                                 return (
-                                    <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 shadow-xs">
-                                        Belum ada trip pengiriman aktif. Silakan centang alamat pada tabel di bawah untuk menugaskan armada!
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 shadow-xs space-y-2">
+                                        <Truck className="w-8 h-8 text-slate-300 mx-auto" />
+                                        <div className="font-bold text-slate-600 text-xs">
+                                            Tidak ada jadwal trip pengiriman aktif pada filter tanggal ini.
+                                        </div>
+                                        <p className="text-[11px] text-slate-400">
+                                            Silakan pilih kategori jadwal lain atau centang order SPO pada tabel di bawah untuk menjadwalkan mobil armada.
+                                        </p>
                                     </div>
                                 );
                             }
@@ -1011,10 +1545,27 @@ export default function DeliveriesTab({
                                                         <span className="bg-blue-50 text-[#1b68b0] font-mono font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
                                                             {trip.trip_code}
                                                         </span>
-                                                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">
-                                                            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                                                            <span>{formatIndonesianDate(trip.delivery_date || trip.orders?.[0]?.delivery_date || trip.deliveries?.[0]?.delivery_date)}</span>
-                                                        </span>
+                                                        {(() => {
+                                                            const tDate = getNormalizedTripDate(trip);
+                                                            const relBadge = tDate === todayStr ? 'JALAN HARI INI' : tDate === tomorrowStr ? 'JALAN BESOK' : tDate === dayAfterTomorrowStr ? 'JALAN LUSA' : null;
+                                                            return (
+                                                                <>
+                                                                    {relBadge && (
+                                                                        <span className={`font-black text-[10px] px-2 py-0.5 rounded-md border ${
+                                                                            tDate === todayStr
+                                                                                ? 'bg-[#1b68b0] text-white border-[#1b68b0]'
+                                                                                : 'bg-amber-100 text-amber-800 border-amber-300'
+                                                                        }`}>
+                                                                            {relBadge}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                                                                        <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                                                                        <span>{formatIndonesianDate(tDate)}</span>
+                                                                    </span>
+                                                                </>
+                                                            );
+                                                        })()}
                                                         <h4 className="font-extrabold text-[#242222] text-sm flex items-center gap-1.5">
                                                             <User className="w-3.5 h-3.5 text-slate-500" />
                                                             <span>{trip.driver_name}</span>
@@ -1038,6 +1589,7 @@ export default function DeliveriesTab({
                                                 <div className="flex flex-wrap gap-1.5 justify-end">
                                                     {userRole !== 'satpam' && (
                                                         <button
+                                                            type="button"
                                                             onClick={() => handleOpenEditTripModal(trip)}
                                                             className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                                             title="Edit Penugasan Supir & Mobil Trip Ini"
@@ -1103,20 +1655,32 @@ export default function DeliveriesTab({
                                             <div className="space-y-2 text-xs">
                                                 {trip.orders.map((ord, stopIdx) => {
                                                     const isLunas = ord.payment_status === 'Lunas';
+                                                    const isPickupTask = String(ord.spo_number || '').startsWith('SPB-') || String(ord.glass_type || '').startsWith('[AMBIL BARANG]');
                                                     return (
-                                                        <div key={ord.id} className="flex items-start gap-2.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
-                                                            <span className="bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/20 text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5">
-                                                                STOP #{stopIdx + 1}
+                                                        <div key={ord.id} className={`flex items-start gap-2.5 p-3 rounded-xl border ${isPickupTask ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/80 border-slate-200'}`}>
+                                                            <span className={`border text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${isPickupTask ? 'bg-[#1b68b0] text-white border-[#1b68b0]' : 'bg-[#1b68b0]/10 text-[#1b68b0] border-[#1b68b0]/20'}`}>
+                                                                {isPickupTask ? `AMBIL #${stopIdx + 1}` : `STOP #${stopIdx + 1}`}
                                                             </span>
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex justify-between items-center gap-2">
                                                                     <span className="font-bold text-[#242222] truncate">
-                                                                        SPO: {ord.spo_number} — {ord.customer_name}
+                                                                        {isPickupTask ? `SPB: ${ord.spo_number} — ${ord.customer_name}` : `SPO: ${ord.spo_number} — ${ord.customer_name}`}
                                                                     </span>
-                                                                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
-                                                                        {isLunas ? 'LUNAS' : 'COD'}
-                                                                    </span>
+                                                                    {isPickupTask ? (
+                                                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-blue-100 text-[#1b68b0] border border-blue-300">
+                                                                            TUGAS AMBIL BARANG
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                                                                            {isLunas ? 'LUNAS' : 'COD'}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
+                                                                {isPickupTask && ord.glass_type && (
+                                                                    <div className="text-[11px] font-bold text-[#1b68b0] mt-0.5 truncate">
+                                                                        {ord.glass_type}
+                                                                    </div>
+                                                                )}
                                                                 <p className="text-slate-500 text-[11px] truncate mt-1 flex items-center gap-1">
                                                                     <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                                                                     <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
@@ -1125,9 +1689,9 @@ export default function DeliveriesTab({
                                                             <button
                                                                 onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
                                                                 className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
-                                                                title="Cetak Surat Jalan khusus Alamat Ini"
+                                                                title={isPickupTask ? 'Cetak Surat Perintah Pengambilan Barang' : 'Cetak Surat Jalan khusus Alamat Ini'}
                                                             >
-                                                                <Printer className="w-3 h-3" /> SJ
+                                                                <Printer className="w-3 h-3" /> {isPickupTask ? 'Surat Perintah' : 'SJ'}
                                                             </button>
                                                         </div>
                                                     );
@@ -1304,7 +1868,10 @@ export default function DeliveriesTab({
                                         <input
                                             type="date"
                                             value={dispatchDateInput}
-                                            onChange={e => setDispatchDateInput(e.target.value)}
+                                            onChange={e => {
+                                                setDispatchDateInput(e.target.value);
+                                                if (e.target.value) setFleetScheduleDate(e.target.value);
+                                            }}
                                             className="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
                                         />
                                     </div>
@@ -1330,10 +1897,14 @@ export default function DeliveriesTab({
                                             onChange={e => setDispatchVehicleInput(e.target.value)}
                                             className="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-800 font-semibold focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0] cursor-pointer"
                                         >
-                                            <option value="Engkel Box (D 8472 AB)">Engkel Box (D 8472 AB)</option>
-                                            <option value="Pick Up L300 (D 8192 XY)">Pick Up L300 (D 8192 XY)</option>
-                                            <option value="Truck Engkel Long (D 8011 GH)">Truck Engkel Long (D 8011 GH)</option>
-                                            <option value="Armada Subcon (B 9920 FK)">Armada Subcon (B 9920 FK)</option>
+                                            {FLEET_VEHICLES.map(v => {
+                                                const st = batchDispatchFleetAvailability[v.plate];
+                                                return (
+                                                    <option key={v.plate} value={v.plate}>
+                                                        {v.plate} — {st?.isBusy ? `[TERJADWAL: ${st.totalStops} Alamat]` : '[TERSEDIA]'}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                     </div>
 
@@ -1785,42 +2356,54 @@ export default function DeliveriesTab({
                         </div>
                     </div>
                     )}
-
-                    {/* MODAL PENUGASAN MOBIL PER SPO ORDER */}
-                    <AssignVehicleModal
-                        show={showAssignVehicleModal}
-                        onClose={() => setShowAssignVehicleModal(false)}
-                        order={selectedAssignOrder}
-                        driver={assignDriver}
-                        setDriver={setAssignDriver}
-                        vehicle={assignVehicle}
-                        setVehicle={setAssignVehicle}
-                        deliveryDate={assignDate}
-                        setDeliveryDate={setAssignDate}
-                        notes={assignNotes}
-                        setNotes={setAssignNotes}
-                        handleSubmit={handleSingleAssignSubmit}
-                        isSubmitting={isSubmittingVehicle}
-                    />
-
-                    {/* MODAL EDIT PENUGASAN TRIP ARMADA MOBIL */}
-                    <EditTripModal
-                        show={showEditTripModal}
-                        onClose={() => setShowEditTripModal(false)}
-                        trip={editingTripData}
-                        driver={editTripDriver}
-                        setDriver={setEditTripDriver}
-                        vehicle={editTripVehicle}
-                        setVehicle={setEditTripVehicle}
-                        deliveryDate={editTripDate}
-                        setDeliveryDate={setEditTripDate}
-                        notes={editTripNotes}
-                        setNotes={setEditTripNotes}
-                        handleSubmit={handleEditTripSubmit}
-                        isSubmitting={isSubmittingEditTrip}
-                    />
                 </>
             )}
+
+            {/* MODAL PENUGASAN MOBIL PER SPO ORDER */}
+            <AssignVehicleModal
+                show={showAssignVehicleModal}
+                onClose={() => setShowAssignVehicleModal(false)}
+                order={selectedAssignOrder}
+                driver={assignDriver}
+                setDriver={setAssignDriver}
+                vehicle={assignVehicle}
+                setVehicle={setAssignVehicle}
+                deliveryDate={assignDate}
+                setDeliveryDate={setAssignDate}
+                notes={assignNotes}
+                setNotes={setAssignNotes}
+                handleSubmit={handleSingleAssignSubmit}
+                isSubmitting={isSubmittingVehicle}
+                allTrips={allGroupedTrips}
+            />
+
+            {/* MODAL EDIT PENUGASAN TRIP ARMADA MOBIL */}
+            <EditTripModal
+                show={showEditTripModal}
+                onClose={() => setShowEditTripModal(false)}
+                trip={editingTripData}
+                driver={editTripDriver}
+                setDriver={setEditTripDriver}
+                vehicle={editTripVehicle}
+                setVehicle={setEditTripVehicle}
+                deliveryDate={editTripDate}
+                setDeliveryDate={setEditTripDate}
+                notes={editTripNotes}
+                setNotes={setEditTripNotes}
+                handleSubmit={handleEditTripSubmit}
+                isSubmitting={isSubmittingEditTrip}
+                allTrips={allGroupedTrips}
+            />
+
+            {/* MODAL SURAT PERINTAH PENGAMBILAN BARANG (MOBIL KOSONG / AMBIL BARANG) */}
+            <PickupDispatchModal
+                show={showPickupModal}
+                onClose={() => setShowPickupModal(false)}
+                initialVehicle={pickupInitVehicle}
+                initialDriver={pickupInitDriver}
+                initialDate={pickupInitDate}
+                allTrips={allGroupedTrips}
+            />
         </div>
     );
 }

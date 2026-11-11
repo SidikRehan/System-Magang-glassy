@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatIndonesianDate, formatIndonesianDateTime, roleTitles } from '@/Utils/dashboardHelpers';
+import { formatIndonesianDate, formatIndonesianDateTime, roleTitles, getDivisionProgressStatus, normalizeProcessCode } from '@/Utils/dashboardHelpers';
 import {
     FileText, Sliders, Truck, CreditCard, CheckCircle2,
     Clock, Plus, Search, Calendar, Edit3, RefreshCw,
@@ -30,9 +30,24 @@ export default function OrdersTab({
     handleAcknowledgeRevision,
 }) {
     const renderProgressTracker = (o) => {
-        const procs = Array.isArray(o.processes) && o.processes.length > 0 ? o.processes : ['HT'];
+        const reqSet = new Set(['HT']);
+        if (Array.isArray(o.processes)) {
+            o.processes.forEach(p => {
+                const norm = normalizeProcessCode(p);
+                if (norm) reqSet.add(norm);
+            });
+        }
+        if (Array.isArray(o.items)) {
+            o.items.forEach(it => {
+                if (Array.isArray(it.processes)) {
+                    it.processes.forEach(p => {
+                        const norm = normalizeProcessCode(p);
+                        if (norm) reqSet.add(norm);
+                    });
+                }
+            });
+        }
         const currentDiv = o.current_division || 'admin_gudang';
-        const divProgress = o.division_progress || {};
 
         const divOrder = [
             { key: 'HT', divKey: 'divisi_ht', label: 'HT' },
@@ -55,8 +70,8 @@ export default function OrdersTab({
 
                 <div className="flex flex-wrap items-center gap-1 pt-0.5">
                     {divOrder.map((d, idx) => {
-                        const isRequired = procs.includes(d.key);
-                        const statusText = divProgress[d.key] || divProgress[d.key.toUpperCase()];
+                        const statusText = getDivisionProgressStatus(o, d.key);
+                        const isRequired = reqSet.has(d.key) || (o.division_progress && statusText && statusText !== 'N/A');
 
                         if (!isRequired && currentDiv !== d.divKey && statusText !== 'Selesai') {
                             return null;

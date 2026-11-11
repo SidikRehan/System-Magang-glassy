@@ -8,8 +8,6 @@ export default function CompleteRepairModal({
     selectedRepairTool,
     onSuccess
 }) {
-    if (!show || !selectedRepairTool) return null;
-
     const [form, setForm] = useState({
         condition: 'Baik',
         notes: ''
@@ -18,6 +16,8 @@ export default function CompleteRepairModal({
     const [repairCost, setRepairCost] = useState('');
     const [technicianName, setTechnicianName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show || !selectedRepairTool) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();

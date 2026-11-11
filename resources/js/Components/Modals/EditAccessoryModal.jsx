@@ -8,8 +8,6 @@ export default function EditAccessoryModal({
     accessory,
     onSuccess
 }) {
-    if (!show || !accessory) return null;
-
     const [form, setForm] = useState({
         name: '',
         buy_price: '',
@@ -41,6 +39,8 @@ export default function EditAccessoryModal({
             }
         }
     }, [accessory]);
+
+    if (!show || !accessory) return null;
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];

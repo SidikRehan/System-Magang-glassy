@@ -1,8 +1,7 @@
 import React from 'react';
 import { 
     Building2, User, Phone, MapPin, MessageCircle, 
-    Edit, Trash2, Plus, Search, CheckCircle2, Factory,
-    Layers, ShieldCheck, ExternalLink
+    Edit, Trash2, Plus, Search, Factory
 } from 'lucide-react';
 
 export default function SuppliersTab({

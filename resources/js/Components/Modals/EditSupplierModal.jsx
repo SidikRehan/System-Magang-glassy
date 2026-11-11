@@ -8,8 +8,6 @@ export default function EditSupplierModal({
     supplier,
     onSuccess
 }) {
-    if (!show || !supplier) return null;
-
     const [form, setForm] = useState({
         name: '',
         category: '',
@@ -32,6 +30,8 @@ export default function EditSupplierModal({
             });
         }
     }, [supplier]);
+
+    if (!show || !supplier) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();

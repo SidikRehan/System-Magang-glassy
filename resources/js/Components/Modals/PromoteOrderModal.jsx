@@ -7,11 +7,11 @@ export default function PromoteOrderModal({
     targetPromoteOrder,
     onConfirmPromote
 }) {
-    if (!show || !targetPromoteOrder) return null;
-
     const [promotePaymentOption, setPromotePaymentOption] = useState('dp');
     const [promoteDpPercent, setPromoteDpPercent] = useState(50);
     const [promoteCustomPaidAmount, setPromoteCustomPaidAmount] = useState('');
+
+    if (!show || !targetPromoteOrder) return null;
 
     const getPromotePaidAmount = () => {
         if (!targetPromoteOrder) return 0;

@@ -7,8 +7,6 @@ export default function AddAccessoryModal({
     onClose,
     onSuccess
 }) {
-    if (!show) return null;
-
     const [form, setForm] = useState({
         name: '',
         buy_price: '',
@@ -19,6 +17,8 @@ export default function AddAccessoryModal({
     });
     const [imagePreview, setImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show) return null;
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];

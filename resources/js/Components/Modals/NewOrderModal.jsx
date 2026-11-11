@@ -4,22 +4,17 @@ import {
     ShoppingBag,
     Calendar,
     User,
-    Phone,
-    MapPin,
     Layers,
     Plus,
     Copy,
     Trash2,
-    Check,
     AlertTriangle,
     CreditCard,
     FileText,
-    Sparkles,
     Upload,
     Clock,
     X,
     ArrowRight,
-    HelpCircle,
     CheckCircle2,
     Package,
     Loader2,
@@ -77,16 +72,6 @@ export default function NewOrderModal({
     calcPriorityFee = 0,
     calcTotalPrice = 0
 }) {
-    if (!show) return null;
-
-    const formatAreaDisplay = (val) => {
-        const num = parseFloat(val) || 0;
-        if (num <= 0) return '0.00';
-        if (num < 0.01) return num.toFixed(4);
-        if (num < 0.1) return num.toFixed(3);
-        return num.toFixed(2);
-    };
-
     const [attemptedSubmit, setAttemptedSubmit] = React.useState(false);
     const [shakeKey, setShakeKey] = React.useState(0);
 
@@ -98,7 +83,7 @@ export default function NewOrderModal({
 
     // Form Validation Checks
     const parsedScraps = React.useMemo(() => {
-        if (!orderForm.used_scrap_rak) return [];
+        if (!orderForm?.used_scrap_rak) return [];
         const regex = /([A-Z0-9-]+)\s*\(([^,]+),\s*([^=]+)=\s*(\d+)\s*lbr\)(?:\s*\[Grp:\s*([^\]]+)\])?/g;
         const matches = [];
         let match;
@@ -112,22 +97,35 @@ export default function NewOrderModal({
             });
         }
         return matches;
-    }, [orderForm.used_scrap_rak]);
+    }, [orderForm?.used_scrap_rak]);
 
     const selectedScrapCodes = React.useMemo(() => parsedScraps.map(s => s.code), [parsedScraps]);
+
+    if (!show) return null;
+
+    const formatAreaDisplay = (val) => {
+        const num = parseFloat(val) || 0;
+        if (num <= 0) return '0.00';
+        if (num < 0.01) return num.toFixed(4);
+        if (num < 0.1) return num.toFixed(3);
+        return num.toFixed(2);
+    };
+
     const selectedScraps = (initialScrap || []).filter(s => selectedScrapCodes.includes(s.scrap_code));
-    
-    const checkItemExceedsScrap = (item) => {
-        const itemGroupScraps = parsedScraps
-            .filter(ps => ps.group_id === String(item.group_id) || (ps.group_id === null && initialScrap?.find(s => s.scrap_code === ps.code)?.glass_type === item.glass_type))
+
+    const getGroupScraps = (groupId, glassType) => {
+        return parsedScraps
+            .filter(ps => ps.group_id === String(groupId) || (ps.group_id === null && initialScrap?.find(s => s.scrap_code === ps.code)?.glass_type === glassType))
             .map(ps => initialScrap?.find(s => s.scrap_code === ps.code))
             .filter(Boolean);
+    };
 
-        if (itemGroupScraps.length === 0) return false;
-        const rawLen = parseFloat(item.length_cm) || 0;
-        const rawWid = parseFloat(item.width_cm) || 0;
-        if (rawLen === 0 || rawWid === 0) return false;
-        
+    const doesItemFitIntoScrap = (item, scrap) => {
+        if (!item || !scrap) return false;
+        const rawLen = parseFloat(String(item.length_cm).replace(',', '.')) || 0;
+        const rawWid = parseFloat(String(item.width_cm).replace(',', '.')) || 0;
+        if (rawLen <= 0 || rawWid <= 0) return false;
+
         const isEdgeGrinding = (item.processes || []).includes('GM');
         const finalLen = isEdgeGrinding ? rawLen + 1 : rawLen;
         const finalWid = isEdgeGrinding ? rawWid + 1 : rawWid;
@@ -135,11 +133,41 @@ export default function NewOrderModal({
         const maxOrderDim = Math.max(finalLen, finalWid);
         const minOrderDim = Math.min(finalLen, finalWid);
 
-        return itemGroupScraps.every(scrap => {
-            const maxScrapDim = Math.max(parseFloat(scrap.length_cm) || 0, parseFloat(scrap.width_cm) || 0);
-            const minScrapDim = Math.min(parseFloat(scrap.length_cm) || 0, parseFloat(scrap.width_cm) || 0);
-            return maxOrderDim > maxScrapDim || minOrderDim > minScrapDim;
+        const maxScrapDim = Math.max(parseFloat(scrap.length_cm) || 0, parseFloat(scrap.width_cm) || 0);
+        const minScrapDim = Math.min(parseFloat(scrap.length_cm) || 0, parseFloat(scrap.width_cm) || 0);
+
+        return maxOrderDim <= maxScrapDim && minOrderDim <= minScrapDim;
+    };
+
+    const checkItemExceedsScrap = (item) => {
+        const grpId = item.group_id || ('grp_' + (item.glass_type ? item.glass_type.replace(/\s+/g, '_') : '0'));
+        const itemGroupScraps = getGroupScraps(grpId, item.glass_type);
+
+        if (itemGroupScraps.length === 0) return false;
+        const rawLen = parseFloat(String(item.length_cm).replace(',', '.')) || 0;
+        const rawWid = parseFloat(String(item.width_cm).replace(',', '.')) || 0;
+        if (rawLen === 0 || rawWid === 0) return false;
+
+        // Ambil semua variasi ukuran yang berada di group kaca yang sama dan sudah diisi dimensinya
+        const groupSiblings = (calcItems || []).filter(ci => {
+            const ciGrpId = ci.group_id || ('grp_' + (ci.glass_type ? ci.glass_type.replace(/\s+/g, '_') : '0'));
+            const ciLen = parseFloat(String(ci.length_cm).replace(',', '.')) || 0;
+            const ciWid = parseFloat(String(ci.width_cm).replace(',', '.')) || 0;
+            return (ciGrpId === grpId || (!ci.group_id && ci.glass_type === item.glass_type)) && ciLen > 0 && ciWid > 0;
         });
+
+        // Jika di dalam group yang sama sudah ada minimal 1 ukuran lain yang muat menggunakan kaca sisa ini,
+        // maka ukuran tambahan lainnya (cth: ukuran ke-2 & ke-3 yang lebih besar) otomatis menggunakan bahan lembaran baru dan TIDAK error!
+        const anySiblingFitsScrap = groupSiblings.some(sibling =>
+            itemGroupScraps.some(scrap => doesItemFitIntoScrap(sibling, scrap))
+        );
+
+        if (anySiblingFitsScrap) {
+            return false;
+        }
+
+        // Jika TIDAK ADA SATUPUN ukuran di group ini yang muat ke kaca sisa yang dipilih, barulah tampilkan peringatan
+        return !itemGroupScraps.some(scrap => doesItemFitIntoScrap(item, scrap));
     };
 
     const hasScrapSizeError = calcItems.some(item => checkItemExceedsScrap(item));
@@ -1161,7 +1189,7 @@ export default function NewOrderModal({
                             </span>
                             {orderForm.priority_status === 'Prioritas' && (
                                 <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-full font-mono">
-                                    🔥 Order Prioritas / Express
+                                    Order Prioritas / Express
                                 </span>
                             )}
                         </h4>
@@ -1184,7 +1212,7 @@ export default function NewOrderModal({
                                 >
                                     <option value="" disabled>-- Pilih Status --</option>
                                     <option value="Biasa">Biasa (Standard)</option>
-                                    <option value="Prioritas">🔥 Prioritas (Buru-buru / Express)</option>
+                                    <option value="Prioritas">Prioritas (Buru-buru / Express)</option>
                                 </select>
                             </div>
 
@@ -1262,7 +1290,7 @@ export default function NewOrderModal({
                                         </button>
                                     </div>
                                     <span className="text-[10px] text-amber-800 block font-mono leading-tight pt-0.5">
-                                        💡 *Default Rp 0 (Free/Gratis tanpa charge). Isi nominal jika ada charge ekspress.
+                                        *Default Rp 0 (Free/Gratis tanpa charge). Isi nominal jika ada charge ekspress.
                                     </span>
                                 </div>
                             )}
@@ -1587,7 +1615,7 @@ export default function NewOrderModal({
                                 {!isDescriptionValid && <li>Catatan Order / Penjelasan Kaca belum diisi</li>}
                                 {!isOrderDateValid && <li>Tanggal Order belum diisi</li>}
                                 {!isItemsValid && <li>Item Kaca belum lengkap (Jenis Kaca, Panjang, Lebar, Qty)</li>}
-                                {!isPriorityValid && <li>Nominal Fee Prioritas wajib diisi (&gt; 0)</li>}
+                                {!isPriorityValid && <li>Nominal Fee Prioritas wajib diisi (minimal Rp 10.000)</li>}
                                 {!isPaymentValid && <li>Jumlah Uang Diterima / DP wajib diisi dengan angka valid</li>}
                             </ul>
                         </div>

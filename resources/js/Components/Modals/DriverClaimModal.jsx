@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { Fuel, X, Check, Camera, Calendar, Truck, FileText, Send, Trash2, Loader2 } from 'lucide-react';
+import { Fuel, X, Check, Camera, FileText, Send, Loader2 } from 'lucide-react';
 
 export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver', defaultPlate = 'B 9482 SYP (Truk Engkel)' }) {
-    if (!isOpen) return null;
-
     const availableCategories = [
         { id: 'BBM Armada', label: 'BBM Solar Dexlite / BioSolar', short: 'BBM Solar' },
         { id: 'Tol & Parkir', label: 'Tiket E-Toll & Parkir Proyek', short: 'E-Toll & Parkir' },
@@ -33,6 +31,8 @@ export default function DriverClaimModal({ isOpen, onClose, userName = 'Driver',
     });
 
     const [formattedAmount, setFormattedAmount] = useState('');
+
+    if (!isOpen) return null;
 
     const handleAmountChange = (e) => {
         const raw = e.target.value.replace(/[^0-9]/g, '');

@@ -3,8 +3,7 @@ import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import {
     BarChart3, FileText, Truck, Sliders, Boxes, Building2,
     Plug, Archive, Wrench, Users, CreditCard, Search,
-    LogOut, Menu, X, AlertTriangle, Handshake, CheckCircle2, ArrowRight,
-    Plus, Edit3, Layers, Download, Trash2, RotateCcw, MessageCircle, Check, Calendar, PauseCircle
+    LogOut, Menu, X, AlertTriangle, Check, PauseCircle
 } from 'lucide-react';
 import NewOrderModal from '@/Components/Modals/NewOrderModal';
 import EditDraftOrderModal from '@/Components/Modals/EditDraftOrderModal';
@@ -415,6 +414,22 @@ export default function Dashboard({
 
     const handleOpenSketchLightbox = (path, title, options = {}) => {
         if (!path) return;
+        if (typeof path === 'object' && path !== null) {
+            const rawUrl = path.url || path.path || '';
+            if (!rawUrl) return;
+            const fullUrl = rawUrl.startsWith('http') || rawUrl.startsWith('/') ? rawUrl : `/storage/${rawUrl}`;
+            setSketchLightbox({
+                isOpen: true,
+                url: fullUrl,
+                title: path.title || title || 'Lampiran Gambar',
+                type: path.type || 'order',
+                subtitle: path.subtitle || null,
+                description: path.description || null,
+                badge: path.badge || null,
+                metadata: path.metadata || path,
+            });
+            return;
+        }
         const fullUrl = path.startsWith('http') || path.startsWith('/') ? path : `/storage/${path}`;
         const opts = typeof options === 'string' ? { type: options } : (options || {});
         setSketchLightbox({
@@ -615,8 +630,10 @@ export default function Dashboard({
         if (o.current_division === divKey) return true;
 
         const code = divKey.replace('divisi_', '').toUpperCase();
+        const title = code.charAt(0).toUpperCase() + code.slice(1).toLowerCase();
         const p = o.division_progress || {};
-        return p[code] === 'Selesai' || p[code] === 'Sedang Dikerjakan';
+        const status = p[title] || p[code] || p[code.toLowerCase()];
+        return status === 'Selesai' || status === 'Sedang Dikerjakan';
     };
 
     // WhatsApp Supplier Restock Modal State
@@ -804,23 +821,42 @@ export default function Dashboard({
 
     useEffect(() => {
         if (initialTools && initialTools.length > 0) {
-            setToolsList(initialTools);
-            const extractedBorrows = initialTools.flatMap(t => (t.borrows || []).map(b => ({
-                id: b.id,
-                tool_id: t.id,
-                tool_code: t.tool_code,
-                tool_name: t.name,
-                borrower_name: b.borrower_name,
-                purpose: b.purpose,
-                borrow_date: b.borrow_date,
-                expected_return: b.expected_return,
-                actual_return: b.actual_return,
-                qty_borrowed: b.qty_borrowed,
-                status: b.status
-            })));
-            if (extractedBorrows.length > 0) {
-                setToolBorrowings(extractedBorrows);
-            }
+            const normalizedTools = initialTools.map(t => ({
+                ...t,
+                unit: t.unit || 'Unit',
+                location: t.location || 'Gudang Utama',
+                condition_notes: t.condition_notes || t.notes || '',
+                repair_stage: t.repair_stage || (
+                    t.condition === 'Perlu Servis'
+                        ? 'Sedang Dalam Perbaikan'
+                        : ((Number(t.damaged_qty) || 0) > 0 || t.condition === 'Rusak')
+                            ? 'Perlu Perbaikan'
+                            : (t.notes && String(t.notes).includes('[Selesai Servis') ? 'Selesai' : null)
+                )
+            }));
+            setToolsList(normalizedTools);
+            const extractedBorrows = initialTools.flatMap(t => (t.borrows || []).map(b => {
+                const borrowDateStr = b.borrow_date ? String(b.borrow_date).split('T')[0].split(' ')[0] : '-';
+                const returnDateStr = b.actual_return || (b.return_date ? String(b.return_date).split('T')[0].split(' ')[0] : null);
+                const qtyVal = b.qty_borrowed ?? b.qty ?? 1;
+                const isActiveBorrow = b.status === 'Dipinjam' || b.status === 'Sedang Dipinjam';
+                return {
+                    id: b.id,
+                    tool_id: t.id,
+                    tool_code: t.tool_code,
+                    tool_name: t.name,
+                    borrower_name: b.borrower_name,
+                    purpose: b.purpose || b.notes || 'Keperluan Operasional Teknisi',
+                    notes: b.notes || b.purpose || '',
+                    borrow_date: borrowDateStr,
+                    expected_return: b.expected_return || borrowDateStr,
+                    actual_return: returnDateStr,
+                    qty_borrowed: qtyVal,
+                    qty: qtyVal,
+                    status: isActiveBorrow ? 'Sedang Dipinjam' : 'Dikembalikan'
+                };
+            }));
+            setToolBorrowings(extractedBorrows);
         }
     }, [initialTools]);
 
@@ -997,33 +1033,44 @@ export default function Dashboard({
 
     useEffect(() => {
         if (initialSupplies && initialSupplies.length > 0) {
-            setWarehouseSuppliesList(initialSupplies);
-            const extractedUsages = initialSupplies.flatMap(s => (s.usages || []).map(u => ({
+            const normalizedSupplies = initialSupplies.map(s => ({
+                ...s,
+                qty: s.qty ?? s.stock_qty ?? 0,
+                stock_qty: s.stock_qty ?? s.qty ?? 0,
+                location: s.location || 'Gudang Utama',
+                unit: s.unit || 'Pcs'
+            }));
+            setWarehouseSuppliesList(normalizedSupplies);
+            const extractedUsages = normalizedSupplies.flatMap(s => (s.usages || []).map(u => ({
                 id: u.id,
                 supply_id: s.id,
                 item_code: s.item_code,
                 item_name: s.name,
-                used_qty: u.used_qty,
+                used_qty: u.used_qty ?? u.qty ?? 1,
                 unit: s.unit,
-                user_division: u.user_division,
-                taker_name: u.taker_name,
-                usage_date: u.usage_date,
+                user_division: u.user_division || u.division || 'Divisi Operasional',
+                taker_name: u.taker_name || u.user_name || '-',
+                usage_date: u.usage_date || (u.created_at ? String(u.created_at).split('T')[0].split(' ')[0] : '-'),
                 notes: u.notes
             })));
             if (extractedUsages.length > 0) {
                 setSupplyUsageLogs(extractedUsages);
             }
-            const extractedRestocks = initialSupplies.flatMap(s => (s.restocks || []).map(r => ({
+            const extractedRestocks = normalizedSupplies.flatMap(s => (s.restocks || []).map(r => ({
                 id: r.id,
                 supply_id: s.id,
                 item_code: s.item_code,
                 item_name: s.name,
+                current_stock: s.qty ?? s.stock_qty ?? 0,
                 request_qty: r.request_qty,
                 unit: s.unit,
-                requester_name: r.requester_name,
-                urgency: r.urgency,
-                request_date: r.request_date,
-                status: r.status,
+                requester_name: r.requester_name || r.requested_by || 'Admin Gudang',
+                requested_by: r.requested_by || r.requester_name || 'Admin Gudang',
+                urgency: r.urgency || r.priority || 'Mendesak / Stok Menipis',
+                priority: r.priority || r.urgency || (r.notes && String(r.notes).includes('Darurat') ? 'Darurat / Habis Total' : 'Mendesak / Stok Menipis'),
+                request_date: r.request_date || (r.created_at ? String(r.created_at).split('T')[0].split(' ')[0] : '-'),
+                requested_at: r.requested_at || r.request_date || (r.created_at ? String(r.created_at).split('T')[0].split(' ')[0] : '-'),
+                status: r.status || 'Menunggu Persetujuan',
                 reason: r.reason,
                 approved_date: r.approved_date,
                 notes: r.notes
@@ -1210,47 +1257,53 @@ export default function Dashboard({
 
     const handleApproveRestockRequest = (reqId) => {
         const targetReq = supplyRestockRequests.find(r => r.id === reqId);
-        setSupplyRestockRequests(prev => prev.map(r => {
-            if (r.id === reqId) {
-                return { ...r, status: 'Disetujui & Dipesan (Didanai Finance)' };
+        router.post(route('inventory.supplies.restock_approve', reqId), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSupplyRestockRequests(prev => prev.map(r => r.id === reqId ? { ...r, status: 'Selesai Restok' } : r));
+                if (targetReq && confirm(`Pengajuan restok "${targetReq.item_name}" (+${targetReq.request_qty} ${targetReq.unit}) BERHASIL disetujui & stok gudang telah ditambahkan!\n\nApakah Anda ingin langsung mencatat pembiayaan pengadaan perlengkapan ini ke Modul Finance?`)) {
+                    handleOpenFinanceModal('pembelian_alat', {
+                        type: 'pembelian_alat',
+                        category: 'Alat & Mesin',
+                        title: `Pengadaan Alat/Perlengkapan: ${targetReq.item_name} (+${targetReq.request_qty} ${targetReq.unit})`,
+                        amount: (targetReq.request_qty || 1) * 350000,
+                        supplier_name: 'Toko Teknik Industri Jaya Sentosa',
+                        notes: `Didanai untuk kebutuhan Gudang & Pabrik (Kode: ${targetReq.item_code})`
+                    });
+                }
+            },
+            onError: () => {
+                setSupplyRestockRequests(prev => prev.map(r => {
+                    if (r.id === reqId) {
+                        return { ...r, status: 'Disetujui & Dipesan' };
+                    }
+                    return r;
+                }));
             }
-            return r;
-        }));
-
-        if (targetReq && confirm(`✅ Pengajuan restok "${targetReq.item_name}" BERHASIL disetujui!\n\nApakah Anda ingin langsung mencatat pembiayaan pengadaan alat ini ke Modul Finance?`)) {
-            handleOpenFinanceModal('pembelian_alat', {
-                type: 'pembelian_alat',
-                category: 'Alat & Mesin',
-                title: `Pengadaan Alat/Perlengkapan: ${targetReq.item_name} (+${targetReq.request_qty} ${targetReq.unit})`,
-                amount: (targetReq.request_qty || 1) * 350000,
-                supplier_name: 'Toko Teknik Industri Jaya Sentosa',
-                notes: `Didanai untuk kebutuhan Gudang & Pabrik (Kode: ${targetReq.item_code})`
-            });
-        } else {
-            alert('✅ Pengajuan restok disetujui & status diubah menjadi Disetujui & Dipesan (Didanai Finance)!');
-        }
+        });
     };
 
     const handleCompleteRestockRequest = (req) => {
-        setSupplyRestockRequests(prev => prev.map(r => {
-            if (r.id === req.id) {
-                return { ...r, status: 'Selesai Restok' };
+        router.post(route('inventory.supplies.restock_approve', req.id), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSupplyRestockRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'Selesai Restok' } : r));
+            },
+            onError: () => {
+                setSupplyRestockRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'Selesai Restok' } : r));
+                setWarehouseSuppliesList(prev => prev.map(s => {
+                    if (s.id === req.supply_id || s.item_code === req.item_code) {
+                        const currentQ = s.stock_qty ?? s.qty ?? 0;
+                        const newQty = currentQ + req.request_qty;
+                        let newStatus = 'Aman';
+                        if (newQty <= 0) newStatus = 'Habis';
+                        else if (newQty <= s.min_stock) newStatus = 'Menipis';
+                        return { ...s, qty: newQty, stock_qty: newQty, status: newStatus };
+                    }
+                    return s;
+                }));
             }
-            return r;
-        }));
-
-        setWarehouseSuppliesList(prev => prev.map(s => {
-            if (s.id === req.supply_id || s.item_code === req.item_code) {
-                const newQty = s.stock_qty + req.request_qty;
-                let newStatus = 'Aman';
-                if (newQty <= 0) newStatus = 'Habis';
-                else if (newQty <= s.min_stock) newStatus = 'Menipis';
-                return { ...s, stock_qty: newQty, status: newStatus };
-            }
-            return s;
-        }));
-
-        alert(`🎉 Restok "${req.item_name}" sejumlah +${req.request_qty} ${req.unit} SELESAI & STOK GUDANG BERHASIL DITAMBAHKAN!`);
+        });
     };
 
     // Return Tool Modal State
@@ -1316,7 +1369,14 @@ export default function Dashboard({
             condition: 'Perlu Servis',
             notes: 'Mulai pengerjaan servis teknisi'
         }, {
-            preserveScroll: true
+            preserveScroll: true,
+            onSuccess: () => {
+                setToolsList(prev => prev.map(t => t.id === toolId ? {
+                    ...t,
+                    condition: 'Perlu Servis',
+                    repair_stage: 'Sedang Dalam Perbaikan'
+                } : t));
+            }
         });
     };
 
@@ -2077,20 +2137,10 @@ export default function Dashboard({
         }
     }, [initialSheetGlasses]);
 
-    const handleRecordRawMaterialSuccess = (glassTypeName, sheetsUsed) => {
-        setSheetGlasses(prev => prev.map(item => {
-            const matchName = item.name.toLowerCase().includes(glassTypeName.toLowerCase()) || glassTypeName.toLowerCase().includes(item.name.toLowerCase());
-            if (matchName) {
-                const newQty = Math.max(0, item.qty - sheetsUsed);
-                const newStatus = newQty > 10 ? 'Aman' : (newQty > 0 ? 'Menipis' : 'Pengajuan Proses Restock');
-                return {
-                    ...item,
-                    qty: newQty,
-                    status: newStatus
-                };
-            }
-            return item;
-        }));
+    const handleRecordRawMaterialSuccess = () => {
+        // Stok di database sudah otomatis dikurangi oleh SypOperationalController::recordRawMaterialUsage
+        // dan disinkronkan ulang melalui prop Inertia `initialSheetGlasses` di atas.
+        // Jangan kurangi lagi di state lokal agar tidak terjadi pemotongan ganda (double-subtraction).
     };
 
     const MASTER_SUPPLIERS = [
@@ -2182,7 +2232,7 @@ export default function Dashboard({
         setSearchTerm(val);
         setStockSearchTerm(val);
         setSupplierSearchTerm(val);
-        setAccessorySearchTerm(val);
+        setAccSearchTerm(val);
         setSupplySearchTerm(val);
         setToolSearchTerm(val);
         setEmployeeSearchTerm(val);
@@ -2282,7 +2332,7 @@ export default function Dashboard({
     // Auto set default active tab based on user's role
     useEffect(() => {
         if (userRole.startsWith('divisi_') || userRole === 'admin_gudang') setActiveTab('production');
-        else if (userRole === 'driver') setActiveTab('deliveries');
+        else if (userRole === 'driver' || userRole === 'satpam') setActiveTab('deliveries');
         else if (userRole === 'owner') setActiveTab('dashboard');
         else if (userRole === 'finance' || userRole === 'admin_finance') setActiveTab('finance');
         else setActiveTab('orders');
@@ -3350,8 +3400,32 @@ export default function Dashboard({
         });
     };
 
+    const normalizeProc = (p) => {
+        if (!p) return '';
+        const u = String(p).replace('divisi_', '').trim().toUpperCase();
+        if (u === 'ETSA') return 'Etsa';
+        if (u === 'BOR') return 'Bor';
+        return u;
+    };
+
     const renderProgressTracker = (o) => {
-        const procs = Array.isArray(o.processes) && o.processes.length > 0 ? o.processes : ['HT'];
+        const reqSet = new Set(['HT']);
+        if (Array.isArray(o.processes)) {
+            o.processes.forEach(p => {
+                const norm = normalizeProc(p);
+                if (norm) reqSet.add(norm);
+            });
+        }
+        if (Array.isArray(o.items)) {
+            o.items.forEach(it => {
+                if (Array.isArray(it.processes)) {
+                    it.processes.forEach(p => {
+                        const norm = normalizeProc(p);
+                        if (norm) reqSet.add(norm);
+                    });
+                }
+            });
+        }
         const currentDiv = o.current_division || 'admin_gudang';
         const divProgress = o.division_progress || {};
 
@@ -3368,29 +3442,29 @@ export default function Dashboard({
         return (
             <div className="space-y-1.5 min-w-[140px]">
                 <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                        📍 {roleTitles[currentDiv] || currentDiv}
+                    <span className="text-[10px] text-[#1b68b0] font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                        {roleTitles[currentDiv] || currentDiv}
                     </span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1 pt-0.5">
                     {divOrder.map((d, idx) => {
-                        const isRequired = procs.includes(d.key);
-                        const statusText = divProgress[d.key] || divProgress[d.key.toUpperCase()];
+                        const statusText = divProgress[d.key] || divProgress[d.key.toUpperCase()] || divProgress[d.key.toLowerCase()];
+                        const isRequired = reqSet.has(d.key) || (o.division_progress && statusText && statusText !== 'N/A');
 
-                        let badgeStyle = "bg-slate-900/60 text-slate-500 border-slate-800 opacity-50";
-                        let statusIcon = "⚪";
+                        let badgeStyle = "bg-slate-100 text-slate-500 border-slate-200 opacity-60";
+                        let statusIcon = "•";
 
                         if (!isRequired && currentDiv !== d.divKey && statusText !== 'Selesai') {
                             return null;
                         }
 
                         if (statusText === 'Selesai' || (activeIndex > idx && activeIndex !== -1)) {
-                            badgeStyle = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold";
-                            statusIcon = "✅";
+                            badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold";
+                            statusIcon = "✓";
                         } else if (currentDiv === d.divKey || statusText === 'Sedang Dikerjakan' || statusText === 'Menunggu Dispatch') {
-                            badgeStyle = "bg-cyan-500/25 text-cyan-300 border-cyan-400 font-extrabold animate-pulse shadow-sm shadow-cyan-500/20";
-                            statusIcon = "⚙️";
+                            badgeStyle = "bg-blue-50 text-[#1b68b0] border-blue-200 font-extrabold animate-pulse shadow-2xs";
+                            statusIcon = "→";
                         }
 
                         return (
@@ -3412,15 +3486,25 @@ export default function Dashboard({
     const getOrderRelevantDivisions = (o) => {
         if (!o) return [];
         let procs = [];
+        const addProc = (p) => {
+            const norm = normalizeProc(p);
+            if (norm && !procs.includes(norm)) procs.push(norm);
+        };
         if (Array.isArray(o.processes) && o.processes.length > 0) {
-            procs = [...o.processes];
+            o.processes.forEach(addProc);
         }
         if (Array.isArray(o.items)) {
             o.items.forEach(it => {
                 if (Array.isArray(it.processes)) {
-                    it.processes.forEach(p => {
-                        if (!procs.includes(p)) procs.push(p);
-                    });
+                    it.processes.forEach(addProc);
+                }
+            });
+        }
+        if (o.division_progress && typeof o.division_progress === 'object') {
+            ['HT', 'GM', 'BV', 'Etsa', 'Bor'].forEach(code => {
+                const st = o.division_progress[code] || o.division_progress[code.toUpperCase()] || o.division_progress[code.toLowerCase()];
+                if (st && st !== 'N/A' && !procs.includes(code)) {
+                    procs.push(code);
                 }
             });
         }
@@ -3432,11 +3516,11 @@ export default function Dashboard({
         procs.sort((a, b) => fixedOrder.indexOf(a) - fixedOrder.indexOf(b));
 
         const divInfo = {
-            'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong', icon: '✂️', bg: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
-            'Bor': { key: 'divisi_bor', code: 'Bor', name: 'Divisi Bor (Drilling)', icon: '⚡', bg: 'bg-orange-500/10 text-orange-300 border-orange-500/30' },
-            'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', icon: '✨', bg: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
-            'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', icon: '💎', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
-            'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', icon: '🌫️', bg: 'bg-purple-500/10 text-purple-300 border-purple-500/30' }
+            'HT': { key: 'divisi_ht', code: 'HT', name: 'Divisi Potong', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+            'Bor': { key: 'divisi_bor', code: 'Bor', name: 'Divisi Bor (Drilling)', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
+            'GM': { key: 'divisi_gm', code: 'GM', name: 'Divisi GM (Gosok Mesin)', bg: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+            'BV': { key: 'divisi_bv', code: 'BV', name: 'Divisi BV (Beveling)', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+            'Etsa': { key: 'divisi_etsa', code: 'Etsa', name: 'Divisi Etsa (Sandblast Blur)', bg: 'bg-purple-50 text-purple-700 border-purple-200' }
         };
 
         return procs.map(p => divInfo[p]).filter(Boolean);
@@ -3620,7 +3704,7 @@ export default function Dashboard({
                         <Sliders className="w-3.5 h-3.5" /> Disposisi
                     </button>
                 )}
-                {(userRole.startsWith('divisi_') || userRole === 'owner') && (() => {
+                {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (() => {
                     const suspendedCount = (initialOrders || []).filter(o => o && o.complaint_status === 'pending_gudang').length;
                     return (
                         <button
@@ -3734,7 +3818,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
+                            {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver' || userRole === 'satpam') && (
                                 <button onClick={() => { setActiveTab('deliveries'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'deliveries' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <div className="flex items-center gap-3">
                                         <Truck className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Pengiriman</span>
@@ -3753,7 +3837,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole.startsWith('divisi_') || userRole === 'owner') && (() => {
+                            {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (() => {
                                 const suspendedCount = (initialOrders || []).filter(o => o && o.complaint_status === 'pending_gudang').length;
                                 return (
                                     <button onClick={() => { setActiveTab('suspended'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'suspended' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
@@ -3914,7 +3998,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole.startsWith('divisi_') || userRole === 'owner') && (() => {
+                        {(userRole.startsWith('divisi_') || userRole === 'admin_gudang' || userRole === 'owner') && (() => {
                             const suspendedCount = (initialOrders || []).filter(o => o && o.complaint_status === 'pending_gudang').length;
                             return (
                                 <button onClick={() => setActiveTab('suspended')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'suspended' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
@@ -4549,6 +4633,7 @@ export default function Dashboard({
                 show={showBorrowToolModal}
                 onClose={() => setShowBorrowToolModal(false)}
                 toolsList={toolsList}
+                prefillForm={borrowToolForm}
             />
 
             {/* MODAL KONFIRMASI PENGEMBALIAN ALAT */}
@@ -4647,6 +4732,7 @@ export default function Dashboard({
                 onClose={() => { setShowEmployeeModal(false); setSelectedEmployeeForEdit(null); }}
                 employeeToEdit={selectedEmployeeForEdit}
                 roleTitles={roleTitles}
+                userRole={userRole}
             />
 
             {/* MODAL CATAT TRANSAKSI KEUANGAN & PEMBELIAN (FINANCE & AKUNTANSI / OWNER) */}
@@ -4714,6 +4800,15 @@ export default function Dashboard({
                 scrapGlasses={scrapGlasses}
                 onRecordRawMaterialSuccess={handleRecordRawMaterialSuccess}
                 onOpenStickerModal={handleOpenStickerModal}
+            />
+
+            {/* MODAL INPUT KACA SISA POTONGAN DARI POPUP EKSEKUSI DIVISI */}
+            <ScrapPopupModal
+                show={showScrapPopupModal}
+                onClose={() => setShowScrapPopupModal(false)}
+                form={scrapPopupForm}
+                setForm={setScrapPopupForm}
+                onSubmit={handleSaveScrapFromPopup}
             />
 
             {/* MODAL LAPOR KACA CACAT / BARET */}

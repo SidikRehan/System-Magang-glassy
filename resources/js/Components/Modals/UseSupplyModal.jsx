@@ -9,8 +9,6 @@ export default function UseSupplyModal({
     onSubmit,
     onSuccess
 }) {
-    if (!show) return null;
-
     const [division, setDivision] = useState('HT (Potong)');
     const [userName, setUserName] = useState('');
     const [notes, setNotes] = useState('');
@@ -18,6 +16,8 @@ export default function UseSupplyModal({
         { supply_id: '', used_qty: 1 }
     ]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show) return null;
 
     const handleAddItem = () => {
         setItems(prev => [...prev, { supply_id: '', used_qty: 1 }]);
@@ -64,8 +64,9 @@ export default function UseSupplyModal({
         for (const it of validItems) {
             const supplyObj = suppliesList.find(s => s.id === parseInt(it.supply_id));
             const qtyNum = parseInt(it.used_qty) || 1;
-            if (supplyObj && qtyNum > supplyObj.qty) {
-                alert(`Stok "${supplyObj.name}" tidak mencukupi! Sisa stok: ${supplyObj.qty} ${supplyObj.unit}`);
+            const availQty = supplyObj ? (supplyObj.qty ?? supplyObj.stock_qty ?? 0) : 0;
+            if (supplyObj && qtyNum > availQty) {
+                alert(`Stok "${supplyObj.name}" tidak mencukupi! Sisa stok: ${availQty} ${supplyObj.unit}`);
                 return;
             }
         }
@@ -187,7 +188,8 @@ export default function UseSupplyModal({
                         <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
                             {items.map((it, idx) => {
                                 const selectedSupply = suppliesList.find(s => s.id === parseInt(it.supply_id));
-                                const isOverStock = selectedSupply && parseInt(it.used_qty) > selectedSupply.qty;
+                                const selectedSupplyAvail = selectedSupply ? (selectedSupply.qty ?? selectedSupply.stock_qty ?? 0) : 0;
+                                const isOverStock = selectedSupply && parseInt(it.used_qty) > selectedSupplyAvail;
 
                                 return (
                                     <div key={idx} className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
@@ -205,11 +207,14 @@ export default function UseSupplyModal({
                                                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-slate-800 font-medium text-xs focus:border-[#1b68b0] cursor-pointer"
                                                 >
                                                     <option value="">-- Pilih Barang Perlengkapan --</option>
-                                                    {suppliesList.map(s => (
-                                                        <option key={s.id} value={s.id} disabled={s.qty <= 0}>
-                                                            [{s.item_code}] {s.name} (Sisa Stok: {s.qty} {s.unit})
-                                                        </option>
-                                                    ))}
+                                                    {suppliesList.map(s => {
+                                                        const sQty = s.qty ?? s.stock_qty ?? 0;
+                                                        return (
+                                                            <option key={s.id} value={s.id} disabled={sQty <= 0}>
+                                                                [{s.item_code}] {s.name} (Sisa Stok: {sQty} {s.unit})
+                                                            </option>
+                                                        );
+                                                    })}
                                                 </select>
                                             </div>
 
@@ -245,7 +250,7 @@ export default function UseSupplyModal({
                                         {isOverStock && (
                                             <div className="flex items-center gap-1 text-[11px] text-rose-600 font-semibold bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
                                                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                                <span>Stok tidak cukup! Sisa stok hanya {selectedSupply.qty} {selectedSupply.unit}.</span>
+                                                <span>Stok tidak cukup! Sisa stok hanya {selectedSupplyAvail} {selectedSupply.unit}.</span>
                                             </div>
                                         )}
                                     </div>

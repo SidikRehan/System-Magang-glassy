@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { router } from '@inertiajs/react';
-import { X, Tag, Scissors, AlertTriangle, CheckCircle2, ArrowRight, Phone, MapPin, Calendar, Clock, FileText, Layers, Box, Sparkles, Plus, Minus, Edit3, Trash2, Search, RotateCcw, Info, Check, ShieldAlert, FileCheck, Layers3, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import { X, Tag, Scissors, AlertTriangle, CheckCircle2, Phone, MapPin, Calendar, Clock, FileText, Layers, Box, Sparkles, Plus, Edit3, Trash2, Search, RotateCcw, Info, Check, Loader2, ChevronDown } from 'lucide-react';
 
 function SearchableScrapSelect({
     scrapGlasses = [],
     selectedId = '',
     onSelect = () => { },
     initialGlassType = '',
-    placeholder = '🔍 Ketik untuk cari & pilih kaca sisa (kode, jenis, ukuran cm, rak)...'
+    placeholder = 'Ketik untuk cari & pilih kaca sisa (kode, jenis, ukuran cm, rak)...'
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -193,19 +193,19 @@ export default function DivisionExecutionModal({
     onOpenSketchLightbox = () => { },
     sheetGlasses = [],
     scrapGlasses = [],
-    onRecordRawMaterialSuccess = () => { },
     onOpenStickerModal = null
 }) {
-    if (!show || !selectedExecutionOrder) return null;
-
-    const orderedItems = Array.isArray(selectedExecutionOrder.items) && selectedExecutionOrder.items.length > 0
-        ? selectedExecutionOrder.items
-        : [{ glass_type: selectedExecutionOrder.glass_type || 'Kaca Cermin 5 mm polos', qty: 1 }];
+    const orderedItems = React.useMemo(() => {
+        if (Array.isArray(selectedExecutionOrder?.items) && selectedExecutionOrder.items.length > 0) {
+            return selectedExecutionOrder.items;
+        }
+        return [{ glass_type: selectedExecutionOrder?.glass_type || 'Kaca Cermin 5 mm polos', qty: 1 }];
+    }, [selectedExecutionOrder]);
 
     const uniqueGlassTypes = React.useMemo(() => {
         const map = new Map();
         orderedItems.forEach(it => {
-            const name = it.glass_type || selectedExecutionOrder.glass_type || 'Kaca Lembaran';
+            const name = it.glass_type || selectedExecutionOrder?.glass_type || 'Kaca Lembaran';
             const existing = map.get(name) || { glass_type: name, totalQty: 0, itemCount: 0 };
             existing.totalQty += (parseInt(it.qty) || 1);
             existing.itemCount += 1;
@@ -214,7 +214,7 @@ export default function DivisionExecutionModal({
         return Array.from(map.values());
     }, [orderedItems, selectedExecutionOrder]);
 
-    const initialGlassType = uniqueGlassTypes[0]?.glass_type || orderedItems[0]?.glass_type || selectedExecutionOrder.glass_type || '';
+    const initialGlassType = uniqueGlassTypes[0]?.glass_type || orderedItems[0]?.glass_type || selectedExecutionOrder?.glass_type || '';
 
     const [rawGlassType, setRawGlassType] = useState(initialGlassType);
     const [rawSheetsUsedMap, setRawSheetsUsedMap] = useState({});
@@ -400,6 +400,7 @@ export default function DivisionExecutionModal({
     // State untuk Edit / Potong Ulang Kaca Sisa di Rak
     const [showEditScrapModal, setShowEditScrapModal] = useState(false);
     const [selectedScrapToEdit, setSelectedScrapToEdit] = useState(null);
+    const [isSubmittingScrapEdit, setIsSubmittingScrapEdit] = useState(false);
     const [editScrapForm, setEditScrapForm] = useState({
         id: null,
         length_cm: '',
@@ -414,9 +415,15 @@ export default function DivisionExecutionModal({
     // Calculate recommended next division
     const computeDefaultNextDiv = React.useCallback((ord) => {
         if (!ord) return 'QC_Ready';
-        const fixedSeq = ['HT', 'GM', 'BV', 'Etsa'];
+        const fixedSeq = ['HT', 'GM', 'BV', 'ETSA', 'BOR'];
         const reqCodes = ['HT'];
-        const addC = (p) => { if (p && ['GM', 'BV', 'Etsa'].includes(p) && !reqCodes.includes(p)) reqCodes.push(p); };
+        const addC = (p) => {
+            if (!p) return;
+            const code = String(p).toUpperCase().trim();
+            if (['GM', 'BV', 'ETSA', 'BOR'].includes(code) && !reqCodes.includes(code)) {
+                reqCodes.push(code);
+            }
+        };
         if (Array.isArray(ord.processes)) ord.processes.forEach(addC);
         if (Array.isArray(ord.items)) {
             ord.items.forEach(it => { if (Array.isArray(it.processes)) it.processes.forEach(addC); });
@@ -425,7 +432,7 @@ export default function DivisionExecutionModal({
         const curKey = (ord.current_division || '').replace('divisi_', '').toUpperCase();
         const curIdx = reqCodes.indexOf(curKey);
         if (curIdx >= 0 && curIdx < reqCodes.length - 1) {
-            const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'Etsa': 'divisi_etsa' };
+            const map = { 'HT': 'divisi_ht', 'GM': 'divisi_gm', 'BV': 'divisi_bv', 'ETSA': 'divisi_etsa', 'BOR': 'divisi_bor' };
             return map[reqCodes[curIdx + 1]] || 'QC_Ready';
         }
         return 'QC_Ready';
@@ -694,6 +701,8 @@ export default function DivisionExecutionModal({
         }
     }, [selectedExecutionOrder]);
 
+    if (!show || !selectedExecutionOrder) return null;
+
     // currentStockItem is memoized at top level
 
     const handleRecordRawMaterial = (e) => {
@@ -724,7 +733,6 @@ export default function DivisionExecutionModal({
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmittingRaw(false);
-                onRecordRawMaterialSuccess(rawGlassType, usedQty);
                 updateRawSheetsForType(1, rawGlassType);
                 setRawNotes('');
             },
@@ -1818,7 +1826,7 @@ export default function DivisionExecutionModal({
                                                             <div className="bg-white border-2 border-[#1b68b0] p-3 rounded-lg space-y-2.5 animate-in fade-in">
                                                                 <div className="flex justify-between items-center text-[#1b68b0] font-bold border-b border-slate-200 pb-1 text-[11px]">
                                                                     <span>Form Koreksi/Edit Ukuran Sisa Potong ({sc.glass_type})</span>
-                                                                    <span className="text-[10px] text-amber-800 font-mono">💡 Perbaiki salah ketik dimensi</span>
+                                                                    <span className="text-[10px] text-amber-800 font-mono">Perbaiki salah ketik dimensi</span>
                                                                 </div>
                                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                                                     <div>
@@ -1896,7 +1904,7 @@ export default function DivisionExecutionModal({
                                 <div className="flex flex-wrap gap-2">
                                     {selectedExecutionOrder.raw_materials_used.map((rm, rmIdx) => (
                                         <div key={rmIdx} className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 font-mono shadow-xs text-slate-800">
-                                            <span className="text-[#1b68b0] font-bold">📄 {rm.glass_type}</span>
+                                            <span className="text-[#1b68b0] font-bold flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {rm.glass_type}</span>
                                             <span className="bg-[#70b03c]/15 text-[#70b03c] px-2 py-0.5 rounded text-[10px] font-black">
                                                 {rm.sheets_used} Lembar
                                             </span>
@@ -1940,7 +1948,7 @@ export default function DivisionExecutionModal({
                                     <div className="flex items-center gap-2">
                                         {selectedExecutionOrder.is_revised && (
                                             <span className="text-xs font-black text-amber-800 bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-300 font-mono">
-                                                🏆 SELESAI & SUDAH DIREVISI
+                                                SELESAI & SUDAH DIREVISI
                                             </span>
                                         )}
                                         <span className="text-xs font-bold text-[#70b03c] bg-[#70b03c]/10 px-4 py-2 rounded-xl border border-[#70b03c]/30 flex items-center gap-1.5 shadow-xs font-mono">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, X, ArrowRight, Layers, FileText, CheckCircle2, Loader2 } from 'lucide-react';
+import { Send, X, ArrowRight, Layers, Loader2 } from 'lucide-react';
 
 export default function DispatchModal({
     show,

@@ -12,9 +12,9 @@ export default function WaybillModal({
 }) {
     const waybillOrder = selectedWaybillOrder || order || selectedOrder;
 
-    if (!show || !waybillOrder) return null;
+    const [activeColor, setActiveColor] = useState(waybillOrder?.waybill_color || 'Putih');
 
-    const [activeColor, setActiveColor] = useState(waybillOrder.waybill_color || 'Putih');
+    if (!show || !waybillOrder) return null;
 
     const colorConfig = {
         Putih: {
@@ -49,6 +49,7 @@ export default function WaybillModal({
 
     const currentConfig = colorConfig[activeColor] || colorConfig.Putih;
     const isLunas = waybillOrder.payment_status === 'Lunas';
+    const isPickupTask = String(waybillOrder.spo_number || '').startsWith('SPB-') || String(waybillOrder.glass_type || '').startsWith('[AMBIL BARANG]');
     const remainingCOD = Math.max(0, Number(waybillOrder.total_price || 0) - Number(waybillOrder.paid_amount || 0));
     const itemsList = Array.isArray(waybillOrder.items) && waybillOrder.items.length > 0
         ? waybillOrder.items
@@ -156,24 +157,24 @@ export default function WaybillModal({
                         </div>
                         <div className="text-right">
                             <span className={`${currentConfig.badgeBg} px-3 py-1 rounded-md text-xs font-bold tracking-widest inline-block uppercase mb-1`}>
-                                SURAT JALAN ({activeColor.toUpperCase()})
+                                {isPickupTask ? 'SURAT PERINTAH PENGAMBILAN BARANG' : `SURAT JALAN (${activeColor.toUpperCase()})`}
                             </span>
-                            <div className="text-xs font-mono font-bold">No: SJ-{waybillOrder.spo_number || waybillOrder.id}</div>
-                            <div className="text-[11px] text-slate-700">Tgl Kirim: {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                            <div className="text-xs font-mono font-bold">No: {isPickupTask ? waybillOrder.spo_number : `SJ-${waybillOrder.spo_number || waybillOrder.id}`}</div>
+                            <div className="text-[11px] text-slate-700">Tgl Tugas: {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                         </div>
                     </div>
 
                     <div className="text-center font-bold text-xs py-1.5 rounded-lg border border-slate-300 bg-white/70 uppercase tracking-wide">
-                        {currentConfig.title}
+                        {isPickupTask ? 'SURAT PERINTAH JALAN — TUGAS PENGAMBILAN BARANG / MATERIAL ARMADA' : currentConfig.title}
                     </div>
 
                     {/* DETAIL TUJUAN & KONSUMEN */}
                     <div className="grid grid-cols-2 gap-4 text-xs bg-white/90 p-3.5 rounded-xl border border-slate-300">
                         <div className="space-y-1">
-                            <div><strong>No. SPO:</strong> <span className="font-mono text-[#1b68b0] font-bold">{waybillOrder.spo_number || waybillOrder.id}</span></div>
-                            <div><strong>Penerima / Customer:</strong> <span className="font-bold">{waybillOrder.customer_name}</span></div>
+                            <div><strong>{isPickupTask ? 'No. Surat Perintah:' : 'No. SPO:'}</strong> <span className="font-mono text-[#1b68b0] font-bold">{waybillOrder.spo_number || waybillOrder.id}</span></div>
+                            <div><strong>{isPickupTask ? 'Tempat Pengambilan / Supplier:' : 'Penerima / Customer:'}</strong> <span className="font-bold">{waybillOrder.customer_name}</span></div>
                             <div><strong>No. Telepon:</strong> {waybillOrder.customer_phone}</div>
-                            <div><strong>Alamat Tujuan:</strong> {waybillOrder.customer_address || '-'}</div>
+                            <div><strong>{isPickupTask ? 'Alamat Pengambilan:' : 'Alamat Tujuan:'}</strong> {waybillOrder.customer_address || '-'}</div>
                         </div>
                         <div className="space-y-1 border-l border-slate-300 pl-3">
                             <div><strong>Pengirim:</strong> CV Cahya Karunia Jaya (SYP Glass)</div>
@@ -212,9 +213,15 @@ export default function WaybillModal({
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold">{it.length_cm} x {it.width_cm} cm</td>
-                                        <td className="border border-slate-300 p-2 text-center font-mono">{it.thickness_mm || 5} mm</td>
-                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold text-slate-950">{it.qty || 1} Lembar</td>
+                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold">
+                                            {Number(it.length_cm) > 0 ? `${it.length_cm} x ${it.width_cm} cm` : '-'}
+                                        </td>
+                                        <td className="border border-slate-300 p-2 text-center font-mono">
+                                            {Number(it.thickness_mm) > 0 ? `${it.thickness_mm} mm` : '-'}
+                                        </td>
+                                        <td className="border border-slate-300 p-2 text-center font-mono font-bold text-slate-950">
+                                            {it.qty || 1} {it.unit || 'Lembar'}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

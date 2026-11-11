@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
-    Archive, Plus, Search, CheckCircle2, AlertTriangle, 
-    ClipboardList, Send, FileText, Check, Clock, 
+    Archive, Plus, Search, 
+    ClipboardList, Send, Check, 
     Box, MessageSquare, Package, User, Calendar,
     Edit, Trash2, X
 } from 'lucide-react';
@@ -216,8 +216,8 @@ export default function WarehouseSuppliesTab({
                                                         description: `Dokumentasi visual barang habis pakai operasional pabrik (${s.category || 'Perlengkapan'}). Digunakan untuk verifikasi stok fisik dan pengambilan barang di ${s.location || 'gudang'}.`,
                                                         itemCode: s.item_code,
                                                         category: s.category,
-                                                        location: s.location,
-                                                        stockQty: `${s.stock_qty} ${s.unit || 'unit'}`,
+                                                        location: s.location || 'Gudang Utama',
+                                                        stockQty: `${s.stock_qty ?? s.qty ?? 0} ${s.unit || 'unit'}`,
                                                     })}
                                                     className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
                                                     title="Klik untuk memperbesar foto sample perlengkapan"
@@ -234,9 +234,9 @@ export default function WarehouseSuppliesTab({
                                         <td className="p-3 font-bold text-[#242222]">{s.name}</td>
                                         <td className="p-3 text-slate-500">{s.category}</td>
                                         <td className="p-3 text-center font-extrabold text-[#242222]">
-                                            {s.stock_qty} <span className="text-[10px] text-slate-400 font-normal">{s.unit}</span>
+                                            {s.stock_qty ?? s.qty ?? 0} <span className="text-[10px] text-slate-400 font-normal">{s.unit}</span>
                                         </td>
-                                        <td className="p-3 text-slate-500">{s.location}</td>
+                                        <td className="p-3 text-slate-500">{s.location || 'Gudang Utama'}</td>
                                         <td className="p-3 text-center">
                                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${s.status === 'Aman' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : s.status === 'Menipis' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
                                                 {s.status}
@@ -386,39 +386,39 @@ export default function WarehouseSuppliesTab({
                             <tbody className="divide-y divide-slate-100">
                                 {supplyRestockRequests.map(req => (
                                     <tr key={req.id} className="hover:bg-slate-50/70 transition">
-                                        <td className="p-3 text-slate-500">{req.requested_at}</td>
+                                        <td className="p-3 text-slate-500">{req.requested_at || req.request_date || '-'}</td>
                                         <td className="p-3">
                                             <div className="font-bold text-[#242222]">{req.item_name}</div>
-                                            <div className="text-[10px] font-mono text-[#1b68b0]">{req.item_code} (Sisa: {req.current_stock} {req.unit})</div>
+                                            <div className="text-[10px] font-mono text-[#1b68b0]">{req.item_code} (Sisa: {req.current_stock ?? 0} {req.unit})</div>
                                         </td>
                                         <td className="p-3 text-center font-black text-amber-700">
                                             +{req.request_qty} {req.unit}
                                         </td>
                                         <td className="p-3">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${req.priority.includes('Mendesak') ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-700'}`}>
-                                                {req.priority}
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${String(req.priority || 'Biasa').includes('Mendesak') || String(req.priority || '').includes('Darurat') ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-700'}`}>
+                                                {req.priority || 'Mendesak / Stok Menipis'}
                                             </span>
                                         </td>
-                                        <td className="p-3 text-slate-700">{req.requested_by}</td>
+                                        <td className="p-3 text-slate-700">{req.requested_by || req.requester_name || 'Admin Gudang'}</td>
                                         <td className="p-3 text-slate-500 italic max-w-xs truncate">{req.notes || '-'}</td>
                                         <td className="p-3 text-center">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${req.status === 'Menunggu Persetujuan Admin Toko' ? 'bg-amber-50 text-amber-700 border border-amber-200' : req.status === 'Disetujui & Dipesan' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${String(req.status || '').startsWith('Menunggu') ? 'bg-amber-50 text-amber-700 border border-amber-200' : String(req.status || '').startsWith('Disetujui') ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
                                                 {req.status}
                                             </span>
                                         </td>
                                         <td className="p-3 text-right">
                                             <div className="flex justify-end gap-1.5">
-                                                {req.status === 'Menunggu Persetujuan Admin Toko' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                                                {String(req.status || '').startsWith('Menunggu') && (userRole === 'admin_toko' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => handleApproveRestockRequest(req.id)}
                                                         className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer flex items-center gap-1"
-                                                        title="Setujui dan pesan barang dari supplier"
+                                                        title="Setujui dan tambahkan stok ke gudang"
                                                     >
                                                         <Check className="w-3.5 h-3.5" /> Setujui
                                                     </button>
                                                 )}
 
-                                                {req.status === 'Menunggu Persetujuan Admin Toko' && (userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                {String(req.status || '').startsWith('Menunggu') && (userRole === 'admin_gudang' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => {
                                                             if (confirm(`Batalkan pengajuan restok "${req.item_name}"?`)) {
@@ -432,7 +432,7 @@ export default function WarehouseSuppliesTab({
                                                     </button>
                                                 )}
 
-                                                {req.status === 'Disetujui & Dipesan' && (userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                                                {String(req.status || '').startsWith('Disetujui') && (userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => handleCompleteRestockRequest(req)}
                                                         className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer flex items-center gap-1"
