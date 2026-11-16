@@ -238,6 +238,8 @@ export default function DivisionExecutionModal({
 
         // 3. Best Sub-word Match / Scoring
         const typeWords = lowerType.replace(/kaca/g, '').replace(/mm/g, ' mm ').split(/[\s,]+/).filter(w => w.length > 0);
+        const orderThickMatch = lowerType.match(/(\d+(?:[.,]\d+)?)\s*mm/);
+        const orderThickNum = orderThickMatch ? orderThickMatch[1].replace(',', '.') : null;
         let bestMatch = null;
         let highestScore = 0;
 
@@ -250,6 +252,13 @@ export default function DivisionExecutionModal({
             for (const w of typeWords) {
                 if (w === 'mm' || w === 'm') continue;
                 if (gLower.includes(w)) score += 2;
+            }
+
+            // Penalti jika ketebalan (mm) berbeda antara nama order dan stok master
+            const gThickMatch = gLower.match(/(\d+(?:[.,]\d+)?)\s*mm/);
+            const gThickNum = gThickMatch ? gThickMatch[1].replace(',', '.') : null;
+            if (orderThickNum && gThickNum && orderThickNum !== gThickNum) {
+                penalty += 6;
             }
 
             // Penalti jika master stok mengandung kata khusus (warna/tipe) yang TIDAK ada di nama order
@@ -289,9 +298,9 @@ export default function DivisionExecutionModal({
     }, [rawGlassType, findStockItemForType]);
 
     const getRawSheetsForType = (gt = rawGlassType) => {
-        if (!gt) return 1;
+        if (!gt) return 0;
         const val = rawSheetsUsedMap[gt];
-        let num = val !== undefined && val !== null ? val : 1;
+        let num = val !== undefined && val !== null ? val : 0;
         if (num === '') return '';
 
         const stockItem = gt === rawGlassType ? currentStockItem : findStockItemForType(gt);
@@ -315,16 +324,15 @@ export default function DivisionExecutionModal({
         }
 
         let num = parseInt(val, 10);
-        if (isNaN(num)) num = 1;
+        if (isNaN(num)) num = 0;
 
         const stockItem = gt === rawGlassType ? currentStockItem : findStockItemForType(gt);
         const maxStock = stockItem ? stockItem.qty : null;
 
         if (maxStock !== null && maxStock !== undefined) {
-            const minAllowed = maxStock === 0 ? 0 : 1;
-            num = Math.max(minAllowed, Math.min(num, maxStock));
+            num = Math.max(0, Math.min(num, maxStock));
         } else {
-            num = Math.max(1, num);
+            num = Math.max(0, num);
         }
 
         setRawSheetsUsedMap(prev => ({
@@ -343,52 +351,51 @@ export default function DivisionExecutionModal({
     const [isSubmittingSelfScrap, setIsSubmittingSelfScrap] = useState(false);
     const [isSubmittingFinishModal, setIsSubmittingFinishModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showConfirmNoRawModal, setShowConfirmNoRawModal] = useState(false);
+
+    const executeFinishJob = () => {
+        if (!selectedExecutionOrder || !onFinishJobSubmit) return;
+        const actualTargetDiv = userRole === 'owner' ? selectedNextDiv : computeDefaultNextDiv(selectedExecutionOrder);
+        setShowConfirmNoRawModal(false);
+        setIsSubmittingFinishModal(true);
+        onFinishJobSubmit(selectedExecutionOrder.id, actualTargetDiv, {
+            onFinish: () => setIsSubmittingFinishModal(false)
+        });
+    };
 
     const handleFinishModalSubmit = () => {
         if (!selectedExecutionOrder || !onFinishJobSubmit) return;
 
         const currentDiv = selectedExecutionOrder.current_division || '';
         const hasLoggedRaw = Array.isArray(selectedExecutionOrder.raw_materials_used) && selectedExecutionOrder.raw_materials_used.length > 0;
-        const hasLoggedScrap = selectedExecutionOrder.used_scrap_rak && String(selectedExecutionOrder.used_scrap_rak).includes('TERPAKAI DIVISI HT');
+        const scrapVal = selectedExecutionOrder.used_scrap_rak ? String(selectedExecutionOrder.used_scrap_rak).trim() : '';
+        const hasAssignedScrap = scrapVal !== '' && scrapVal !== '-' && !scrapVal.includes('DITOLAK');
+        const hasLoggedScrap = scrapVal.includes('TERPAKAI DIVISI HT') || hasAssignedScrap;
 
-        if (currentDiv === 'divisi_ht' && !hasLoggedRaw && !hasLoggedScrap) {
+        if (currentDiv === 'divisi_ht') {
+            // Cek apakah ada input jumlah lembaran > 0 yang belum diklik tombol "+ Catat Pemakaian Bahan"
+            const unrecordedEntry = Object.entries(rawSheetsUsedMap).find(([, qtyVal]) => (parseInt(qtyVal, 10) || 0) > 0);
             const currentQtyVal = getRawSheetsForType();
-            const usedQty = parseInt(currentQtyVal) || 0;
+            const usedQty = parseInt(currentQtyVal, 10) || 0;
 
-            if (rawGlassType && usedQty >= 1) {
-                if (currentStockItem && usedQty > currentStockItem.qty) {
-                    alert(`❌ PEMAKAIAN MELEBIHI STOK AKTIF!\n\nStok kaca "${currentStockItem.name}" di Gudang saat ini hanya tersisa ${currentStockItem.qty} ${currentStockItem.unit}.\n\nPemakaian tidak dapat dicatat otomatis!`);
-                    return;
-                }
+            if (usedQty > 0 || unrecordedEntry) {
+                const pendingType = usedQty > 0 ? rawGlassType : unrecordedEntry[0];
+                const pendingQty = usedQty > 0 ? usedQty : parseInt(unrecordedEntry[1], 10);
+                alert(
+                    `⚠️ PEMAKAIAN BAHAN BELUM DICATAT!\n\n` +
+                    `Anda telah mengisi pemakaian bahan "${pendingType}" sebanyak ${pendingQty} Lembar, namun belum mengklik tombol "+ Catat Pemakaian Bahan".\n\n` +
+                    `Stok bahan HANYA berkurang setelah Anda mengklik tombol hijau "+ Catat Pemakaian Bahan". Silakan klik tombol tersebut terlebih dahulu (atau kembalikan angka ke 0 jika tidak jadi memakai bahan tersebut).`
+                );
+                return;
+            }
 
-                setIsSubmittingFinishModal(true);
-                const finalGlassType = currentStockItem ? currentStockItem.name : rawGlassType;
-
-                const actualTargetDiv = userRole === 'owner' ? selectedNextDiv : computeDefaultNextDiv(selectedExecutionOrder);
-                router.post(route('orders.raw_material', selectedExecutionOrder.id), {
-                    glass_type: finalGlassType,
-                    sheets_used: usedQty,
-                    notes: rawNotes || 'Disimpan otomatis saat klik Selesai Pengerjaan'
-                }, {
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        onFinishJobSubmit(selectedExecutionOrder.id, actualTargetDiv, {
-                            onFinish: () => setIsSubmittingFinishModal(false)
-                        });
-                    },
-                    onError: () => {
-                        setIsSubmittingFinishModal(false);
-                    }
-                });
+            if (!hasLoggedRaw && !hasLoggedScrap) {
+                setShowConfirmNoRawModal(true);
                 return;
             }
         }
 
-        const actualTargetDiv = userRole === 'owner' ? selectedNextDiv : computeDefaultNextDiv(selectedExecutionOrder);
-        setIsSubmittingFinishModal(true);
-        onFinishJobSubmit(selectedExecutionOrder.id, actualTargetDiv, {
-            onFinish: () => setIsSubmittingFinishModal(false)
-        });
+        executeFinishJob();
     };
     const [rejectReasonType, setRejectReasonType] = useState('baret_cacat');
     const [rejectNotes, setRejectNotes] = useState('');
@@ -708,9 +715,9 @@ export default function DivisionExecutionModal({
     const handleRecordRawMaterial = (e) => {
         e.preventDefault();
         const currentQtyVal = getRawSheetsForType();
-        const usedQty = parseInt(currentQtyVal) || 0;
+        const usedQty = parseInt(currentQtyVal, 10) || 0;
         if (!rawGlassType || usedQty < 1) {
-            alert('⚠️ Mohon pilih bahan kaca dan tentukan jumlah lembaran (minimal 1 lembar)!');
+            alert('⚠️ Silakan isi jumlah lembaran bahan kaca yang dipakai terlebih dahulu (minimal 1 lembar) sebelum mengklik "+ Catat Pemakaian Bahan"!');
             return;
         }
 
@@ -733,7 +740,7 @@ export default function DivisionExecutionModal({
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmittingRaw(false);
-                updateRawSheetsForType(1, rawGlassType);
+                updateRawSheetsForType(0, rawGlassType);
                 setRawNotes('');
             },
             onError: () => {
@@ -1443,7 +1450,7 @@ export default function DivisionExecutionModal({
                                                         }`}>
                                                         Total: {gt.totalQty} Pcs ({gt.itemCount} Ukuran)
                                                     </span>
-                                                    {typedQty !== undefined && typedQty !== null && typedQty !== '' && (
+                                                    {typedQty !== undefined && typedQty !== null && typedQty !== '' && parseInt(typedQty, 10) > 0 && (
                                                         <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md shadow-xs ${isSelected ? 'bg-white text-[#1b68b0]' : 'bg-[#1b68b0] text-white'
                                                             }`}>
                                                             {typedQty} Lembar
@@ -1463,7 +1470,7 @@ export default function DivisionExecutionModal({
                                             <span>Input Jumlah Lembar Kaca Bahan Yang Dipakai ({rawGlassType}):</span>
                                         </label>
                                         <span className="text-[10px] text-amber-800 font-mono font-bold">
-                                            💡 Masukkan angka pemakaian khusus bahan ini (sekian lembar)
+                                            Isi jumlah lembar lalu klik tombol + Catat Pemakaian Bahan agar stok berkurang
                                         </span>
                                     </div>
 
@@ -1473,10 +1480,10 @@ export default function DivisionExecutionModal({
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    const cur = parseInt(getRawSheetsForType() || 0);
+                                                    const cur = parseInt(getRawSheetsForType() || 0, 10);
                                                     updateRawSheetsForType(cur - 1);
                                                 }}
-                                                disabled={(parseInt(getRawSheetsForType()) || 0) <= 0}
+                                                disabled={(parseInt(getRawSheetsForType(), 10) || 0) <= 0}
                                                 className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-200 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                 title="Kurangi 1 Lembar"
                                             >
@@ -1503,12 +1510,12 @@ export default function DivisionExecutionModal({
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    const cur = parseInt(getRawSheetsForType()) || 0;
+                                                    const cur = parseInt(getRawSheetsForType(), 10) || 0;
                                                     updateRawSheetsForType(cur + 1);
                                                 }}
-                                                disabled={currentStockItem ? (parseInt(getRawSheetsForType()) || 0) >= currentStockItem.qty : false}
+                                                disabled={currentStockItem ? (parseInt(getRawSheetsForType(), 10) || 0) >= currentStockItem.qty : false}
                                                 className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg font-black flex items-center justify-center cursor-pointer border border-slate-200 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
-                                                title={currentStockItem && (parseInt(getRawSheetsForType()) || 0) >= currentStockItem.qty ? `Stok Maksimal Terpenuhi (${currentStockItem.qty} Lembar)` : "Tambah 1 Lembar"}
+                                                title={currentStockItem && (parseInt(getRawSheetsForType(), 10) || 0) >= currentStockItem.qty ? `Stok Maksimal Terpenuhi (${currentStockItem.qty} Lembar)` : "Tambah 1 Lembar"}
                                             >
                                                 +
                                             </button>
@@ -1517,19 +1524,23 @@ export default function DivisionExecutionModal({
                                         {/* SUBMIT BUTTON */}
                                         <button
                                             type="submit"
-                                            disabled={isSubmittingRaw || (currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty)}
-                                            className={`ml-auto font-extrabold px-5 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 h-[42px] ${currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty
+                                            disabled={isSubmittingRaw || (currentStockItem && (parseInt(getRawSheetsForType(), 10) || 0) > currentStockItem.qty)}
+                                            className={`ml-auto font-extrabold px-5 py-2.5 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 h-[42px] ${currentStockItem && (parseInt(getRawSheetsForType(), 10) || 0) > currentStockItem.qty
                                                     ? 'bg-rose-100 text-rose-800 border border-rose-300 cursor-not-allowed opacity-90'
-                                                    : 'bg-[#70b03c] hover:bg-[#5f9733] text-white border border-[#5f9733] cursor-pointer disabled:opacity-50'
+                                                    : (parseInt(getRawSheetsForType(), 10) || 0) <= 0
+                                                        ? 'bg-slate-200 hover:bg-slate-300 text-slate-600 border border-slate-300 cursor-pointer'
+                                                        : 'bg-[#70b03c] hover:bg-[#5f9733] text-white border border-[#5f9733] cursor-pointer disabled:opacity-50'
                                                 }`}
                                         >
                                             <Plus className="w-4 h-4" />
                                             <span>
                                                 {isSubmittingRaw
                                                     ? 'Menyimpan...'
-                                                    : (currentStockItem && (parseInt(getRawSheetsForType()) || 0) > currentStockItem.qty)
+                                                    : (currentStockItem && (parseInt(getRawSheetsForType(), 10) || 0) > currentStockItem.qty)
                                                         ? `Stok Tidak Cukup (Sisa ${currentStockItem.qty} Lembar)`
-                                                        : `+ Catat (${parseInt(getRawSheetsForType() || 0)} Lembar ${rawGlassType})`
+                                                        : (parseInt(getRawSheetsForType(), 10) || 0) <= 0
+                                                            ? '+ Catat Pemakaian Bahan'
+                                                            : `+ Catat Pemakaian Bahan (${parseInt(getRawSheetsForType() || 0, 10)} Lembar ${rawGlassType})`
                                                 }
                                             </span>
                                         </button>
@@ -1538,7 +1549,7 @@ export default function DivisionExecutionModal({
 
                                 {/* LIVE INDIKATOR SISA STOK MASTER GUDANG */}
                                 {currentStockItem ? (
-                                    <div className={`text-[11px] border rounded-xl p-3 font-mono flex flex-wrap items-center justify-between gap-2.5 ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 0) >= 0
+                                    <div className={`text-[11px] border rounded-xl p-3 font-mono flex flex-wrap items-center justify-between gap-2.5 ${currentStockItem.qty - (parseInt(rawSheetsUsed, 10) || 0) >= 0
                                             ? 'bg-white border-slate-200 text-slate-800 shadow-xs'
                                             : 'bg-rose-50 border-2 border-rose-300 text-rose-800 shadow-xs'
                                         }`}>
@@ -1550,14 +1561,20 @@ export default function DivisionExecutionModal({
                                                 Sisa {currentStockItem.qty} {currentStockItem.unit}
                                             </span>
                                         </span>
-                                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 0) >= 0
-                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                                : 'bg-rose-600 text-white border border-rose-700 uppercase tracking-wide'
-                                            }`}>
-                                            {currentStockItem.qty - (parseInt(rawSheetsUsed) || 0) >= 0
-                                                ? `Sisa Stok Setelah Dipotong: ${currentStockItem.qty - (parseInt(rawSheetsUsed) || 0)} ${currentStockItem.unit}`
-                                                : `STOK TIDAK CUKUP! Stok (${currentStockItem.qty} Lembar) < Pemakaian (${parseInt(rawSheetsUsed) || 0} Lembar)`}
-                                        </span>
+                                        {(parseInt(rawSheetsUsed, 10) || 0) <= 0 ? (
+                                            <span className="px-3 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                                Stok Aktif Saat Ini: {currentStockItem.qty} {currentStockItem.unit} (Belum Dikurangi)
+                                            </span>
+                                        ) : (
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${currentStockItem.qty - (parseInt(rawSheetsUsed, 10) || 0) >= 0
+                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                    : 'bg-rose-600 text-white border border-rose-700 uppercase tracking-wide'
+                                                }`}>
+                                                {currentStockItem.qty - (parseInt(rawSheetsUsed, 10) || 0) >= 0
+                                                    ? `Estimasi Sisa Setelah Dicatat: ${currentStockItem.qty - (parseInt(rawSheetsUsed, 10) || 0)} ${currentStockItem.unit}`
+                                                    : `STOK TIDAK CUKUP! Stok (${currentStockItem.qty} Lembar) < Pemakaian (${parseInt(rawSheetsUsed, 10) || 0} Lembar)`}
+                                            </span>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-xl font-mono flex items-center gap-2">
@@ -2305,6 +2322,66 @@ export default function DivisionExecutionModal({
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* MODAL POPUP KONFIRMASI SELESAI TANPA PEMAKAIAN BAHAN LEMBARAN BARU */}
+                {showConfirmNoRawModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+                        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto text-slate-800">
+                            <div className="flex justify-between items-start border-b border-slate-200 pb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0] shrink-0">
+                                        <AlertTriangle className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-sm text-[#242222]">
+                                            Konfirmasi Pemakaian Bahan
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500">
+                                            Order SPO #{selectedExecutionOrder.spo_number}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmNoRawModal(false)}
+                                    className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1 transition cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3 text-xs">
+                                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-amber-900 space-y-1.5">
+                                    <p className="font-bold text-xs text-[#242222]">
+                                        Apakah Anda tidak menggunakan bahan lembaran baru pada orderan ini?
+                                    </p>
+                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                        Orderan ini belum memiliki catatan pemakaian bahan kaca lembaran baru. Jika klik <strong>Ya, Selesai Tanpa Bahan Baru</strong>, maka orderan akan diselesaikan dan diteruskan tanpa mengurangi stok bahan lembaran baru.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 text-xs">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmNoRawModal(false)}
+                                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer"
+                                >
+                                    Batal (Catat Bahan Dulu)
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isSubmittingFinishModal}
+                                    onClick={executeFinishJob}
+                                    className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span>Ya, Selesai Tanpa Bahan Baru</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wrench, X, Check } from 'lucide-react';
+import { Wrench, X, Send, Calculator, Store } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 export default function AddToolModal({
@@ -11,6 +11,9 @@ export default function AddToolModal({
         name: '',
         category: 'Mesin Bor & Potong',
         total_qty: 1,
+        estimated_price: 250000,
+        supplier_name: 'Toko Teknik & Mesin Industri',
+        supplier_phone: '',
         condition: 'Baik',
         location: 'Rak Utama',
         notes: ''
@@ -20,6 +23,8 @@ export default function AddToolModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!show) return null;
+
+    const estimatedTotal = (parseInt(form.total_qty) || 0) * (parseFloat(form.estimated_price) || 0);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -32,7 +37,7 @@ export default function AddToolModal({
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.name) {
-            alert('Masukkan nama alat / mesin!');
+            alert('Masukkan nama alat / mesin yang ingin diajukan!');
             return;
         }
 
@@ -41,6 +46,9 @@ export default function AddToolModal({
         formData.append('name', form.name);
         formData.append('category', form.category);
         formData.append('total_qty', form.total_qty);
+        formData.append('estimated_price', form.estimated_price || 0);
+        formData.append('supplier_name', form.supplier_name || 'Toko Teknik & Mesin Industri');
+        formData.append('supplier_phone', form.supplier_phone || '');
         formData.append('condition', form.condition);
         formData.append('location', form.location);
         formData.append('notes', form.notes || '');
@@ -71,9 +79,9 @@ export default function AddToolModal({
                         </div>
                         <div>
                             <h3 className="font-bold text-[#242222] text-base">
-                                Tambah Alat Penunjang / Mesin Baru
+                                Ajukan Pembelian Alat / Mesin Baru ke Finance
                             </h3>
-                            <p className="text-xs text-slate-500 font-mono">Registrasi mesin potong, bor, atau handtool ke inventaris</p>
+                            <p className="text-xs text-slate-500 font-mono">Kirim pengajuan pembelian alat penunjang baru ke bagian Finance</p>
                         </div>
                     </div>
                     <button 
@@ -103,7 +111,7 @@ export default function AddToolModal({
                     </div>
 
                     <div>
-                        <label className="text-slate-700 block mb-1 font-semibold">Nama Alat / Mesin Penunjang:*</label>
+                        <label className="text-slate-700 block mb-1 font-semibold">Nama Alat / Mesin yang Diajukan:*</label>
                         <input
                             type="text"
                             required
@@ -114,67 +122,107 @@ export default function AddToolModal({
                         />
                     </div>
 
-                    <div>
-                        <label className="text-slate-700 block mb-1 font-semibold">Foto Contoh Alat / Mesin (Opsional):</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 text-xs focus:border-[#1b68b0] cursor-pointer"
-                        />
-                        {imagePreview && (
-                            <div className="mt-2 relative w-24 h-24 border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="text-slate-700 block mb-1 font-semibold">Total Jumlah Unit:*</label>
+                            <label className="text-slate-700 block mb-1 font-bold">Jumlah Unit Diajukan:*</label>
                             <input
                                 type="number"
                                 min="1"
                                 required
                                 value={form.total_qty}
                                 onChange={e => setForm({ ...form, total_qty: e.target.value })}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#1b68b0] font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                             />
                         </div>
                         <div>
-                            <label className="text-slate-700 block mb-1 font-semibold">Kondisi Alat Awal:</label>
-                            <select
-                                value={form.condition}
-                                onChange={e => setForm({ ...form, condition: e.target.value })}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                            >
-                                <option value="Baik">Baik & Siap Pakai</option>
-                                <option value="Perlu Servis">Perlu Servis</option>
-                                <option value="Rusak">Rusak</option>
-                            </select>
+                            <label className="text-slate-700 block mb-1 font-bold">Estimasi Harga Satuan (Rp):</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={form.estimated_price}
+                                onChange={e => setForm({ ...form, estimated_price: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
+                            />
                         </div>
                     </div>
 
-                    <div>
-                        <label className="text-slate-700 block mb-1 font-semibold">Lokasi Penyimpanan / Rak Storage:</label>
-                        <input
-                            type="text"
-                            placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
-                            value={form.location}
-                            onChange={e => setForm({ ...form, location: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                        />
+                    <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[#1b68b0] font-bold">
+                            <Calculator className="w-4 h-4 shrink-0" />
+                            <span>Estimasi Total Anggaran Pembelian Alat:</span>
+                        </div>
+                        <span className="font-mono font-black text-sm text-[#1b68b0]">
+                            Rp {Number(estimatedTotal).toLocaleString('id-ID')}
+                        </span>
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-bold flex items-center gap-1">
+                                <Store className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                <span>Toko / Supplier Tujuan:</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Contoh: Toko Teknik & Mesin Industri"
+                                value={form.supplier_name}
+                                onChange={e => setForm({ ...form, supplier_name: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-bold">No. WhatsApp Supplier (Opsional):</label>
+                            <input
+                                type="text"
+                                placeholder="Contoh: 6281234567890"
+                                value={form.supplier_phone}
+                                onChange={e => setForm({ ...form, supplier_phone: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-semibold">Rencana Lokasi Penyimpanan:</label>
+                            <input
+                                type="text"
+                                placeholder="Contoh: Rak Alat A1 / Gudang Belakang"
+                                value={form.location}
+                                onChange={e => setForm({ ...form, location: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-semibold">Foto Contoh Alat (Opsional):</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 text-xs focus:border-[#1b68b0] cursor-pointer"
+                            />
+                        </div>
+                    </div>
+                    {imagePreview && (
+                        <div className="relative w-24 h-24 border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                            <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                    )}
+
                     <div>
-                        <label className="text-slate-700 block mb-1 font-semibold">Catatan / Keterangan (Opsional):</label>
+                        <label className="text-slate-700 block mb-1 font-semibold">Alasan Pengajuan / Spesifikasi Alat (Opsional):</label>
                         <textarea
                             rows="2"
-                            placeholder="Catatan nomor seri, kelengkapan, dll."
+                            placeholder="Contoh: Penambahan unit bor kaca untuk mempercepat antrean divisi bor."
                             value={form.notes}
                             onChange={e => setForm({ ...form, notes: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                         />
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl text-[11px] text-amber-900">
+                        <span className="font-bold block mb-0.5">Alur Persetujuan & Pembelian Finance:</span>
+                        <p>Pengajuan alat baru ini otomatis masuk ke menu <strong>Ajuan Restok & Belanja</strong> di bagian Finance. Setelah Finance memesan ke supplier dan mengunggah <strong>Nota Bukti Pembayaran</strong>, stok alat ini otomatis aktif dan siap dipinjam.</p>
                     </div>
 
                     <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
@@ -188,10 +236,10 @@ export default function AddToolModal({
                         <button 
                             type="submit" 
                             disabled={isSubmitting}
-                            className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer disabled:opacity-50"
+                            className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer disabled:opacity-50"
                         >
-                            <Check className="w-4 h-4" />
-                            <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Alat'}</span>
+                            <Send className="w-4 h-4" />
+                            <span>{isSubmitting ? 'Mengirim Pengajuan...' : 'Kirim Pengajuan ke Finance'}</span>
                         </button>
                     </div>
                 </form>

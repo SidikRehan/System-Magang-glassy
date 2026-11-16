@@ -15,6 +15,8 @@ class ToolBorrow extends Model
         'borrow_date' => 'datetime',
         'return_date' => 'datetime',
         'qty' => 'integer',
+        'damaged_qty' => 'integer',
+        'lost_qty' => 'integer',
     ];
 
     public function tool()

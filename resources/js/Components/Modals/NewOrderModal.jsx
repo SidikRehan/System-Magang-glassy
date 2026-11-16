@@ -20,7 +20,8 @@ import {
     Loader2,
     Building2,
     Scissors,
-    Search
+    Search,
+    Camera
 } from 'lucide-react';
 import SearchableSelect from '@/Components/SearchableSelect';
 
@@ -74,6 +75,13 @@ export default function NewOrderModal({
 }) {
     const [attemptedSubmit, setAttemptedSubmit] = React.useState(false);
     const [shakeKey, setShakeKey] = React.useState(0);
+    const [dpProofPreview, setDpProofPreview] = React.useState(null);
+
+    React.useEffect(() => {
+        if (!show) {
+            setDpProofPreview(null);
+        }
+    }, [show]);
 
     // Scrap Glass Picker State
     const [showScrapPickerModal, setShowScrapPickerModal] = React.useState(false);
@@ -1408,6 +1416,49 @@ export default function NewOrderModal({
                                             <span className="font-mono font-black text-emerald-800 text-base">
                                                 Rp {kembalian.toLocaleString()}
                                             </span>
+                                        </div>
+                                    )}
+
+                                    {/* UPLOAD BUKTI PEMBAYARAN DP / AWAL CUSTOMER */}
+                                    {!orderForm.is_company_use && paid > 0 && (
+                                        <div className="bg-blue-50/70 border border-blue-200 p-3.5 rounded-xl space-y-2.5 text-xs">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <label className="font-bold text-[#1b68b0] flex items-center gap-1.5">
+                                                    <Camera className="w-4 h-4 text-[#1b68b0]" />
+                                                    <span>Upload Foto Bukti Pembayaran {sisa === 0 ? 'Lunas' : 'DP'} Customer (Struk / Transfer / Nota)</span>
+                                                </label>
+                                                <span className="text-[10px] bg-blue-100 text-[#1b68b0] font-bold px-2 py-0.5 rounded-full border border-blue-300">
+                                                    ARSIP BUKTI DP
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        setOrderForm('dp_proof', file);
+                                                        setDpProofPreview(URL.createObjectURL(file));
+                                                    }
+                                                }}
+                                                className="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#1b68b0] file:text-white hover:file:bg-[#15528c] cursor-pointer"
+                                            />
+                                            {dpProofPreview && (
+                                                <div className="relative rounded-xl overflow-hidden border border-slate-300 max-h-44 bg-white p-1">
+                                                    <img src={dpProofPreview} alt="Bukti Pembayaran DP" className="w-full h-40 object-contain mx-auto" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setOrderForm('dp_proof', null);
+                                                            setDpProofPreview(null);
+                                                        }}
+                                                        className="absolute top-2 right-2 bg-rose-600 text-white p-1 rounded-lg shadow cursor-pointer hover:bg-rose-700"
+                                                        title="Hapus foto bukti DP"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

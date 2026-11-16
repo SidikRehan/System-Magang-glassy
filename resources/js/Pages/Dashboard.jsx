@@ -3,7 +3,7 @@ import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import {
     BarChart3, FileText, Truck, Sliders, Boxes, Building2,
     Plug, Archive, Wrench, Users, CreditCard, Search,
-    LogOut, Menu, X, AlertTriangle, Check, PauseCircle
+    LogOut, Menu, X, AlertTriangle, Check, PauseCircle, Send, Zap
 } from 'lucide-react';
 import NewOrderModal from '@/Components/Modals/NewOrderModal';
 import EditDraftOrderModal from '@/Components/Modals/EditDraftOrderModal';
@@ -19,6 +19,7 @@ import BatchWaybillModal from '@/Components/Modals/BatchWaybillModal';
 import EmployeeModal from '@/Components/Modals/EmployeeModal';
 import CandlestickChart from '@/Components/Charts/CandlestickChart';
 import FinanceTransactionModal from '@/Components/Modals/FinanceTransactionModal';
+import ApproveFinanceClaimModal from '@/Components/Modals/ApproveFinanceClaimModal';
 import DriverClaimModal from '@/Components/Modals/DriverClaimModal';
 import CodSettlementModal from '@/Components/Modals/CodSettlementModal';
 import ConfirmDeliveryModal from '@/Components/Modals/ConfirmDeliveryModal';
@@ -110,6 +111,8 @@ export default function Dashboard({
 
     // Role Integration State: Driver Claims & COD Handover & Delivery Confirmation
     const [showDriverClaimModal, setShowDriverClaimModal] = useState(false);
+    const [showApproveClaimModal, setShowApproveClaimModal] = useState(false);
+    const [selectedClaimForApproval, setSelectedClaimForApproval] = useState(null);
     const [showCodSettlementModal, setShowCodSettlementModal] = useState(false);
     const [selectedCodOrder, setSelectedCodOrder] = useState(null);
 
@@ -139,8 +142,16 @@ export default function Dashboard({
         setShowFinanceModal(true);
     };
 
-    const handleApproveClaim = (id) => {
-        router.post(route('finance.transactions.approve', id), {}, {
+    const handleApproveClaim = (claimOrId) => {
+        const targetClaim = typeof claimOrId === 'object' && claimOrId !== null
+            ? claimOrId
+            : financeTransactionsList.find(t => t.id === claimOrId);
+        if (targetClaim) {
+            setSelectedClaimForApproval(targetClaim);
+            setShowApproveClaimModal(true);
+            return;
+        }
+        router.post(route('finance.transactions.approve', claimOrId), {}, {
             preserveScroll: true
         });
     };
@@ -825,6 +836,8 @@ export default function Dashboard({
                 ...t,
                 unit: t.unit || 'Unit',
                 location: t.location || 'Gudang Utama',
+                damaged_qty: Number(t.damaged_qty) || 0,
+                lost_qty: Number(t.lost_qty) || 0,
                 condition_notes: t.condition_notes || t.notes || '',
                 repair_stage: t.repair_stage || (
                     t.condition === 'Perlu Servis'
@@ -851,9 +864,14 @@ export default function Dashboard({
                     borrow_date: borrowDateStr,
                     expected_return: b.expected_return || borrowDateStr,
                     actual_return: returnDateStr,
+                    return_date: returnDateStr,
                     qty_borrowed: qtyVal,
                     qty: qtyVal,
-                    status: isActiveBorrow ? 'Sedang Dipinjam' : 'Dikembalikan'
+                    status: isActiveBorrow ? 'Sedang Dipinjam' : 'Dikembalikan',
+                    return_condition: b.return_condition || 'Baik',
+                    damaged_qty: Number(b.damaged_qty) || 0,
+                    lost_qty: Number(b.lost_qty) || 0,
+                    return_notes: b.return_notes || ''
                 };
             }));
             setToolBorrowings(extractedBorrows);
@@ -3211,7 +3229,7 @@ export default function Dashboard({
         setSubmittingAction(targetStatus);
 
         // Cek apakah ada file foto yang di-upload
-        const hasSketchFile = orderForm.sketch_photo instanceof File;
+        const hasSketchFile = (orderForm.sketch_photo instanceof File) || (orderForm.dp_proof instanceof File);
 
         router.post(route('orders.store'), {
             ...orderForm,
@@ -3365,12 +3383,17 @@ export default function Dashboard({
         const option = paymentData?.payment_option || promotePaymentOption;
         const dpPct = paymentData?.dp_percent !== undefined ? paymentData.dp_percent : promoteDpPercent;
         const customAmt = paymentData?.custom_paid_amount !== undefined ? paymentData.custom_paid_amount : promoteCustomPaidAmount;
+        const hasDpProofFile = paymentData?.dp_proof instanceof File;
 
         router.post(route('orders.promote', orderToPromote.id), {
             payment_option: option,
             dp_percent: dpPct,
-            custom_paid_amount: option === 'custom' ? customAmt : (option === 'lunas' ? orderToPromote.total_price : null)
+            custom_paid_amount: option === 'custom' ? customAmt : (option === 'lunas' ? orderToPromote.total_price : null),
+            payment_method: paymentData?.payment_method || 'Transfer Bank / QRIS',
+            dp_proof: paymentData?.dp_proof || null,
         }, {
+            forceFormData: hasDpProofFile,
+            preserveScroll: true,
             onSuccess: () => {
                 setShowPromoteModal(false);
                 setTargetPromoteOrder(null);
@@ -3583,8 +3606,20 @@ export default function Dashboard({
     };
 
     const handleCompleteDelivery = (id, markLunas = false) => {
+        const targetOrd = (initialOrders || []).find(o => o.id === id);
+        if (targetOrd && handleOpenConfirmDeliveryModal) {
+            handleOpenConfirmDeliveryModal(targetOrd);
+            return;
+        }
         router.post(route('orders.complete_delivery', id), {
             mark_lunas: markLunas
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (targetOrd?.payment_status === 'Lunas') {
+                    setActiveOrderCard('selesai');
+                }
+            }
         });
     };
 
@@ -3600,8 +3635,8 @@ export default function Dashboard({
         if (activeOrderCard === 'draft') return o.status === 'draft' && matchesSearch;
         if (activeOrderCard === 'pengerjaan') return o.status === 'pengerjaan' && matchesSearch;
         if (activeOrderCard === 'pengiriman') return o.status === 'pengiriman' && matchesSearch;
-        if (activeOrderCard === 'pembayaran') return o.payment_status !== 'Lunas' && matchesSearch;
-        if (activeOrderCard === 'selesai') return o.status === 'selesai' && matchesSearch;
+        if (activeOrderCard === 'pembayaran') return o.status !== 'draft' && o.payment_status !== 'Lunas' && matchesSearch;
+        if (activeOrderCard === 'selesai') return o.status === 'selesai' && o.payment_status === 'Lunas' && matchesSearch;
         return matchesSearch;
     });
 
@@ -3900,19 +3935,71 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                                <button onClick={() => { setActiveTab('finance'); setMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
-                                    </div>
-                                    {Number(metrics.pendingApprovalCount || 0) > 0 && (
-                                        <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                            {metrics.pendingApprovalCount}
-                                        </span>
-                                    )}
-                                </button>
-                            )}
+                            {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (() => {
+                                const pendingFinanceTrxCount = (financeTransactionsList || []).filter(t => t.approval_status === 'pending').length;
+                                const pendingGlassCount = (sheetGlasses || []).filter(g => g.status === 'Pengajuan Proses Restock').length;
+                                const pendingAccCount = (accessoriesList || []).filter(a => a.status === 'Pengajuan Restock').length;
+                                const pendingSupplyCount = (supplyRestockRequests || []).filter(r => r.status !== 'Selesai Restok' && r.status !== 'Ditolak Finance').length;
+                                const totalAjuanCount = pendingFinanceTrxCount + pendingGlassCount + pendingAccCount + pendingSupplyCount;
+
+                                return (
+                                    <>
+                                        <button
+                                            onClick={() => { setActiveTab('finance'); setFinanceSubTab('pnl'); setMobileMenuOpen(false); }}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${(activeTab === 'finance' && financeSubTab === 'pnl') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Laporan Laba / Rugi (P&L)</span>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => { setActiveTab('finance'); setFinanceSubTab('assets_valuation'); setMobileMenuOpen(false); }}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${(activeTab === 'finance' && financeSubTab === 'assets_valuation') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Data Aset & Valuasi Stok</span>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => { setActiveTab('finance'); setFinanceSubTab('restock_requests'); setMobileMenuOpen(false); }}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${(activeTab === 'finance' && financeSubTab === 'restock_requests') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Send className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Ajuan Restok & Belanja</span>
+                                            </div>
+                                            {totalAjuanCount > 0 && (
+                                                <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                                    {totalAjuanCount}
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        <button
+                                            onClick={() => { setActiveTab('finance'); setFinanceSubTab('opex'); setMobileMenuOpen(false); }}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${(activeTab === 'finance' && financeSubTab === 'opex') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Zap className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Biaya Operasional (OPEX)</span>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => { setActiveTab('finance'); setFinanceSubTab('ledger'); setMobileMenuOpen(false); }}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${(activeTab === 'finance' && financeSubTab === 'ledger') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Buku Kas & Riwayat Mutasi</span>
+                                            </div>
+                                            <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200 font-mono">
+                                                {(financeTransactionsList || []).length}
+                                            </span>
+                                        </button>
+                                    </>
+                                );
+                            })()}
                         </nav>
 
                         {/* MOBILE DRAWER FOOTER */}
@@ -4079,19 +4166,71 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
-                            <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'finance' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
-                                <div className="flex items-center gap-3">
-                                    <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Finance</span>
-                                </div>
-                                {Number(metrics.pendingApprovalCount || 0) > 0 && (
-                                    <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                        {metrics.pendingApprovalCount}
-                                    </span>
-                                )}
-                            </button>
-                        )}
+                        {(userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (() => {
+                            const pendingFinanceTrxCount = (financeTransactionsList || []).filter(t => t.approval_status === 'pending').length;
+                            const pendingGlassCount = (sheetGlasses || []).filter(g => g.status === 'Pengajuan Proses Restock').length;
+                            const pendingAccCount = (accessoriesList || []).filter(a => a.status === 'Pengajuan Restock').length;
+                            const pendingSupplyCount = (supplyRestockRequests || []).filter(r => r.status !== 'Selesai Restok' && r.status !== 'Ditolak Finance').length;
+                            const totalAjuanCount = pendingFinanceTrxCount + pendingGlassCount + pendingAccCount + pendingSupplyCount;
+
+                            return (
+                                <>
+                                    <button
+                                        onClick={() => { setActiveTab('finance'); setFinanceSubTab('pnl'); }}
+                                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${(activeTab === 'finance' && financeSubTab === 'pnl') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <FileText className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Laporan Laba / Rugi (P&L)</span>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => { setActiveTab('finance'); setFinanceSubTab('assets_valuation'); }}
+                                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${(activeTab === 'finance' && financeSubTab === 'assets_valuation') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Data Aset & Valuasi Stok</span>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => { setActiveTab('finance'); setFinanceSubTab('restock_requests'); }}
+                                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${(activeTab === 'finance' && financeSubTab === 'restock_requests') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Send className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Ajuan Restok & Belanja</span>
+                                        </div>
+                                        {totalAjuanCount > 0 && (
+                                            <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                                {totalAjuanCount}
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={() => { setActiveTab('finance'); setFinanceSubTab('opex'); }}
+                                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${(activeTab === 'finance' && financeSubTab === 'opex') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Zap className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Biaya Operasional (OPEX)</span>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => { setActiveTab('finance'); setFinanceSubTab('ledger'); }}
+                                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${(activeTab === 'finance' && financeSubTab === 'ledger') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <CreditCard className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Buku Kas & Riwayat Mutasi</span>
+                                        </div>
+                                        <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200 font-mono">
+                                            {(financeTransactionsList || []).length}
+                                        </span>
+                                    </button>
+                                </>
+                            );
+                        })()}
                     </nav>
 
                     {/* SIDEBAR FOOTER: USER PROFILE & LOGOUT */}
@@ -4161,6 +4300,7 @@ export default function Dashboard({
                                 handleCompleteDelivery={handleCompleteDelivery}
                                 handleOpenRevisionDetailModal={handleOpenRevisionDetailModal}
                                 handleAcknowledgeRevision={handleAcknowledgeRevision}
+                                handleOpenCodModal={handleOpenCodModal}
                             />
                         )}
 
@@ -4269,6 +4409,11 @@ export default function Dashboard({
                                 userRole={userRole}
                                 metrics={metrics}
                                 financeTransactionsList={financeTransactionsList}
+                                sheetGlasses={sheetGlasses}
+                                accessoriesList={accessoriesList}
+                                toolsList={toolsList}
+                                warehouseSuppliesList={warehouseSuppliesList}
+                                supplyRestockRequests={supplyRestockRequests}
                                 financeSearchTerm={financeSearchTerm}
                                 setFinanceSearchTerm={setFinanceSearchTerm}
                                 financeCategoryFilter={financeCategoryFilter}
@@ -4282,6 +4427,7 @@ export default function Dashboard({
                                 handleApproveClaim={handleApproveClaim}
                                 handleDrilldownOpex={handleDrilldownOpex}
                                 handleDeleteFinanceTransaction={handleDeleteFinanceTransaction}
+                                handleOpenSketchLightbox={handleOpenSketchLightbox}
                             />
                         )}
 
@@ -4744,6 +4890,13 @@ export default function Dashboard({
                 prefillData={financeModalPrefillData}
             />
 
+            {/* MODAL PERSETUJUAN RESTOK BARANG & INPUT NOTA BUKTI PEMBAYARAN FINANCE */}
+            <ApproveFinanceClaimModal
+                isOpen={showApproveClaimModal}
+                onClose={() => { setShowApproveClaimModal(false); setSelectedClaimForApproval(null); }}
+                claim={selectedClaimForApproval}
+            />
+
             {/* MODAL KLAIM BIAYA ARMADA SUPIR (BBM SOLAR, TOL, PARKIR) */}
             <DriverClaimModal
                 isOpen={showDriverClaimModal}
@@ -4751,12 +4904,16 @@ export default function Dashboard({
                 userName={userName}
             />
 
-            {/* MODAL SERAH TERIMA UANG COD SURAT JALAN MERAH */}
+            {/* MODAL KONFIRMASI PELUNASAN ORDER & BUKTI BAYAR */}
             <CodSettlementModal
                 isOpen={showCodSettlementModal}
                 onClose={() => { setShowCodSettlementModal(false); setSelectedCodOrder(null); }}
                 order={selectedCodOrder}
-                driverName={userName}
+                onSettled={(settledOrder) => {
+                    if (settledOrder?.status === 'selesai' || settledOrder?.delivered_at) {
+                        setActiveOrderCard('selesai');
+                    }
+                }}
             />
 
             {/* MODAL KONFIRMASI TERKIRIM & UPLOAD BUKTI SURAT JALAN TANDA TANGAN */}
@@ -4764,6 +4921,11 @@ export default function Dashboard({
                 isOpen={showConfirmDeliveryModal}
                 onClose={() => { setShowConfirmDeliveryModal(false); setSelectedDeliveryOrder(null); }}
                 order={selectedDeliveryOrder}
+                onCompleted={(completedOrder) => {
+                    if (completedOrder?.payment_status === 'Lunas') {
+                        setActiveOrderCard('selesai');
+                    }
+                }}
             />
 
             {/* MODAL CETAK RESMI LAPORAN KEUANGAN PERUSAHAAN (PDF / PRINTER) */}

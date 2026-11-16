@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import { 
     Truck, User, Calendar, MapPin, ClipboardList, 
-    Printer, Fuel, CreditCard, CheckSquare, XSquare, 
+    Printer, Fuel, CheckSquare, XSquare, 
     Plus, AlertCircle, FileText, CheckCircle2, 
     ShieldCheck, Send, Clock, Camera, Edit3,
     Search, Lock, X, Layers, Check, History, Loader2
@@ -792,27 +792,26 @@ export default function DeliveriesTab({
                                                         {/* TIMELINE STOP DESTINATIONS */}
                                                         <div className="space-y-2 text-xs">
                                                             {trip.orders.map((ord, stopIdx) => {
-                                                                const isLunas = ord.payment_status === 'Lunas';
                                                                 const isFinished = ord.status === 'selesai';
-                                                                const sisaCod = Math.max(0, Number(ord.total_price || 0) - Number(ord.paid_amount || 0));
+                                                                const isPickupTask = String(ord.spo_number || '').startsWith('SPB-') || String(ord.glass_type || '').startsWith('[AMBIL BARANG]');
                                                                 return (
                                                                     <div key={ord.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border ${isFinished ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/80 border-slate-200'}`}>
                                                                         <div className="flex items-start gap-2.5 min-w-0">
                                                                             <span className={`border text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${isFinished ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-[#1b68b0]/10 text-[#1b68b0] border-[#1b68b0]/20'}`}>
-                                                                                STOP #{stopIdx + 1}
+                                                                                {isPickupTask ? `AMBIL #${stopIdx + 1}` : `STOP #{stopIdx + 1}`.replace('#{stopIdx + 1}', `#${stopIdx + 1}`)}
                                                                             </span>
                                                                             <div className="min-w-0">
                                                                                 <div className="flex items-center gap-2">
                                                                                     <span className="font-bold text-[#242222] truncate">
-                                                                                        SPO: {ord.spo_number} — {ord.customer_name}
+                                                                                        {isPickupTask ? `SPB: ${ord.spo_number} — ${ord.customer_name}` : `SPO: ${ord.spo_number} — ${ord.customer_name}`}
                                                                                     </span>
                                                                                     {isFinished ? (
                                                                                         <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
                                                                                             <CheckCircle2 className="w-3 h-3 text-emerald-600" /> TERKIRIM
                                                                                         </span>
                                                                                     ) : (
-                                                                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
-                                                                                            {isLunas ? 'LUNAS' : `COD (Rp ${sisaCod.toLocaleString('id-ID')})`}
+                                                                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-blue-50 text-[#1b68b0] border border-blue-200">
+                                                                                            {isPickupTask ? 'TUGAS AMBIL BARANG' : 'DALAM PENGIRIMAN'}
                                                                                         </span>
                                                                                     )}
                                                                                 </div>
@@ -823,15 +822,6 @@ export default function DeliveriesTab({
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-end sm:self-center">
-                                                                            {!isLunas && !isFinished && (
-                                                                                <button
-                                                                                    onClick={() => handleOpenCodModal(ord)}
-                                                                                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                                                                    title="Setor Hasil Penagihan COD ke Kasir"
-                                                                                >
-                                                                                    <CreditCard className="w-3 h-3" /> Setor COD
-                                                                                </button>
-                                                                            )}
                                                                             {!isFinished ? (
                                                                                 <button
                                                                                     type="button"
@@ -1006,7 +996,7 @@ export default function DeliveriesTab({
                                                                                         SPO: {ord.spo_number} — {ord.customer_name}
                                                                                     </span>
                                                                                     <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Lunas & Terkirim
+                                                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selesai Terkirim
                                                                                     </span>
                                                                                 </div>
                                                                                 <p className="text-slate-500 text-[11px] truncate mt-0.5 flex items-center gap-1">

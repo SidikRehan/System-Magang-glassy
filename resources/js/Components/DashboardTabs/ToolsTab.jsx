@@ -151,10 +151,10 @@ export default function ToolsTab({
                         {(userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button
                                 onClick={() => setShowAddToolModal(true)}
-                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                             >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span>Tambah Alat Baru</span>
+                                <span>Ajukan Pembelian Alat Baru ke Finance</span>
                             </button>
                         )}
                         <button
@@ -421,8 +421,18 @@ export default function ToolsTab({
                                             </td>
                                             <td className="p-3 text-center font-mono font-bold text-[#242222]">{t.total_qty} {t.unit}</td>
                                             <td className="p-3 text-center">
-                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${t.available_qty > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
-                                                    {t.available_qty > 0 ? `Tersedia (${t.available_qty} ${t.unit})` : 'Habis Dipinjam'}
+                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
+                                                    t.condition === 'Pengajuan Pembelian'
+                                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                        : t.available_qty > 0
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                }`}>
+                                                    {t.condition === 'Pengajuan Pembelian'
+                                                        ? 'Menunggu Finance'
+                                                        : t.available_qty > 0
+                                                            ? `Tersedia (${t.available_qty} ${t.unit})`
+                                                            : 'Habis Dipinjam'}
                                                 </span>
                                             </td>
                                             <td className="p-3">
@@ -534,6 +544,30 @@ export default function ToolsTab({
                                         </div>
                                     </div>
 
+                                    {!(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') && (b.return_condition || b.return_notes || (Number(b.damaged_qty) || 0) > 0 || (Number(b.lost_qty) || 0) > 0) && (
+                                        <div className={`p-2.5 rounded-xl border text-xs space-y-1 ${
+                                            b.return_condition === 'Hilang' || (Number(b.lost_qty) || 0) > 0
+                                                ? 'bg-rose-50/80 border-rose-200 text-rose-800'
+                                                : b.return_condition === 'Rusak' || b.return_condition === 'Perlu Servis' || (Number(b.damaged_qty) || 0) > 0
+                                                    ? 'bg-amber-50/80 border-amber-200 text-amber-900'
+                                                    : 'bg-emerald-50/60 border-emerald-200 text-emerald-800'
+                                        }`}>
+                                            <div className="flex items-center justify-between font-bold text-[11px]">
+                                                <span>Kondisi Kembali:</span>
+                                                <span className="font-mono">
+                                                    {b.return_condition || 'Baik'}
+                                                    {(Number(b.damaged_qty) || 0) > 0 ? ` (${b.damaged_qty} Unit)` : ''}
+                                                    {(Number(b.lost_qty) || 0) > 0 ? ` (${b.lost_qty} Unit Hilang)` : ''}
+                                                </span>
+                                            </div>
+                                            {b.return_notes && (
+                                                <div className="text-[11px] italic opacity-90">
+                                                    "{b.return_notes}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? (
                                         (userRole === 'admin_gudang' || userRole === 'owner') && (
                                             <button
@@ -553,7 +587,7 @@ export default function ToolsTab({
                                                     onClick={() => handleOpenReturnModal(b)}
                                                     className="text-[11px] text-[#1b68b0] hover:underline font-semibold cursor-pointer"
                                                 >
-                                                    Detail
+                                                    Detail Riwayat
                                                 </button>
                                             )}
                                         </div>
@@ -624,9 +658,24 @@ export default function ToolsTab({
                                             <td className="p-3 text-xs text-slate-500 font-mono">{b.borrow_date}</td>
                                             <td className="p-3 text-xs font-mono text-[#1b68b0] font-bold">{b.expected_return || b.borrow_date}</td>
                                             <td className="p-3 text-center">
-                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                                                    {b.status === 'Dipinjam' ? 'Sedang Dipinjam' : b.status}
-                                                </span>
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                                        {b.status === 'Dipinjam' ? 'Sedang Dipinjam' : b.status}
+                                                    </span>
+                                                    {!(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') && (
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                                                            b.return_condition === 'Hilang' || (Number(b.lost_qty) || 0) > 0
+                                                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                                : b.return_condition === 'Rusak' || b.return_condition === 'Perlu Servis' || (Number(b.damaged_qty) || 0) > 0
+                                                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                    : 'bg-slate-50 text-slate-600 border-slate-200'
+                                                        }`} title={b.return_notes || ''}>
+                                                            Kondisi: {b.return_condition || 'Baik'}
+                                                            {(Number(b.damaged_qty) || 0) > 0 ? ` (${b.damaged_qty} Rusak)` : ''}
+                                                            {(Number(b.lost_qty) || 0) > 0 ? ` (${b.lost_qty} Hilang)` : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="p-3 text-right">
                                                 {(b.status === 'Sedang Dipinjam' || b.status === 'Dipinjam') ? (
@@ -643,12 +692,17 @@ export default function ToolsTab({
                                                         <span className="text-xs text-emerald-700 font-bold font-mono">
                                                             Selesai ({b.actual_return || b.return_date || 'Dikembalikan'})
                                                         </span>
+                                                        {b.return_notes && (
+                                                            <span className="text-[10px] text-slate-500 italic max-w-[180px] truncate" title={b.return_notes}>
+                                                                "{b.return_notes}"
+                                                            </span>
+                                                        )}
                                                         {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                                             <button
                                                                 onClick={() => handleOpenReturnModal(b)}
                                                                 className="text-[10px] text-[#1b68b0] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer"
                                                             >
-                                                                Detail
+                                                                Detail Riwayat
                                                             </button>
                                                         )}
                                                     </div>

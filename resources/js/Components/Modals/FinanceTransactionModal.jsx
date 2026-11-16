@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { CreditCard, X, CheckCircle2, Save, Loader2 } from 'lucide-react';
+import { CreditCard, X, CheckCircle2, Save, Loader2, Camera, AlertTriangle } from 'lucide-react';
 
 export default function FinanceTransactionModal({
     isOpen,
@@ -22,13 +22,18 @@ export default function FinanceTransactionModal({
         due_date: '',
         notes: '',
         source_role: 'admin_toko',
+        receipt_photo: null,
     });
 
     const [formattedAmount, setFormattedAmount] = useState('');
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const [localError, setLocalError] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             clearErrors();
+            setLocalError('');
+            setPhotoPreview(null);
             const targetType = prefillData?.type || prefillType || 'biaya_operasional';
             const targetCat = prefillData?.category || getCategoriesForType(targetType)[0] || 'Biaya Operasional Umum';
             const targetAmount = prefillData?.amount ? String(prefillData.amount) : '';
@@ -45,6 +50,7 @@ export default function FinanceTransactionModal({
                 payment_status: prefillData?.payment_status || 'Lunas',
                 notes: prefillData?.notes || '',
                 source_role: prefillData?.source_role || 'admin_toko',
+                receipt_photo: null,
             }));
 
             if (targetAmount) {
@@ -87,12 +93,36 @@ export default function FinanceTransactionModal({
         setFormattedAmount(raw ? Number(raw).toLocaleString('id-ID') : '');
     };
 
+    const isRestockRealization = Boolean(
+        prefillData?.notes && String(prefillData.notes).includes('[RESTOCK_')
+    );
+    const isPurchaseType =
+        data.type === 'pembelian_bahan' ||
+        data.type === 'pembelian_aksesoris' ||
+        data.type === 'pembelian_alat';
+
+    const handlePhotoChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setData('receipt_photo', file);
+            setPhotoPreview(URL.createObjectURL(file));
+            setLocalError('');
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        if ((isRestockRealization || isPurchaseType) && !data.receipt_photo) {
+            setLocalError('Wajib mengunggah foto Nota / Bukti Pembayaran pembelian barang terlebih dahulu!');
+            return;
+        }
+        setLocalError('');
         post(route('finance.transactions.store'), {
+            forceFormData: true,
             onSuccess: () => {
                 reset();
                 setFormattedAmount('');
+                setPhotoPreview(null);
                 onClose();
             }
         });
@@ -315,6 +345,45 @@ export default function FinanceTransactionModal({
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs text-slate-800 font-mono focus:border-[#1b68b0] focus:bg-white cursor-pointer font-medium"
                             />
                         </div>
+                    </div>
+
+                    {/* UPLOAD FOTO NOTA / BUKTI PEMBAYARAN PEMBELIAN BARANG */}
+                    <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <Camera className="w-4 h-4 text-[#1b68b0]" />
+                                <span>
+                                    Upload Foto Nota / Bukti Pembayaran Barang {(isRestockRealization || isPurchaseType) && <span className="text-rose-500">*</span>}
+                                </span>
+                            </label>
+                            <span className="text-[10px] font-bold bg-[#1b68b0] text-white px-2.5 py-0.5 rounded-full">
+                                {(isRestockRealization || isPurchaseType) ? 'WAJIB BUKTI BAYAR' : 'LAMPIRAN NOTA'}
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                            Unggah foto nota belanja supplier, faktur pembelian, atau bukti transfer pembayaran barang produksi/aksesoris/alat (JPG, PNG, WEBP maks 5 MB).
+                        </p>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            className="w-full text-xs text-slate-700 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#1b68b0] file:text-white hover:file:bg-[#15528c] file:cursor-pointer bg-white border border-slate-200 rounded-xl p-1.5"
+                        />
+                        {photoPreview && (
+                            <div className="mt-2 relative rounded-xl overflow-hidden border border-slate-200 bg-white p-2">
+                                <img
+                                    src={photoPreview}
+                                    alt="Preview Nota Pembayaran"
+                                    className="max-h-44 w-auto mx-auto rounded-lg object-contain"
+                                />
+                            </div>
+                        )}
+                        {(localError || errors.receipt_photo) && (
+                            <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-2.5 text-xs font-bold flex items-center gap-2 mt-1">
+                                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                                <span>{localError || errors.receipt_photo}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* CATATAN TAMBAHAN */}

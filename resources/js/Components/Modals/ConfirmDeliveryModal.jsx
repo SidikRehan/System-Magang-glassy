@@ -1,25 +1,22 @@
 import React, { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { X, CheckCircle2, Camera, User, MapPin, CreditCard, Loader2, Check } from 'lucide-react';
+import { X, CheckCircle2, Camera, User, MapPin, Loader2, Check, Truck } from 'lucide-react';
 
 export default function ConfirmDeliveryModal({
     isOpen,
     onClose,
     order,
+    onCompleted = null,
 }) {
-    const isLunas = order?.payment_status === 'Lunas';
-
     const [photoPreview, setPhotoPreview] = useState(order?.proof_photo_path ? `/storage/${order.proof_photo_path}` : null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         proof_photo: null,
         recipient_name: order?.recipient_name || '',
-        mark_lunas: isLunas ? true : false,
+        mark_lunas: false,
     });
 
     if (!isOpen || !order) return null;
-
-    const sisaCod = Math.max(0, Number(order.total_price || 0) - Number(order.paid_amount || 0));
 
     const handlePhotoChange = (e) => {
         const file = e.target.files[0];
@@ -46,6 +43,9 @@ export default function ConfirmDeliveryModal({
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
+                if (onCompleted) {
+                    onCompleted(order);
+                }
                 handleModalClose();
             }
         });
@@ -101,12 +101,9 @@ export default function ConfirmDeliveryModal({
                             <span className="font-mono font-black text-xs text-[#1b68b0] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200">
                                 SPO: {order.spo_number}
                             </span>
-                            <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold ${
-                                isLunas 
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
-                            }`}>
-                                {isLunas ? 'STATUS: LUNAS' : `COD: Rp ${sisaCod.toLocaleString('id-ID')}`}
+                            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold bg-blue-50 text-[#1b68b0] border border-blue-200 flex items-center gap-1">
+                                <Truck className="w-3 h-3 text-[#1b68b0]" />
+                                <span>BUKTI SERAH TERIMA SJ</span>
                             </span>
                         </div>
 
@@ -181,29 +178,6 @@ export default function ConfirmDeliveryModal({
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:border-[#1b68b0] focus:bg-white"
                         />
                     </div>
-
-                    {/* STATUS PELUNASAN COD (JIKA BELUM LUNAS) */}
-                    {!isLunas && (
-                        <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="font-bold text-rose-900 text-xs flex items-center gap-1.5">
-                                    <CreditCard className="w-4 h-4 text-rose-700" />
-                                    <span>Penagihan COD di Lokasi (Rp {sisaCod.toLocaleString('id-ID')})</span>
-                                </span>
-                            </div>
-                            <label className="flex items-center gap-2 cursor-pointer pt-1">
-                                <input
-                                    type="checkbox"
-                                    checked={data.mark_lunas}
-                                    onChange={e => setData('mark_lunas', e.target.checked)}
-                                    className="w-4 h-4 rounded text-[#70b03c] focus:ring-[#70b03c]"
-                                />
-                                <span className="text-xs font-bold text-slate-800">
-                                    Telah menerima uang pelunasan COD dari konsumen di lokasi
-                                </span>
-                            </label>
-                        </div>
-                    )}
 
                     {/* ACTION BUTTONS */}
                     <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-200">

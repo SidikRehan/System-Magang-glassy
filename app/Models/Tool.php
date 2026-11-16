@@ -15,6 +15,7 @@ class Tool extends Model
         'total_qty' => 'integer',
         'available_qty' => 'integer',
         'damaged_qty' => 'integer',
+        'lost_qty' => 'integer',
     ];
 
     public function borrows()

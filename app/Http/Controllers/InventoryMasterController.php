@@ -148,6 +148,7 @@ class InventoryMasterController extends Controller
 
         $validated = $request->validate([
             'add_qty' => 'required|integer|min:1',
+            'buy_price' => 'nullable|numeric|min:0',
             'supplier_name' => 'nullable|string|max:255',
             'supplier_phone' => 'nullable|string|max:50',
             'supplier_pic' => 'nullable|string|max:255',
@@ -155,53 +156,50 @@ class InventoryMasterController extends Controller
         ]);
 
         $addQty = (int) $validated['add_qty'];
-        $newQty = $glass->qty + $addQty;
-        $status = $newQty > 10 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+        $buyPrice = isset($validated['buy_price']) && (float) $validated['buy_price'] > 0
+            ? (float) $validated['buy_price']
+            : (float) ($glass->buy_price ?? 0);
+        $totalCost = $addQty * $buyPrice;
+        $supplierName = $validated['supplier_name'] ?? $glass->supplier_name ?? 'Supplier Kaca Lembaran';
+        $supplierPhone = $validated['supplier_phone'] ?? $glass->supplier_phone ?? null;
 
         $glass->update([
-            'qty' => $newQty,
-            'last_restock' => now(),
-            'status' => $status,
-            'supplier_name' => $validated['supplier_name'] ?? $glass->supplier_name,
-            'supplier_phone' => $validated['supplier_phone'] ?? $glass->supplier_phone,
+            'status' => 'Pengajuan Proses Restock',
+            'buy_price' => $buyPrice > 0 ? $buyPrice : $glass->buy_price,
+            'supplier_name' => $supplierName,
+            'supplier_phone' => $supplierPhone,
             'supplier_pic' => $validated['supplier_pic'] ?? $glass->supplier_pic,
         ]);
 
-        // Auto-create FinanceTransaction for COGS (HPP Pembelian Bahan Baku Kaca)
-        $buyPrice = (float) ($glass->buy_price ?? 0);
-        $totalCost = $addQty * $buyPrice;
-
-        if ($totalCost > 0) {
-            $prefix = 'PO-BB';
-            $period = date('Ym');
-            $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $prefix = 'PO-BB';
+        $period = date('Ym');
+        $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+            $count++;
             $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
-
-            FinanceTransaction::create([
-                'transaction_code' => $trxCode,
-                'type' => 'pembelian_bahan',
-                'category' => 'Bahan Baku Kaca Lembaran',
-                'title' => 'Restok ' . $glass->name . ' (' . $addQty . ' ' . ($glass->unit ?? 'Lembar') . ')',
-                'amount' => $totalCost,
-                'supplier_name' => $validated['supplier_name'] ?? $glass->supplier_name,
-                'payment_method' => 'Kas / Bank',
-                'payment_status' => 'Lunas',
-                'approval_status' => 'approved',
-                'source_role' => Auth::user()?->role ?? 'admin_toko',
-                'transaction_date' => now()->toDateString(),
-                'notes' => 'Restok otomatis bahan kaca: ' . $glass->name . ' (' . $glass->thickness_mm . 'mm) sebanyak ' . $addQty . ' ' . ($glass->unit ?? 'lembar') . ' @ Rp ' . number_format($buyPrice, 0, ',', '.') . (!empty($validated['notes']) ? '. Catatan: ' . $validated['notes'] : ''),
-                'user_id' => Auth::id(),
-                'approved_by_user_id' => Auth::id(),
-                'approved_at' => now(),
-            ]);
         }
 
-        $msg = "Stok kaca {$glass->name} berhasil ditambah sebanyak {$addQty} {$glass->unit}!";
-        if ($totalCost > 0) {
-            $msg .= " Pembelian senilai Rp " . number_format($totalCost, 0, ',', '.') . " otomatis dibukukan ke Finance (HPP Bahan).";
-        }
+        $metaTag = "[RESTOCK_GLASS_ID:{$glass->id}|QTY:{$addQty}|CODE:{$glass->item_code}|PHONE:" . ($supplierPhone ?? '') . "]";
+        $cleanNotes = !empty($validated['notes']) ? trim($validated['notes']) : 'Pengajuan restok bahan kaca produksi ke Finance untuk disetujui dan dipesan ke supplier.';
 
-        return redirect()->back()->with('success', $msg);
+        FinanceTransaction::create([
+            'transaction_code' => $trxCode,
+            'type' => 'pembelian_bahan',
+            'category' => 'Bahan Baku Kaca Lembaran',
+            'title' => 'Pengajuan Restok Bahan Produksi: ' . $glass->name . ' (+' . $addQty . ' ' . ($glass->unit ?? 'Lembar') . ')',
+            'amount' => $totalCost,
+            'supplier_name' => $supplierName,
+            'payment_method' => 'Menunggu Realisasi Finance',
+            'payment_status' => 'Tempo',
+            'approval_status' => 'pending',
+            'source_role' => Auth::user()?->role ?? 'admin_toko',
+            'transaction_date' => now()->toDateString(),
+            'notes' => "{$metaTag} {$cleanNotes} (Ukuran: {$glass->size} • Sisa Stok: {$glass->qty} " . ($glass->unit ?? 'Lembar') . " • Estimasi @ Rp " . number_format($buyPrice, 0, ',', '.') . ")",
+            'user_id' => Auth::id(),
+        ]);
+
+        return redirect()->back()->with('success', "Pengajuan restok bahan produksi {$glass->name} (+{$addQty} {$glass->unit}) berhasil dikirim ke Finance untuk disetujui & dipesan!");
     }
 
     public function destroySheetGlass($id)
@@ -218,7 +216,49 @@ class InventoryMasterController extends Controller
         $glass = SheetGlass::findOrFail($id);
         $glass->update(['status' => 'Pengajuan Proses Restock']);
 
-        return redirect()->back()->with('success', "Pengajuan restok {$glass->name} berhasil dikirim ke Admin Toko!");
+        // Cek apakah sudah ada pengajuan pending untuk kaca ini di FinanceTransaction
+        $existingPending = FinanceTransaction::where('approval_status', 'pending')
+            ->where(function ($q) use ($glass) {
+                $q->where('notes', 'like', "%[RESTOCK_GLASS_ID:{$glass->id}|%")
+                  ->orWhere('title', 'like', "%{$glass->name}%");
+            })
+            ->first();
+
+        if (!$existingPending) {
+            $addQty = 10;
+            $buyPrice = (float) ($glass->buy_price ?? 0);
+            $totalCost = $addQty * $buyPrice;
+            $supplierName = $glass->supplier_name ?? 'PT Asahimas Flat Glass Tbk';
+            $supplierPhone = $glass->supplier_phone ?? null;
+
+            $prefix = 'PO-BB';
+            $period = date('Ym');
+            $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+            while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+                $count++;
+                $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+            }
+
+            $metaTag = "[RESTOCK_GLASS_ID:{$glass->id}|QTY:{$addQty}|CODE:{$glass->item_code}|PHONE:" . ($supplierPhone ?? '') . "]";
+            FinanceTransaction::create([
+                'transaction_code' => $trxCode,
+                'type' => 'pembelian_bahan',
+                'category' => 'Bahan Baku Kaca Lembaran',
+                'title' => 'Pengajuan Restok Bahan Produksi: ' . $glass->name . ' (+' . $addQty . ' ' . ($glass->unit ?? 'Lembar') . ')',
+                'amount' => $totalCost,
+                'supplier_name' => $supplierName,
+                'payment_method' => 'Menunggu Realisasi Finance',
+                'payment_status' => 'Tempo',
+                'approval_status' => 'pending',
+                'source_role' => Auth::user()?->role ?? 'admin_gudang',
+                'transaction_date' => now()->toDateString(),
+                'notes' => "{$metaTag} Pengajuan restok stok kaca habis/menipis oleh Admin Gudang ke bagian Finance. (Ukuran: {$glass->size} • Sisa Stok: {$glass->qty} " . ($glass->unit ?? 'Lembar') . ")",
+                'user_id' => Auth::id(),
+            ]);
+        }
+
+        return redirect()->back()->with('success', "Pengajuan restok kaca {$glass->name} berhasil dikirim ke bagian Finance untuk dipesan ke supplier!");
     }
 
     public function cancelRequestRestockSheetGlass($id)
@@ -226,6 +266,10 @@ class InventoryMasterController extends Controller
         $glass = SheetGlass::findOrFail($id);
         $status = $glass->qty > 10 ? 'Aman' : ($glass->qty > 0 ? 'Menipis' : 'Habis');
         $glass->update(['status' => $status]);
+
+        FinanceTransaction::where('approval_status', 'pending')
+            ->where('notes', 'like', "%[RESTOCK_GLASS_ID:{$glass->id}|%")
+            ->delete();
 
         return redirect()->back()->with('success', "Pengajuan restok {$glass->name} dibatalkan.");
     }
@@ -361,64 +405,60 @@ class InventoryMasterController extends Controller
 
     public function restockAccessory(Request $request, $id)
     {
+        return $this->requestRestockAccessory($request, $id);
+    }
+
+    public function requestRestockAccessory(Request $request, $id)
+    {
         $acc = Accessory::findOrFail($id);
 
         $validated = $request->validate([
-            'add_qty' => 'required|integer|min:1',
+            'add_qty' => 'nullable|integer|min:1',
+            'buy_price' => 'nullable|numeric|min:0',
+            'supplier_name' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $addQty = (int) $validated['add_qty'];
-        $newQty = $acc->qty + $addQty;
-        $status = $newQty > 20 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+        $addQty = isset($validated['add_qty']) && (int) $validated['add_qty'] > 0 ? (int) $validated['add_qty'] : 10;
+        $unitBuyPrice = isset($validated['buy_price']) && (float) $validated['buy_price'] > 0
+            ? (float) $validated['buy_price']
+            : (float) ($acc->buy_price ?? 0);
+        $estimatedTotal = $addQty * $unitBuyPrice;
 
         $acc->update([
-            'qty' => $newQty,
-            'status' => $status,
+            'status' => 'Pengajuan Restock',
+            'buy_price' => $unitBuyPrice > 0 ? $unitBuyPrice : $acc->buy_price,
         ]);
 
-        // Auto-create FinanceTransaction for COGS (HPP Pembelian Aksesoris)
-        $buyPrice = (float) ($acc->buy_price ?? 0);
-        $totalCost = $addQty * $buyPrice;
-
-        if ($totalCost > 0) {
-            $prefix = 'PO-ACC';
-            $period = date('Ym');
-            $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $prefix = 'PO-ACC';
+        $period = date('Ym');
+        $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+            $count++;
             $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
-
-            FinanceTransaction::create([
-                'transaction_code' => $trxCode,
-                'type' => 'pembelian_aksesoris',
-                'category' => 'Aksesoris & Hardware',
-                'title' => 'Restok ' . $acc->name . ' (' . $addQty . ' ' . ($acc->unit ?? 'Pcs') . ')',
-                'amount' => $totalCost,
-                'payment_method' => 'Kas / Bank',
-                'payment_status' => 'Lunas',
-                'approval_status' => 'approved',
-                'source_role' => Auth::user()?->role ?? 'admin_toko',
-                'transaction_date' => now()->toDateString(),
-                'notes' => 'Restok otomatis aksesoris: ' . $acc->name . ' sebanyak ' . $addQty . ' ' . ($acc->unit ?? 'Pcs') . ' @ Rp ' . number_format($buyPrice, 0, ',', '.') . (!empty($validated['notes']) ? '. Catatan: ' . $validated['notes'] : ''),
-                'user_id' => Auth::id(),
-                'approved_by_user_id' => Auth::id(),
-                'approved_at' => now(),
-            ]);
         }
 
-        $msg = "Stok aksesoris {$acc->name} bertambah {$addQty} {$acc->unit}!";
-        if ($totalCost > 0) {
-            $msg .= " Pembelian senilai Rp " . number_format($totalCost, 0, ',', '.') . " otomatis dibukukan ke Finance (HPP Aksesoris).";
-        }
+        $metaTag = "[RESTOCK_ACC_ID:{$acc->id}|QTY:{$addQty}|CODE:{$acc->acc_code}]";
+        $cleanNotes = !empty($validated['notes']) ? trim($validated['notes']) : 'Pengajuan restok stok aksesoris konsumen oleh Admin Toko.';
 
-        return redirect()->back()->with('success', $msg);
-    }
+        FinanceTransaction::create([
+            'transaction_code' => $trxCode,
+            'type' => 'pembelian_aksesoris',
+            'category' => 'Restock Aksesoris & Hardware',
+            'title' => "Pengajuan Restok Aksesoris: {$acc->name} (+{$addQty} " . ($acc->unit ?? 'Pcs') . ")",
+            'amount' => $estimatedTotal,
+            'supplier_name' => $validated['supplier_name'] ?? 'Toko Hardware / Supplier Aksesoris',
+            'payment_method' => 'Menunggu Realisasi Finance',
+            'payment_status' => 'Tempo',
+            'approval_status' => 'pending',
+            'source_role' => Auth::user()?->role ?? 'admin_toko',
+            'transaction_date' => now()->toDateString(),
+            'notes' => "{$metaTag} {$cleanNotes} (Stok saat ini: {$acc->qty} " . ($acc->unit ?? 'Pcs') . " • Estimasi @ Rp " . number_format($unitBuyPrice, 0, ',', '.') . ")",
+            'user_id' => Auth::id(),
+        ]);
 
-    public function requestRestockAccessory($id)
-    {
-        $acc = Accessory::findOrFail($id);
-        $acc->update(['status' => 'Pengajuan Restock']);
-
-        return redirect()->back()->with('success', "Pengajuan restock aksesoris {$acc->name} berhasil dikirim.");
+        return redirect()->back()->with('success', "Pengajuan restok aksesoris {$acc->name} (+{$addQty} " . ($acc->unit ?? 'Pcs') . ") berhasil dikirim ke Finance untuk disetujui & dibayarkan!");
     }
 
     public function destroyAccessory($id)
@@ -445,6 +485,9 @@ class InventoryMasterController extends Controller
             'condition' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:100',
             'total_qty' => 'required|integer|min:1',
+            'estimated_price' => 'nullable|numeric|min:0',
+            'supplier_name' => 'nullable|string|max:255',
+            'supplier_phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
@@ -455,26 +498,60 @@ class InventoryMasterController extends Controller
             $nextId++;
             $toolCode = 'ALT-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
         }
-        $totalQty = (int) $validated['total_qty'];
+        $requestedQty = (int) $validated['total_qty'];
+        $unitPrice = isset($validated['estimated_price']) && (float) $validated['estimated_price'] > 0
+            ? (float) $validated['estimated_price']
+            : 250000;
+        $estimatedTotal = $requestedQty * $unitPrice;
+        $supplierName = !empty($validated['supplier_name']) ? $validated['supplier_name'] : 'Toko Teknik & Mesin Industri';
+        $supplierPhone = !empty($validated['supplier_phone']) ? $validated['supplier_phone'] : null;
 
         $imagePath = null;
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('tools', 'public');
         }
 
-        Tool::create([
+        $tool = Tool::create([
             'tool_code' => $toolCode,
             'name' => $validated['name'],
             'image_path' => $imagePath,
             'category' => $validated['category'],
-            'condition' => $validated['condition'] ?? 'Baik',
+            'condition' => 'Pengajuan Pembelian',
             'location' => $validated['location'] ?? 'Gudang Utama',
-            'total_qty' => $totalQty,
-            'available_qty' => $totalQty,
-            'notes' => $validated['notes'] ?? null,
+            'total_qty' => 0,
+            'available_qty' => 0,
+            'notes' => "[Pengajuan Pembelian {$requestedQty} Unit ke Finance] " . ($validated['notes'] ?? ''),
         ]);
 
-        return redirect()->back()->with('success', "Alat penunjang {$validated['name']} berhasil didaftarkan!");
+        $prefix = 'PO-ALT';
+        $period = date('Ym');
+        $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+            $count++;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        }
+
+        $metaTag = "[RESTOCK_TOOL_ID:{$tool->id}|QTY:{$requestedQty}|CODE:{$tool->tool_code}|PHONE:" . ($supplierPhone ?? '') . "]";
+        $cleanNotes = !empty($validated['notes']) ? trim($validated['notes']) : 'Pengajuan pembelian alat penunjang / mesin baru.';
+
+        FinanceTransaction::create([
+            'transaction_code' => $trxCode,
+            'type' => 'pembelian_alat',
+            'category' => 'Alat & Mesin Produksi',
+            'title' => "Pengajuan Pembelian Alat Baru: {$tool->name} (+{$requestedQty} Unit)",
+            'amount' => $estimatedTotal,
+            'supplier_name' => $supplierName,
+            'payment_method' => 'Menunggu Realisasi Finance',
+            'payment_status' => 'Tempo',
+            'approval_status' => 'pending',
+            'source_role' => Auth::user()?->role ?? 'admin_gudang',
+            'transaction_date' => now()->toDateString(),
+            'notes' => "{$metaTag} {$cleanNotes} (Kategori: {$tool->category} • Lokasi: {$tool->location} • Estimasi @ Rp " . number_format($unitPrice, 0, ',', '.') . ")",
+            'user_id' => Auth::id(),
+        ]);
+
+        return redirect()->back()->with('success', "Pengajuan pembelian alat baru {$validated['name']} (+{$requestedQty} Unit) berhasil dikirim ke bagian Finance untuk disetujui & dipesan!");
     }
 
     public function updateTool(Request $request, $id)
@@ -490,6 +567,7 @@ class InventoryMasterController extends Controller
             'category' => 'nullable|string|max:100',
             'condition' => 'nullable|string|max:50',
             'damaged_qty' => 'nullable|integer|min:0',
+            'lost_qty' => 'nullable|integer|min:0',
             'location' => 'nullable|string|max:100',
             'total_qty' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:500',
@@ -499,17 +577,21 @@ class InventoryMasterController extends Controller
         $condition = $validated['condition'] ?? $tool->condition ?? 'Baik';
         $totalQty = (int) $validated['total_qty'];
 
-        // Jika kondisi 'Baik', maka tidak ada unit rusak/perlu servis (damaged_qty = 0)
-        // Jika 'Perlu Servis' atau 'Rusak', ambil damaged_qty (min 1, max total_qty)
-        if ($condition === 'Baik') {
+        if ($condition === 'Baik' || $condition === 'Bagus') {
             $damagedQty = 0;
+            $lostQty = 0;
+        } elseif ($condition === 'Hilang') {
+            $damagedQty = isset($validated['damaged_qty']) ? min((int) $validated['damaged_qty'], $totalQty) : (int) ($tool->damaged_qty ?? 0);
+            $requestedLost = isset($validated['lost_qty']) ? (int) $validated['lost_qty'] : max(1, (int) ($tool->lost_qty ?? 1));
+            $lostQty = min(max(1, $requestedLost), max(0, $totalQty - $damagedQty));
         } else {
             $requestedDamaged = isset($validated['damaged_qty']) ? (int) $validated['damaged_qty'] : 1;
             $damagedQty = min(max(1, $requestedDamaged), $totalQty);
+            $lostQty = isset($validated['lost_qty']) ? min((int) $validated['lost_qty'], max(0, $totalQty - $damagedQty)) : (int) ($tool->lost_qty ?? 0);
         }
 
         $borrowedQty = ToolBorrow::where('tool_id', $tool->id)->where('status', 'Dipinjam')->sum('qty');
-        $newAvailable = max(0, $totalQty - $borrowedQty - $damagedQty);
+        $newAvailable = max(0, $totalQty - $borrowedQty - $damagedQty - $lostQty);
 
         $imagePath = $tool->image_path;
         if ($request->hasFile('image')) {
@@ -522,6 +604,7 @@ class InventoryMasterController extends Controller
             'category' => $validated['category'] ?? $tool->category ?? 'Mesin Bor & Potong',
             'condition' => $condition,
             'damaged_qty' => $damagedQty,
+            'lost_qty' => $lostQty,
             'location' => $validated['location'] ?? $tool->location,
             'total_qty' => $totalQty,
             'available_qty' => $newAvailable,
@@ -585,16 +668,100 @@ class InventoryMasterController extends Controller
             return redirect()->back()->with('error', 'Alat ini sudah dikembalikan sebelumnya.');
         }
 
-        DB::transaction(function () use ($borrow) {
+        $validated = $request->validate([
+            'return_condition' => 'nullable|string|in:Baik,Perlu Servis,Rusak,Hilang',
+            'damaged_qty' => 'nullable|integer|min:0',
+            'lost_qty' => 'nullable|integer|min:0',
+            'return_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $borrowedQty = max(1, (int) $borrow->qty);
+        $returnCondition = $validated['return_condition'] ?? 'Baik';
+
+        $damagedQty = isset($validated['damaged_qty']) ? min((int) $validated['damaged_qty'], $borrowedQty) : 0;
+        $lostQty = isset($validated['lost_qty']) ? min((int) $validated['lost_qty'], max(0, $borrowedQty - $damagedQty)) : 0;
+
+        if (($returnCondition === 'Rusak' || $returnCondition === 'Perlu Servis') && $damagedQty <= 0 && $lostQty <= 0) {
+            $damagedQty = $borrowedQty;
+        } elseif ($returnCondition === 'Hilang' && $lostQty <= 0 && $damagedQty <= 0) {
+            $lostQty = $borrowedQty;
+        } elseif ($returnCondition === 'Baik' && $damagedQty <= 0 && $lostQty <= 0) {
+            $damagedQty = 0;
+            $lostQty = 0;
+        }
+
+        if ($damagedQty > 0 && $lostQty === 0 && $returnCondition === 'Baik') {
+            $returnCondition = 'Rusak';
+        } elseif ($lostQty > 0 && $damagedQty === 0 && $returnCondition === 'Baik') {
+            $returnCondition = 'Hilang';
+        }
+
+        $goodReturnedQty = max(0, $borrowedQty - $damagedQty - $lostQty);
+        $returnNotes = !empty($validated['return_notes']) ? trim($validated['return_notes']) : null;
+
+        DB::transaction(function () use ($borrow, $returnCondition, $damagedQty, $lostQty, $goodReturnedQty, $returnNotes) {
             $borrow->update([
                 'return_date' => now(),
                 'status' => 'Dikembalikan',
+                'return_condition' => $returnCondition,
+                'damaged_qty' => $damagedQty,
+                'lost_qty' => $lostQty,
+                'return_notes' => $returnNotes,
             ]);
 
-            $borrow->tool->increment('available_qty', $borrow->qty);
+            $tool = $borrow->tool;
+            if ($tool) {
+                $newDamagedTotal = min((int) $tool->total_qty, (int) ($tool->damaged_qty ?? 0) + $damagedQty);
+                $newLostTotal = min(max(0, (int) $tool->total_qty - $newDamagedTotal), (int) ($tool->lost_qty ?? 0) + $lostQty);
+
+                $activeBorrowedQty = ToolBorrow::where('tool_id', $tool->id)
+                    ->where('status', 'Dipinjam')
+                    ->where('id', '!=', $borrow->id)
+                    ->sum('qty');
+
+                $newAvailable = max(0, (int) $tool->total_qty - (int) $activeBorrowedQty - $newDamagedTotal - $newLostTotal);
+
+                $newToolCondition = $tool->condition;
+                if ($damagedQty > 0) {
+                    $newToolCondition = $returnCondition === 'Perlu Servis' ? 'Perlu Servis' : 'Rusak';
+                } elseif ($lostQty > 0 && $newDamagedTotal === 0) {
+                    $newToolCondition = 'Hilang';
+                }
+
+                $updatedToolNotes = $tool->notes;
+                if ($damagedQty > 0 || $lostQty > 0 || !empty($returnNotes)) {
+                    $dateStr = now()->format('Y-m-d');
+                    $statusParts = [];
+                    if ($damagedQty > 0) {
+                        $statusParts[] = "{$returnCondition}: {$damagedQty} unit";
+                    }
+                    if ($lostQty > 0) {
+                        $statusParts[] = "Hilang: {$lostQty} unit";
+                    }
+                    if (empty($statusParts)) {
+                        $statusParts[] = "Kondisi: {$returnCondition}";
+                    }
+                    $summary = implode(', ', $statusParts);
+                    $noteDetail = $returnNotes ? " — {$returnNotes}" : '';
+                    $updatedToolNotes = "[Pengembalian {$dateStr} oleh {$borrow->borrower_name}] {$summary}{$noteDetail}";
+                }
+
+                $tool->update([
+                    'available_qty' => $newAvailable,
+                    'damaged_qty' => $newDamagedTotal,
+                    'lost_qty' => $newLostTotal,
+                    'condition' => $newToolCondition,
+                    'notes' => $updatedToolNotes,
+                ]);
+            }
         });
 
-        return redirect()->back()->with('success', "Pengembalian alat {$borrow->tool->name} berhasil diverifikasi!");
+        $extraMsg = '';
+        if ($damagedQty > 0 || $lostQty > 0) {
+            $extraMsg = " Kondisi alat otomatis diperbarui ({$returnCondition}) dan tercatat di Log Perbaikan & Hilang.";
+        }
+
+        return redirect()->back()->with('success', "Pengembalian alat {$borrow->tool->name} berhasil diverifikasi!{$extraMsg}");
     }
 
     public function repairTool(Request $request, $id)
@@ -618,8 +785,9 @@ class InventoryMasterController extends Controller
 
         if ($newCondition === 'Baik') {
             $borrowedQty = ToolBorrow::where('tool_id', $tool->id)->where('status', 'Dipinjam')->sum('qty');
+            $lostQty = (int) ($tool->lost_qty ?? 0);
             $updateData['damaged_qty'] = 0;
-            $updateData['available_qty'] = max(0, (int) $tool->total_qty - (int) $borrowedQty);
+            $updateData['available_qty'] = max(0, (int) $tool->total_qty - (int) $borrowedQty - $lostQty);
         }
 
         $tool->update($updateData);
@@ -803,17 +971,54 @@ class InventoryMasterController extends Controller
 
         $validated = $request->validate([
             'request_qty' => 'required|integer|min:1',
+            'estimated_price' => 'nullable|numeric|min:0',
+            'supplier_name' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        SupplyRestock::create([
+        $reqQty = (int) $validated['request_qty'];
+        $unitPrice = isset($validated['estimated_price']) && (float) $validated['estimated_price'] > 0
+            ? (float) $validated['estimated_price']
+            : 50000;
+        $estimatedTotal = $reqQty * $unitPrice;
+        $supplierName = !empty($validated['supplier_name']) ? $validated['supplier_name'] : 'Toko Teknik & Sparepart Pabrik';
+
+        $restock = SupplyRestock::create([
             'supply_id' => $supply->id,
-            'request_qty' => $validated['request_qty'],
+            'request_qty' => $reqQty,
             'notes' => $validated['notes'] ?? null,
-            'status' => 'Menunggu Persetujuan',
+            'status' => 'Menunggu Persetujuan Finance',
         ]);
 
-        return redirect()->back()->with('success', "Permintaan restok {$validated['request_qty']} {$supply->unit} {$supply->name} diajukan ke manajemen!");
+        $prefix = 'PO-ALT';
+        $period = date('Ym');
+        $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+            $count++;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        }
+
+        $metaTag = "[RESTOCK_SUPPLY_ID:{$supply->id}|QTY:{$reqQty}|REQ_ID:{$restock->id}|CODE:{$supply->item_code}]";
+        $cleanNotes = !empty($validated['notes']) ? trim($validated['notes']) : 'Pengajuan pembelian sparepart / perlengkapan produksi.';
+
+        FinanceTransaction::create([
+            'transaction_code' => $trxCode,
+            'type' => 'pembelian_alat',
+            'category' => 'Sparepart & Perlengkapan Produksi',
+            'title' => "Pengajuan Sparepart/Inventaris: {$supply->name} (+{$reqQty} " . ($supply->unit ?? 'Pcs') . ")",
+            'amount' => $estimatedTotal,
+            'supplier_name' => $supplierName,
+            'payment_method' => 'Menunggu Realisasi Finance',
+            'payment_status' => 'Tempo',
+            'approval_status' => 'pending',
+            'source_role' => Auth::user()?->role ?? 'admin_toko',
+            'transaction_date' => now()->toDateString(),
+            'notes' => "{$metaTag} {$cleanNotes} (Sisa Stok Gudang: {$supply->qty} " . ($supply->unit ?? 'Pcs') . ")",
+            'user_id' => Auth::id(),
+        ]);
+
+        return redirect()->back()->with('success', "Pengajuan pembelian sparepart/perlengkapan {$supply->name} (+{$reqQty} {$supply->unit}) berhasil dikirim ke Finance untuk disetujui & dipesan!");
     }
 
     public function approveRestockSupply(Request $request, $restockId)
@@ -824,8 +1029,44 @@ class InventoryMasterController extends Controller
             return redirect()->back()->with('error', 'Permintaan ini sudah selesai diproses.');
         }
 
-        DB::transaction(function () use ($restock) {
-            $supply = $restock->supply;
+        $supply = $restock->supply;
+        $reqQty = (int) $restock->request_qty;
+
+        // Jika masih berstatus Menunggu Persetujuan Admin Toko, teruskan ke Finance jika belum ada di FinanceTransaction
+        $existingPendingTrx = FinanceTransaction::where('notes', 'like', "%[RESTOCK_SUPPLY_ID:{$supply->id}|QTY:{$reqQty}|REQ_ID:{$restock->id}%")->first();
+        if (!$existingPendingTrx && !in_array(Auth::user()?->role, ['owner', 'finance', 'admin_finance'])) {
+            $restock->update(['status' => 'Menunggu Persetujuan Finance']);
+
+            $prefix = 'PO-ALT';
+            $period = date('Ym');
+            $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+            while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+                $count++;
+                $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+            }
+
+            $metaTag = "[RESTOCK_SUPPLY_ID:{$supply->id}|QTY:{$reqQty}|REQ_ID:{$restock->id}|CODE:{$supply->item_code}]";
+            FinanceTransaction::create([
+                'transaction_code' => $trxCode,
+                'type' => 'pembelian_alat',
+                'category' => 'Sparepart & Perlengkapan Produksi',
+                'title' => "Pengajuan Sparepart/Inventaris: {$supply->name} (+{$reqQty} " . ($supply->unit ?? 'Pcs') . ")",
+                'amount' => $reqQty * 50000,
+                'supplier_name' => 'Toko Teknik & Sparepart Pabrik',
+                'payment_method' => 'Menunggu Realisasi Finance',
+                'payment_status' => 'Tempo',
+                'approval_status' => 'pending',
+                'source_role' => Auth::user()?->role ?? 'admin_toko',
+                'transaction_date' => now()->toDateString(),
+                'notes' => "{$metaTag} " . ($restock->notes ?? 'Pengajuan pembelian sparepart/inventaris produksi.'),
+                'user_id' => Auth::id(),
+            ]);
+
+            return redirect()->back()->with('success', "Pengajuan restok {$supply->name} diteruskan ke Finance untuk disetujui & dipesan!");
+        }
+
+        DB::transaction(function () use ($restock, $supply) {
             $newQty = $supply->qty + $restock->request_qty;
             $status = $newQty > $supply->min_stock ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
 

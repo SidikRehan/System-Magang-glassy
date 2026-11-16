@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Handshake, X, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Handshake, X, CheckCircle2, Camera } from 'lucide-react';
 
 export default function PromoteOrderModal({
     show,
@@ -10,6 +10,16 @@ export default function PromoteOrderModal({
     const [promotePaymentOption, setPromotePaymentOption] = useState('dp');
     const [promoteDpPercent, setPromoteDpPercent] = useState(50);
     const [promoteCustomPaidAmount, setPromoteCustomPaidAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Transfer Bank / QRIS');
+    const [dpProofFile, setDpProofFile] = useState(null);
+    const [dpProofPreview, setDpProofPreview] = useState(null);
+
+    useEffect(() => {
+        if (!show) {
+            setDpProofFile(null);
+            setDpProofPreview(null);
+        }
+    }, [show]);
 
     if (!show || !targetPromoteOrder) return null;
 
@@ -29,7 +39,9 @@ export default function PromoteOrderModal({
             payment_option: promotePaymentOption,
             dp_percent: promoteDpPercent,
             custom_paid_amount: promotePaymentOption === 'custom' ? promoteCustomPaidAmount : (promotePaymentOption === 'lunas' ? targetPromoteOrder.total_price : null),
-            paid_amount: paidAmount
+            paid_amount: paidAmount,
+            payment_method: paymentMethod,
+            dp_proof: dpProofFile,
         });
     };
 
@@ -190,6 +202,53 @@ export default function PromoteOrderModal({
                                         </span>
                                     </div>
                                 )}
+
+                                {/* METODE & UPLOAD BUKTI PEMBAYARAN DP / DEAL */}
+                                <div className="bg-blue-50/70 border border-blue-200 p-3.5 rounded-2xl space-y-2.5 text-xs">
+                                    <div>
+                                        <label className="text-slate-700 font-bold block mb-1">Metode Pembayaran DP / Deal:</label>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            {['Transfer Bank / QRIS', 'Tunai di Toko', 'EDC / Debit'].map(m => (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() => setPaymentMethod(m)}
+                                                    className={`py-1.5 px-2 rounded-xl border text-[11px] font-bold transition cursor-pointer ${
+                                                        paymentMethod === m
+                                                            ? 'bg-[#1b68b0] text-white border-[#1b68b0]'
+                                                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    {m}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="font-bold text-[#1b68b0] flex items-center gap-1.5">
+                                            <Camera className="w-4 h-4 text-[#1b68b0]" />
+                                            <span>Upload Bukti Pembayaran DP / Lunas Customer</span>
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const f = e.target.files[0];
+                                                if (f) {
+                                                    setDpProofFile(f);
+                                                    setDpProofPreview(URL.createObjectURL(f));
+                                                }
+                                            }}
+                                            className="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs text-slate-700 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#1b68b0] file:text-white hover:file:bg-[#15528c] cursor-pointer"
+                                        />
+                                        {dpProofPreview && (
+                                            <div className="relative rounded-xl overflow-hidden border border-slate-300 max-h-40 bg-white p-1">
+                                                <img src={dpProofPreview} alt="Bukti DP" className="w-full h-36 object-contain mx-auto" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         );
                     })()}

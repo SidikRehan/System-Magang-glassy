@@ -140,6 +140,7 @@ class SypOperationalController extends Controller
             'accessories' => 'nullable|array',
             'description' => 'nullable|string',
             'sketch_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'dp_proof' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'priority_status' => 'required|string',
             'priority_fee' => 'nullable|numeric',
             'custom_fee' => 'nullable|numeric',
@@ -219,6 +220,11 @@ class SypOperationalController extends Controller
             $sketchPath = $request->file('sketch_photo')->store('sketches', 'public');
         }
 
+        $dpProofPath = null;
+        if ($request->hasFile('dp_proof')) {
+            $dpProofPath = $request->file('dp_proof')->store('payment_proofs', 'public');
+        }
+
         // Handle flexible payment selection (Cash, Transfer, QRIS with Auto DP / Lunas)
         $paymentMethod = $request->input('payment_method', 'cash');
         $rawPaid = $request->input('custom_paid_amount', $request->input('paid_amount', null));
@@ -281,6 +287,9 @@ class SypOperationalController extends Controller
             'total_price' => $totalPrice,
             'paid_amount' => $paidAmount,
             'payment_status' => $paymentStatus,
+            'payment_method' => $paymentMethod,
+            'dp_proof_path' => $dpProofPath,
+            'payment_proof_path' => ($paymentStatus === 'Lunas' && $dpProofPath) ? $dpProofPath : null,
             'status' => $targetStatus,
             'is_company_use' => $isCompanyUse,
             'current_division' => $isDraft ? 'admin_toko' : 'admin_gudang',
@@ -619,7 +628,20 @@ class SypOperationalController extends Controller
     public function promoteDraftToPengerjaan(Request $request, $id)
     {
         $order = Order::findOrFail($id);
-        
+
+        $request->validate([
+            'dp_proof' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'payment_method' => 'nullable|string|max:100',
+        ]);
+
+        if ($request->hasFile('dp_proof')) {
+            $dpPath = $request->file('dp_proof')->store('payment_proofs', 'public');
+            $order->dp_proof_path = $dpPath;
+        }
+        if ($request->filled('payment_method')) {
+            $order->payment_method = $request->input('payment_method');
+        }
+
         $paymentOption = $request->input('payment_option', 'dp');
         $dpPercent = (float)$request->input('dp_percent', 50);
         $totalPrice = (float)$order->total_price;
@@ -651,6 +673,9 @@ class SypOperationalController extends Controller
         $order->status = 'pengerjaan';
         $order->payment_status = $paymentStatus;
         $order->paid_amount = $paidAmount;
+        if ($paymentStatus === 'Lunas' && $order->dp_proof_path && !$order->payment_proof_path) {
+            $order->payment_proof_path = $order->dp_proof_path;
+        }
         $order->current_division = 'admin_gudang';
         $order->gudang_released_at = $order->gudang_released_at ?? now();
         $freshProgress = $this->buildDivisionProgress((array)($order->items ?? []), (array)($order->processes ?? []));
@@ -805,7 +830,8 @@ class SypOperationalController extends Controller
         $order->current_division = 'selesai';
         $order->delivered_at = $order->delivered_at ?? now();
 
-        if ($request->boolean('mark_lunas') || ($validated['payment_status'] ?? '') === 'Lunas') {
+        $userRole = auth()->user()->role ?? '';
+        if ($userRole !== 'driver' && ($request->boolean('mark_lunas') || ($validated['payment_status'] ?? '') === 'Lunas')) {
             $order->payment_status = 'Lunas';
             $order->paid_amount = $order->total_price;
         }
@@ -2383,6 +2409,58 @@ class SypOperationalController extends Controller
             'approved_at' => $approvalStatus === 'approved' ? now() : null,
         ]);
 
+        if ($approvalStatus === 'approved') {
+            if (preg_match('/\[RESTOCK_GLASS_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+                $glass = SheetGlass::find((int) $matches[1]);
+                $restockQty = (int) $matches[2];
+                if ($glass && $restockQty > 0) {
+                    $newQty = (int) $glass->qty + $restockQty;
+                    $glass->update([
+                        'qty' => $newQty,
+                        'last_restock' => now(),
+                        'status' => $newQty > 10 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis'),
+                    ]);
+                }
+            } elseif (preg_match('/\[RESTOCK_SUPPLY_ID:(\d+)\|QTY:(\d+)(?:\|REQ_ID:(\d+))?/', (string) $trx->notes, $matches)) {
+                $supply = Supply::find((int) $matches[1]);
+                $restockQty = (int) $matches[2];
+                $reqId = isset($matches[3]) ? (int) $matches[3] : null;
+                if ($supply && $restockQty > 0) {
+                    $newQty = (int) $supply->qty + $restockQty;
+                    $supply->update([
+                        'qty' => $newQty,
+                        'status' => $newQty > ($supply->min_stock ?? 5) ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis'),
+                    ]);
+                    if ($reqId) {
+                        \App\Models\SupplyRestock::where('id', $reqId)->update(['status' => 'Selesai Restok']);
+                    }
+                }
+            } elseif (preg_match('/\[RESTOCK_ACC_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+                $acc = Accessory::find((int) $matches[1]);
+                $restockQty = (int) $matches[2];
+                if ($acc && $restockQty > 0) {
+                    $newQty = (int) $acc->qty + $restockQty;
+                    $acc->update([
+                        'qty' => $newQty,
+                        'status' => $newQty > 20 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis'),
+                    ]);
+                }
+            } elseif (preg_match('/\[RESTOCK_TOOL_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+                $tool = Tool::find((int) $matches[1]);
+                $restockQty = (int) $matches[2];
+                if ($tool && $restockQty > 0) {
+                    $newTotal = (int) $tool->total_qty + $restockQty;
+                    $newAvail = (int) $tool->available_qty + $restockQty;
+                    $tool->update([
+                        'total_qty' => $newTotal,
+                        'available_qty' => $newAvail,
+                        'condition' => 'Baik',
+                        'notes' => 'Disetujui & dibeli oleh Finance (' . $trx->transaction_code . ')',
+                    ]);
+                }
+            }
+        }
+
         $logDesc = $isDriver
             ? 'Supir (' . ($user->name ?? 'Driver') . ') mengajukan klaim biaya armada ' . $trx->title . ' sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . ' (Status: Menunggu Persetujuan)'
             : 'Mencatat transaksi ' . strtoupper(str_replace('_', ' ', $trx->type)) . ' (' . $trx->title . ') sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . ' (' . $trx->payment_method . ')';
@@ -2414,22 +2492,159 @@ class SypOperationalController extends Controller
         }
 
         $trx = FinanceTransaction::findOrFail($id);
+
+        $isRestockRequest = $trx->type === 'pembelian_aksesoris'
+            || $trx->type === 'pembelian_bahan'
+            || $trx->type === 'pembelian_alat'
+            || str_contains((string) $trx->notes, '[RESTOCK_')
+            || str_contains(strtolower((string) $trx->title), 'restok')
+            || str_contains(strtolower((string) $trx->title), 'pengajuan');
+
+        $validated = $request->validate([
+            'receipt_photo' => ($isRestockRequest && empty($trx->receipt_photo_path))
+                ? 'required|image|max:5120'
+                : 'nullable|image|max:5120',
+            'restock_qty' => 'nullable|integer|min:1',
+            'amount' => 'nullable|numeric|min:0',
+            'invoice_number' => 'nullable|string|max:255',
+            'supplier_name' => 'nullable|string|max:255',
+            'payment_method' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1000',
+        ], [
+            'receipt_photo.required' => 'Wajib mengunggah Nota / Bukti Pembayaran restok barang sebelum menyetujui pengajuan restok!',
+            'receipt_photo.image' => 'File nota bukti pembayaran harus berupa gambar (JPG, PNG, JPEG, WEBP).',
+            'receipt_photo.max' => 'Ukuran foto nota bukti pembayaran maksimal 5 MB.',
+        ]);
+
+        $receiptPhotoPath = $trx->receipt_photo_path;
+        if ($request->hasFile('receipt_photo')) {
+            $receiptPhotoPath = $request->file('receipt_photo')->store('receipts', 'public');
+        }
+
+        $finalAmount = isset($validated['amount']) && $validated['amount'] !== null && $validated['amount'] !== ''
+            ? (float) $validated['amount']
+            : (float) $trx->amount;
+
+        $overrideRestockQty = isset($validated['restock_qty']) && (int) $validated['restock_qty'] > 0
+            ? (int) $validated['restock_qty']
+            : null;
+
+        $updatedNotes = $trx->notes;
+        if ($overrideRestockQty) {
+            $updatedNotes = preg_replace('/\|QTY:\d+/', '|QTY:' . $overrideRestockQty, (string) $updatedNotes);
+        }
+        if (!empty($validated['notes'])) {
+            $updatedNotes = trim(($updatedNotes ? $updatedNotes . ' | ' : '') . 'Catatan Finance: ' . $validated['notes']);
+        }
+
+        $finalTitle = $trx->title;
+        if ($overrideRestockQty) {
+            $finalTitle = preg_replace('/\(\+\d+\s/', '(+' . $overrideRestockQty . ' ', (string) $finalTitle);
+        }
+
         $trx->update([
+            'title' => $finalTitle,
             'approval_status' => 'approved',
+            'payment_status' => 'Lunas',
+            'amount' => $finalAmount,
+            'invoice_number' => !empty($validated['invoice_number']) ? $validated['invoice_number'] : $trx->invoice_number,
+            'supplier_name' => !empty($validated['supplier_name']) ? $validated['supplier_name'] : $trx->supplier_name,
+            'payment_method' => !empty($validated['payment_method']) ? $validated['payment_method'] : ($trx->payment_method === 'Menunggu Realisasi Finance' ? 'Transfer Bank / Kas' : $trx->payment_method),
+            'receipt_photo_path' => $receiptPhotoPath,
+            'notes' => $updatedNotes,
             'approved_by_user_id' => auth()->id(),
             'approved_at' => now(),
         ]);
+
+        // Otomatis tambahkan stok barang sesuai jenis pengajuan restok (Kaca Lembaran / Aksesoris / Sparepart & Perlengkapan)
+        $restockedAccInfo = '';
+        if (preg_match('/\[RESTOCK_GLASS_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+            $glassId = (int) $matches[1];
+            $restockQty = (int) $matches[2];
+            $glass = SheetGlass::find($glassId);
+            if ($glass && $restockQty > 0) {
+                $newQty = (int) $glass->qty + $restockQty;
+                $newStatus = $newQty > 10 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+                $glass->update([
+                    'qty' => $newQty,
+                    'last_restock' => now(),
+                    'status' => $newStatus,
+                ]);
+                $restockedAccInfo = " Stok bahan produksi {$glass->name} otomatis bertambah +{$restockQty} " . ($glass->unit ?? 'Lembar') . " (Total Stok: {$newQty} " . ($glass->unit ?? 'Lembar') . ").";
+            }
+        } elseif (preg_match('/\[RESTOCK_SUPPLY_ID:(\d+)\|QTY:(\d+)(?:\|REQ_ID:(\d+))?/', (string) $trx->notes, $matches)) {
+            $supplyId = (int) $matches[1];
+            $restockQty = (int) $matches[2];
+            $reqId = isset($matches[3]) ? (int) $matches[3] : null;
+            $supply = Supply::find($supplyId);
+            if ($supply && $restockQty > 0) {
+                $newQty = (int) $supply->qty + $restockQty;
+                $newStatus = $newQty > ($supply->min_stock ?? 5) ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+                $supply->update([
+                    'qty' => $newQty,
+                    'status' => $newStatus,
+                ]);
+                if ($reqId) {
+                    \App\Models\SupplyRestock::where('id', $reqId)->update(['status' => 'Selesai Restok']);
+                }
+                $restockedAccInfo = " Stok sparepart/perlengkapan {$supply->name} otomatis bertambah +{$restockQty} " . ($supply->unit ?? 'Pcs') . " (Total Stok: {$newQty} " . ($supply->unit ?? 'Pcs') . ").";
+            }
+        } elseif (preg_match('/\[RESTOCK_ACC_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+            $accId = (int) $matches[1];
+            $restockQty = (int) $matches[2];
+            $acc = Accessory::find($accId);
+            if ($acc && $restockQty > 0) {
+                $newQty = (int) $acc->qty + $restockQty;
+                $newStatus = $newQty > 20 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+                $acc->update([
+                    'qty' => $newQty,
+                    'status' => $newStatus,
+                ]);
+                $restockedAccInfo = " Stok aksesoris {$acc->name} otomatis bertambah +{$restockQty} " . ($acc->unit ?? 'Pcs') . " (Total Stok: {$newQty} " . ($acc->unit ?? 'Pcs') . ").";
+            }
+        } elseif (preg_match('/\[RESTOCK_TOOL_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+            $toolId = (int) $matches[1];
+            $restockQty = (int) $matches[2];
+            $tool = Tool::find($toolId);
+            if ($tool && $restockQty > 0) {
+                $newTotal = (int) $tool->total_qty + $restockQty;
+                $newAvail = (int) $tool->available_qty + $restockQty;
+                $tool->update([
+                    'total_qty' => $newTotal,
+                    'available_qty' => $newAvail,
+                    'condition' => 'Baik',
+                    'notes' => 'Disetujui & dibeli oleh Finance (' . $trx->transaction_code . ')',
+                ]);
+                $restockedAccInfo = " Stok alat penunjang {$tool->name} otomatis bertambah +{$restockQty} Unit (Total Siap Pakai: {$newAvail} Unit).";
+            }
+        } elseif ($trx->type === 'pembelian_aksesoris') {
+            if (preg_match('/\(\+(\d+)\s/i', (string) $trx->title, $qtyMatch)) {
+                $restockQty = (int) $qtyMatch[1];
+                $acc = Accessory::where('status', 'Pengajuan Restock')->get()->first(function ($item) use ($trx) {
+                    return str_contains(strtolower((string) $trx->title), strtolower((string) $item->name));
+                });
+                if ($acc && $restockQty > 0) {
+                    $newQty = (int) $acc->qty + $restockQty;
+                    $newStatus = $newQty > 20 ? 'Aman' : ($newQty > 0 ? 'Menipis' : 'Habis');
+                    $acc->update([
+                        'qty' => $newQty,
+                        'status' => $newStatus,
+                    ]);
+                    $restockedAccInfo = " Stok aksesoris {$acc->name} otomatis bertambah +{$restockQty} " . ($acc->unit ?? 'Pcs') . " (Total Stok: {$newQty} " . ($acc->unit ?? 'Pcs') . ").";
+                }
+            }
+        }
 
         ActivityLog::create([
             'user_id' => auth()->id(),
             'admin_name' => auth()->user()->name ?? ($user->role === 'owner' ? 'Owner / Direksi' : 'Finance & Accounting'),
             'action_type' => 'APPROVE_KLAIM_FINANCE',
             'target_user_name' => $trx->transaction_code,
-            'description' => 'Menyetujui klaim ' . $trx->transaction_code . ' (' . $trx->title . ') sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . ' untuk dibayarkan dari kas operasional.',
+            'description' => 'Menyetujui & mengunggah nota pembayaran ' . $trx->transaction_code . ' (' . $trx->title . ') sebesar Rp ' . number_format($trx->amount, 0, ',', '.') . '.' . $restockedAccInfo,
             'created_at' => now(),
         ]);
 
-        return redirect()->back()->with('message', 'Klaim biaya #' . $trx->transaction_code . ' berhasil DISETUJUI dan langsung dibukukan ke Laporan Keuangan!');
+        return redirect()->back()->with('message', 'Pengajuan #' . $trx->transaction_code . ' berhasil DISETUJUI beserta Nota Bukti Pembayaran dan dibukukan ke Laporan Keuangan!' . $restockedAccInfo);
     }
 
     /**
@@ -2450,6 +2665,29 @@ class SypOperationalController extends Controller
             'rejection_reason' => $reason,
         ]);
 
+        if (preg_match('/\[RESTOCK_GLASS_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+            $glass = SheetGlass::find((int) $matches[1]);
+            if ($glass && $glass->status === 'Pengajuan Proses Restock') {
+                $revertedStatus = $glass->qty > 10 ? 'Aman' : ($glass->qty > 0 ? 'Menipis' : 'Habis');
+                $glass->update(['status' => $revertedStatus]);
+            }
+        } elseif (preg_match('/\[RESTOCK_SUPPLY_ID:(\d+)\|QTY:(\d+)(?:\|REQ_ID:(\d+))?/', (string) $trx->notes, $matches)) {
+            if (!empty($matches[3])) {
+                \App\Models\SupplyRestock::where('id', (int) $matches[3])->update(['status' => 'Ditolak Finance']);
+            }
+        } elseif (preg_match('/\[RESTOCK_ACC_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+            $acc = Accessory::find((int) $matches[1]);
+            if ($acc && $acc->status === 'Pengajuan Restock') {
+                $revertedStatus = $acc->qty > 20 ? 'Aman' : ($acc->qty > 0 ? 'Menipis' : 'Habis');
+                $acc->update(['status' => $revertedStatus]);
+            }
+        } elseif (preg_match('/\[RESTOCK_TOOL_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
+            $tool = Tool::find((int) $matches[1]);
+            if ($tool && $tool->condition === 'Pengajuan Pembelian' && (int) $tool->total_qty === 0) {
+                $tool->delete();
+            }
+        }
+
         ActivityLog::create([
             'user_id' => auth()->id(),
             'admin_name' => auth()->user()->name ?? ($user->role === 'owner' ? 'Owner / Direksi' : 'Finance & Accounting'),
@@ -2459,31 +2697,62 @@ class SypOperationalController extends Controller
             'created_at' => now(),
         ]);
 
-        return redirect()->back()->with('message', 'Klaim biaya #' . $trx->transaction_code . ' telah DITOLAK.');
+        return redirect()->back()->with('message', 'Pengajuan #' . $trx->transaction_code . ' telah DITOLAK.');
     }
 
     /**
-     * Settle COD Payment Handover from Driver to Cashier
+     * Settle Order Full Payment (Pelunasan Order oleh Admin Toko dengan Bukti Pembayaran)
      */
     public function settleCodHandover(Request $request, $id)
     {
         $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            'payment_proof' => $order->payment_proof_path ? 'nullable|image|max:5120' : 'required|image|max:5120',
+            'payment_method' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
+        ], [
+            'payment_proof.required' => 'Wajib mengunggah foto bukti pembayaran / struk transfer pelunasan customer terlebih dahulu!',
+            'payment_proof.image' => 'File bukti pembayaran harus berupa gambar (JPG, PNG, JPEG).',
+            'payment_proof.max' => 'Ukuran foto bukti pembayaran maksimal 5 MB.',
+        ]);
+
         $sisaCod = max(0, (float)($order->total_price - $order->paid_amount));
+
+        if ($request->hasFile('payment_proof')) {
+            $path = $request->file('payment_proof')->store('payment_proofs', 'public');
+            $order->payment_proof_path = $path;
+        }
+
+        if (!empty($validated['payment_method'])) {
+            $order->payment_method = $validated['payment_method'];
+        }
 
         $order->payment_status = 'Lunas';
         $order->paid_amount = $order->total_price;
+
+        $hasCompletedDelivery = !empty($order->delivered_at) ||
+            Delivery::where('order_id', $order->id)->where('delivery_status', 'Selesai Terkirim')->exists();
+
+        if ($hasCompletedDelivery) {
+            $order->status = 'selesai';
+            $order->current_division = 'selesai';
+        }
+
         $order->save();
+
+        $methodLabel = !empty($validated['payment_method']) ? ' (' . $validated['payment_method'] . ')' : '';
 
         ActivityLog::create([
             'user_id' => auth()->id(),
-            'admin_name' => auth()->user()->name ?? 'Kasir & Finance',
-            'action_type' => 'SETORAN_COD_DITERIMA',
+            'admin_name' => auth()->user()->name ?? 'Admin Toko & Kasir',
+            'action_type' => 'PELUNASAN_ORDER_LUNAS',
             'target_user_name' => $order->spo_number,
-            'description' => 'Konfirmasi serah terima uang kas pelunasan COD Surat Jalan Merah Order #' . $order->spo_number . ' sebesar Rp ' . number_format($sisaCod, 0, ',', '.') . ' (' . $order->customer_name . ') disetorkan ke Kasir.',
+            'description' => 'Konfirmasi pelunasan pembayaran Order #' . $order->spo_number . ' sebesar Rp ' . number_format($sisaCod, 0, ',', '.') . ' (' . $order->customer_name . ')' . $methodLabel . ' beserta lampiran bukti pembayaran oleh Admin Toko.',
             'created_at' => now(),
         ]);
 
-        return redirect()->back()->with('message', 'Serah terima uang kas COD Order #' . $order->spo_number . ' (Rp ' . number_format($sisaCod, 0, ',', '.') . ') BERHASIL dikonfirmasi masuk ke Kas Toko!');
+        return redirect()->back()->with('message', 'Status pembayaran Order #' . $order->spo_number . ' (Rp ' . number_format($sisaCod, 0, ',', '.') . ') beserta bukti pembayaran berhasil diubah menjadi LUNAS!');
     }
 
     /**

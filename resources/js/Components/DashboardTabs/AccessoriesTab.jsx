@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-    Plug, Plus, Search, RefreshCw, Send, 
+    Plug, Plus, Search, Send, Clock,
     Edit, Trash2, Lock, ZoomIn
 } from 'lucide-react';
 
@@ -220,21 +220,25 @@ export default function AccessoriesTab({
                                         )}
                                     </td>
                                     <td className="p-3 text-center">
-                                        <div className="flex items-center justify-center gap-1.5">
-                                            <button
-                                                onClick={() => { setSelectedAccItem(acc); setAccRestockQty(10); setShowRestockAccModal(true); }}
-                                                className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                                title="Restock Aksesoris Masuk"
-                                            >
-                                                <RefreshCw className="w-3.5 h-3.5" /> Restock
-                                            </button>
-                                            {acc.status !== 'Pengajuan Restock' && (
-                                                <button
-                                                    onClick={() => handleRequestAccRestockStatus(acc.id)}
-                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                                    title="Ajukan kebutuhan restock aksesoris ini"
+                                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                            {acc.status === 'Pengajuan Restock' ? (
+                                                <span
+                                                    className="bg-purple-50 text-purple-700 border border-purple-200 font-bold px-2.5 py-1.5 rounded-lg text-xs inline-flex items-center gap-1"
+                                                    title="Pengajuan restok sudah dikirim dan sedang menunggu persetujuan & nota bayar Finance"
                                                 >
-                                                    <Send className="w-3.5 h-3.5" /> Ajukan
+                                                    <Clock className="w-3.5 h-3.5" /> Menunggu Finance
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedAccItem(acc);
+                                                        if (setAccRestockQty) setAccRestockQty(10);
+                                                        setShowRestockAccModal(true);
+                                                    }}
+                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                                    title="Ajukan kebutuhan restock aksesoris ini ke Finance"
+                                                >
+                                                    <Send className="w-3.5 h-3.5" /> Ajukan Restok
                                                 </button>
                                             )}
                                             {(userRole === 'admin_toko' || userRole === 'owner') && (

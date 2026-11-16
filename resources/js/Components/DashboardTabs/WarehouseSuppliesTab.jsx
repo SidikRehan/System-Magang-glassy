@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
     Archive, Plus, Search, 
-    ClipboardList, Send, Check, 
+    ClipboardList, Send, 
     Box, MessageSquare, Package, User, Calendar,
     Edit, Trash2, X
 } from 'lucide-react';
@@ -135,14 +135,14 @@ export default function WarehouseSuppliesTab({
 
                 {/* ACTION BUTTONS */}
                 <div className="flex flex-wrap items-center gap-2">
-                    {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                    {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                         <>
                             <button
                                 onClick={() => handleOpenRequestRestockModal(null)}
                                 className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                             >
                                 <Send className="w-3.5 h-3.5" />
-                                <span>Ajukan Restok</span>
+                                <span>Ajukan Pembelian / Restok ke Finance</span>
                             </button>
                             <button
                                 onClick={() => setShowAddSupplyModal(true)}
@@ -151,13 +151,15 @@ export default function WarehouseSuppliesTab({
                                 <Plus className="w-3.5 h-3.5 text-[#1b68b0]" />
                                 <span>Tambah Item</span>
                             </button>
-                            <button
-                                onClick={() => setShowUseSupplyModal(true)}
-                                className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-                            >
-                                <ClipboardList className="w-3.5 h-3.5" />
-                                <span>Catat Pemakaian</span>
-                            </button>
+                            {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                <button
+                                    onClick={() => setShowUseSupplyModal(true)}
+                                    className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                                >
+                                    <ClipboardList className="w-3.5 h-3.5" />
+                                    <span>Catat Pemakaian</span>
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
@@ -244,13 +246,13 @@ export default function WarehouseSuppliesTab({
                                         </td>
                                         <td className="p-3 text-right">
                                             <div className="flex items-center justify-end gap-1.5">
-                                                {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                                                {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => handleOpenRequestRestockModal(s)}
-                                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${s.status !== 'Aman' ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs'}`}
-                                                        title="Ajukan Restok Barang ini ke Admin Toko"
+                                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${s.status !== 'Aman' ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 shadow-2xs'}`}
+                                                        title="Ajukan Pembelian / Restok Sparepart & Inventaris ini ke Finance"
                                                     >
-                                                        <Send className="w-3.5 h-3.5" /> Restok
+                                                        <Send className="w-3.5 h-3.5" /> Ajukan Restok
                                                     </button>
                                                 )}
                                                 {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
@@ -355,16 +357,16 @@ export default function WarehouseSuppliesTab({
                         <div>
                             <h3 className="font-black text-[#242222] text-sm flex items-center gap-2">
                                 <Send className="w-4 h-4 text-[#1b68b0]" />
-                                <span>Daftar Pengajuan Restok Perlengkapan ke Admin Toko</span>
+                                <span>Daftar Pengajuan Pembelian Sparepart & Perlengkapan ke Finance</span>
                             </h3>
-                            <p className="text-xs text-slate-500 font-medium">Monitoring pengajuan restok barang gudang yang diajukan ke Admin Toko / Purchasing.</p>
+                            <p className="text-xs text-slate-500 font-medium">Monitoring pengajuan restok sparepart/inventaris produksi yang diajukan ke bagian Finance untuk disetujui & dipesan.</p>
                         </div>
-                        {(userRole === 'admin_gudang' || userRole === 'owner') && (
+                        {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
                             <button
                                 onClick={() => handleOpenRequestRestockModal(null)}
                                 className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                             >
-                                <Plus className="w-3.5 h-3.5" /> Ajukan Restok Baru
+                                <Plus className="w-3.5 h-3.5" /> Ajukan Restok ke Finance
                             </button>
                         )}
                     </div>
@@ -408,13 +410,13 @@ export default function WarehouseSuppliesTab({
                                         </td>
                                         <td className="p-3 text-right">
                                             <div className="flex justify-end gap-1.5">
-                                                {String(req.status || '').startsWith('Menunggu') && (userRole === 'admin_toko' || userRole === 'owner') && (
+                                                {String(req.status || '').startsWith('Menunggu') && !String(req.status || '').includes('Finance') && (userRole === 'admin_toko' || userRole === 'owner') && (
                                                     <button
                                                         onClick={() => handleApproveRestockRequest(req.id)}
-                                                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer flex items-center gap-1"
-                                                        title="Setujui dan tambahkan stok ke gudang"
+                                                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                                        title="Teruskan pengajuan ini ke bagian Finance untuk disetujui & dipesan"
                                                     >
-                                                        <Check className="w-3.5 h-3.5" /> Setujui
+                                                        <Send className="w-3.5 h-3.5" /> Teruskan ke Finance
                                                     </button>
                                                 )}
 

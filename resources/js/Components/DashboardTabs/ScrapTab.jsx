@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
-    Boxes, Plus, Search, Eye, EyeOff, RefreshCw, 
-    MessageSquare, Edit, Trash2, Calendar, Scissors, 
+    Boxes, Plus, Search, Eye, EyeOff, 
+    Edit, Trash2, Calendar, Scissors, 
     CheckCircle2, AlertTriangle, Clock, 
     Lock, Package, Send, ZoomIn, X
 } from 'lucide-react';
@@ -153,7 +153,7 @@ export default function ScrapTab({
                         })}
                     </div>
 
-                    {/* BUTTON TAMBAH BARANG & RESTOK UMUM */}
+                    {/* BUTTON TAMBAH BARANG & AJUKAN RESTOK KE FINANCE */}
                     <div className="flex flex-wrap items-center gap-2.5">
                         {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button
@@ -164,14 +164,14 @@ export default function ScrapTab({
                                 <span>Tambah Jenis Barang Baru</span>
                             </button>
                         )}
-                        {(userRole === 'admin_toko' || userRole === 'owner') && (
+                        {(userRole === 'admin_toko' || userRole === 'admin_gudang' || userRole === 'owner') && (
                             <button
                                 onClick={() => handleOpenRestockModal(null)}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
-                                title="Restock bahan kaca lembaran baru (pilih jenis kaca dari daftar)"
+                                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
+                                title="Ajukan pembelian / restock bahan kaca lembaran baru ke Finance"
                             >
-                                <RefreshCw className="w-4 h-4" />
-                                <span>Restock Kaca (Pilih Barang)</span>
+                                <Send className="w-4 h-4" />
+                                <span>Ajukan Restok Kaca ke Finance</span>
                             </button>
                         )}
                     </div>
@@ -368,31 +368,30 @@ export default function ScrapTab({
                                                 <td className="p-3 text-right whitespace-nowrap">
                                                     <div className="flex flex-wrap items-center justify-end gap-1.5">
                                                         {(userRole === 'admin_toko' || userRole === 'owner') && (
-                                                            <>
-                                                                {item.status === 'Pengajuan Proses Restock' && (
-                                                                    <button
-                                                                        onClick={() => handleOpenSupplierWaModal(item)}
-                                                                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                                                                        title="Setujui dan chat WA supplier"
-                                                                    >
-                                                                        <MessageSquare className="w-3.5 h-3.5" /> WA Supplier
-                                                                    </button>
-                                                                )}
-
+                                                            item.status === 'Pengajuan Proses Restock' ? (
                                                                 <button
                                                                     onClick={() => handleOpenRestockModal(item)}
-                                                                    className="bg-blue-50 hover:bg-blue-100 text-[#1b68b0] border border-blue-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                                    title="Teruskan / kirim rincian pengajuan pembelian ke Finance"
                                                                 >
-                                                                    <RefreshCw className="w-3.5 h-3.5" /> Restock
+                                                                    <Send className="w-3.5 h-3.5" /> Ajukan ke Finance
                                                                 </button>
-                                                            </>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleOpenRestockModal(item)}
+                                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                                    title="Ajukan restok bahan kaca lembaran ini ke bagian Finance"
+                                                                >
+                                                                    <Send className="w-3.5 h-3.5" /> Ajukan Restok
+                                                                </button>
+                                                            )
                                                         )}
 
                                                         {(userRole === 'admin_gudang' || userRole.startsWith('divisi_')) && (
                                                             item.status === 'Pengajuan Proses Restock' ? (
                                                                 <div className="flex items-center gap-1">
                                                                     <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-bold">
-                                                                        Menunggu Toko
+                                                                        Menunggu Finance
                                                                     </span>
                                                                     {(userRole === 'admin_gudang' || userRole === 'owner') && handleCancelRequestRestockStatus && (
                                                                         <button
@@ -414,11 +413,11 @@ export default function ScrapTab({
                                                                 </button>
                                                             ) : (
                                                                 <button
-                                                                    onClick={() => handleRequestRestockStatus(item.id)}
+                                                                    onClick={() => handleOpenRestockModal(item)}
                                                                     className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                                                    title="Ajukan kebutuhan restock barang ini"
+                                                                    title="Ajukan restock barang kaca ini ke bagian Finance"
                                                                 >
-                                                                    <Send className="w-3.5 h-3.5" /> Ajukan Stok
+                                                                    <Send className="w-3.5 h-3.5" /> Ajukan Restok ke Finance
                                                                 </button>
                                                             )
                                                         )}

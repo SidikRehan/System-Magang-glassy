@@ -30,7 +30,9 @@ import {
     Lock,
     Scale,
     Bell,
-    Loader2
+    Loader2,
+    X,
+    Search
 } from 'lucide-react';
 
 export default function ProductionTab({
@@ -64,6 +66,8 @@ export default function ProductionTab({
 }) {
     const [startingOrderId, setStartingOrderId] = React.useState(null);
     const [finishingOrderId, setFinishingOrderId] = React.useState(null);
+    const [confirmNoRawOrder, setConfirmNoRawOrder] = React.useState(null);
+    const [workstationSearchTerm, setWorkstationSearchTerm] = React.useState('');
 
     const handleStartWorkstationJob = (order) => {
         if (setActiveWorkingOrderId) {
@@ -751,7 +755,7 @@ export default function ProductionTab({
                                                                 const hasLoggedScrap = scrapVal.includes('TERPAKAI DIVISI HT') || hasAssignedScrap;
                                                                 
                                                                 if (!hasLoggedRaw && !hasLoggedScrap) {
-                                                                    alert('⚠️ WAJIB CATAT BAHAN: Anda belum mencatat pemakaian bahan lembaran kaca atau kaca sisa (scrap) untuk pekerjaan ini.\n\nSilakan klik tombol "Detail Lengkap" lalu isi jumlah lembaran yang dipakai pada bagian "Bahan Kaca" sebelum menyelesaikan pekerjaan.');
+                                                                    setConfirmNoRawOrder(activeOngoingOrder);
                                                                     return;
                                                                 }
 
@@ -843,8 +847,28 @@ export default function ProductionTab({
                             )}
                         </div>
 
-                        {/* STATISTIK MASUK & SELESAI */}
+                        {/* STATISTIK MASUK & SELESAI + PENCARIAN */}
                         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                            <div className="relative w-full sm:w-64 font-sans">
+                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={workstationSearchTerm}
+                                    onChange={(e) => setWorkstationSearchTerm(e.target.value)}
+                                    placeholder="Cari SPO, pemesan, jenis kaca, ukuran..."
+                                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-8 pr-7 py-1.5 text-xs focus:bg-white focus:border-[#1b68b0] focus:ring-2 focus:ring-[#1b68b0]/15 focus:outline-none transition"
+                                />
+                                {workstationSearchTerm && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setWorkstationSearchTerm('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5 rounded-md cursor-pointer"
+                                        title="Bersihkan pencarian"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
                             {(() => {
                                 const curKey = isDivisionWorker ? userRole.replace('divisi_', '').toUpperCase() : 'HT';
                                 const isHistorySubTab = productionSubTab.endsWith('_history') || productionSubTab === 'QC_Ready' || productionSubTab === 'selesai_global';
@@ -1002,7 +1026,25 @@ export default function ProductionTab({
                             return checkOrderDivisi(o, productionSubTab);
                         });
 
-                        const sortedWorkstationOrders = [...rawFiltered].sort((a, b) => {
+                        const searchQ = workstationSearchTerm.trim().toLowerCase();
+                        const searchedOrders = searchQ
+                            ? rawFiltered.filter(o => {
+                                const spo = String(o.spo_number || '').toLowerCase();
+                                const cust = String(o.customer_name || '').toLowerCase();
+                                const phone = String(o.customer_phone || '').toLowerCase();
+                                const addr = String(o.customer_address || '').toLowerCase();
+                                const gType = String(o.glass_type || '').toLowerCase();
+                                const sizeStr = `${o.length_cm || ''}x${o.width_cm || ''} ${o.length_cm || ''} x ${o.width_cm || ''}`.toLowerCase();
+                                const itemsMatch = Array.isArray(o.items) && o.items.some(it =>
+                                    String(it.glass_type || '').toLowerCase().includes(searchQ) ||
+                                    `${it.length_cm || ''}x${it.width_cm || ''}`.toLowerCase().includes(searchQ) ||
+                                    `${it.length_cm || ''} x ${it.width_cm || ''}`.toLowerCase().includes(searchQ)
+                                );
+                                return spo.includes(searchQ) || cust.includes(searchQ) || phone.includes(searchQ) || addr.includes(searchQ) || gType.includes(searchQ) || sizeStr.includes(searchQ) || itemsMatch;
+                            })
+                            : rawFiltered;
+
+                        const sortedWorkstationOrders = [...searchedOrders].sort((a, b) => {
                             if (a.priority_status === 'Prioritas' && b.priority_status !== 'Prioritas') return -1;
                             if (a.priority_status !== 'Prioritas' && b.priority_status === 'Prioritas') return 1;
                             return b.id - a.id;
@@ -1012,8 +1054,14 @@ export default function ProductionTab({
                             return (
                                 <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-2">
                                     <Factory className="w-8 h-8 text-slate-400 mx-auto" />
-                                    <h4 className="font-bold text-[#242222] text-base">Tidak Ada Orderan Dalam Antrean saat Ini</h4>
-                                    <p className="text-xs text-slate-500">Semua orderan di workstation ini telah selesai dikerjakan atau belum didispatch oleh Gudang.</p>
+                                    <h4 className="font-bold text-[#242222] text-base">
+                                        {searchQ ? `Tidak Ditemukan Orderan untuk "${workstationSearchTerm}"` : 'Tidak Ada Orderan Dalam Antrean saat Ini'}
+                                    </h4>
+                                    <p className="text-xs text-slate-500">
+                                        {searchQ
+                                            ? 'Coba gunakan kata kunci pencarian lain (No. SPO, nama pemesan, jenis kaca, atau ukuran).'
+                                            : 'Semua orderan di workstation ini telah selesai dikerjakan atau belum didispatch oleh Gudang.'}
+                                    </p>
                                 </div>
                             );
                         }
@@ -1567,6 +1615,73 @@ export default function ProductionTab({
                 </div>
             </div>
             </div>
+
+            {/* MODAL POPUP KONFIRMASI SELESAI TANPA PEMAKAIAN BAHAN LEMBARAN BARU (DARI WORKSTATION CARD) */}
+            {confirmNoRawOrder && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+                    <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 relative my-auto text-slate-800">
+                        <div className="flex justify-between items-start border-b border-slate-200 pb-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0] shrink-0">
+                                    <AlertTriangle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm text-[#242222]">
+                                        Konfirmasi Pemakaian Bahan
+                                    </h3>
+                                    <p className="text-[11px] text-slate-500">
+                                        Order SPO #{confirmNoRawOrder.spo_number}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setConfirmNoRawOrder(null)}
+                                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl p-1 transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3 text-xs">
+                            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-amber-900 space-y-1.5">
+                                <p className="font-bold text-xs text-[#242222]">
+                                    Apakah Anda tidak menggunakan bahan lembaran baru pada orderan ini?
+                                </p>
+                                <p className="text-[11px] text-slate-600 leading-relaxed">
+                                    Orderan ini belum memiliki catatan pemakaian bahan kaca lembaran baru. Jika klik <strong>Ya, Selesai Tanpa Bahan Baru</strong>, maka orderan akan diselesaikan dan diteruskan tanpa mengurangi stok bahan lembaran baru.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 text-xs">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmNoRawOrder(null)}
+                                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer"
+                            >
+                                Batal (Catat Bahan Dulu)
+                            </button>
+                            <button
+                                type="button"
+                                disabled={finishingOrderId === confirmNoRawOrder.id}
+                                onClick={() => {
+                                    const targetOrder = confirmNoRawOrder;
+                                    setConfirmNoRawOrder(null);
+                                    const actualNext = userRole === 'owner'
+                                        ? (activeCardNextDiv === 'auto' ? computeDefaultNextDiv(targetOrder) : activeCardNextDiv)
+                                        : computeDefaultNextDiv(targetOrder);
+                                    handleFinishJobAction(targetOrder.id, actualNext);
+                                }}
+                                className="px-5 py-2.5 bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Ya, Selesai Tanpa Bahan Baru</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
