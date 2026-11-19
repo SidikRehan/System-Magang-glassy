@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Printer, X, Layers } from 'lucide-react';
+import { Printer, X, Layers, ShieldCheck, Clock } from 'lucide-react';
 
 export default function BatchWaybillModal({
     show,
     onClose,
     tripData,
+    deliveriesList = [],
     userName
 }) {
     // Multi-select color checkboxes array: e.g. ['Putih', 'Merah']
@@ -66,17 +67,37 @@ export default function BatchWaybillModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150 batch-waybill-backdrop">
             <style>{`
                 @media print {
+                    html, body {
+                        background: #ffffff !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
                     body * {
                         visibility: hidden !important;
+                    }
+                    .batch-waybill-backdrop, .no-print-wrapper {
+                        position: static !important;
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                        background: transparent !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        box-shadow: none !important;
                     }
                     #printable-batch-waybills, #printable-batch-waybills * {
                         visibility: visible !important;
                     }
                     #printable-batch-waybills {
-                        position: fixed !important;
+                        position: absolute !important;
                         left: 0 !important;
                         top: 0 !important;
                         width: 100% !important;
@@ -88,6 +109,9 @@ export default function BatchWaybillModal({
                     }
                     .waybill-page {
                         page-break-after: always !important;
+                        break-after: page !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
                         margin-bottom: 20px !important;
                         border: 2px solid #000 !important;
                     }
@@ -257,6 +281,11 @@ export default function BatchWaybillModal({
                                                         <td className="border border-slate-300 p-2 text-center font-mono">{idx + 1}</td>
                                                         <td className="border border-slate-300 p-2 font-bold">
                                                              {it.glass_type}
+                                                            {it.position_code && (
+                                                                <div className="text-[10px] text-[#1b68b0] font-bold">
+                                                                    Kode Posisi: {it.position_code}
+                                                                </div>
+                                                            )}
                                                             {Array.isArray(it.processes) && it.processes.length > 0 && (
                                                                 <div className="text-[10px] text-slate-600 font-normal">
                                                                     Proses: {it.processes.join(', ')}
@@ -285,21 +314,57 @@ export default function BatchWaybillModal({
                                         )}
                                     </div>
 
-                                    {/* TANDA TANGAN */}
-                                    <div className="grid grid-cols-3 gap-3 text-center text-[10px] pt-2">
-                                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
-                                            <div className="font-bold mb-8 text-slate-700">Penerima / Customer:</div>
-                                            <div className="border-t border-slate-300 pt-1 font-bold">( {ord.customer_name} )</div>
-                                        </div>
-                                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
-                                            <div className="font-bold mb-8 text-slate-700">Driver Pengirim:</div>
-                                            <div className="border-t border-slate-300 pt-1 font-bold">( {driver_name} )</div>
-                                        </div>
-                                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
-                                            <div className="font-bold mb-8 text-slate-700">Admin / Hormat Kami:</div>
-                                            <div className="border-t border-slate-300 pt-1 font-bold">( {userName || 'Admin Toko'} )</div>
-                                        </div>
-                                    </div>
+                                    {/* TANDA TANGAN (4 KOLOM TERMASUK VERIFIKASI SATPAM) */}
+                                    {(() => {
+                                        const delRec = (tripData?.deliveries || []).find(d => d && d.order_id === ord.id)
+                                            || (deliveriesList || []).find(d => d && d.order_id === ord.id);
+                                        const isGateChecked = Boolean(
+                                            delRec && (
+                                                delRec.gate_checked_at ||
+                                                delRec.gate_checked_by ||
+                                                delRec.delivery_status === 'Dalam Pengiriman' ||
+                                                delRec.delivery_status === 'Selesai Terkirim' ||
+                                                delRec.delivery_status === 'Terkirim'
+                                            )
+                                        );
+                                        const gateCheckerName = delRec?.gate_checker?.name || 'Petugas Satpam Gate';
+
+                                        return (
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-[10px] pt-2">
+                                                <div className="border border-slate-300 p-2 rounded-xl bg-white flex flex-col justify-between">
+                                                    <div className="font-bold mb-6 text-slate-700">Penerima / Customer:</div>
+                                                    <div className="border-t border-slate-300 pt-1 font-bold">( {ord.customer_name} )</div>
+                                                </div>
+                                                <div className="border border-slate-300 p-2 rounded-xl bg-white flex flex-col justify-between">
+                                                    <div className="font-bold mb-6 text-slate-700">Driver Pengirim:</div>
+                                                    <div className="border-t border-slate-300 pt-1 font-bold">( {driver_name} )</div>
+                                                </div>
+                                                <div className={`border p-2 rounded-xl flex flex-col justify-between ${isGateChecked ? 'border-emerald-300 bg-emerald-50/40' : 'border-amber-300 bg-amber-50/40'}`}>
+                                                    <div className="font-bold text-slate-700">Verifikasi Satpam / Gate:</div>
+                                                    <div className="my-1.5 flex items-center justify-center">
+                                                        {isGateChecked ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[9px]">
+                                                                <ShieldCheck className="w-3 h-3 text-emerald-700" />
+                                                                <span>TERTANDA TANGAN & SESUAI</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 font-bold text-[9px]">
+                                                                <Clock className="w-3 h-3 text-amber-700" />
+                                                                <span>BELUM DIVERIFIKASI SATPAM</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="border-t border-slate-300 pt-1 font-bold">
+                                                        ( {isGateChecked ? gateCheckerName : 'Belum Ditandatangani'} )
+                                                    </div>
+                                                </div>
+                                                <div className="border border-slate-300 p-2 rounded-xl bg-white flex flex-col justify-between">
+                                                    <div className="font-bold mb-6 text-slate-700">Admin / Hormat Kami:</div>
+                                                    <div className="border-t border-slate-300 pt-1 font-bold">( {userName || 'Admin Toko'} )</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             );
                         });

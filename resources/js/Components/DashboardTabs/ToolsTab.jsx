@@ -144,19 +144,23 @@ export default function ToolsTab({
                 </div>
             </div>
 
+            {/* BUTTON AJUKAN ALAT BARU */}
+            {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'admin_toko') && (
+                <div className="flex justify-start">
+                    <button
+                        onClick={() => setShowAddToolModal(true)}
+                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Ajukan Penambahan Alat Baru ke Finance</span>
+                    </button>
+                </div>
+            )}
+
             {/* BUTTON ACTION & SUBTAB TOGGLE */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl shadow-xs">
-                {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
-                    <div className="flex flex-wrap items-center gap-2">
-                        {(userRole === 'admin_gudang' || userRole === 'owner') && (
-                            <button
-                                onClick={() => setShowAddToolModal(true)}
-                                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Ajukan Pembelian Alat Baru ke Finance</span>
-                            </button>
-                        )}
+                <div className="flex flex-wrap items-center gap-2">
+                    {(userRole === 'admin_gudang' || userRole === 'owner' || userRole === 'driver') && (
                         <button
                             onClick={() => {
                                 if (toolsList.length === 0) {
@@ -177,14 +181,14 @@ export default function ToolsTab({
                             <ClipboardList className="w-3.5 h-3.5 text-[#1b68b0]" />
                             <span>{userRole === 'driver' ? 'Pinjam Alat Supir' : 'Catat Peminjaman Alat'}</span>
                         </button>
-                    </div>
-                )}
-                {userRole === 'admin_toko' && (
-                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                        <Info className="w-4 h-4 text-[#1b68b0] shrink-0" />
-                        <span>Akses Lihat-Saja (Pencatatan & peminjaman alat khusus dikelola oleh Admin Gudang)</span>
-                    </div>
-                )}
+                    )}
+                    {userRole === 'admin_toko' && (
+                        <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl">
+                            <Info className="w-3.5 h-3.5 text-[#1b68b0] shrink-0" />
+                            <span>Peminjaman alat khusus dikelola Admin Gudang</span>
+                        </div>
+                    )}
+                </div>
 
                 {/* SUB TAB PILLS */}
                 <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto scrollbar-none">
@@ -263,7 +267,7 @@ export default function ToolsTab({
                                     <div className="flex items-start gap-3">
                                         {t.image_path ? (
                                             <div 
-                                                onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, t.name, {
+                                                onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox(t.image_path, t.name, {
                                                     type: 'tool',
                                                     subtitle: `Kode Alat: ${t.tool_code || '-'} • ${t.name}`,
                                                     badge: 'Inventaris Alat & Mesin',
@@ -275,7 +279,7 @@ export default function ToolsTab({
                                                 className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-2xs shrink-0 cursor-pointer bg-white"
                                                 title="Klik untuk memperbesar foto sample mesin / alat"
                                             >
-                                                <img src={'/storage/' + t.image_path} alt={t.name} className="w-full h-full object-cover" />
+                                                <img src={t.image_path.startsWith('http') || t.image_path.startsWith('blob:') || t.image_path.startsWith('/') ? t.image_path : `/storage/${t.image_path}`} alt={t.name} className="w-full h-full object-cover" />
                                             </div>
                                         ) : (
                                             <div className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 text-amber-600">
@@ -381,7 +385,7 @@ export default function ToolsTab({
                                             <td className="p-2 text-center">
                                                 {t.image_path ? (
                                                     <div 
-                                                        onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + t.image_path, t.name, {
+                                                        onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox(t.image_path, t.name, {
                                                             type: 'tool',
                                                             subtitle: `Kode Alat: ${t.tool_code || '-'} • ${t.name}`,
                                                             badge: 'Inventaris Alat & Mesin',
@@ -393,7 +397,7 @@ export default function ToolsTab({
                                                         className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
                                                         title="Klik untuk memperbesar foto sample mesin / alat"
                                                     >
-                                                        <img src={'/storage/' + t.image_path} alt={t.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                                                        <img src={t.image_path.startsWith('http') || t.image_path.startsWith('blob:') || t.image_path.startsWith('/') ? t.image_path : `/storage/${t.image_path}`} alt={t.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
                                                     </div>
                                                 ) : (
                                                     <div className="w-10 h-10 rounded-xl bg-amber-50/80 border border-amber-100 flex items-center justify-center mx-auto text-amber-600 shadow-2xs">

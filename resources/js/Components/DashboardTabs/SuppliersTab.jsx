@@ -14,7 +14,7 @@ export default function SuppliersTab({
     handleOpenEditSupplierModal,
     handleDeleteSupplier,
 }) {
-    if (userRole !== 'admin_toko' && userRole !== 'owner') {
+    if (userRole !== 'admin_toko' && userRole !== 'owner' && userRole !== 'finance' && userRole !== 'admin_finance') {
         return null;
     }
 
@@ -60,7 +60,7 @@ export default function SuppliersTab({
             </div>
 
             {/* BUTTON TAMBAH SUPPLIER */}
-            {(userRole === 'admin_toko' || userRole === 'owner') && (
+            {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                 <div className="flex justify-start">
                     <button
                         onClick={() => setShowAddSupplierModal(true)}
@@ -158,7 +158,7 @@ export default function SuppliersTab({
                                             >
                                                 <MessageCircle className="w-3.5 h-3.5" /> WA
                                             </a>
-                                            {(userRole === 'admin_toko' || userRole === 'owner') && (
+                                            {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                                 <>
                                                     <button
                                                         onClick={() => handleOpenEditSupplierModal(sup)}

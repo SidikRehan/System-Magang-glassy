@@ -39,17 +39,37 @@ export default function MultiAddressWaybillModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150 multi-waybill-backdrop">
             <style>{`
                 @media print {
+                    html, body {
+                        background: #ffffff !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
                     body * {
                         visibility: hidden !important;
+                    }
+                    .multi-waybill-backdrop, .no-print-wrapper {
+                        position: static !important;
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                        background: transparent !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        box-shadow: none !important;
                     }
                     #printable-multi-address-waybill, #printable-multi-address-waybill * {
                         visibility: visible !important;
                     }
                     #printable-multi-address-waybill {
-                        position: fixed !important;
+                        position: absolute !important;
                         left: 0 !important;
                         top: 0 !important;
                         width: 100% !important;

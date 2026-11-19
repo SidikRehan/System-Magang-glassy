@@ -21,10 +21,21 @@ class Delivery extends Model
         'proof_photo_path',
         'notes',
         'delivery_date',
+        'gate_checked_by',
+        'gate_checked_at',
+    ];
+
+    protected $casts = [
+        'gate_checked_at' => 'datetime',
     ];
 
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function gateChecker()
+    {
+        return $this->belongsTo(User::class, 'gate_checked_by');
     }
 }

@@ -43,7 +43,7 @@ class SypOperationalController extends Controller
 
             // ── Props data pendukung: dievaluasi saat initial visit dan saat diminta partial reload ───────
             'scrapGlasses'        => fn() => ScrapGlass::where('status', '!=', 'Terpakai')->latest()->get(),
-            'deliveries'          => fn() => Delivery::with('order')->latest()->get(),
+            'deliveries'          => fn() => Delivery::with(['order', 'gateChecker:id,name,role'])->latest()->get(),
             'users'               => fn() => User::select('id', 'name', 'email', 'role', 'created_at')->orderBy('id', 'desc')->get(),
             'activityLogs'        => fn() => ActivityLog::latest()->take(100)->get(),
             'financeTransactions' => fn() => FinanceTransaction::with(['user', 'approver'])->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get(),
@@ -63,7 +63,8 @@ class SypOperationalController extends Controller
     {
         $otherRevenue       = (float) FinanceTransaction::where('approval_status', 'approved')->where('type', 'pemasukan_lain')->sum('amount');
         $activeOrders       = Order::where('status', '!=', 'draft');
-        $totalRevenue       = (float) (clone $activeOrders)->sum('total_price') + $otherRevenue;
+        $completedOrders    = Order::where('status', 'selesai');
+        $totalRevenue       = (float) (clone $completedOrders)->sum('total_price') + $otherRevenue;
         $paidRevenue        = (float) (clone $activeOrders)->sum('paid_amount') + $otherRevenue;
         $pendingCODTotal    = (float) (clone $activeOrders)->where('payment_status', '!=', 'Lunas')->sum('total_price');
         $pendingCODPaid     = (float) (clone $activeOrders)->where('payment_status', '!=', 'Lunas')->sum('paid_amount');
@@ -98,7 +99,9 @@ class SypOperationalController extends Controller
         $pendingApprovalCount = FinanceTransaction::where('approval_status', 'pending')->count();
 
         return [
-            'totalOrders'          => (clone $activeOrders)->count(),
+            'totalOrders'          => (clone $completedOrders)->count(),
+            'completedOrdersCount' => (clone $completedOrders)->count(),
+            'activeDealOrdersCount'=> (clone $activeOrders)->count(),
             'allOrdersCount'       => Order::count(),
             'draftOrdersCount'     => Order::where('status', 'draft')->count(),
             'draftOrdersTotal'     => (float) Order::where('status', 'draft')->sum('total_price'),
@@ -139,8 +142,8 @@ class SypOperationalController extends Controller
             'items' => 'nullable|array',
             'accessories' => 'nullable|array',
             'description' => 'nullable|string',
-            'sketch_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'dp_proof' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'sketch_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
+            'dp_proof' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
             'priority_status' => 'required|string',
             'priority_fee' => 'nullable|numeric',
             'custom_fee' => 'nullable|numeric',
@@ -361,7 +364,8 @@ class SypOperationalController extends Controller
             'accessories' => 'nullable|array',
             'description' => 'nullable|string',
             'revision_notes' => 'nullable|string',
-            'sketch_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'sketch_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
+            'dp_proof' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
             'priority_status' => 'required|string',
             'priority_fee' => 'nullable|numeric',
             'custom_fee' => 'nullable|numeric',
@@ -436,6 +440,9 @@ class SypOperationalController extends Controller
 
         if ($request->hasFile('sketch_photo')) {
             $order->sketch_photo_path = $request->file('sketch_photo')->store('sketches', 'public');
+        }
+        if ($request->hasFile('dp_proof')) {
+            $order->dp_proof_path = $request->file('dp_proof')->store('payment_proofs', 'public');
         }
 
         $targetStatus = $request->input('status', $order->status);
@@ -630,7 +637,7 @@ class SypOperationalController extends Controller
         $order = Order::findOrFail($id);
 
         $request->validate([
-            'dp_proof' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'dp_proof' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
             'payment_method' => 'nullable|string|max:100',
         ]);
 
@@ -806,15 +813,28 @@ class SypOperationalController extends Controller
     {
         $order = Order::findOrFail($id);
 
+        // Wajib sudah dicek / diverifikasi oleh Satpam sebelum mobil bisa foto bukti pengiriman
+        $delivery = Delivery::where('order_id', $order->id)->first();
+        $isGateChecked = $delivery && (
+            !empty($delivery->gate_checked_at) ||
+            !empty($delivery->gate_checked_by) ||
+            in_array($delivery->delivery_status, ['Dalam Pengiriman', 'Selesai Terkirim', 'Terkirim'])
+        );
+
+        if (!$isGateChecked) {
+            $errMsg = '⚠️ Akses Ditolak: Mobil belum dapat mengambil foto bukti pengiriman karena Surat Jalan dan muatan barang untuk Order #' . $order->spo_number . ' belum diverifikasi / ditandatangani oleh Satpam!';
+            return redirect()->back()->withErrors(['proof_photo' => $errMsg])->with('message', $errMsg);
+        }
+
         $validated = $request->validate([
-            'proof_photo' => $order->proof_photo_path ? 'nullable|image|max:5120' : 'required|image|max:5120',
+            'proof_photo' => $order->proof_photo_path ? 'nullable|image|max:10240' : 'required|image|max:10240',
             'recipient_name' => 'nullable|string|max:255',
             'mark_lunas' => 'nullable|boolean',
             'payment_status' => 'nullable|string',
         ], [
             'proof_photo.required' => 'Wajib melampirkan foto Surat Jalan yang telah ditandatangani penerima sebelum mengonfirmasi pengiriman terkirim!',
-            'proof_photo.image' => 'File bukti harus berupa gambar (JPG, PNG, JPEG).',
-            'proof_photo.max' => 'Ukuran foto bukti tidak boleh lebih dari 5 MB.',
+            'proof_photo.image' => 'File bukti harus berupa gambar (JPG, PNG, JPEG, WEBP).',
+            'proof_photo.max' => 'Ukuran foto bukti tidak boleh lebih dari 10 MB.',
         ]);
 
         if ($request->hasFile('proof_photo')) {
@@ -889,7 +909,62 @@ class SypOperationalController extends Controller
     }
 
     /**
-     * Satpam / Gate Checker - Memverifikasi fisik barang dan mengizinkan truk keluar (Gate Pass Approved)
+     * Satpam / Gate Checker - Memverifikasi fisik barang per Orderan SPO di mobil (Klik "Sesuai")
+     */
+    public function gateCheckOrder(Request $request, $id)
+    {
+        $userRole = auth()->user()->role ?? '';
+        if ($userRole !== 'satpam' && $userRole !== 'owner') {
+            return redirect()->back()->with('message', '⚠️ Akses Ditolak: Hanya Satpam / Gate Checker yang berhak memverifikasi kesesuaian barang di mobil!');
+        }
+
+        $order = Order::findOrFail($id);
+        $delivery = \App\Models\Delivery::where('order_id', $order->id)->first();
+
+        if (!$delivery) {
+            $delivery = \App\Models\Delivery::create([
+                'waybill_number' => 'SJ-' . ($order->spo_number ?? $order->id),
+                'trip_code' => $order->trip_code ?: ('TRIP-' . $order->id),
+                'stop_order' => 1,
+                'order_id' => $order->id,
+                'driver_name' => $order->assigned_driver ?: 'Supir Armada',
+                'vehicle_plate' => $order->assigned_vehicle ?: 'Armada Pabrik',
+                'waybill_color' => $order->payment_status === 'Lunas' ? 'Putih' : 'Merah',
+                'delivery_status' => 'Dalam Pengiriman',
+                'delivery_date' => $order->delivery_date ?: date('Y-m-d'),
+                'notes' => 'Terverifikasi Sesuai oleh Satpam di Mobil Armada',
+                'gate_checked_by' => auth()->id(),
+                'gate_checked_at' => now(),
+            ]);
+        } else {
+            $delivery->gate_checked_by = auth()->id();
+            $delivery->gate_checked_at = now();
+            if ($delivery->delivery_status === 'Menunggu Cek Satpam' || empty($delivery->delivery_status)) {
+                $delivery->delivery_status = 'Dalam Pengiriman';
+            }
+            $delivery->save();
+        }
+
+        if ($order->status !== 'selesai') {
+            $order->status = 'pengiriman';
+            $order->current_division = 'driver';
+            $order->save();
+        }
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Petugas Satpam',
+            'action_type' => 'CEK_SATPAM_ORDER_SESUAI',
+            'target_user_name' => $order->spo_number,
+            'description' => 'Satpam (' . (auth()->user()->name ?? 'Satpam') . ') telah memeriksa fisik barang di mobil armada (' . ($order->assigned_vehicle ?? '-') . ') untuk Order #' . $order->spo_number . ' dan mengonfirmasi jumlah barang SESUAI.',
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '✅ [SUDAH DICEK SATPAM — SESUAI] Fisik barang untuk Order #' . $order->spo_number . ' di mobil (' . ($order->assigned_vehicle ?? 'Armada') . ') telah diverifikasi SESUAI oleh Satpam dan siap keluar mengirim!');
+    }
+
+    /**
+     * Satpam / Gate Checker - Memverifikasi fisik seluruh barang pada 1 Trip Mobil dan mengizinkan truk keluar (Gate Pass Approved)
      */
     public function gateCheckDelivery(Request $request, $tripCode)
     {
@@ -900,20 +975,42 @@ class SypOperationalController extends Controller
 
         $deliveries = \App\Models\Delivery::where('trip_code', $tripCode)->get();
         if ($deliveries->isEmpty()) {
+            $ordersInTrip = Order::where('trip_code', $tripCode)->get();
+            foreach ($ordersInTrip as $idx => $ord) {
+                $del = \App\Models\Delivery::create([
+                    'waybill_number' => 'SJ-' . ($ord->spo_number ?? $ord->id),
+                    'trip_code' => $tripCode,
+                    'stop_order' => $idx + 1,
+                    'order_id' => $ord->id,
+                    'driver_name' => $ord->assigned_driver ?: 'Supir Armada',
+                    'vehicle_plate' => $ord->assigned_vehicle ?: 'Armada Pabrik',
+                    'waybill_color' => $ord->payment_status === 'Lunas' ? 'Putih' : 'Merah',
+                    'delivery_status' => 'Dalam Pengiriman',
+                    'delivery_date' => $ord->delivery_date ?: date('Y-m-d'),
+                    'notes' => 'Terverifikasi Sesuai oleh Satpam di Mobil Armada',
+                    'gate_checked_by' => auth()->id(),
+                    'gate_checked_at' => now(),
+                ]);
+                $deliveries->push($del);
+            }
+        }
+
+        if ($deliveries->isEmpty()) {
             return redirect()->back()->withErrors(['message' => 'Surat Barang Keluar tidak ditemukan!']);
         }
 
         foreach ($deliveries as $del) {
             $del->gate_checked_by = auth()->id();
             $del->gate_checked_at = now();
-            // Automatically mark as pengiriman/in transit if it was pending at gate
-            $del->delivery_status = 'Dalam Pengiriman';
+            if ($del->delivery_status !== 'Selesai Terkirim') {
+                $del->delivery_status = 'Dalam Pengiriman';
+            }
             $del->save();
             
             // Sync status ke order terkait
             if ($del->order) {
                 $order = $del->order;
-                if ($order->status !== 'selesai' && $order->status !== 'pengiriman') {
+                if ($order->status !== 'selesai') {
                     $order->status = 'pengiriman';
                     $order->current_division = 'driver';
                     $order->save();
@@ -921,7 +1018,16 @@ class SypOperationalController extends Controller
             }
         }
 
-        return redirect()->back()->with('message', '✅ [GATE PASS APPROVED] Truk (Kode Trip: ' . $tripCode . ') telah diperiksa Satpam dan dizinkan meninggalkan pabrik.');
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'admin_name' => auth()->user()->name ?? 'Petugas Satpam',
+            'action_type' => 'CEK_SATPAM_TRIP_SESUAI',
+            'target_user_name' => $tripCode,
+            'description' => 'Satpam (' . (auth()->user()->name ?? 'Satpam') . ') telah memeriksa seluruh muatan barang di mobil armada pada Trip #' . $tripCode . ' dan mengonfirmasi seluruh orderan SESUAI untuk keluar mengirim.',
+            'created_at' => now(),
+        ]);
+
+        return redirect()->back()->with('message', '✅ [SUDAH DICEK SATPAM — SESUAI] Seluruh muatan barang pada mobil (Kode Trip: ' . $tripCode . ') telah diperiksa Satpam, dinyatakan SESUAI, dan diizinkan keluar mengirim.');
     }
 
     /**
@@ -2112,6 +2218,8 @@ class SypOperationalController extends Controller
             'width_cm' => $w,
             'thickness_mm' => $t,
             'qty' => $q,
+            'position_code' => trim((string)($it['position_code'] ?? $it['code'] ?? '')),
+            'notes' => trim((string)($it['notes'] ?? '')),
             'processes' => $procs,
             'bevel_width_cm' => $bevelWidthCm,
             'gm_sides_length' => $gmSidesL,
@@ -2334,7 +2442,7 @@ class SypOperationalController extends Controller
         $isDriver = ($user && $user->role === 'driver') || $request->input('source_role') === 'driver';
 
         $validated = $request->validate([
-            'type' => 'required|string|in:pembelian_bahan,pembelian_aksesoris,pembelian_alat,biaya_operasional,pemasukan_lain',
+            'type' => 'required|string|in:pembelian_bahan,pembelian_aksesoris,pembelian_alat,biaya_operasional,pemasukan_lain,rekap_bulanan',
             'category' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0',
@@ -2348,9 +2456,9 @@ class SypOperationalController extends Controller
             'vehicle_plate' => 'nullable|string|max:255',
             'source_role' => 'nullable|string|max:50',
             'approval_status' => 'nullable|string|in:approved,pending,rejected',
-            'receipt_photo' => 'nullable|image|max:5120',
+            'receipt_photo' => 'nullable|image|max:10240',
             'receipt_photos' => 'nullable|array',
-            'receipt_photos.*' => 'nullable|image|max:5120',
+            'receipt_photos.*' => 'nullable|image|max:10240',
         ]);
 
         $storedPhotoPaths = [];
@@ -2377,6 +2485,7 @@ class SypOperationalController extends Controller
             'pembelian_alat' => 'PO-ALT',
             'biaya_operasional' => $isDriver ? 'KLM-DRV' : 'EXP',
             'pemasukan_lain' => 'REV-ADD',
+            'rekap_bulanan' => 'REKAP-BLN',
         ];
 
         $prefix = $prefixMap[$validated['type']] ?? 'TRX';
@@ -2387,27 +2496,32 @@ class SypOperationalController extends Controller
         $approvalStatus = $isDriver ? 'pending' : ($validated['approval_status'] ?? 'approved');
         $sourceRole = $validated['source_role'] ?? ($user ? $user->role : 'admin_toko');
 
-        $trx = FinanceTransaction::create([
-            'transaction_code' => $trxCode,
-            'type' => $validated['type'],
-            'category' => $validated['category'],
-            'title' => $validated['title'],
-            'amount' => $validated['amount'],
-            'supplier_name' => $validated['supplier_name'] ?? null,
-            'invoice_number' => $validated['invoice_number'] ?? null,
-            'payment_method' => $validated['payment_method'] ?? 'Kas Tunai',
-            'payment_status' => $validated['payment_status'] ?? 'Lunas',
-            'approval_status' => $approvalStatus,
-            'source_role' => $sourceRole,
-            'vehicle_plate' => $validated['vehicle_plate'] ?? null,
-            'transaction_date' => $validated['transaction_date'],
-            'due_date' => $validated['due_date'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'receipt_photo_path' => $receiptPhotoPath,
-            'user_id' => auth()->id(),
-            'approved_by_user_id' => $approvalStatus === 'approved' ? auth()->id() : null,
-            'approved_at' => $approvalStatus === 'approved' ? now() : null,
-        ]);
+        $trx = FinanceTransaction::updateOrCreate(
+            $validated['type'] === 'rekap_bulanan'
+                ? ['type' => 'rekap_bulanan', 'category' => $validated['category']]
+                : ['transaction_code' => $trxCode],
+            [
+                'transaction_code' => $trxCode,
+                'type' => $validated['type'],
+                'category' => $validated['category'],
+                'title' => $validated['title'],
+                'amount' => $validated['amount'],
+                'supplier_name' => $validated['supplier_name'] ?? null,
+                'invoice_number' => $validated['invoice_number'] ?? null,
+                'payment_method' => $validated['payment_method'] ?? 'Kas Tunai',
+                'payment_status' => $validated['payment_status'] ?? 'Lunas',
+                'approval_status' => $approvalStatus,
+                'source_role' => $sourceRole,
+                'vehicle_plate' => $validated['vehicle_plate'] ?? null,
+                'transaction_date' => $validated['transaction_date'],
+                'due_date' => $validated['due_date'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'receipt_photo_path' => $receiptPhotoPath,
+                'user_id' => auth()->id(),
+                'approved_by_user_id' => $approvalStatus === 'approved' ? auth()->id() : null,
+                'approved_at' => $approvalStatus === 'approved' ? now() : null,
+            ]
+        );
 
         if ($approvalStatus === 'approved') {
             if (preg_match('/\[RESTOCK_GLASS_ID:(\d+)\|QTY:(\d+)/', (string) $trx->notes, $matches)) {
@@ -2501,9 +2615,7 @@ class SypOperationalController extends Controller
             || str_contains(strtolower((string) $trx->title), 'pengajuan');
 
         $validated = $request->validate([
-            'receipt_photo' => ($isRestockRequest && empty($trx->receipt_photo_path))
-                ? 'required|image|max:5120'
-                : 'nullable|image|max:5120',
+            'receipt_photo' => 'required|image|max:10240',
             'restock_qty' => 'nullable|integer|min:1',
             'amount' => 'nullable|numeric|min:0',
             'invoice_number' => 'nullable|string|max:255',
@@ -2511,14 +2623,27 @@ class SypOperationalController extends Controller
             'payment_method' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1000',
         ], [
-            'receipt_photo.required' => 'Wajib mengunggah Nota / Bukti Pembayaran restok barang sebelum menyetujui pengajuan restok!',
-            'receipt_photo.image' => 'File nota bukti pembayaran harus berupa gambar (JPG, PNG, JPEG, WEBP).',
-            'receipt_photo.max' => 'Ukuran foto nota bukti pembayaran maksimal 5 MB.',
+            'receipt_photo.required' => 'Wajib mengunggah foto Bukti Transfer / Nota Pembayaran dari bagian Finance sebelum menyetujui pengajuan atau klaim ini!',
+            'receipt_photo.image' => 'File bukti transfer / nota pembayaran harus berupa gambar (JPG, PNG, JPEG, WEBP).',
+            'receipt_photo.max' => 'Ukuran foto bukti transfer / nota pembayaran maksimal 10 MB.',
         ]);
 
         $receiptPhotoPath = $trx->receipt_photo_path;
         if ($request->hasFile('receipt_photo')) {
-            $receiptPhotoPath = $request->file('receipt_photo')->store('receipts', 'public');
+            $newPhotoPath = $request->file('receipt_photo')->store('receipts', 'public');
+            if (!empty($trx->receipt_photo_path)) {
+                $existingPhotos = [];
+                if (is_string($trx->receipt_photo_path) && str_starts_with(trim($trx->receipt_photo_path), '[')) {
+                    $decoded = json_decode($trx->receipt_photo_path, true);
+                    $existingPhotos = is_array($decoded) ? $decoded : [$trx->receipt_photo_path];
+                } else {
+                    $existingPhotos = [$trx->receipt_photo_path];
+                }
+                $existingPhotos[] = $newPhotoPath;
+                $receiptPhotoPath = json_encode($existingPhotos);
+            } else {
+                $receiptPhotoPath = $newPhotoPath;
+            }
         }
 
         $finalAmount = isset($validated['amount']) && $validated['amount'] !== null && $validated['amount'] !== ''
@@ -2708,13 +2833,13 @@ class SypOperationalController extends Controller
         $order = Order::findOrFail($id);
 
         $validated = $request->validate([
-            'payment_proof' => $order->payment_proof_path ? 'nullable|image|max:5120' : 'required|image|max:5120',
+            'payment_proof' => $order->payment_proof_path ? 'nullable|image|max:10240' : 'required|image|max:10240',
             'payment_method' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:500',
         ], [
             'payment_proof.required' => 'Wajib mengunggah foto bukti pembayaran / struk transfer pelunasan customer terlebih dahulu!',
-            'payment_proof.image' => 'File bukti pembayaran harus berupa gambar (JPG, PNG, JPEG).',
-            'payment_proof.max' => 'Ukuran foto bukti pembayaran maksimal 5 MB.',
+            'payment_proof.image' => 'File bukti pembayaran harus berupa gambar (JPG, PNG, JPEG, WEBP).',
+            'payment_proof.max' => 'Ukuran foto bukti pembayaran maksimal 10 MB.',
         ]);
 
         $sisaCod = max(0, (float)($order->total_price - $order->paid_amount));

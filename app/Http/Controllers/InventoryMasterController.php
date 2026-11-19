@@ -39,7 +39,7 @@ class InventoryMasterController extends Controller
             'supplier_name' => 'nullable|string|max:255',
             'supplier_phone' => 'nullable|string|max:50',
             'supplier_pic' => 'nullable|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $nextId = (SheetGlass::max('id') ?? 0) + 1;
@@ -105,7 +105,7 @@ class InventoryMasterController extends Controller
             'supplier_name' => 'nullable|string|max:255',
             'supplier_phone' => 'nullable|string|max:50',
             'supplier_pic' => 'nullable|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $size = "{$validated['length_cm']} x {$validated['width_cm']} cm";
@@ -334,11 +334,13 @@ class InventoryMasterController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'buy_price' => 'nullable|numeric|min:0',
+            'buy_price' => 'required|numeric|min:0',
             'sell_price' => 'required|numeric|min:0',
-            'qty' => 'required|integer|min:0',
+            'qty' => 'required|integer|min:1',
             'unit' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'supplier_name' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:500',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $nextId = (Accessory::max('id') ?? 0) + 1;
@@ -347,26 +349,56 @@ class InventoryMasterController extends Controller
             $nextId++;
             $accCode = 'ACC-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
         }
-        $qty = (int) $validated['qty'];
-        $status = $qty > 20 ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
+        $requestedQty = (int) $validated['qty'];
+        $buyPrice = (float) $validated['buy_price'];
+        $sellPrice = (float) $validated['sell_price'];
+        $estimatedTotal = $requestedQty * $buyPrice;
 
         $imagePath = null;
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('accessories', 'public');
         }
 
-        Accessory::create([
+        $acc = Accessory::create([
             'acc_code' => $accCode,
             'name' => $validated['name'],
             'image_path' => $imagePath,
-            'buy_price' => $validated['buy_price'] ?? 0,
-            'sell_price' => $validated['sell_price'],
-            'qty' => $qty,
+            'buy_price' => $buyPrice,
+            'sell_price' => $sellPrice,
+            'qty' => 0, // Belum masuk stok sampai disetujui Finance
             'unit' => $validated['unit'] ?? 'Pcs',
-            'status' => $status,
+            'status' => 'Pengajuan Restock',
         ]);
 
-        return redirect()->back()->with('success', "Aksesoris {$validated['name']} berhasil ditambahkan!");
+        $prefix = 'PO-ACC';
+        $period = date('Ym');
+        $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+            $count++;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        }
+
+        $metaTag = "[RESTOCK_ACC_ID:{$acc->id}|QTY:{$requestedQty}|CODE:{$acc->acc_code}|NEW_ITEM:1]";
+        $cleanNotes = !empty($validated['notes']) ? trim($validated['notes']) : 'Pengajuan penambahan aksesoris baru oleh tim toko.';
+
+        FinanceTransaction::create([
+            'transaction_code' => $trxCode,
+            'type' => 'pembelian_aksesoris',
+            'category' => 'Restock Aksesoris & Hardware',
+            'title' => "Pengajuan Pembelian Aksesoris Baru: {$acc->name} (+{$requestedQty} " . ($acc->unit ?? 'Pcs') . ")",
+            'amount' => $estimatedTotal,
+            'supplier_name' => $validated['supplier_name'] ?? 'Supplier Aksesoris & Hardware',
+            'payment_method' => 'Menunggu Realisasi Finance',
+            'payment_status' => 'Tempo',
+            'approval_status' => 'pending',
+            'source_role' => Auth::user()?->role ?? 'admin_toko',
+            'transaction_date' => now()->toDateString(),
+            'notes' => "{$metaTag} {$cleanNotes} (Harga Beli: Rp " . number_format($buyPrice, 0, ',', '.') . " • Harga Jual: Rp " . number_format($sellPrice, 0, ',', '.') . ")",
+            'user_id' => Auth::id(),
+        ]);
+
+        return redirect()->back()->with('success', "Pengajuan penambahan aksesoris baru {$acc->name} (+{$requestedQty} " . ($acc->unit ?? 'Pcs') . ") berhasil dikirim ke Finance untuk disetujui & dibayarkan!");
     }
 
     public function updateAccessory(Request $request, $id)
@@ -379,7 +411,7 @@ class InventoryMasterController extends Controller
             'sell_price' => 'required|numeric|min:0',
             'qty' => 'required|integer|min:0',
             'unit' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $qty = (int) $validated['qty'];
@@ -475,21 +507,19 @@ class InventoryMasterController extends Controller
     // ==========================================
     public function storeTool(Request $request)
     {
-        if ($request->user()?->role === 'admin_toko') {
-            return redirect()->back()->with('error', 'Admin toko hanya memiliki akses lihat. Pengelolaan alat dilakukan oleh Admin Gudang.');
-        }
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:100',
             'condition' => 'nullable|string|max:50',
             'location' => 'nullable|string|max:100',
             'total_qty' => 'required|integer|min:1',
+            'buy_price' => 'nullable|numeric|min:0',
             'estimated_price' => 'nullable|numeric|min:0',
+            'sell_price' => 'nullable|numeric|min:0',
             'supplier_name' => 'nullable|string|max:255',
             'supplier_phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:500',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $nextId = (Tool::max('id') ?? 0) + 1;
@@ -499,10 +529,11 @@ class InventoryMasterController extends Controller
             $toolCode = 'ALT-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
         }
         $requestedQty = (int) $validated['total_qty'];
-        $unitPrice = isset($validated['estimated_price']) && (float) $validated['estimated_price'] > 0
-            ? (float) $validated['estimated_price']
-            : 250000;
-        $estimatedTotal = $requestedQty * $unitPrice;
+        $buyPrice = isset($validated['buy_price']) && (float) $validated['buy_price'] > 0
+            ? (float) $validated['buy_price']
+            : (isset($validated['estimated_price']) && (float) $validated['estimated_price'] > 0 ? (float) $validated['estimated_price'] : 250000);
+        $sellPrice = isset($validated['sell_price']) && (float) $validated['sell_price'] > 0 ? (float) $validated['sell_price'] : null;
+        $estimatedTotal = $requestedQty * $buyPrice;
         $supplierName = !empty($validated['supplier_name']) ? $validated['supplier_name'] : 'Toko Teknik & Mesin Industri';
         $supplierPhone = !empty($validated['supplier_phone']) ? $validated['supplier_phone'] : null;
 
@@ -520,7 +551,7 @@ class InventoryMasterController extends Controller
             'location' => $validated['location'] ?? 'Gudang Utama',
             'total_qty' => 0,
             'available_qty' => 0,
-            'notes' => "[Pengajuan Pembelian {$requestedQty} Unit ke Finance] " . ($validated['notes'] ?? ''),
+            'notes' => "[Pengajuan Pembelian {$requestedQty} Unit ke Finance | Beli: Rp " . number_format($buyPrice, 0, ',', '.') . ($sellPrice ? " | Jual/Nilai: Rp " . number_format($sellPrice, 0, ',', '.') : '') . "] " . ($validated['notes'] ?? ''),
         ]);
 
         $prefix = 'PO-ALT';
@@ -532,8 +563,9 @@ class InventoryMasterController extends Controller
             $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
         }
 
-        $metaTag = "[RESTOCK_TOOL_ID:{$tool->id}|QTY:{$requestedQty}|CODE:{$tool->tool_code}|PHONE:" . ($supplierPhone ?? '') . "]";
+        $metaTag = "[RESTOCK_TOOL_ID:{$tool->id}|QTY:{$requestedQty}|CODE:{$tool->tool_code}|PHONE:" . ($supplierPhone ?? '') . "|NEW_ITEM:1]";
         $cleanNotes = !empty($validated['notes']) ? trim($validated['notes']) : 'Pengajuan pembelian alat penunjang / mesin baru.';
+        $priceNotes = "Harga Beli: Rp " . number_format($buyPrice, 0, ',', '.') . ($sellPrice ? " • Harga Jual/Nilai: Rp " . number_format($sellPrice, 0, ',', '.') : '');
 
         FinanceTransaction::create([
             'transaction_code' => $trxCode,
@@ -545,9 +577,9 @@ class InventoryMasterController extends Controller
             'payment_method' => 'Menunggu Realisasi Finance',
             'payment_status' => 'Tempo',
             'approval_status' => 'pending',
-            'source_role' => Auth::user()?->role ?? 'admin_gudang',
+            'source_role' => Auth::user()?->role ?? 'admin_toko',
             'transaction_date' => now()->toDateString(),
-            'notes' => "{$metaTag} {$cleanNotes} (Kategori: {$tool->category} • Lokasi: {$tool->location} • Estimasi @ Rp " . number_format($unitPrice, 0, ',', '.') . ")",
+            'notes' => "{$metaTag} {$cleanNotes} ({$priceNotes} • Kategori: {$tool->category} • Lokasi: {$tool->location})",
             'user_id' => Auth::id(),
         ]);
 
@@ -571,7 +603,7 @@ class InventoryMasterController extends Controller
             'location' => 'nullable|string|max:100',
             'total_qty' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:500',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $condition = $validated['condition'] ?? $tool->condition ?? 'Baik';
@@ -816,10 +848,14 @@ class InventoryMasterController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:100',
-            'qty' => 'required|integer|min:0',
+            'qty' => 'required|integer|min:1',
             'unit' => 'nullable|string|max:50',
+            'buy_price' => 'nullable|numeric|min:0',
+            'sell_price' => 'nullable|numeric|min:0',
             'min_stock' => 'nullable|integer|min:1',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'supplier_name' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:500',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $nextId = (Supply::max('id') ?? 0) + 1;
@@ -828,27 +864,68 @@ class InventoryMasterController extends Controller
             $nextId++;
             $itemCode = 'SUP-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
         }
-        $qty = (int) $validated['qty'];
+        $requestedQty = (int) $validated['qty'];
         $min = (int) ($validated['min_stock'] ?? 5);
-        $status = $qty > $min ? 'Aman' : ($qty > 0 ? 'Menipis' : 'Habis');
+        $buyPrice = isset($validated['buy_price']) && (float) $validated['buy_price'] > 0
+            ? (float) $validated['buy_price']
+            : 50000;
+        $sellPrice = isset($validated['sell_price']) && (float) $validated['sell_price'] > 0 ? (float) $validated['sell_price'] : null;
+        $estimatedTotal = $requestedQty * $buyPrice;
+        $supplierName = !empty($validated['supplier_name']) ? $validated['supplier_name'] : 'Toko Teknik & Sparepart Pabrik';
 
         $imagePath = null;
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('supplies', 'public');
         }
 
-        Supply::create([
+        $supply = Supply::create([
             'item_code' => $itemCode,
             'name' => $validated['name'],
             'image_path' => $imagePath,
             'category' => $validated['category'],
-            'qty' => $qty,
+            'qty' => 0,
             'unit' => $validated['unit'] ?? 'Pcs',
             'min_stock' => $min,
-            'status' => $status,
+            'status' => 'Pengajuan Restock',
         ]);
 
-        return redirect()->back()->with('success', "Perlengkapan {$validated['name']} berhasil ditambahkan!");
+        $restock = SupplyRestock::create([
+            'supply_id' => $supply->id,
+            'request_qty' => $requestedQty,
+            'notes' => "[Pengajuan Item Baru] " . ($validated['notes'] ?? ''),
+            'status' => 'Menunggu Persetujuan Finance',
+        ]);
+
+        $prefix = 'PO-ALT';
+        $period = date('Ym');
+        $count = FinanceTransaction::where('transaction_code', 'like', $prefix . '-' . $period . '-%')->count() + 1;
+        $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        while (FinanceTransaction::where('transaction_code', $trxCode)->exists()) {
+            $count++;
+            $trxCode = sprintf('%s-%s-%03d', $prefix, $period, $count);
+        }
+
+        $metaTag = "[RESTOCK_SUPPLY_ID:{$supply->id}|QTY:{$requestedQty}|REQ_ID:{$restock->id}|CODE:{$supply->item_code}|NEW_ITEM:1]";
+        $cleanNotes = !empty($validated['notes']) ? trim($validated['notes']) : 'Pengajuan penambahan item baru perlengkapan gudang / sparepart.';
+        $priceNotes = "Harga Beli: Rp " . number_format($buyPrice, 0, ',', '.') . ($sellPrice ? " • Harga Jual: Rp " . number_format($sellPrice, 0, ',', '.') : '');
+
+        FinanceTransaction::create([
+            'transaction_code' => $trxCode,
+            'type' => 'pembelian_alat',
+            'category' => 'Sparepart & Perlengkapan Produksi',
+            'title' => "Pengajuan Item Baru Gudang: {$supply->name} (+{$requestedQty} " . ($supply->unit ?? 'Pcs') . ")",
+            'amount' => $estimatedTotal,
+            'supplier_name' => $supplierName,
+            'payment_method' => 'Menunggu Realisasi Finance',
+            'payment_status' => 'Tempo',
+            'approval_status' => 'pending',
+            'source_role' => Auth::user()?->role ?? 'admin_toko',
+            'transaction_date' => now()->toDateString(),
+            'notes' => "{$metaTag} {$cleanNotes} ({$priceNotes} • Kategori: {$supply->category})",
+            'user_id' => Auth::id(),
+        ]);
+
+        return redirect()->back()->with('success', "Pengajuan penambahan item baru gudang {$validated['name']} (+{$requestedQty} " . ($supply->unit ?? 'Pcs') . ") berhasil dikirim ke bagian Finance untuk disetujui & dibayarkan!");
     }
 
     public function updateSupply(Request $request, $id)
@@ -861,7 +938,7 @@ class InventoryMasterController extends Controller
             'qty' => 'required|integer|min:0',
             'unit' => 'nullable|string|max:50',
             'min_stock' => 'nullable|integer|min:1',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
         ]);
 
         $qty = (int) $validated['qty'];

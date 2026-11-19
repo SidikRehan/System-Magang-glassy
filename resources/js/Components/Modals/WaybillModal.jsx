@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Printer, Tag, X } from 'lucide-react';
+import { Printer, Tag, X, ShieldCheck, Clock } from 'lucide-react';
 
 export default function WaybillModal({
     show,
@@ -7,6 +7,7 @@ export default function WaybillModal({
     selectedWaybillOrder,
     order,
     selectedOrder,
+    deliveriesList = [],
     userName,
     onOpenStickerModal
 }) {
@@ -15,6 +16,18 @@ export default function WaybillModal({
     const [activeColor, setActiveColor] = useState(waybillOrder?.waybill_color || 'Putih');
 
     if (!show || !waybillOrder) return null;
+
+    const delRec = (deliveriesList || []).find(d => d && d.order_id === waybillOrder.id) || waybillOrder.delivery || null;
+    const isGateChecked = Boolean(
+        delRec && (
+            delRec.gate_checked_at ||
+            delRec.gate_checked_by ||
+            delRec.delivery_status === 'Dalam Pengiriman' ||
+            delRec.delivery_status === 'Selesai Terkirim' ||
+            delRec.delivery_status === 'Terkirim'
+        )
+    );
+    const gateCheckerName = delRec?.gate_checker?.name || 'Petugas Satpam Gate';
 
     const colorConfig = {
         Putih: {
@@ -62,17 +75,37 @@ export default function WaybillModal({
         }];
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150 waybill-modal-backdrop">
             <style>{`
                 @media print {
+                    html, body {
+                        background: #ffffff !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
                     body * {
                         visibility: hidden !important;
+                    }
+                    .waybill-modal-backdrop, .no-print-wrapper {
+                        position: static !important;
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                        background: transparent !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        box-shadow: none !important;
                     }
                     #printable-waybill, #printable-waybill * {
                         visibility: visible !important;
                     }
                     #printable-waybill {
-                        position: fixed !important;
+                        position: absolute !important;
                         left: 0 !important;
                         top: 0 !important;
                         width: 100% !important;
@@ -207,6 +240,11 @@ export default function WaybillModal({
                                         <td className="border border-slate-300 p-2 text-center font-mono">{idx + 1}</td>
                                         <td className="border border-slate-300 p-2 font-bold">
                                             {it.glass_type}
+                                            {it.position_code && (
+                                                <div className="text-[10px] text-[#1b68b0] font-bold">
+                                                    Kode Posisi: {it.position_code}
+                                                </div>
+                                            )}
                                             {Array.isArray(it.processes) && it.processes.length > 0 && (
                                                 <div className="text-[10px] text-slate-600 font-normal">
                                                     Proses: {it.processes.join(', ')}
@@ -241,18 +279,37 @@ export default function WaybillModal({
                         )}
                     </div>
 
-                    {/* TANDA TANGAN */}
-                    <div className="grid grid-cols-3 gap-3 text-center text-[10px] pt-2">
-                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
-                            <div className="font-bold mb-8 text-slate-700">Penerima / Customer:</div>
+                    {/* TANDA TANGAN (4 KOLOM TERMASUK VERIFIKASI SATPAM) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-[10px] pt-2">
+                        <div className="border border-slate-300 p-2 rounded-xl bg-white flex flex-col justify-between">
+                            <div className="font-bold mb-6 text-slate-700">Penerima / Customer:</div>
                             <div className="border-t border-slate-300 pt-1 font-bold">( {waybillOrder.customer_name} )</div>
                         </div>
-                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
-                            <div className="font-bold mb-8 text-slate-700">Driver Pengirim:</div>
+                        <div className="border border-slate-300 p-2 rounded-xl bg-white flex flex-col justify-between">
+                            <div className="font-bold mb-6 text-slate-700">Driver Pengirim:</div>
                             <div className="border-t border-slate-300 pt-1 font-bold">( {waybillOrder.assigned_driver || 'Supir Armada'} )</div>
                         </div>
-                        <div className="border border-slate-300 p-2 rounded-xl bg-white">
-                            <div className="font-bold mb-8 text-slate-700">Admin / Hormat Kami:</div>
+                        <div className={`border p-2 rounded-xl flex flex-col justify-between ${isGateChecked ? 'border-emerald-300 bg-emerald-50/40' : 'border-amber-300 bg-amber-50/40'}`}>
+                            <div className="font-bold text-slate-700">Verifikasi Satpam / Gate:</div>
+                            <div className="my-1.5 flex items-center justify-center">
+                                {isGateChecked ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[9px]">
+                                        <ShieldCheck className="w-3 h-3 text-emerald-700" />
+                                        <span>TERTANDA TANGAN & SESUAI</span>
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 font-bold text-[9px]">
+                                        <Clock className="w-3 h-3 text-amber-700" />
+                                        <span>BELUM DIVERIFIKASI SATPAM</span>
+                                    </span>
+                                )}
+                            </div>
+                            <div className="border-t border-slate-300 pt-1 font-bold">
+                                ( {isGateChecked ? gateCheckerName : 'Belum Ditandatangani'} )
+                            </div>
+                        </div>
+                        <div className="border border-slate-300 p-2 rounded-xl bg-white flex flex-col justify-between">
+                            <div className="font-bold mb-6 text-slate-700">Admin / Hormat Kami:</div>
                             <div className="border-t border-slate-300 pt-1 font-bold">( {userName || 'Admin Toko'} )</div>
                         </div>
                     </div>

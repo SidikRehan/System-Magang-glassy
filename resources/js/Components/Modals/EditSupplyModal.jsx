@@ -17,7 +17,11 @@ export default function EditSupplyModal({
         unit: supply?.unit || 'Pcs'
     });
     const [imageFile, setImageFile] = useState(null);
-    const [imagePreview, setImagePreview] = useState(supply?.image_path ? `/storage/${supply.image_path}` : null);
+    const [imagePreview, setImagePreview] = useState(
+        supply?.image_path
+            ? (supply.image_path.startsWith('http') || supply.image_path.startsWith('blob:') || supply.image_path.startsWith('/') ? supply.image_path : `/storage/${supply.image_path}`)
+            : null
+    );
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -29,7 +33,11 @@ export default function EditSupplyModal({
                 min_stock: supply.min_stock ?? 5,
                 unit: supply.unit || 'Pcs'
             });
-            setImagePreview(supply.image_path ? `/storage/${supply.image_path}` : null);
+            setImagePreview(
+                supply.image_path
+                    ? (supply.image_path.startsWith('http') || supply.image_path.startsWith('blob:') || supply.image_path.startsWith('/') ? supply.image_path : `/storage/${supply.image_path}`)
+                    : null
+            );
             setImageFile(null);
         }
     }, [supply]);
@@ -63,6 +71,7 @@ export default function EditSupplyModal({
         }
 
         router.post(route('inventory.supplies.update', supply.id), formData, {
+            forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmitting(false);

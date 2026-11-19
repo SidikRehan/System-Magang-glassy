@@ -89,7 +89,7 @@ export default function AccessoriesTab({
                         className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
                     >
                         <Plus className="w-4 h-4" />
-                        <span>Tambah Aksesoris Baru</span>
+                        <span>Ajukan Aksesoris Baru ke Finance</span>
                     </button>
                 </div>
             )}

@@ -39,7 +39,14 @@ export default function EditToolModal({
                 notes: tool.notes || ''
             });
             setImageFile(null);
-            setImagePreview(tool.image_path ? '/storage/' + tool.image_path : null);
+            if (tool.image_path) {
+                const toolImgUrl = tool.image_path.startsWith('http') || tool.image_path.startsWith('blob:') || tool.image_path.startsWith('/')
+                    ? tool.image_path
+                    : `/storage/${tool.image_path}`;
+                setImagePreview(toolImgUrl);
+            } else {
+                setImagePreview(null);
+            }
             setErrorMessage(null);
         }
     }, [tool]);
@@ -109,6 +116,7 @@ export default function EditToolModal({
             onSuccess: () => {
                 setIsSubmitting(false);
                 if (onSuccess) {
+                    const nextImgPath = imageFile ? URL.createObjectURL(imageFile) : tool.image_path;
                     onSuccess({
                         name: form.name.trim(),
                         category: form.category || tool.category,
@@ -117,7 +125,8 @@ export default function EditToolModal({
                         damaged_qty: safeDamagedQty,
                         available_qty: Math.max(0, form.total_qty - safeDamagedQty),
                         location: form.location ? form.location.trim() : '',
-                        notes: form.notes ? form.notes.trim() : ''
+                        notes: form.notes ? form.notes.trim() : '',
+                        image_path: nextImgPath,
                     });
                 }
                 onClose();

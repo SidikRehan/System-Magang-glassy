@@ -28,12 +28,14 @@ export default function FinanceTransactionModal({
     const [formattedAmount, setFormattedAmount] = useState('');
     const [photoPreview, setPhotoPreview] = useState(null);
     const [localError, setLocalError] = useState('');
+    const [isCustomOtherType, setIsCustomOtherType] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             clearErrors();
             setLocalError('');
             setPhotoPreview(null);
+            setIsCustomOtherType(false);
             const targetType = prefillData?.type || prefillType || 'biaya_operasional';
             const targetCat = prefillData?.category || getCategoriesForType(targetType)[0] || 'Biaya Operasional Umum';
             const targetAmount = prefillData?.amount ? String(prefillData.amount) : '';
@@ -79,6 +81,16 @@ export default function FinanceTransactionModal({
     };
 
     const handleTypeChange = (newType) => {
+        if (newType === 'lainnya') {
+            setIsCustomOtherType(true);
+            setData(prev => ({
+                ...prev,
+                type: 'biaya_operasional',
+                category: '',
+            }));
+            return;
+        }
+        setIsCustomOtherType(false);
         const cats = getCategoriesForType(newType);
         setData(prev => ({
             ...prev,
@@ -112,6 +124,10 @@ export default function FinanceTransactionModal({
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (isCustomOtherType && (!data.category || !String(data.category).trim())) {
+            setLocalError('Mohon ketik nama Tipe / Kategori Transaksi Lainnya terlebih dahulu!');
+            return;
+        }
         if ((isRestockRealization || isPurchaseType) && !data.receipt_photo) {
             setLocalError('Wajib mengunggah foto Nota / Bukti Pembayaran pembelian barang terlebih dahulu!');
             return;
@@ -123,6 +139,7 @@ export default function FinanceTransactionModal({
                 reset();
                 setFormattedAmount('');
                 setPhotoPreview(null);
+                setIsCustomOtherType(false);
                 onClose();
             }
         });
@@ -185,44 +202,62 @@ export default function FinanceTransactionModal({
                         <label className="block text-xs font-bold text-slate-700 mb-2">
                             Pilih Tipe Transaksi Keuangan:
                         </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                             {[
                                 { id: 'pembelian_bahan', label: 'Bahan Kaca', desc: 'Lembaran kaca ke supplier' },
                                 { id: 'pembelian_aksesoris', label: 'Aksesoris', desc: 'Handle, engsel, sealant' },
                                 { id: 'pembelian_alat', label: 'Alat & Mesin', desc: 'Mata bor, mesin, suction' },
                                 { id: 'biaya_operasional', label: 'Biaya Ops (OPEX)', desc: 'Listrik, BBM, gaji, servis' },
-                            ].map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() => handleTypeChange(tab.id)}
-                                    className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${data.type === tab.id
-                                        ? 'bg-[#1b68b0]/10 border-[#1b68b0] text-[#1b68b0] shadow-xs font-bold ring-1 ring-[#1b68b0]/20'
-                                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                                    }`}
-                                >
-                                    <span className="font-bold text-xs block">{tab.label}</span>
-                                    <span className="text-[11px] text-slate-500 line-clamp-1">{tab.desc}</span>
-                                </button>
-                            ))}
+                                { id: 'lainnya', label: 'Lainnya', desc: 'Ketik tipe transaksi sendiri' },
+                            ].map((tab) => {
+                                const isActiveTab = tab.id === 'lainnya'
+                                    ? isCustomOtherType
+                                    : (!isCustomOtherType && data.type === tab.id);
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => handleTypeChange(tab.id)}
+                                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${isActiveTab
+                                            ? 'bg-[#1b68b0]/10 border-[#1b68b0] text-[#1b68b0] shadow-xs font-bold ring-1 ring-[#1b68b0]/20'
+                                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <span className="font-bold text-xs block">{tab.label}</span>
+                                        <span className="text-[11px] text-slate-500 line-clamp-1">{tab.desc}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    {/* DUA KOLOM: KATEGORI & NOMINAL */}
+                    {/* DUA KOLOM: KATEGORI (ATAU INPUT TEKS LAINNYA) & NOMINAL */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
                             <label className="block text-xs font-bold text-slate-700 mb-1">
-                                Kategori Transaksi <span className="text-rose-500">*</span>
+                                {isCustomOtherType ? 'Ketik Tipe / Kategori Transaksi Lainnya' : 'Kategori Transaksi'} <span className="text-rose-500">*</span>
                             </label>
-                            <select
-                                value={data.category}
-                                onChange={e => setData('category', e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
-                            >
-                                {getCategoriesForType(data.type).map(c => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </select>
+                            {isCustomOtherType ? (
+                                <input
+                                    type="text"
+                                    required
+                                    value={data.category}
+                                    onChange={e => setData('category', e.target.value)}
+                                    placeholder="Ketik tipe / kategori lainnya (cth: Konsumsi Rapat, Donasi, dll)..."
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white"
+                                />
+                            ) : (
+                                <select
+                                    value={data.category}
+                                    onChange={e => setData('category', e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
+                                >
+                                    {getCategoriesForType(data.type).map(c => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))}
+                                </select>
+                            )}
+                            {errors.category && <p className="text-rose-500 text-[11px] mt-1">{errors.category}</p>}
                         </div>
 
                         <div>

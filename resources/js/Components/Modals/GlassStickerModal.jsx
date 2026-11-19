@@ -16,7 +16,7 @@ export default function GlassStickerModal({
     const [stickerItems, setStickerItems] = useState([]);
     const [copiedNotification, setCopiedNotification] = useState(false);
 
-    // Helper to build process shorthand like in the PDF reference: "20 X 302,5 GMKLL", "210 X 20,7 GMKLL+BVKLL 1 CM", "41X108.5 HT"
+    // Helper to build process shorthand like in the PDF reference: "20 X 302,5 GMKLL", "210 X 20,7 GMKLL + BVKLL 1 CM", "41 X 108.5 HT"
     const buildProcessShorthand = (item) => {
         const procs = Array.isArray(item.processes) ? item.processes : [];
         const procCodes = [];
@@ -31,7 +31,7 @@ export default function GlassStickerModal({
         if (hasGM) procCodes.push('GMKLL');
         if (hasBV) {
             const widthCm = item.bevel_width_cm || 1;
-            procCodes.push(`+BVKLL ${widthCm} CM`);
+            procCodes.push(`BVKLL ${widthCm} CM`);
         }
         if (hasHT) procCodes.push('HT');
         if (hasBor) procCodes.push('BOR');
@@ -42,7 +42,7 @@ export default function GlassStickerModal({
             return item.process_notes.toUpperCase();
         }
 
-        return procCodes.join('');
+        return procCodes.join(' + ');
     };
 
     // Initialize sticker items from activeOrder
@@ -72,9 +72,14 @@ export default function GlassStickerModal({
             // Dimensions string e.g. "20 X 302,5"
             const lenStr = String(it.length_cm || 0).replace('.', ',');
             const widStr = String(it.width_cm || 0).replace('.', ',');
-            const dimProcStr = `${lenStr} X ${widStr} ${procShorthand}`.trim();
+            const dimProcStr = procShorthand 
+                ? `${lenStr} X ${widStr} ${procShorthand}`.trim()
+                : `${lenStr} X ${widStr}`.trim();
 
-            const codeLocationStr = (it.position_code || it.notes || activeOrder.description || '').toUpperCase();
+            // PENTING: Hanya ambil kode posisi/ruangan per item spesifik.
+            // DILARANG mengambil catatan umum order (activeOrder.description) sebagai kode!
+            const rawCode = (it.position_code || it.code || it.room_code || '').trim().toUpperCase();
+            const codeLocationStr = rawCode ? (rawCode.startsWith('KODE:') ? rawCode : `KODE: ${rawCode}`) : '';
 
             for (let i = 0; i < loops; i++) {
                 generated.push({
@@ -86,7 +91,7 @@ export default function GlassStickerModal({
                     location: (activeOrder.customer_address || activeOrder.city || '').toUpperCase(),
                     glassType: glassTypeStr,
                     dimAndProcess: dimProcStr,
-                    codeLocation: codeLocationStr ? (codeLocationStr.startsWith('KODE:') || codeLocationStr.startsWith('(') ? codeLocationStr : `KODE: ${codeLocationStr}`) : ''
+                    codeLocation: codeLocationStr
                 });
             }
         });
@@ -149,12 +154,12 @@ export default function GlassStickerModal({
                     .sticker-grid {
                         display: grid;
                         grid-template-columns: ${layoutMode === 'a4_grid' ? 'repeat(3, 1fr)' : '1fr'};
-                        gap: ${layoutMode === 'a4_grid' ? '14px 10px' : '0'};
+                        gap: ${layoutMode === 'a4_grid' ? '12px 10px' : '0'};
                         width: 100%;
                     }
                     .sticker-card {
                         border: 1px dashed #444444;
-                        padding: 12px 8px;
+                        padding: 8px 6px;
                         min-height: ${layoutMode === 'a4_grid' ? '135px' : 'auto'};
                         display: flex;
                         flex-direction: column;
@@ -164,43 +169,69 @@ export default function GlassStickerModal({
                         page-break-inside: avoid;
                         break-inside: avoid;
                         background: #ffffff;
+                        box-sizing: border-box;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                        white-space: normal;
                     }
                     .sticker-text-customer {
                         font-weight: 800;
-                        font-size: 13pt;
-                        line-height: 1.25;
-                        text-transform: uppercase;
-                        color: #000000;
-                    }
-                    .sticker-text-location {
-                        font-weight: 800;
-                        font-size: 11pt;
+                        font-size: 12pt;
                         line-height: 1.2;
                         text-transform: uppercase;
                         color: #000000;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                        white-space: normal;
+                        width: 100%;
+                        margin-bottom: 2px;
+                    }
+                    .sticker-text-location {
+                        font-weight: 700;
+                        font-size: 10pt;
+                        line-height: 1.2;
+                        text-transform: uppercase;
+                        color: #000000;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                        white-space: normal;
+                        width: 100%;
                         margin-bottom: 2px;
                     }
                     .sticker-text-glasstype {
-                        font-weight: 800;
-                        font-size: 11.5pt;
-                        line-height: 1.2;
-                        text-transform: uppercase;
-                        color: #000000;
-                        margin-bottom: 2px;
-                    }
-                    .sticker-text-dimproc {
-                        font-weight: 800;
-                        font-size: 12pt;
-                        line-height: 1.25;
-                        text-transform: uppercase;
-                        color: #000000;
-                    }
-                    .sticker-text-codeloc {
-                        font-weight: 800;
+                        font-weight: 700;
                         font-size: 10.5pt;
                         line-height: 1.2;
                         text-transform: uppercase;
                         color: #000000;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                        white-space: normal;
+                        width: 100%;
+                        margin-bottom: 2px;
+                    }
+                    .sticker-text-dimproc {
+                        font-weight: 800;
+                        font-size: 11pt;
+                        line-height: 1.25;
+                        text-transform: uppercase;
+                        color: #000000;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                        white-space: normal;
+                        width: 100%;
+                        margin-bottom: 2px;
+                    }
+                    .sticker-text-codeloc {
+                        font-weight: 800;
+                        font-size: 10pt;
+                        line-height: 1.2;
+                        text-transform: uppercase;
+                        color: #000000;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                        white-space: normal;
+                        width: 100%;
                         margin-top: 2px;
                     }
                 </style>
@@ -274,14 +305,14 @@ export default function GlassStickerModal({
                     .sticker-grid {
                         display: grid !important;
                         grid-template-columns: ${layoutMode === 'a4_grid' ? 'repeat(3, 1fr)' : '1fr'} !important;
-                        gap: ${layoutMode === 'a4_grid' ? '14px 10px' : '0'} !important;
+                        gap: ${layoutMode === 'a4_grid' ? '12px 10px' : '0'} !important;
                         width: 100% !important;
                     }
 
                     .sticker-card {
                         box-sizing: border-box !important;
                         border: 1px dashed #444 !important;
-                        padding: 10px 8px !important;
+                        padding: 8px 6px !important;
                         min-height: ${layoutMode === 'a4_grid' ? '135px' : 'auto'} !important;
                         display: flex !important;
                         flex-direction: column !important;
@@ -291,54 +322,79 @@ export default function GlassStickerModal({
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
                         background-color: #ffffff !important;
+                        word-break: break-word !important;
+                        overflow-wrap: break-word !important;
+                        white-space: normal !important;
                     }
 
                     .sticker-text-customer {
                         font-family: Arial, Helvetica, sans-serif !important;
                         font-weight: 800 !important;
-                        font-size: 13pt !important;
-                        line-height: 1.25 !important;
+                        font-size: 12pt !important;
+                        line-height: 1.2 !important;
                         color: #000000 !important;
                         text-transform: uppercase !important;
+                        word-break: break-word !important;
+                        overflow-wrap: break-word !important;
+                        white-space: normal !important;
+                        width: 100% !important;
+                        margin-bottom: 2px !important;
                     }
 
                     .sticker-text-location {
                         font-family: Arial, Helvetica, sans-serif !important;
-                        font-weight: 800 !important;
-                        font-size: 11pt !important;
+                        font-weight: 700 !important;
+                        font-size: 10pt !important;
                         line-height: 1.2 !important;
                         color: #000000 !important;
                         text-transform: uppercase !important;
                         margin-bottom: 2px !important;
+                        word-break: break-word !important;
+                        overflow-wrap: break-word !important;
+                        white-space: normal !important;
+                        width: 100% !important;
                     }
 
                     .sticker-text-glasstype {
                         font-family: Arial, Helvetica, sans-serif !important;
-                        font-weight: 800 !important;
-                        font-size: 11.5pt !important;
+                        font-weight: 700 !important;
+                        font-size: 10.5pt !important;
                         line-height: 1.2 !important;
                         color: #000000 !important;
                         text-transform: uppercase !important;
                         margin-bottom: 2px !important;
+                        word-break: break-word !important;
+                        overflow-wrap: break-word !important;
+                        white-space: normal !important;
+                        width: 100% !important;
                     }
 
                     .sticker-text-dimproc {
                         font-family: Arial, Helvetica, sans-serif !important;
                         font-weight: 800 !important;
-                        font-size: 12pt !important;
+                        font-size: 11pt !important;
                         line-height: 1.25 !important;
                         color: #000000 !important;
                         text-transform: uppercase !important;
+                        word-break: break-word !important;
+                        overflow-wrap: break-word !important;
+                        white-space: normal !important;
+                        width: 100% !important;
+                        margin-bottom: 2px !important;
                     }
 
                     .sticker-text-codeloc {
                         font-family: Arial, Helvetica, sans-serif !important;
                         font-weight: 800 !important;
-                        font-size: 10.5pt !important;
+                        font-size: 10pt !important;
                         line-height: 1.2 !important;
                         color: #000000 !important;
                         text-transform: uppercase !important;
                         margin-top: 2px !important;
+                        word-break: break-word !important;
+                        overflow-wrap: break-word !important;
+                        white-space: normal !important;
+                        width: 100% !important;
                     }
                 }
             `}</style>
@@ -451,7 +507,7 @@ export default function GlassStickerModal({
                                         type="text"
                                         value={stk.customerName}
                                         onChange={e => handleUpdateStickerItem(idx, 'customerName', e.target.value)}
-                                        className="sticker-text-customer text-center w-full font-black border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-950 uppercase"
+                                        className="sticker-text-customer text-center w-full font-black text-sm border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-950 uppercase"
                                     />
 
                                     {/* Line 2: Location / Address / City */}
@@ -461,33 +517,35 @@ export default function GlassStickerModal({
                                             value={stk.location}
                                             placeholder="LOKASI / KOTA (OPSIONAL)"
                                             onChange={e => handleUpdateStickerItem(idx, 'location', e.target.value)}
-                                            className="sticker-text-location text-center w-full font-bold border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-800 uppercase"
+                                            className="sticker-text-location text-center w-full font-bold text-xs border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-800 uppercase"
                                         />
                                     )}
 
                                     {/* Line 3: Glass Type & Thickness */}
-                                    <input
-                                        type="text"
+                                    <textarea
+                                        rows={1}
                                         value={stk.glassType}
                                         onChange={e => handleUpdateStickerItem(idx, 'glassType', e.target.value)}
-                                        className="sticker-text-glasstype text-center w-full font-bold border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-800 uppercase"
+                                        className="sticker-text-glasstype resize-none text-center w-full font-bold text-xs border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0.5 text-slate-800 uppercase break-words whitespace-normal leading-tight"
                                     />
 
-                                    {/* Line 4: Dimensions & Process Code (e.g. 20 X 302,5 GMKLL) */}
-                                    <input
-                                        type="text"
+                                    {/* Line 4: Dimensions & Process Code (e.g. 150 X 30 GMKLL + BVKLL 2 CM + HT + BOR) */}
+                                    <textarea
+                                        rows={2}
                                         value={stk.dimAndProcess}
                                         onChange={e => handleUpdateStickerItem(idx, 'dimAndProcess', e.target.value)}
-                                        className="sticker-text-dimproc text-center w-full font-black border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-950 uppercase"
+                                        className="sticker-text-dimproc resize-none text-center w-full font-black text-xs border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-1 text-slate-950 uppercase break-words whitespace-normal leading-snug"
+                                        title="Ukuran dan proses pengerjaan kaca"
                                     />
 
-                                    {/* Line 5: Code / Position / Notes */}
+                                    {/* Line 5: Code / Position / Room (e.g. KODE: JENDELA LT 2) */}
                                     <input
                                         type="text"
                                         value={stk.codeLocation}
-                                        placeholder="KODE / CATATAN POSISI (OPSIONAL)"
+                                        placeholder="+ KODE POSISI KACA (cth: KODE: JENDELA LT 2)"
                                         onChange={e => handleUpdateStickerItem(idx, 'codeLocation', e.target.value)}
-                                        className="sticker-text-codeloc text-center w-full font-bold border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0 text-slate-700 uppercase"
+                                        className="sticker-text-codeloc text-center w-full font-bold text-xs border-none focus:bg-slate-50 focus:ring-1 focus:ring-[#1b68b0] rounded p-0.5 text-slate-700 uppercase"
+                                        title="Kode posisi / ruangan penempatan kaca"
                                     />
                                 </div>
                             ))}

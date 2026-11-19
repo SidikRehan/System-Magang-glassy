@@ -4,13 +4,14 @@ import {
     FileText, Sliders, Truck, CreditCard, CheckCircle2,
     Clock, Plus, Search, Calendar, Edit3, RefreshCw,
     Printer, Tag, Send, Eye, AlertCircle, MapPin, Lock,
-    Building2, Bell
+    Building2, Bell, ShieldCheck
 } from 'lucide-react';
 
 export default function OrdersTab({
     userRole,
     canViewPricing,
     initialOrders = [],
+    initialDeliveries = [],
     filteredOrders = [],
     activeOrderCard,
     setActiveOrderCard,
@@ -59,15 +60,41 @@ export default function OrdersTab({
         ];
 
         const activeIndex = divOrder.findIndex(d => d.divKey === currentDiv);
+        const delRec = (initialDeliveries || []).find(d => d && d.order_id === o.id);
+        const isGateChecked = Boolean(
+            delRec && (
+                delRec.gate_checked_at ||
+                delRec.gate_checked_by ||
+                delRec.delivery_status === 'Dalam Pengiriman' ||
+                delRec.delivery_status === 'Selesai Terkirim' ||
+                delRec.delivery_status === 'Terkirim'
+            )
+        );
+        const hasAssignedVehicle = Boolean(o.assigned_driver || o.assigned_vehicle || delRec);
 
         return (
             <div className="space-y-1.5 min-w-[140px]">
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                     <span className="text-[10px] text-[#1b68b0] font-bold bg-[#1b68b0]/10 px-2 py-0.5 rounded-full border border-[#1b68b0]/25 flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-[#1b68b0]" />
                         <span>{roleTitles[currentDiv] || currentDiv}</span>
                     </span>
                 </div>
+                {hasAssignedVehicle && (
+                    <div className="pt-0.5">
+                        {isGateChecked ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs" title={delRec?.gate_checked_at ? `Sudah dicek Satpam pada ${formatIndonesianDateTime(delRec.gate_checked_at)}` : 'Barang di mobil sudah dicek & dinyatakan sesuai oleh Satpam'}>
+                                <ShieldCheck className="w-3 h-3 text-emerald-700 shrink-0" />
+                                <span>Sudah Dicek Satpam (Sesuai)</span>
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300">
+                                <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span>Menunggu Cek Satpam</span>
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 <div className="flex flex-wrap items-center gap-1 pt-0.5">
                     {divOrder.map((d, idx) => {
@@ -155,7 +182,7 @@ export default function OrdersTab({
                     ...(canManageSalesOrFinance ? [
                         { key: 'pembayaran', label: 'Pembayaran / COD', count: initialOrders.filter(o => o.status !== 'draft' && o.payment_status !== 'Lunas').length, Icon: CreditCard, accent: 'text-yellow-600 bg-yellow-50 border-yellow-100', activeRing: 'ring-2 ring-yellow-500/30 border-yellow-500' }
                     ] : []),
-                    { key: 'selesai', label: 'Selesai', count: initialOrders.filter(o => o.status === 'selesai' && o.payment_status === 'Lunas').length, Icon: CheckCircle2, accent: 'text-[#70b03c] bg-emerald-50 border-emerald-100', activeRing: 'ring-2 ring-[#70b03c]/30 border-[#70b03c]' },
+                    { key: 'selesai', label: 'Riwayat Selesai', count: initialOrders.filter(o => o.status === 'selesai').length, Icon: CheckCircle2, accent: 'text-[#70b03c] bg-emerald-50 border-emerald-100', activeRing: 'ring-2 ring-[#70b03c]/30 border-[#70b03c]' },
                 ].map(card => {
                     const isActive = activeOrderCard === card.key;
                     const CardIcon = card.Icon;
@@ -360,8 +387,13 @@ export default function OrdersTab({
                                                             <div className="font-extrabold text-[#1b68b0] text-xs leading-snug break-words">
                                                                 #{idx + 1}. {it.glass_type}
                                                             </div>
-                                                            <div className="text-xs text-[#242222] font-mono font-bold">
-                                                                {it.length_cm} x {it.width_cm} = {it.qty || 1} lbr
+                                                            <div className="text-xs text-[#242222] font-mono font-bold flex items-center justify-between flex-wrap gap-1">
+                                                                <span>{it.length_cm} x {it.width_cm} = {it.qty || 1} lbr</span>
+                                                                {it.position_code && (
+                                                                    <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-md font-sans">
+                                                                        Kode: {it.position_code}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <div className="text-[11px] text-slate-500 font-mono flex items-center justify-between gap-1">
                                                                 <span>{it.thickness_mm} mm</span>
@@ -638,24 +670,48 @@ export default function OrdersTab({
                                                     )
                                                 )}
 
-                                                {o.status === 'pengiriman' && (
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <button
-                                                            onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }}
-                                                            className="bg-white hover:bg-slate-50 text-[#1b68b0] border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                                            title="Cetak 4 Warna Surat Jalan Pengiriman (Putih, Merah, Kuning, Hijau)"
-                                                        >
-                                                            <Printer className="w-3.5 h-3.5" /> Surat Jalan
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleCompleteDelivery(o.id, false)}
-                                                            className="bg-[#70b03c] hover:bg-[#5e9632] text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                                                            title="Klik jika barang telah sampai dan diterima konsumen"
-                                                        >
-                                                            <CheckCircle2 className="w-3.5 h-3.5" /> Selesai
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                {o.status === 'pengiriman' && (() => {
+                                                    const delRec = (initialDeliveries || []).find(d => d && d.order_id === o.id);
+                                                    const isGateChecked = Boolean(
+                                                        delRec && (
+                                                            delRec.gate_checked_at ||
+                                                            delRec.gate_checked_by ||
+                                                            delRec.delivery_status === 'Dalam Pengiriman' ||
+                                                            delRec.delivery_status === 'Selesai Terkirim' ||
+                                                            delRec.delivery_status === 'Terkirim'
+                                                        )
+                                                    );
+                                                    return (
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <button
+                                                                onClick={() => { setSelectedWaybillOrder(o); setShowWaybillModal(true); }}
+                                                                className="bg-white hover:bg-slate-50 text-[#1b68b0] border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                                title="Cetak 4 Warna Surat Jalan Pengiriman (Putih, Merah, Kuning, Hijau)"
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5" /> Surat Jalan
+                                                            </button>
+                                                            {isGateChecked ? (
+                                                                <button
+                                                                    onClick={() => handleCompleteDelivery(o.id, false)}
+                                                                    className="bg-[#70b03c] hover:bg-[#5e9632] text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                                                                    title="Klik jika barang telah sampai dan diterima konsumen"
+                                                                >
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" /> Selesai
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled
+                                                                    className="bg-slate-100 text-slate-400 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-not-allowed"
+                                                                    title="Tidak dapat foto bukti pengiriman: Surat Jalan & muatan mobil belum diverifikasi/ditandatangani oleh Satpam"
+                                                                >
+                                                                    <Lock className="w-3.5 h-3.5 text-amber-500" />
+                                                                    <span>Tunggu Cek Satpam</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
 
                                                 {o.status === 'selesai' && (
                                                     <div className="flex flex-wrap items-center gap-2">

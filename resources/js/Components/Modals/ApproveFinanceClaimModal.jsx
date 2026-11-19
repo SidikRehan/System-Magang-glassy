@@ -21,7 +21,7 @@ export default function ApproveFinanceClaimModal({
     useEffect(() => {
         if (claim && isOpen) {
             setReceiptFile(null);
-            setReceiptPreview(claim.receipt_photo_path ? (claim.receipt_photo_path.startsWith('http') || claim.receipt_photo_path.startsWith('/') ? claim.receipt_photo_path : `/storage/${claim.receipt_photo_path}`) : null);
+            setReceiptPreview(null);
             setAmount(claim.amount ?? '');
             setInvoiceNumber(claim.invoice_number || '');
             setSupplierName(claim.supplier_name || '');
@@ -39,6 +39,19 @@ export default function ApproveFinanceClaimModal({
     }, [claim, isOpen]);
 
     if (!isOpen || !claim) return null;
+
+    const getExistingPhotoList = (pathStr) => {
+        if (!pathStr) return [];
+        if (typeof pathStr === 'string' && pathStr.trim().startsWith('[')) {
+            try {
+                return JSON.parse(pathStr);
+            } catch {
+                return [pathStr];
+            }
+        }
+        return [pathStr];
+    };
+    const driverStrukList = getExistingPhotoList(claim.receipt_photo_path);
 
     const isRestockRequest = claim.type === 'pembelian_aksesoris'
         || claim.type === 'pembelian_bahan'
@@ -80,8 +93,12 @@ export default function ApproveFinanceClaimModal({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (isRestockRequest && !receiptFile && !claim.receipt_photo_path) {
-            setErrorMsg('Wajib mengunggah foto Nota / Bukti Pembayaran terlebih dahulu sebelum menyetujui pengajuan restok!');
+        if (!receiptFile) {
+            setErrorMsg(
+                isRestockRequest
+                    ? 'Wajib mengunggah foto Nota / Bukti Transfer Pembayaran terlebih dahulu sebelum menyetujui pengajuan restok!'
+                    : 'Wajib mengunggah foto Bukti Transfer / Pencairan Kas Finance terlebih dahulu sebelum menyetujui klaim ini!'
+            );
             return;
         }
 
@@ -229,6 +246,30 @@ export default function ApproveFinanceClaimModal({
                                 "{cleanDisplayNotes}"
                             </p>
                         )}
+                        {driverStrukList.length > 0 && (
+                            <div className="pt-1 space-y-1.5">
+                                <span className="text-[10px] font-bold text-slate-500 block">
+                                    Lampiran Struk Pengajuan Awal (Dari {claim.source_role === 'driver' ? 'Supir' : 'Pemohon'}):
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    {driverStrukList.map((p, idx) => {
+                                        const imgUrl = p.startsWith('http') || p.startsWith('/') ? p : `/storage/${p}`;
+                                        return (
+                                            <a
+                                                key={idx}
+                                                href={imgUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="block border border-slate-200 rounded-xl overflow-hidden bg-white p-1 hover:border-[#1b68b0] transition"
+                                                title="Klik untuk melihat foto struk dari pemohon"
+                                            >
+                                                <img src={imgUrl} alt={`Struk ${idx + 1}`} className="h-14 w-auto object-contain rounded" />
+                                            </a>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                         {isRestockRequest && (
                             <div className="pt-1 flex justify-end">
                                 <button
@@ -244,31 +285,42 @@ export default function ApproveFinanceClaimModal({
                         )}
                     </div>
 
-                    {/* UPLOAD NOTA BUKTI PEMBAYARAN */}
+                    {/* UPLOAD NOTA / BUKTI TRANSFER PEMBAYARAN FINANCE (WAJIB) */}
                     <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-4 space-y-2.5">
                         <div className="flex items-center justify-between">
                             <label className="text-slate-800 font-bold flex items-center gap-1.5">
                                 <Camera className="w-4 h-4 text-[#1b68b0]" />
-                                <span>Upload Nota / Bukti Pembayaran {isRestockRequest && <span className="text-rose-500">*</span>}</span>
+                                <span>
+                                    {isRestockRequest
+                                        ? 'Upload Nota / Bukti Transfer Pembayaran'
+                                        : 'Upload Bukti Transfer / Pencairan Kas Finance'}{' '}
+                                    <span className="text-rose-500">*</span>
+                                </span>
                             </label>
                             <span className="text-[10px] font-bold bg-[#1b68b0] text-white px-2 py-0.5 rounded-full">
-                                {isRestockRequest ? 'WAJIB NOTA BAYAR' : 'BUKTI KAS'}
+                                WAJIB BUKTI TRANSFER
                             </span>
                         </div>
                         <p className="text-[11px] text-slate-500 leading-relaxed">
-                            Unggah foto nota belanja toko, faktur supplier, atau bukti transfer pembayaran dari Finance (JPG, PNG, WEBP maks 5 MB).
+                            {isRestockRequest
+                                ? 'Wajib unggah foto bukti transfer bank atau nota pembayaran pembelian barang ke supplier dari bagian Finance (JPG, PNG, WEBP maks 5 MB).'
+                                : 'Wajib unggah foto bukti transfer bank / bukti pencairan uang kas dari bagian Finance kepada pemohon klaim (JPG, PNG, WEBP maks 5 MB).'}
                         </p>
                         <input
                             type="file"
                             accept="image/*"
+                            required
                             onChange={handleFileChange}
                             className="w-full text-xs text-slate-700 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#1b68b0] file:text-white hover:file:bg-[#15528c] file:cursor-pointer bg-white border border-slate-200 rounded-xl p-1.5"
                         />
                         {receiptPreview && (
                             <div className="mt-2 relative rounded-xl overflow-hidden border border-slate-200 bg-white p-2">
+                                <span className="text-[10px] font-bold text-emerald-700 block mb-1">
+                                    Pratinjau Bukti Transfer / Nota Pembayaran Finance:
+                                </span>
                                 <img
                                     src={receiptPreview}
-                                    alt="Preview Nota Pembayaran"
+                                    alt="Preview Bukti Transfer Finance"
                                     className="max-h-44 w-auto mx-auto rounded-lg object-contain"
                                 />
                             </div>

@@ -593,8 +593,8 @@ export default function NewOrderModal({
                                                             </div>
                                                         </div>
 
-                                                        {/* ROW DIMENSI & QTY */}
-                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                        {/* ROW DIMENSI, QTY & KODE POSISI KACA */}
+                                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                                             <div>
                                                                 <label className="text-slate-600 block mb-1 text-[11px] font-semibold">Panjang (cm):</label>
                                                                 <input 
@@ -632,6 +632,20 @@ export default function NewOrderModal({
                                                                     onChange={e => handleItemChange(idx, 'qty', e.target.value)} 
                                                                     onFocus={e => e.target.select()}
                                                                     className={getFieldClass((parseInt(item.qty) || 0) > 0, "w-full bg-slate-50 border rounded-xl p-2 text-slate-800 font-mono font-bold text-xs focus:bg-white")} 
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-slate-600 block mb-1 text-[11px] font-semibold" title="Kode penempatan / ruangan kaca agar customer tidak bingung memilah kaca">
+                                                                    Kode Posisi / Ruangan:
+                                                                </label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    placeholder="cth: Jendela Lt 2, Pintu 1"
+                                                                    value={item.position_code ?? ''} 
+                                                                    onChange={e => handleItemChange(idx, 'position_code', e.target.value)} 
+                                                                    onFocus={e => e.target.select()}
+                                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 text-xs focus:bg-white focus:border-[#1b68b0] focus:ring-1 focus:ring-[#1b68b0]/15" 
+                                                                    title="Kode penempatan / ruangan kaca agar customer tidak bingung memilah kaca"
                                                                 />
                                                             </div>
                                                         </div>

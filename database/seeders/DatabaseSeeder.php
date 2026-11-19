@@ -68,6 +68,18 @@ class DatabaseSeeder extends Seeder
                 'password' => $password,
             ],
             [
+                'name' => 'Staff Divisi Bor (Coak/Lubang)',
+                'email' => 'bor@sypglass.co.id',
+                'role' => 'divisi_bor',
+                'password' => $password,
+            ],
+            [
+                'name' => 'Pak Dadang (Satpam / Gate Checker)',
+                'email' => 'satpam@sypglass.co.id',
+                'role' => 'satpam',
+                'password' => $password,
+            ],
+            [
                 'name' => 'Pak Budi (Supir Utama DC)',
                 'email' => 'driver@sypglass.co.id',
                 'role' => 'driver',

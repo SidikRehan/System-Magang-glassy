@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Archive, X, Check } from 'lucide-react';
+import { Archive, X, Send, Calculator, Store, Camera } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 export default function AddSupplyModal({
@@ -11,14 +11,23 @@ export default function AddSupplyModal({
         name: '',
         category: 'APD & Keselamatan Kerja',
         qty: 10,
+        unit: 'Pcs',
+        buy_price: 50000,
+        sell_price: '',
         min_stock: 5,
-        unit: 'Pcs'
+        supplier_name: 'Toko Teknik & Sparepart Pabrik',
+        notes: ''
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!show) return null;
+
+    const requestedQty = parseInt(form.qty) || 0;
+    const buyPrice = parseFloat(form.buy_price) || 0;
+    const sellPrice = parseFloat(form.sell_price) || 0;
+    const estimatedTotal = requestedQty * buyPrice;
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -31,7 +40,12 @@ export default function AddSupplyModal({
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.name) {
-            alert('Masukkan nama perlengkapan / sparepart!');
+            alert('Masukkan nama barang perlengkapan / sparepart!');
+            return;
+        }
+
+        if (requestedQty <= 0) {
+            alert('Jumlah pengajuan (Berapa banyak) minimal 1 unit!');
             return;
         }
 
@@ -40,13 +54,20 @@ export default function AddSupplyModal({
         formData.append('name', form.name);
         formData.append('category', form.category);
         formData.append('qty', form.qty);
-        formData.append('min_stock', form.min_stock);
-        formData.append('unit', form.unit);
+        formData.append('unit', form.unit || 'Pcs');
+        formData.append('buy_price', form.buy_price || 0);
+        if (form.sell_price !== '') {
+            formData.append('sell_price', form.sell_price);
+        }
+        formData.append('min_stock', form.min_stock || 5);
+        formData.append('supplier_name', form.supplier_name || 'Toko Teknik & Sparepart Pabrik');
+        formData.append('notes', form.notes || '');
         if (imageFile) {
             formData.append('image', imageFile);
         }
 
         router.post(route('inventory.supplies.store'), formData, {
+            forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -62,6 +83,7 @@ export default function AddSupplyModal({
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
             <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-800">
+                {/* HEADER */}
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
                     <div className="flex items-center gap-2.5">
                         <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
@@ -69,9 +91,9 @@ export default function AddSupplyModal({
                         </div>
                         <div>
                             <h3 className="font-bold text-[#242222] text-base">
-                                Tambah Perlengkapan Gudang Baru
+                                Ajukan Penambahan Barang Gudang Baru
                             </h3>
-                            <p className="text-xs text-slate-500 font-mono">Registrasi barang perlengkapan operasional & consumables gudang</p>
+                            <p className="text-xs text-slate-500 font-mono">Pengajuan item gudang ke Finance (Jumlah, Harga Beli, & Harga Jual/Nilai)</p>
                         </div>
                     </div>
                     <button 
@@ -82,9 +104,15 @@ export default function AddSupplyModal({
                     </button>
                 </div>
 
+                {/* INFO BANNER */}
+                <div className="bg-blue-50/80 border border-blue-200 p-3 rounded-2xl text-[11px] text-blue-900 leading-relaxed">
+                    <span className="font-bold block mb-0.5 text-[#1b68b0]">Alur Persetujuan Tim Finance:</span>
+                    <p>Pengajuan item baru gudang ini otomatis tercatat di bagian Finance pada menu <strong>Ajuan Restok & Belanja</strong> sebagai rencana pengeluaran penambahan item sebesar Total Anggaran (Qty × Harga Beli). Setelah Finance menyetujui & mengunggah nota pembayaran, stok barang otomatis aktif.</p>
+                </div>
+
                 <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                     <div>
-                        <label className="text-slate-700 block mb-1 font-semibold">Kategori Perlengkapan:</label>
+                        <label className="text-slate-700 block mb-1 font-semibold">Kategori Perlengkapan Gudang:</label>
                         <select
                             value={form.category}
                             onChange={e => setForm({ ...form, category: e.target.value })}
@@ -101,10 +129,10 @@ export default function AddSupplyModal({
                     </div>
 
                     <div>
-                        <label className="text-slate-700 block mb-1 font-semibold">Nama Perlengkapan / Barang Habis Pakai:*</label>
+                        <label className="text-slate-700 block mb-1 font-semibold">Nama Perlengkapan / Barang Gudang:*</label>
                         <input
                             type="text"
-                            placeholder="Contoh: Sarung Tangan Safety Antigores / Lakban Bening"
+                            placeholder="Contoh: Sarung Tangan Safety Antigores / Lakban Bening 2 Inch"
                             value={form.name}
                             onChange={e => setForm({ ...form, name: e.target.value })}
                             required
@@ -112,27 +140,12 @@ export default function AddSupplyModal({
                         />
                     </div>
 
-                    <div>
-                        <label className="text-slate-700 block mb-1 font-semibold">Foto Contoh Sparepart / Barang (Opsional):</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-800 text-xs focus:border-[#1b68b0] cursor-pointer"
-                        />
-                        {imagePreview && (
-                            <div className="mt-2 relative w-24 h-24 border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="text-slate-700 block mb-1 font-semibold">Stok Awal:*</label>
+                            <label className="text-slate-700 block mb-1 font-semibold">Berapa Banyak (Qty Diajukan):*</label>
                             <input
                                 type="number"
-                                min="0"
+                                min="1"
                                 value={form.qty}
                                 onChange={e => setForm({ ...form, qty: e.target.value })}
                                 required
@@ -140,25 +153,114 @@ export default function AddSupplyModal({
                             />
                         </div>
                         <div>
-                            <label className="text-slate-700 block mb-1 font-semibold">Min. Stok (Alert):</label>
+                            <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
+                            <select
+                                value={form.unit}
+                                onChange={e => setForm({ ...form, unit: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-semibold focus:border-[#1b68b0] focus:bg-white cursor-pointer"
+                            >
+                                <option value="Pcs">Pcs</option>
+                                <option value="Roll">Roll</option>
+                                <option value="Box">Box</option>
+                                <option value="Pasang">Pasang</option>
+                                <option value="Botol">Botol</option>
+                                <option value="Liter">Liter</option>
+                                <option value="Meter">Meter</option>
+                                <option value="Set">Set</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-semibold">Harga Beli Satuan (Rp):*</label>
+                            <input
+                                type="number"
+                                min="0"
+                                required
+                                placeholder="Contoh: 35000"
+                                value={form.buy_price}
+                                onChange={e => setForm({ ...form, buy_price: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-semibold">Harga Jual / Nilai Satuan (Rp):</label>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="Opsional (Jual/Nilai)"
+                                value={form.sell_price}
+                                onChange={e => setForm({ ...form, sell_price: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[#5f9733] font-mono font-bold focus:border-[#70b03c] focus:bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    {/* LIVE TOTAL BUDGET */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-slate-700 font-bold">
+                            <Calculator className="w-4 h-4 text-[#1b68b0] shrink-0" />
+                            <span>Total Pengeluaran Kas (Anggaran Finance):</span>
+                        </div>
+                        <span className="font-mono font-black text-sm text-[#1b68b0]">
+                            Rp {Number(estimatedTotal).toLocaleString('id-ID')}
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-semibold flex items-center gap-1">
+                                <Store className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                <span>Toko / Supplier Tujuan:</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Contoh: Toko Teknik & Sparepart Pabrik"
+                                value={form.supplier_name}
+                                onChange={e => setForm({ ...form, supplier_name: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-slate-700 block mb-1 font-semibold">Batas Min. Stok (Alert Habis):</label>
                             <input
                                 type="number"
                                 min="1"
                                 value={form.min_stock}
                                 onChange={e => setForm({ ...form, min_stock: e.target.value })}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-amber-700 font-mono font-bold focus:border-amber-500 focus:bg-white"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-mono font-bold focus:border-[#1b68b0] focus:bg-white"
                             />
                         </div>
-                        <div>
-                            <label className="text-slate-700 block mb-1 font-semibold">Satuan Unit:</label>
-                            <input
-                                type="text"
-                                placeholder="Pcs/Pasang/Roll/Box"
-                                value={form.unit}
-                                onChange={e => setForm({ ...form, unit: e.target.value })}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
-                            />
-                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-slate-700 block mb-1 font-semibold flex items-center gap-1">
+                            <Camera className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Foto Contoh Barang (Opsional):</span>
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-1.5 text-slate-800 text-xs focus:border-[#1b68b0] cursor-pointer"
+                        />
+                        {imagePreview && (
+                            <div className="mt-2 relative w-20 h-20 border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="text-slate-700 block mb-1 font-semibold">Catatan Tambahan (Opsional):</label>
+                        <textarea
+                            rows="2"
+                            placeholder="Contoh: Kebutuhan konsumabel proses pemotongan dan perakitan kaca."
+                            value={form.notes}
+                            onChange={e => setForm({ ...form, notes: e.target.value })}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:border-[#1b68b0] focus:bg-white"
+                        />
                     </div>
 
                     <div className="pt-2 flex justify-end gap-2.5 border-t border-slate-200">
@@ -172,10 +274,10 @@ export default function AddSupplyModal({
                         <button 
                             type="submit" 
                             disabled={isSubmitting}
-                            className="bg-[#70b03c] hover:bg-[#5f9733] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer disabled:opacity-50"
+                            className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-5 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 text-xs cursor-pointer disabled:opacity-50"
                         >
-                            <Check className="w-4 h-4" />
-                            <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Barang Baru'}</span>
+                            <Send className="w-4 h-4" />
+                            <span>{isSubmitting ? 'Mengirim Ajuan...' : 'Kirim Ajuan ke Finance'}</span>
                         </button>
                     </div>
                 </form>

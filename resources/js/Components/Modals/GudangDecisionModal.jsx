@@ -83,7 +83,13 @@ export default function GudangDecisionModal({
                                 className="rounded-xl overflow-hidden border border-slate-200 max-h-48 bg-slate-100 cursor-pointer group relative"
                                 title="Klik untuk memperbesar foto bukti cacat kaca"
                             >
-                                <img src={`/storage/${selectedComplaintOrder.complaint_data.photo_path}`} alt="Bukti Cacat Kaca" className="w-full h-full object-contain group-hover:scale-105 transition duration-200" />
+                                <img
+                                    src={selectedComplaintOrder.complaint_data.photo_path.startsWith('http') || selectedComplaintOrder.complaint_data.photo_path.startsWith('/') || selectedComplaintOrder.complaint_data.photo_path.startsWith('blob:') || selectedComplaintOrder.complaint_data.photo_path.startsWith('data:')
+                                        ? selectedComplaintOrder.complaint_data.photo_path
+                                        : `/storage/${selectedComplaintOrder.complaint_data.photo_path}`}
+                                    alt="Bukti Cacat Kaca"
+                                    className="w-full h-full object-contain group-hover:scale-105 transition duration-200"
+                                />
                                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
                                     <ZoomIn className="w-4 h-4" />
                                     <span>Perbesar Foto</span>

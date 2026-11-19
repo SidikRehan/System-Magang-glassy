@@ -11,6 +11,7 @@ import { isDriverMatch, isOrderExecutionFinished, getOrderRelevantDivisions, for
 import AssignVehicleModal from '@/Components/Modals/AssignVehicleModal';
 import EditTripModal from '@/Components/Modals/EditTripModal';
 import PickupDispatchModal from '@/Components/Modals/PickupDispatchModal';
+import ConfirmGateCheckModal from '@/Components/Modals/ConfirmGateCheckModal';
 
 const FLEET_VEHICLES = [
     {
@@ -591,6 +592,99 @@ export default function DeliveriesTab({
         return [pathStr];
     };
 
+    const getOrderGateCheckInfo = useCallback((orderObj, tripObj = null) => {
+        if (!orderObj) return { isChecked: false, deliveryRecord: null, checkedAt: null, checkerName: null };
+        const delRec = (tripObj?.deliveries || []).find(d => d && d.order_id === orderObj.id)
+            || safeDeliveries.find(d => d && d.order_id === orderObj.id);
+        const isChecked = Boolean(
+            delRec && (
+                delRec.gate_checked_at ||
+                delRec.gate_checked_by ||
+                delRec.delivery_status === 'Dalam Pengiriman' ||
+                delRec.delivery_status === 'Selesai Terkirim' ||
+                delRec.delivery_status === 'Terkirim'
+            )
+        );
+        return {
+            isChecked,
+            deliveryRecord: delRec || null,
+            checkedAt: delRec?.gate_checked_at || null,
+            checkerName: delRec?.gate_checker?.name || 'Petugas Satpam',
+        };
+    }, [safeDeliveries]);
+
+    const getOrderItemsWithSummary = (ord) => {
+        const items = Array.isArray(ord?.items) && ord.items.length > 0
+            ? ord.items
+            : [{
+                glass_type: ord?.glass_type || 'Kaca Pesanan',
+                length_cm: ord?.length_cm || 0,
+                width_cm: ord?.width_cm || 0,
+                thickness_mm: ord?.thickness_mm || 5,
+                qty: ord?.qty || 1,
+                unit: ord?.unit || 'Pcs'
+            }];
+        const totalQty = items.reduce((sum, it) => sum + (Number(it.qty) || 1), 0);
+        return { items, totalQty };
+    };
+
+    // State & Handler Modal Konfirmasi Satpam (Anda yakin sudah sesuai? Ya / Tidak)
+    const [showGateCheckConfirmModal, setShowGateCheckConfirmModal] = useState(false);
+    const [gateCheckConfirmData, setGateCheckConfirmData] = useState(null);
+    const [isSubmittingGateCheck, setIsSubmittingGateCheck] = useState(false);
+
+    const handleOpenGateCheckConfirmForOrder = (ord, trip) => {
+        const { items, totalQty } = getOrderItemsWithSummary(ord);
+        setGateCheckConfirmData({
+            mode: 'order',
+            order: ord,
+            trip: trip,
+            items: items,
+            totalQty: totalQty,
+        });
+        setShowGateCheckConfirmModal(true);
+    };
+
+    const handleOpenGateCheckConfirmForTrip = (trip) => {
+        const allItems = [];
+        let allQty = 0;
+        (trip?.orders || []).forEach(ord => {
+            const { items, totalQty } = getOrderItemsWithSummary(ord);
+            allQty += totalQty;
+            items.forEach(it => {
+                allItems.push({ ...it, spo_number: ord.spo_number });
+            });
+        });
+        setGateCheckConfirmData({
+            mode: 'trip',
+            order: null,
+            trip: trip,
+            items: allItems,
+            totalQty: allQty,
+        });
+        setShowGateCheckConfirmModal(true);
+    };
+
+    const handleConfirmGateCheckSubmit = () => {
+        if (!gateCheckConfirmData) return;
+        setIsSubmittingGateCheck(true);
+
+        const url = gateCheckConfirmData.mode === 'trip'
+            ? `/deliveries/${gateCheckConfirmData.trip?.trip_code}/gate-check`
+            : `/orders/${gateCheckConfirmData.order?.id}/gate-check`;
+
+        router.post(url, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowGateCheckConfirmModal(false);
+                setGateCheckConfirmData(null);
+            },
+            onFinish: () => {
+                setIsSubmittingGateCheck(false);
+            }
+        });
+    };
+
     return (
         <div className="space-y-6">
             {/* HEADER TAB */}
@@ -794,14 +888,16 @@ export default function DeliveriesTab({
                                                             {trip.orders.map((ord, stopIdx) => {
                                                                 const isFinished = ord.status === 'selesai';
                                                                 const isPickupTask = String(ord.spo_number || '').startsWith('SPB-') || String(ord.glass_type || '').startsWith('[AMBIL BARANG]');
+                                                                const gateInfo = getOrderGateCheckInfo(ord, trip);
+                                                                const { items: ordItems, totalQty: ordTotalQty } = getOrderItemsWithSummary(ord);
                                                                 return (
-                                                                    <div key={ord.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border ${isFinished ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/80 border-slate-200'}`}>
+                                                                    <div key={ord.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border ${isFinished ? 'bg-emerald-50/50 border-emerald-200' : gateInfo.isChecked ? 'bg-emerald-50/30 border-emerald-300' : 'bg-slate-50/80 border-slate-200'}`}>
                                                                         <div className="flex items-start gap-2.5 min-w-0">
                                                                             <span className={`border text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${isFinished ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-[#1b68b0]/10 text-[#1b68b0] border-[#1b68b0]/20'}`}>
                                                                                 {isPickupTask ? `AMBIL #${stopIdx + 1}` : `STOP #{stopIdx + 1}`.replace('#{stopIdx + 1}', `#${stopIdx + 1}`)}
                                                                             </span>
                                                                             <div className="min-w-0">
-                                                                                <div className="flex items-center gap-2">
+                                                                                <div className="flex flex-wrap items-center gap-1.5">
                                                                                     <span className="font-bold text-[#242222] truncate">
                                                                                         {isPickupTask ? `SPB: ${ord.spo_number} — ${ord.customer_name}` : `SPO: ${ord.spo_number} — ${ord.customer_name}`}
                                                                                     </span>
@@ -814,31 +910,64 @@ export default function DeliveriesTab({
                                                                                             {isPickupTask ? 'TUGAS AMBIL BARANG' : 'DALAM PENGIRIMAN'}
                                                                                         </span>
                                                                                     )}
+                                                                                    {gateInfo.isChecked ? (
+                                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shrink-0" title={gateInfo.checkedAt ? `Diverifikasi Satpam pada ${formatIndonesianDateTime(gateInfo.checkedAt)}` : 'Jumlah barang di mobil sudah dicek & dinyatakan sesuai oleh Satpam'}>
+                                                                                            <ShieldCheck className="w-3 h-3 text-emerald-700" />
+                                                                                            <span>Sudah Dicek Satpam (Sesuai)</span>
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1 shrink-0">
+                                                                                            <Clock className="w-3 h-3 text-amber-600" />
+                                                                                            <span>Menunggu Cek Satpam</span>
+                                                                                        </span>
+                                                                                    )}
                                                                                 </div>
                                                                                 <p className="text-slate-500 text-[11px] truncate mt-0.5 flex items-center gap-1">
                                                                                     <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                                                                                     <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
                                                                                 </p>
+                                                                                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                                                                                    <span className="text-[10px] font-mono font-bold bg-white text-slate-700 border border-slate-200 px-1.5 py-0.5 rounded">
+                                                                                        Total Muatan: {ordTotalQty} Pcs/Lbr
+                                                                                    </span>
+                                                                                    {ordItems.map((it, iIdx) => (
+                                                                                        <span key={iIdx} className="text-[10px] bg-white text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded font-mono">
+                                                                                            {it.glass_type} {Number(it.length_cm) > 0 ? `(${it.length_cm}x${it.width_cm}cm)` : ''} × <strong>{it.qty || 1}</strong>
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-end sm:self-center">
                                                                             {!isFinished ? (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => {
-                                                                                        if (handleOpenConfirmDeliveryModal) {
-                                                                                            handleOpenConfirmDeliveryModal(ord);
-                                                                                        } else if (handleCompleteDelivery) {
-                                                                                            handleCompleteDelivery(ord.id);
-                                                                                        } else {
-                                                                                            router.post(`/orders/${ord.id}/complete-delivery`);
-                                                                                        }
-                                                                                    }}
-                                                                                    className="bg-[#70b03c] hover:bg-[#5f9733] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-xs flex items-center gap-1 cursor-pointer"
-                                                                                    title="Ambil foto Surat Jalan & konfirmasi terkirim"
-                                                                                >
-                                                                                    <Camera className="w-3.5 h-3.5" /> Foto & Konfirmasi Terkirim
-                                                                                </button>
+                                                                                gateInfo.isChecked ? (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => {
+                                                                                            if (handleOpenConfirmDeliveryModal) {
+                                                                                                handleOpenConfirmDeliveryModal(ord);
+                                                                                            } else if (handleCompleteDelivery) {
+                                                                                                handleCompleteDelivery(ord.id);
+                                                                                            } else {
+                                                                                                router.post(`/orders/${ord.id}/complete-delivery`);
+                                                                                            }
+                                                                                        }}
+                                                                                        className="bg-[#70b03c] hover:bg-[#5f9733] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-xs flex items-center gap-1 cursor-pointer"
+                                                                                        title="Ambil foto Surat Jalan & konfirmasi terkirim"
+                                                                                    >
+                                                                                        <Camera className="w-3.5 h-3.5" /> Foto & Konfirmasi Terkirim
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        disabled
+                                                                                        className="bg-slate-200 text-slate-500 border border-slate-300 px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-not-allowed opacity-80"
+                                                                                        title="Terkunci: Surat Jalan & barang di mobil belum diverifikasi/ditandatangani oleh Satpam"
+                                                                                    >
+                                                                                        <Lock className="w-3.5 h-3.5 text-amber-600" />
+                                                                                        <span>Terkunci (Belum Verifikasi Satpam)</span>
+                                                                                    </button>
+                                                                                )
                                                                             ) : (
                                                                                 ord.proof_photo_path ? (
                                                                                     <div className="flex items-center gap-1">
@@ -1624,65 +1753,162 @@ export default function DeliveriesTab({
                                                     >
                                                         <ClipboardList className="w-3.5 h-3.5 text-[#70b03c]" /> Gate Pass
                                                     </button>
-                                                    {(userRole === 'satpam' || userRole === 'owner') && (
-                                                        <button
-                                                            onClick={() => {
-                                                                if(confirm('Apakah Anda yakin jumlah fisik barang & kaca di armada sudah sesuai dengan Surat Gate Pass?')) {
-                                                                    router.post(`/deliveries/${trip.trip_code}/gate-check`, {}, { preserveScroll: true });
-                                                                }
-                                                            }}
-                                                            disabled={trip.deliveries?.[0]?.delivery_status === 'Dalam Pengiriman' || trip.deliveries?.[0]?.delivery_status === 'Terkirim'}
-                                                            className="bg-[#70b03c] hover:bg-[#5f9733] text-white border border-[#70b03c] px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        >
-                                                            <ShieldCheck className="w-3.5 h-3.5 text-white" /> 
-                                                            {trip.deliveries?.[0]?.delivery_status === 'Dalam Pengiriman' || trip.deliveries?.[0]?.delivery_status === 'Terkirim' ? 'Telah Keluar Gerbang' : 'Validasi Keluar'}
-                                                        </button>
-                                                    )}
+                                                    {(userRole === 'satpam' || userRole === 'owner') && (() => {
+                                                        const allTripOrdersChecked = trip.orders.length > 0 && trip.orders.every(o => getOrderGateCheckInfo(o, trip).isChecked);
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenGateCheckConfirmForTrip(trip)}
+                                                                disabled={allTripOrdersChecked}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-2xs ${
+                                                                    allTripOrdersChecked
+                                                                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 cursor-default'
+                                                                        : 'bg-[#70b03c] hover:bg-[#5f9733] text-white border border-[#70b03c] cursor-pointer'
+                                                                }`}
+                                                            >
+                                                                <ShieldCheck className="w-3.5 h-3.5" />
+                                                                <span>{allTripOrdersChecked ? 'Semua Barang Mobil Sesuai (Siap Keluar)' : 'Sesuai Semua & Izinkan Mobil Keluar'}</span>
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
 
-                                            {/* TIMELINE STOP DESTINATIONS */}
-                                            <div className="space-y-2 text-xs">
+                                            {/* TIMELINE STOP DESTINATIONS & PENGECEKAN FISIK BARANG DI MOBIL OLEH SATPAM */}
+                                            <div className="space-y-2.5 text-xs">
                                                 {trip.orders.map((ord, stopIdx) => {
                                                     const isLunas = ord.payment_status === 'Lunas';
                                                     const isPickupTask = String(ord.spo_number || '').startsWith('SPB-') || String(ord.glass_type || '').startsWith('[AMBIL BARANG]');
+                                                    const gateInfo = getOrderGateCheckInfo(ord, trip);
+                                                    const { items: ordItems, totalQty: ordTotalQty } = getOrderItemsWithSummary(ord);
                                                     return (
-                                                        <div key={ord.id} className={`flex items-start gap-2.5 p-3 rounded-xl border ${isPickupTask ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/80 border-slate-200'}`}>
-                                                            <span className={`border text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${isPickupTask ? 'bg-[#1b68b0] text-white border-[#1b68b0]' : 'bg-[#1b68b0]/10 text-[#1b68b0] border-[#1b68b0]/20'}`}>
-                                                                {isPickupTask ? `AMBIL #${stopIdx + 1}` : `STOP #${stopIdx + 1}`}
-                                                            </span>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex justify-between items-center gap-2">
-                                                                    <span className="font-bold text-[#242222] truncate">
-                                                                        {isPickupTask ? `SPB: ${ord.spo_number} — ${ord.customer_name}` : `SPO: ${ord.spo_number} — ${ord.customer_name}`}
+                                                        <div key={ord.id} className={`p-3.5 rounded-xl border space-y-2.5 transition ${
+                                                            gateInfo.isChecked
+                                                                ? 'bg-emerald-50/40 border-emerald-300'
+                                                                : isPickupTask
+                                                                    ? 'bg-blue-50/50 border-blue-200'
+                                                                    : 'bg-slate-50/80 border-slate-200'
+                                                        }`}>
+                                                            <div className="flex flex-wrap items-start justify-between gap-2.5">
+                                                                <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                                                    <span className={`border text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${isPickupTask ? 'bg-[#1b68b0] text-white border-[#1b68b0]' : 'bg-[#1b68b0]/10 text-[#1b68b0] border-[#1b68b0]/20'}`}>
+                                                                        {isPickupTask ? `AMBIL #${stopIdx + 1}` : `STOP #${stopIdx + 1}`}
                                                                     </span>
-                                                                    {isPickupTask ? (
-                                                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-blue-100 text-[#1b68b0] border border-blue-300">
-                                                                            TUGAS AMBIL BARANG
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
-                                                                            {isLunas ? 'LUNAS' : 'COD'}
-                                                                        </span>
-                                                                    )}
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex flex-wrap items-center gap-2">
+                                                                            <span className="font-bold text-[#242222] truncate">
+                                                                                {isPickupTask ? `SPB: ${ord.spo_number} — ${ord.customer_name}` : `SPO: ${ord.spo_number} — ${ord.customer_name}`}
+                                                                            </span>
+                                                                            {isPickupTask ? (
+                                                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 bg-blue-100 text-[#1b68b0] border border-blue-300">
+                                                                                    TUGAS AMBIL BARANG
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${isLunas ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                                                                                    {isLunas ? 'LUNAS' : 'COD'}
+                                                                                </span>
+                                                                            )}
+
+                                                                            {/* BADGE TANDA SUDAH DICEK OLEH SATPAM DI ORDERANNYA */}
+                                                                            {gateInfo.isChecked ? (
+                                                                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shrink-0 shadow-2xs">
+                                                                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                                                                                    <span>Sudah Dicek Satpam (Barang Sesuai • Siap Keluar)</span>
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1 shrink-0">
+                                                                                    <Clock className="w-3 h-3 text-amber-600" />
+                                                                                    <span>Belum Dicek Satpam</span>
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-slate-500 text-[11px] truncate mt-1 flex items-center gap-1">
+                                                                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                            <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
+                                                                        </p>
+                                                                        {gateInfo.isChecked && gateInfo.checkedAt && (
+                                                                            <p className="text-[10px] text-emerald-700 font-mono font-bold mt-0.5">
+                                                                                Diverifikasi Satpam ({gateInfo.checkerName}) pada {formatIndonesianDateTime(gateInfo.checkedAt)}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                                {isPickupTask && ord.glass_type && (
-                                                                    <div className="text-[11px] font-bold text-[#1b68b0] mt-0.5 truncate">
-                                                                        {ord.glass_type}
+
+                                                                <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                                                                    {(userRole === 'satpam' || userRole === 'owner') && (
+                                                                        gateInfo.isChecked ? (
+                                                                            <span className="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs">
+                                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                                <span>Sesuai (Terverifikasi)</span>
+                                                                            </span>
+                                                                        ) : (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleOpenGateCheckConfirmForOrder(ord, trip)}
+                                                                                className="bg-[#70b03c] hover:bg-[#5f9733] text-white px-3 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer shadow-xs flex items-center gap-1"
+                                                                                title="Klik Sesuai jika jumlah fisik barang di mobil sudah sesuai dengan rincian orderan ini"
+                                                                            >
+                                                                                <ShieldCheck className="w-3.5 h-3.5" />
+                                                                                <span>Klik Sesuai (Cek Barang)</span>
+                                                                            </button>
+                                                                        )
+                                                                    )}
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
+                                                                        className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
+                                                                        title={isPickupTask ? 'Cetak Surat Perintah Pengambilan Barang' : 'Cetak Surat Jalan khusus Alamat Ini'}
+                                                                    >
+                                                                        <Printer className="w-3 h-3" /> {isPickupTask ? 'Surat Perintah' : 'SJ'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* DAFTAR RINCIAN BARANG & JUMLAH QTY DI MOBIL UNTUK DICEK SATPAM */}
+                                                            <div className="bg-white border border-slate-200/90 rounded-lg p-2.5 space-y-1.5">
+                                                                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 border-b border-slate-100 pb-1">
+                                                                    <span className="flex items-center gap-1.5">
+                                                                        <ClipboardList className="w-3.5 h-3.5 text-[#1b68b0]" />
+                                                                        <span>Rincian Barang & Jumlah Muatan di Mobil (Order #{ord.spo_number}):</span>
+                                                                    </span>
+                                                                    <span className="font-mono font-black text-[#1b68b0] bg-blue-50 border border-blue-200 px-2 py-0.2 rounded">
+                                                                        Total Jumlah: {ordTotalQty} Pcs / Lembar
+                                                                    </span>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                                                    {ordItems.map((it, itIdx) => (
+                                                                        <div key={itIdx} className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-lg text-[11px]">
+                                                                            <div className="min-w-0">
+                                                                                <div className="font-bold text-[#242222] truncate">
+                                                                                    #{itIdx + 1}. {it.glass_type}
+                                                                                </div>
+                                                                                {Number(it.length_cm) > 0 && (
+                                                                                    <div className="text-[10px] font-mono text-slate-500">
+                                                                                        Ukuran: {it.length_cm} x {it.width_cm} cm ({it.thickness_mm || 5} mm)
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            <span className="font-mono font-black text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shrink-0">
+                                                                                {it.qty || 1} {it.unit || 'Pcs'}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                {Array.isArray(ord.accessories) && ord.accessories.length > 0 && (
+                                                                    <div className="flex flex-wrap items-center gap-1 pt-1">
+                                                                        <span className="text-[10px] font-bold text-slate-500">Aksesoris Tambahan:</span>
+                                                                        {ord.accessories.map((a, aIdx) => {
+                                                                            const isObj = typeof a === 'object' && a !== null;
+                                                                            return (
+                                                                                <span key={aIdx} className="text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded">
+                                                                                    +{isObj ? `${a.name} (${a.qty || 1} Pcs)` : a}
+                                                                                </span>
+                                                                            );
+                                                                        })}
                                                                     </div>
                                                                 )}
-                                                                <p className="text-slate-500 text-[11px] truncate mt-1 flex items-center gap-1">
-                                                                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                                                                    <span>{ord.customer_address || '-'} ({ord.customer_phone})</span>
-                                                                </p>
                                                             </div>
-                                                            <button
-                                                                onClick={() => { setSelectedWaybillOrder(ord); setShowWaybillModal(true); }}
-                                                                className="bg-white hover:bg-slate-100 text-[#1b68b0] border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-bold transition shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
-                                                                title={isPickupTask ? 'Cetak Surat Perintah Pengambilan Barang' : 'Cetak Surat Jalan khusus Alamat Ini'}
-                                                            >
-                                                                <Printer className="w-3 h-3" /> {isPickupTask ? 'Surat Perintah' : 'SJ'}
-                                                            </button>
                                                         </div>
                                                     );
                                                 })}
@@ -2171,6 +2397,20 @@ export default function DeliveriesTab({
                                                                     <div className="text-[11px] text-slate-500 font-medium">
                                                                         {ord.assigned_vehicle}
                                                                     </div>
+                                                                    {(() => {
+                                                                        const gateInfo = getOrderGateCheckInfo(ord);
+                                                                        return gateInfo.isChecked ? (
+                                                                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 mt-0.5">
+                                                                                <ShieldCheck className="w-3 h-3 text-emerald-700" />
+                                                                                <span>Sudah Dicek Satpam (Sesuai)</span>
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 mt-0.5">
+                                                                                <Clock className="w-3 h-3 text-amber-600" />
+                                                                                <span>Menunggu Cek Satpam</span>
+                                                                            </span>
+                                                                        );
+                                                                    })()}
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleOpenAssignVehicleModal(ord)}
@@ -2393,6 +2633,20 @@ export default function DeliveriesTab({
                 initialDriver={pickupInitDriver}
                 initialDate={pickupInitDate}
                 allTrips={allGroupedTrips}
+            />
+
+            {/* MODAL KONFIRMASI SATPAM (APAKAH ANDA YAKIN SUDAH SESUAI? YA / TIDAK) */}
+            <ConfirmGateCheckModal
+                show={showGateCheckConfirmModal}
+                onClose={() => {
+                    if (!isSubmittingGateCheck) {
+                        setShowGateCheckConfirmModal(false);
+                        setGateCheckConfirmData(null);
+                    }
+                }}
+                confirmData={gateCheckConfirmData}
+                onConfirm={handleConfirmGateCheckSubmit}
+                isSubmitting={isSubmittingGateCheck}
             />
         </div>
     );

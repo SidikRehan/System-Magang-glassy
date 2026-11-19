@@ -10,9 +10,54 @@ export default function GatePassModal({
     if (!show || !selectedBarangKeluarData) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto text-slate-800">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-3.5">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150 gatepass-backdrop">
+            <style>{`
+                @media print {
+                    html, body {
+                        background: #ffffff !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    body * {
+                        visibility: hidden !important;
+                    }
+                    .gatepass-backdrop, .no-print-wrapper {
+                        position: static !important;
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                        background: transparent !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+                    #printable-gate-pass, #printable-gate-pass * {
+                        visibility: visible !important;
+                    }
+                    #printable-gate-pass {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 15px !important;
+                        box-shadow: none !important;
+                        background-color: #fff !important;
+                        color: #000 !important;
+                        border: 2px solid #000 !important;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                }
+            `}</style>
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto no-print-wrapper text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3.5 no-print">
                     <div className="flex items-center gap-2.5">
                         <div className="w-10 h-10 rounded-2xl bg-[#1b68b0]/10 flex items-center justify-center text-[#1b68b0]">
                             <FileText className="w-5 h-5" />
@@ -33,7 +78,7 @@ export default function GatePassModal({
                 </div>
 
                 {/* DOKUMEN CETAK DENGAN EMBEDDED PRINT LAYOUT */}
-                <div className="bg-white text-slate-900 p-6 rounded-2xl space-y-4 font-sans border border-slate-300 shadow-xs">
+                <div id="printable-gate-pass" className="bg-white text-slate-900 p-6 rounded-2xl space-y-4 font-sans border border-slate-300 shadow-xs">
                     {/* HEADER KOP DOKUMEN */}
                     <div className="flex justify-between items-start border-b-2 border-slate-900 pb-3">
                         <div>
@@ -152,7 +197,7 @@ export default function GatePassModal({
                 </div>
 
                 {/* ACTION PRINT BUTTON */}
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 no-print">
                     <button
                         type="button"
                         onClick={onClose}

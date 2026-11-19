@@ -89,6 +89,19 @@ export default function WarehouseSuppliesTab({
                 </div>
             </div>
 
+            {/* BUTTON AJUKAN ITEM BARU GUDANG */}
+            {(userRole === 'admin_gudang' || userRole === 'admin_toko' || userRole === 'owner') && (
+                <div className="flex justify-start">
+                    <button
+                        onClick={() => setShowAddSupplyModal(true)}
+                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs flex items-center gap-2 transition cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Ajukan Barang Gudang Baru ke Finance</span>
+                    </button>
+                </div>
+            )}
+
             {/* BUTTON ACTION & SUBTAB TOGGLE */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-slate-200 p-3 rounded-2xl shadow-xs">
                 {/* SUBTAB PILLS */}
@@ -142,14 +155,7 @@ export default function WarehouseSuppliesTab({
                                 className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                             >
                                 <Send className="w-3.5 h-3.5" />
-                                <span>Ajukan Pembelian / Restok ke Finance</span>
-                            </button>
-                            <button
-                                onClick={() => setShowAddSupplyModal(true)}
-                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-2xs cursor-pointer"
-                            >
-                                <Plus className="w-3.5 h-3.5 text-[#1b68b0]" />
-                                <span>Tambah Item</span>
+                                <span>Ajukan Restok Stok Menipis</span>
                             </button>
                             {(userRole === 'admin_gudang' || userRole === 'owner') && (
                                 <button
@@ -211,7 +217,7 @@ export default function WarehouseSuppliesTab({
                                         <td className="p-2 text-center">
                                             {s.image_path ? (
                                                 <div 
-                                                    onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox('/storage/' + s.image_path, s.name, {
+                                                    onClick={() => handleOpenSketchLightbox && handleOpenSketchLightbox(s.image_path, s.name, {
                                                         type: 'supply',
                                                         subtitle: `Kode Barang: ${s.item_code || '-'} • ${s.name}`,
                                                         badge: 'Bahan Pembantu Gudang',
@@ -224,7 +230,7 @@ export default function WarehouseSuppliesTab({
                                                     className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-2xs mx-auto cursor-pointer group relative bg-white"
                                                     title="Klik untuk memperbesar foto sample perlengkapan"
                                                 >
-                                                    <img src={'/storage/' + s.image_path} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
+                                                    <img src={s.image_path.startsWith('http') || s.image_path.startsWith('blob:') || s.image_path.startsWith('/') ? s.image_path : `/storage/${s.image_path}`} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-200" />
                                                 </div>
                                             ) : (
                                                 <div className="w-10 h-10 rounded-xl bg-blue-50/80 border border-blue-100 flex items-center justify-center mx-auto text-[#1b68b0] shadow-2xs">

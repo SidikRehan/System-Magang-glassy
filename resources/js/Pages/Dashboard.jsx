@@ -3,7 +3,7 @@ import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import {
     BarChart3, FileText, Truck, Sliders, Boxes, Building2,
     Plug, Archive, Wrench, Users, CreditCard, Search,
-    LogOut, Menu, X, AlertTriangle, Check, PauseCircle, Send, Zap
+    LogOut, Menu, X, AlertTriangle, Check, PauseCircle, Send, Zap, Award
 } from 'lucide-react';
 import NewOrderModal from '@/Components/Modals/NewOrderModal';
 import EditDraftOrderModal from '@/Components/Modals/EditDraftOrderModal';
@@ -120,6 +120,20 @@ export default function Dashboard({
     const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
 
     const handleOpenConfirmDeliveryModal = (order) => {
+        const delRec = (initialDeliveries || []).find(d => d && d.order_id === order?.id);
+        const isGateChecked = Boolean(
+            delRec && (
+                delRec.gate_checked_at ||
+                delRec.gate_checked_by ||
+                delRec.delivery_status === 'Dalam Pengiriman' ||
+                delRec.delivery_status === 'Selesai Terkirim' ||
+                delRec.delivery_status === 'Terkirim'
+            )
+        );
+        if (!isGateChecked) {
+            alert(`⚠️ Mobil belum dapat mengambil foto bukti pengiriman karena Surat Jalan dan muatan barang untuk Order #${order?.spo_number || ''} belum diverifikasi / ditandatangani oleh Satpam!`);
+            return;
+        }
         setSelectedDeliveryOrder(order);
         setShowConfirmDeliveryModal(true);
     };
@@ -415,6 +429,7 @@ export default function Dashboard({
     const [sketchLightbox, setSketchLightbox] = useState({
         isOpen: false,
         url: '',
+        urls: [],
         title: '',
         type: 'order',
         subtitle: '',
@@ -423,15 +438,49 @@ export default function Dashboard({
         metadata: {}
     });
 
+    const normalizeStorageUrl = (rawPath) => {
+        if (!rawPath || typeof rawPath !== 'string') return '';
+        const trimmed = rawPath.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('blob:') || trimmed.startsWith('data:') || trimmed.startsWith('/')) {
+            return trimmed;
+        }
+        return `/storage/${trimmed}`;
+    };
+
+    const parseStorageUrlList = (input) => {
+        if (!input) return [];
+        if (Array.isArray(input)) {
+            return input.map(normalizeStorageUrl).filter(Boolean);
+        }
+        if (typeof input === 'string') {
+            const trimmed = input.trim();
+            if (trimmed.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) {
+                        return parsed.map(normalizeStorageUrl).filter(Boolean);
+                    }
+                } catch {
+                    // fallback to single path
+                }
+            }
+            const single = normalizeStorageUrl(trimmed);
+            return single ? [single] : [];
+        }
+        return [];
+    };
+
     const handleOpenSketchLightbox = (path, title, options = {}) => {
         if (!path) return;
-        if (typeof path === 'object' && path !== null) {
+        if (typeof path === 'object' && path !== null && !Array.isArray(path)) {
             const rawUrl = path.url || path.path || '';
-            if (!rawUrl) return;
-            const fullUrl = rawUrl.startsWith('http') || rawUrl.startsWith('/') ? rawUrl : `/storage/${rawUrl}`;
+            const urlList = parseStorageUrlList(path.urls || rawUrl);
+            if (urlList.length === 0) return;
             setSketchLightbox({
                 isOpen: true,
-                url: fullUrl,
+                url: urlList[0],
+                urls: urlList,
                 title: path.title || title || 'Lampiran Gambar',
                 type: path.type || 'order',
                 subtitle: path.subtitle || null,
@@ -441,11 +490,13 @@ export default function Dashboard({
             });
             return;
         }
-        const fullUrl = path.startsWith('http') || path.startsWith('/') ? path : `/storage/${path}`;
+        const urlList = parseStorageUrlList(path);
+        if (urlList.length === 0) return;
         const opts = typeof options === 'string' ? { type: options } : (options || {});
         setSketchLightbox({
             isOpen: true,
-            url: fullUrl,
+            url: urlList[0],
+            urls: urlList,
             title: title || 'Lampiran Gambar',
             type: opts.type || null,
             subtitle: opts.subtitle || null,
@@ -525,6 +576,7 @@ export default function Dashboard({
 
         setIsSubmittingComplaint(true);
         router.post(route('orders.complaint', selectedExecutionOrder.id), formData, {
+            forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
                 setShowComplaintModal(false);
@@ -1606,7 +1658,8 @@ export default function Dashboard({
             buy_price: acc.buy_price,
             sell_price: acc.sell_price,
             qty: acc.qty,
-            unit: acc.unit
+            unit: acc.unit,
+            image_path: acc.image_path || null
         });
         setShowEditAccModal(true);
     };
@@ -2752,6 +2805,7 @@ export default function Dashboard({
             width_cm: '',
             thickness_mm: 5,
             qty: 1,
+            position_code: '',
             processes: ['HT'],
             bevel_width_cm: 1,
             hole_length_cm: 2,
@@ -2800,6 +2854,7 @@ export default function Dashboard({
             width_cm: '',
             thickness_mm: targetType ? extractThickness(targetType) : 5,
             qty: 1,
+            position_code: '',
             processes: lastMatching?.processes ? [...lastMatching.processes] : ['HT'],
             bevel_width_cm: 1,
             hole_length_cm: 2,
@@ -2823,6 +2878,7 @@ export default function Dashboard({
             width_cm: '',
             thickness_mm: 5,
             qty: 1,
+            position_code: '',
             processes: ['HT'],
             bevel_width_cm: 1,
             hole_length_cm: 2,
@@ -3277,7 +3333,10 @@ export default function Dashboard({
                 width_cm: it.width_cm || 120,
                 thickness_mm: it.thickness_mm || 5,
                 qty: it.qty || 1,
-                processes: Array.isArray(it.processes) ? it.processes : ['HT']
+                position_code: it.position_code || it.code || '',
+                notes: it.notes || '',
+                processes: Array.isArray(it.processes) ? it.processes : ['HT'],
+                ...it
             }))
             : [{
                 id: 1,
@@ -3286,6 +3345,8 @@ export default function Dashboard({
                 width_cm: order.width_cm || 120,
                 thickness_mm: order.thickness_mm || 5,
                 qty: 1,
+                position_code: order.position_code || order.code || '',
+                notes: order.notes || '',
                 processes: Array.isArray(order.processes) ? order.processes : ['HT']
             }];
 
@@ -3616,9 +3677,7 @@ export default function Dashboard({
         }, {
             preserveScroll: true,
             onSuccess: () => {
-                if (targetOrd?.payment_status === 'Lunas') {
-                    setActiveOrderCard('selesai');
-                }
+                setActiveOrderCard('selesai');
             }
         });
     };
@@ -3636,7 +3695,7 @@ export default function Dashboard({
         if (activeOrderCard === 'pengerjaan') return o.status === 'pengerjaan' && matchesSearch;
         if (activeOrderCard === 'pengiriman') return o.status === 'pengiriman' && matchesSearch;
         if (activeOrderCard === 'pembayaran') return o.status !== 'draft' && o.payment_status !== 'Lunas' && matchesSearch;
-        if (activeOrderCard === 'selesai') return o.status === 'selesai' && o.payment_status === 'Lunas' && matchesSearch;
+        if (activeOrderCard === 'selesai') return o.status === 'selesai' && matchesSearch;
         return matchesSearch;
     });
 
@@ -3764,7 +3823,7 @@ export default function Dashboard({
                         <Boxes className="w-3.5 h-3.5" /> Kaca
                     </button>
                 )}
-                {(userRole === 'admin_toko' || userRole === 'owner') && (
+                {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                     <button
                         onClick={() => setActiveTab('suppliers')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${activeTab === 'suppliers' ? 'bg-[#1b68b0] text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'}`}
@@ -3896,7 +3955,7 @@ export default function Dashboard({
                                 </button>
                             )}
 
-                            {(userRole === 'admin_toko' || userRole === 'owner') && (
+                            {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                                 <button onClick={() => { setActiveTab('suppliers'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}>
                                     <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Supplier</span>
                                 </button>
@@ -3954,11 +4013,20 @@ export default function Dashboard({
                                         </button>
 
                                         <button
+                                            onClick={() => { setActiveTab('finance'); setFinanceSubTab('monthly_profit'); setMobileMenuOpen(false); }}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${(activeTab === 'finance' && financeSubTab === 'monthly_profit') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Award className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Laba Bersih Per Bulan</span>
+                                            </div>
+                                        </button>
+
+                                        <button
                                             onClick={() => { setActiveTab('finance'); setFinanceSubTab('assets_valuation'); setMobileMenuOpen(false); }}
                                             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition ${(activeTab === 'finance' && financeSubTab === 'assets_valuation') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222] font-semibold'}`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Data Aset & Valuasi Stok</span>
+                                                <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Total Aset Perusahaan</span>
                                             </div>
                                         </button>
 
@@ -4115,7 +4183,7 @@ export default function Dashboard({
                             </button>
                         )}
 
-                        {(userRole === 'admin_toko' || userRole === 'owner') && (
+                        {(userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <button onClick={() => setActiveTab('suppliers')} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${activeTab === 'suppliers' ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}>
                                 <Building2 className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Supplier</span>
                             </button>
@@ -4185,11 +4253,20 @@ export default function Dashboard({
                                     </button>
 
                                     <button
+                                        onClick={() => { setActiveTab('finance'); setFinanceSubTab('monthly_profit'); }}
+                                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${(activeTab === 'finance' && financeSubTab === 'monthly_profit') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Award className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Laba Bersih Per Bulan</span>
+                                        </div>
+                                    </button>
+
+                                    <button
                                         onClick={() => { setActiveTab('finance'); setFinanceSubTab('assets_valuation'); }}
                                         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all duration-150 cursor-pointer ${(activeTab === 'finance' && financeSubTab === 'assets_valuation') ? 'bg-[#1b68b0]/10 text-[#1b68b0] border border-[#1b68b0]/30 font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-[#242222]'}`}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Data Aset & Valuasi Stok</span>
+                                            <Boxes className="w-4 h-4 shrink-0 text-[#1b68b0]" /> <span>Total Aset Perusahaan</span>
                                         </div>
                                     </button>
 
@@ -4283,6 +4360,7 @@ export default function Dashboard({
                                 userRole={userRole}
                                 canViewPricing={canViewPricing}
                                 initialOrders={initialOrders}
+                                initialDeliveries={initialDeliveries}
                                 filteredOrders={filteredOrders}
                                 activeOrderCard={activeOrderCard}
                                 setActiveOrderCard={setActiveOrderCard}
@@ -4408,6 +4486,7 @@ export default function Dashboard({
                             <FinanceTab
                                 userRole={userRole}
                                 metrics={metrics}
+                                ordersList={initialOrders}
                                 financeTransactionsList={financeTransactionsList}
                                 sheetGlasses={sheetGlasses}
                                 accessoriesList={accessoriesList}
@@ -4432,7 +4511,7 @@ export default function Dashboard({
                         )}
 
                         {/* TAB 7: DATA SUPPLIER & MITRA */}
-                        {activeTab === 'suppliers' && (userRole === 'admin_toko' || userRole === 'owner') && (
+                        {activeTab === 'suppliers' && (userRole === 'admin_toko' || userRole === 'owner' || userRole === 'finance' || userRole === 'admin_finance') && (
                             <SuppliersTab
                                 userRole={userRole}
                                 suppliersList={suppliersList}
@@ -4836,6 +4915,7 @@ export default function Dashboard({
                 onClose={() => { setShowWaybillModal(false); setSelectedWaybillOrder(null); }}
                 selectedWaybillOrder={selectedWaybillOrder}
                 order={selectedWaybillOrder}
+                deliveriesList={initialDeliveries}
                 userName={userName}
                 onOpenStickerModal={handleOpenStickerModal}
             />
@@ -4869,6 +4949,7 @@ export default function Dashboard({
                 show={showBatchWaybillModal}
                 onClose={() => { setShowBatchWaybillModal(false); setSelectedBatchWaybillTrip(null); }}
                 tripData={selectedBatchWaybillTrip}
+                deliveriesList={initialDeliveries}
                 userName={userName}
             />
 
@@ -4921,10 +5002,8 @@ export default function Dashboard({
                 isOpen={showConfirmDeliveryModal}
                 onClose={() => { setShowConfirmDeliveryModal(false); setSelectedDeliveryOrder(null); }}
                 order={selectedDeliveryOrder}
-                onCompleted={(completedOrder) => {
-                    if (completedOrder?.payment_status === 'Lunas') {
-                        setActiveOrderCard('selesai');
-                    }
+                onCompleted={() => {
+                    setActiveOrderCard('selesai');
                 }}
             />
 
@@ -4936,6 +5015,11 @@ export default function Dashboard({
                 metrics={metrics}
                 financeTransactionsList={financeTransactionsList}
                 ordersList={initialOrders}
+                sheetGlasses={sheetGlasses}
+                accessoriesList={accessoriesList}
+                toolsList={toolsList}
+                warehouseSuppliesList={warehouseSuppliesList}
+                scrapGlasses={scrapGlasses}
                 currentUserName={userName}
             />
 
@@ -4989,8 +5073,9 @@ export default function Dashboard({
             {/* GLOBAL IMAGE LIGHTBOX MODAL */}
             <ImageLightboxModal
                 isOpen={sketchLightbox.isOpen}
-                onClose={() => setSketchLightbox({ isOpen: false, url: '', title: '', type: 'order', subtitle: '', description: '', badge: '', metadata: {} })}
+                onClose={() => setSketchLightbox({ isOpen: false, url: '', urls: [], title: '', type: 'order', subtitle: '', description: '', badge: '', metadata: {} })}
                 url={sketchLightbox.url}
+                urls={sketchLightbox.urls}
                 title={sketchLightbox.title}
                 type={sketchLightbox.type}
                 subtitle={sketchLightbox.subtitle}

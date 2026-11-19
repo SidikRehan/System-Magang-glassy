@@ -8,6 +8,11 @@ export default function PrintFinancialReportModal({
     metrics = {},
     financeTransactionsList = [],
     ordersList = [],
+    sheetGlasses = [],
+    accessoriesList = [],
+    toolsList = [],
+    warehouseSuppliesList = [],
+    scrapGlasses = [],
     currentUserName = 'Tim Finance & Akuntansi'
 }) {
     const [selectedReportType, setSelectedReportType] = useState(initialReportType);
@@ -26,7 +31,7 @@ export default function PrintFinancialReportModal({
     const paidRev = Number(metrics.paidRevenue || 0);
     const pendingCodVal = Number(metrics.pendingCOD || 0);
 
-    const approvedTransactions = financeTransactionsList.filter(t => t.approval_status === 'approved');
+    const approvedTransactions = financeTransactionsList.filter(t => t.approval_status === 'approved' && t.type !== 'rekap_bulanan');
 
     const bahanKacaTrx = approvedTransactions.filter(t => t.type === 'pembelian_bahan');
     const aksesorisTrx = approvedTransactions.filter(t => t.type === 'pembelian_aksesoris');
@@ -54,9 +59,42 @@ export default function PrintFinancialReportModal({
     const netMarginPct = totalRev > 0 ? ((netProfitVal / totalRev) * 100).toFixed(1) : '0.0';
     const netOperatingCash = paidRev - grandTotalExpenses;
 
+    // Kalkulasi Valuasi Total Keseluruhan Aset Perusahaan untuk Laporan Cetak
+    const getToolUnitPrice = (tool) => {
+        if (Number(tool.buy_price) > 0) return Number(tool.buy_price);
+        if (Number(tool.estimated_price) > 0) return Number(tool.estimated_price);
+        const cat = String(tool.category || '').toLowerCase();
+        if (cat.includes('mesin utama')) return 15000000;
+        if (cat.includes('bor') || cat.includes('potong')) return 1250000;
+        if (cat.includes('vakum')) return 450000;
+        if (cat.includes('mata bor')) return 185000;
+        if (cat.includes('lapangan')) return 650000;
+        return 250000;
+    };
+
+    const getSupplyUnitPrice = (sup) => {
+        if (Number(sup.buy_price) > 0) return Number(sup.buy_price);
+        if (Number(sup.estimated_price) > 0) return Number(sup.estimated_price);
+        const cat = String(sup.category || '').toLowerCase();
+        if (cat.includes('kimia') || cat.includes('oli') || cat.includes('pelumas')) return 85000;
+        if (cat.includes('apd') || cat.includes('keselamatan')) return 35000;
+        if (cat.includes('packaging')) return 25000;
+        return 45000;
+    };
+
+    const totalGlassAssetValue = (sheetGlasses || []).reduce((sum, g) => sum + ((Number(g.qty) || 0) * (Number(g.buy_price) || 0)), 0);
+    const totalAccAssetValue = (accessoriesList || []).reduce((sum, a) => sum + ((Number(a.qty) || 0) * (Number(a.buy_price) || 0)), 0);
+    const totalToolsAssetValue = (toolsList || []).reduce((sum, t) => sum + ((Number(t.total_qty) || 0) * getToolUnitPrice(t)), 0);
+    const totalSuppliesAssetValue = (warehouseSuppliesList || []).reduce((sum, s) => sum + ((Number(s.qty ?? s.stock_qty) || 0) * getSupplyUnitPrice(s)), 0);
+    const totalScrapAssetValue = Number(metrics.scrapGlassLoss || ((scrapGlasses || []).length * 125000));
+    const netCashBalance = Math.max(0, netOperatingCash);
+    const totalPhysicalInventoryValue = totalGlassAssetValue + totalAccAssetValue + totalToolsAssetValue + totalSuppliesAssetValue + totalScrapAssetValue;
+    const grandTotalCompanyAssets = totalPhysicalInventoryValue + netCashBalance + pendingCodVal;
+
     const reportOptions = [
-        { id: 'all', label: 'Semua Laporan (Lengkap)', title: 'LAPORAN KEUANGAN KONSOLIDASI & RINGKASAN EKSEKUTIF USAHA', desc: 'P&L, Pengadaan Bahan, Aksesoris/Alat, OPEX, Arus Kas & Pengesahan Resmi' },
+        { id: 'all', label: 'Semua Laporan (Lengkap)', title: 'LAPORAN KEUANGAN KONSOLIDASI & RINGKASAN EKSEKUTIF USAHA', desc: 'P&L, Total Aset Perusahaan, Pengadaan Bahan, OPEX, Arus Kas & Pengesahan Resmi' },
         { id: 'pnl', label: 'Laporan Laba / Rugi (P&L)', title: 'LAPORAN LABA RUGI KOMPREHENSIF (STATEMENT OF PROFIT OR LOSS)', desc: 'Laporan Pendapatan, HPP, Beban Usaha & Laba Bersih Komprehensif' },
+        { id: 'assets_valuation', label: 'Total Aset Perusahaan', title: 'LAPORAN NERACA KEKAYAAN & VALUASI TOTAL KESELURUHAN ASET PERUSAHAAN', desc: 'Rekapitulasi 7 Pos Aset Perusahaan & Rincian Valuasi Kaca, Aksesoris, Alat/Mesin, Peralatan Gudang & Scrap' },
         { id: 'purchases', label: 'Pengadaan Bahan Baku Kaca', title: 'LAPORAN REKAPITULASI PENGADAAN BAHAN BAKU KACA SUPPLIER', desc: 'Faktur PO Pengadaan Kaca Float, Asahimas, Mulia, Tempered & Laminated' },
         { id: 'accessories_tools', label: 'Aksesoris & Alat Kerja', title: 'LAPORAN PEMBELIAN AKSESORIS KACA & ALAT KERJA PABRIK', desc: 'Belanja Hardware Dekkson, Dorma, Sealant Silikon & Mata Bor Pabrik' },
         { id: 'opex', label: 'Realisasi Beban OPEX', title: 'LAPORAN REALISASI BIAYA OPERASIONAL (OPEX) VS PLAFON ANGGARAN', desc: 'Evaluasi Biaya Listrik PLN, BBM Solar Armada, Gaji Staf, Servis Mesin & Kantor' },
@@ -286,7 +324,7 @@ export default function PrintFinancialReportModal({
                                     <div className="text-[9px] text-slate-500 mt-0.5">{metrics.totalOrders || ordersList.length || 0} Faktur SPO (Deal)</div>
                                 </div>
                                 <div className="border border-slate-300 p-3 rounded bg-slate-50">
-                                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">HPP Bahan & Aksesoris</div>
+                                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Uang Modal (Bahan & Aksesoris)</div>
                                     <div className="font-extrabold font-mono text-slate-900 text-sm mt-1">Rp {totalCogs.toLocaleString('id-ID')}</div>
                                     <div className="text-[9px] text-slate-500 mt-0.5">Laba Kotor: {grossMarginPct}%</div>
                                 </div>
@@ -339,9 +377,9 @@ export default function PrintFinancialReportModal({
                                             <td className="p-2 pr-3 text-right text-slate-950">Rp {totalRev.toLocaleString('id-ID')}</td>
                                         </tr>
 
-                                        {/* 2. HPP */}
+                                        {/* 2. UANG MODAL */}
                                         <tr className="bg-slate-100 font-black text-slate-900 border-b border-slate-300">
-                                            <td className="p-2 pl-3 pt-3">2. HARGA POKOK PENJUALAN (HPP / COGS)</td>
+                                            <td className="p-2 pl-3 pt-3">2. UANG MODAL (PEMBELIAN BAHAN & AKSESORIS)</td>
                                             <td className="p-2 pr-3 pt-3 text-right"></td>
                                         </tr>
                                         <tr className="border-b border-slate-200">
@@ -353,7 +391,7 @@ export default function PrintFinancialReportModal({
                                             <td className="p-1.5 pr-3 text-right text-slate-900 font-semibold">Rp {aksesorisSum.toLocaleString('id-ID')}</td>
                                         </tr>
                                         <tr className="bg-slate-50 font-bold text-slate-950 border-b-2 border-slate-400">
-                                            <td className="p-2 pl-3">TOTAL HARGA POKOK PENJUALAN (TOTAL HPP)</td>
+                                            <td className="p-2 pl-3">TOTAL UANG MODAL PRODUKSI</td>
                                             <td className="p-2 pr-3 text-right text-slate-950">Rp {totalCogs.toLocaleString('id-ID')}</td>
                                         </tr>
 
@@ -441,6 +479,275 @@ export default function PrintFinancialReportModal({
                                         <div className="text-[10px] text-slate-500">{isProfitable ? 'Kondisi Finansial Prima' : 'Evaluasi Efisiensi Beban'}</div>
                                     </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* SECTION ASET PERUSAHAAN: TOTAL KESELURUHAN ASET PERUSAHAAN & RINCIAN DETAILNYA */}
+                        {(selectedReportType === 'all' || selectedReportType === 'assets_valuation') && (
+                            <div className="mb-8 space-y-5">
+                                <div className="border-b-2 border-slate-900 pb-1 mb-3 flex justify-between items-baseline">
+                                    <h3 className="font-black text-sm uppercase text-slate-950 tracking-wide font-serif">
+                                        {selectedReportType === 'all' ? 'II. ' : ''}Rekapitulasi Total Keseluruhan Aset Perusahaan & Valuasi Inventaris
+                                    </h3>
+                                    <span className="text-[11px] text-slate-600 font-mono">Valuasi Aset Likuid, Tetap & Persediaan</span>
+                                </div>
+
+                                {/* 3 KARTU RINGKASAN TOTAL ASET CETAK */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                                    <div className="border-2 border-slate-900 p-3 rounded bg-slate-100">
+                                        <div className="text-[10px] font-sans uppercase font-black text-slate-700">Grand Total Seluruh Aset Perusahaan</div>
+                                        <div className="font-black text-slate-950 text-base mt-1">Rp {Number(grandTotalCompanyAssets).toLocaleString('id-ID')}</div>
+                                        <div className="text-[9px] font-sans text-slate-600 mt-0.5">Total Kekayaan (Fisik + Kas + Piutang)</div>
+                                    </div>
+                                    <div className="border border-slate-300 p-3 rounded bg-slate-50">
+                                        <div className="text-[10px] font-sans uppercase font-bold text-slate-500">Total Aset Fisik (Stok & Mesin)</div>
+                                        <div className="font-black text-slate-900 text-sm mt-1">Rp {Number(totalPhysicalInventoryValue).toLocaleString('id-ID')}</div>
+                                        <div className="text-[9px] font-sans text-slate-500 mt-0.5">Kaca, Aksesoris, Alat, Gudang & Scrap</div>
+                                    </div>
+                                    <div className="border border-slate-300 p-3 rounded bg-slate-50">
+                                        <div className="text-[10px] font-sans uppercase font-bold text-slate-500">Total Aset Kas Likuid & Piutang</div>
+                                        <div className="font-black text-slate-900 text-sm mt-1">Rp {Number(netCashBalance + pendingCodVal).toLocaleString('id-ID')}</div>
+                                        <div className="text-[9px] font-sans text-slate-500 mt-0.5">Kas Bersih + Piutang COD Surat Jalan</div>
+                                    </div>
+                                </div>
+
+                                {/* TABEL 7 POS KOMPOSISI ASET PERUSAHAAN */}
+                                <table className="w-full text-xs font-mono border border-slate-400 border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-100 text-slate-900 font-black border-b-2 border-slate-400 text-left">
+                                            <th className="p-2 text-center">No</th>
+                                            <th className="p-2">Kelompok & Kategori Aset Perusahaan</th>
+                                            <th className="p-2">Klasifikasi</th>
+                                            <th className="p-2">Volume / Keterangan Fisik</th>
+                                            <th className="p-2 text-center">Porsi (%)</th>
+                                            <th className="p-2 text-right">Nilai Valuasi (Rp)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-300">
+                                        {[
+                                            {
+                                                no: 1,
+                                                name: 'Aset Persediaan Bahan Baku Kaca Lembaran',
+                                                type: 'Aset Lancar (Inventory)',
+                                                vol: `${(sheetGlasses || []).reduce((s, g) => s + (Number(g.qty) || 0), 0)} Lembar (${sheetGlasses?.length || 0} Jenis)`,
+                                                val: totalGlassAssetValue,
+                                            },
+                                            {
+                                                no: 2,
+                                                name: 'Aset Persediaan Aksesoris & Fitting Kaca',
+                                                type: 'Aset Lancar (Inventory)',
+                                                vol: `${(accessoriesList || []).reduce((s, a) => s + (Number(a.qty) || 0), 0)} Unit (${accessoriesList?.length || 0} Jenis)`,
+                                                val: totalAccAssetValue,
+                                            },
+                                            {
+                                                no: 3,
+                                                name: 'Aset Tetap Alat Kerja & Mesin Produksi Pabrik',
+                                                type: 'Aset Tetap (Fixed Assets)',
+                                                vol: `${(toolsList || []).reduce((s, t) => s + (Number(t.total_qty) || 0), 0)} Unit (${toolsList?.length || 0} Jenis)`,
+                                                val: totalToolsAssetValue,
+                                            },
+                                            {
+                                                no: 4,
+                                                name: 'Aset Peralatan, Sparepart & Consumables Gudang',
+                                                type: 'Aset Operasional Gudang',
+                                                vol: `${(warehouseSuppliesList || []).reduce((s, sup) => s + (Number(sup.qty ?? sup.stock_qty) || 0), 0)} Unit (${warehouseSuppliesList?.length || 0} Jenis)`,
+                                                val: totalSuppliesAssetValue,
+                                            },
+                                            {
+                                                no: 5,
+                                                name: 'Aset Material Kaca Sisa Rak (Scrap Layak Pakai)',
+                                                type: 'Aset Material Efisiensi',
+                                                vol: `${scrapGlasses?.length || 0} Potongan Kaca Sisa Produksi`,
+                                                val: totalScrapAssetValue,
+                                            },
+                                            {
+                                                no: 6,
+                                                name: 'Aset Likuid Saldo Kas Bersih & Bank Perusahaan',
+                                                type: 'Aset Likuid (Cash)',
+                                                vol: 'Saldo Kas Operasional Riil Tersedia',
+                                                val: netCashBalance,
+                                            },
+                                            {
+                                                no: 7,
+                                                name: 'Aset Piutang Penjualan COD Surat Jalan Merah',
+                                                type: 'Aset Piutang Usaha',
+                                                vol: 'Tagihan SPO Deal Proses Pelunasan',
+                                                val: pendingCodVal,
+                                            },
+                                        ].map(row => {
+                                            const pct = grandTotalCompanyAssets > 0 ? ((row.val / grandTotalCompanyAssets) * 100).toFixed(1) : '0.0';
+                                            return (
+                                                <tr key={row.no}>
+                                                    <td className="p-2 text-center font-bold text-slate-700">{row.no}</td>
+                                                    <td className="p-2 font-sans font-bold text-slate-900">{row.name}</td>
+                                                    <td className="p-2 font-sans text-slate-700">{row.type}</td>
+                                                    <td className="p-2 text-slate-700">{row.vol}</td>
+                                                    <td className="p-2 text-center font-bold">{pct}%</td>
+                                                    <td className="p-2 text-right font-black text-slate-900 whitespace-nowrap">
+                                                        Rp {Number(row.val || 0).toLocaleString('id-ID')}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        <tr className="bg-slate-200 font-black text-slate-950 border-t-2 border-slate-900">
+                                            <td colSpan="4" className="p-2.5 text-left uppercase">
+                                                GRAND TOTAL KESELURUHAN ASET PERUSAHAAN
+                                            </td>
+                                            <td className="p-2.5 text-center">100.0%</td>
+                                            <td className="p-2.5 text-right text-sm whitespace-nowrap">
+                                                Rp {Number(grandTotalCompanyAssets).toLocaleString('id-ID')}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                {/* RINCIAN DETAIL SETIAP KATEGORI ASET FISIK */}
+                                {selectedReportType === 'assets_valuation' && (
+                                    <div className="space-y-5 pt-2">
+                                        {/* 1. Rincian Kaca Lembaran */}
+                                        <div>
+                                            <h4 className="font-bold text-xs uppercase text-slate-900 border-b border-slate-400 pb-1 mb-2 flex justify-between">
+                                                <span>1. Rincian Aset Persediaan Bahan Baku Kaca Lembaran</span>
+                                                <span className="font-mono">Subtotal: Rp {Number(totalGlassAssetValue).toLocaleString('id-ID')}</span>
+                                            </h4>
+                                            <table className="w-full text-[11px] font-mono border border-slate-300 border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 text-left">
+                                                        <th className="p-1.5">Kode</th>
+                                                        <th className="p-1.5">Nama & Jenis Kaca</th>
+                                                        <th className="p-1.5">Ukuran</th>
+                                                        <th className="p-1.5 text-center">Stok</th>
+                                                        <th className="p-1.5 text-right">Harga Beli / Lbr</th>
+                                                        <th className="p-1.5 text-right">Total Nilai Aset</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-200">
+                                                    {(sheetGlasses || []).map((g, idx) => (
+                                                        <tr key={g.id || idx}>
+                                                            <td className="p-1.5 font-bold text-slate-900">{g.item_code}</td>
+                                                            <td className="p-1.5 font-sans font-semibold text-slate-900">{g.name}</td>
+                                                            <td className="p-1.5 text-slate-700">{g.size || `${g.length_cm}x${g.width_cm} cm`}</td>
+                                                            <td className="p-1.5 text-center font-bold">{g.qty} {g.unit || 'Lembar'}</td>
+                                                            <td className="p-1.5 text-right">Rp {Number(g.buy_price || 0).toLocaleString('id-ID')}</td>
+                                                            <td className="p-1.5 text-right font-bold text-slate-900">
+                                                                Rp {((Number(g.qty) || 0) * (Number(g.buy_price) || 0)).toLocaleString('id-ID')}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* 2. Rincian Aksesoris Kaca */}
+                                        <div>
+                                            <h4 className="font-bold text-xs uppercase text-slate-900 border-b border-slate-400 pb-1 mb-2 flex justify-between">
+                                                <span>2. Rincian Aset Persediaan Aksesoris & Fitting Kaca</span>
+                                                <span className="font-mono">Subtotal: Rp {Number(totalAccAssetValue).toLocaleString('id-ID')}</span>
+                                            </h4>
+                                            <table className="w-full text-[11px] font-mono border border-slate-300 border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 text-left">
+                                                        <th className="p-1.5">Kode</th>
+                                                        <th className="p-1.5">Nama Aksesoris</th>
+                                                        <th className="p-1.5 text-center">Stok</th>
+                                                        <th className="p-1.5 text-right">Harga Beli Satuan</th>
+                                                        <th className="p-1.5 text-right">Total Nilai Aset</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-200">
+                                                    {(accessoriesList || []).map((a, idx) => (
+                                                        <tr key={a.id || idx}>
+                                                            <td className="p-1.5 font-bold text-slate-900">{a.acc_code}</td>
+                                                            <td className="p-1.5 font-sans font-semibold text-slate-900">{a.name}</td>
+                                                            <td className="p-1.5 text-center font-bold">{a.qty} {a.unit || 'Pcs'}</td>
+                                                            <td className="p-1.5 text-right">Rp {Number(a.buy_price || 0).toLocaleString('id-ID')}</td>
+                                                            <td className="p-1.5 text-right font-bold text-slate-900">
+                                                                Rp {((Number(a.qty) || 0) * (Number(a.buy_price) || 0)).toLocaleString('id-ID')}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* 3. Rincian Alat & Mesin Produksi */}
+                                        <div>
+                                            <h4 className="font-bold text-xs uppercase text-slate-900 border-b border-slate-400 pb-1 mb-2 flex justify-between">
+                                                <span>3. Rincian Aset Tetap Alat Kerja & Mesin Produksi</span>
+                                                <span className="font-mono">Subtotal: Rp {Number(totalToolsAssetValue).toLocaleString('id-ID')}</span>
+                                            </h4>
+                                            <table className="w-full text-[11px] font-mono border border-slate-300 border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 text-left">
+                                                        <th className="p-1.5">Kode</th>
+                                                        <th className="p-1.5">Nama Alat / Mesin</th>
+                                                        <th className="p-1.5">Kategori</th>
+                                                        <th className="p-1.5 text-center">Unit</th>
+                                                        <th className="p-1.5 text-center">Kondisi</th>
+                                                        <th className="p-1.5 text-right">Harga Satuan</th>
+                                                        <th className="p-1.5 text-right">Total Nilai Aset</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-200">
+                                                    {(toolsList || []).map((t, idx) => {
+                                                        const uPrice = getToolUnitPrice(t);
+                                                        return (
+                                                            <tr key={t.id || idx}>
+                                                                <td className="p-1.5 font-bold text-slate-900">{t.tool_code}</td>
+                                                                <td className="p-1.5 font-sans font-semibold text-slate-900">{t.name}</td>
+                                                                <td className="p-1.5 font-sans text-slate-700">{t.category}</td>
+                                                                <td className="p-1.5 text-center font-bold">{t.total_qty} {t.unit || 'Unit'}</td>
+                                                                <td className="p-1.5 text-center">{t.condition}</td>
+                                                                <td className="p-1.5 text-right">Rp {Number(uPrice).toLocaleString('id-ID')}</td>
+                                                                <td className="p-1.5 text-right font-bold text-slate-900">
+                                                                    Rp {((Number(t.total_qty) || 0) * uPrice).toLocaleString('id-ID')}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* 4. Rincian Peralatan Gudang */}
+                                        <div>
+                                            <h4 className="font-bold text-xs uppercase text-slate-900 border-b border-slate-400 pb-1 mb-2 flex justify-between">
+                                                <span>4. Rincian Aset Peralatan, Sparepart & Consumables Gudang</span>
+                                                <span className="font-mono">Subtotal: Rp {Number(totalSuppliesAssetValue).toLocaleString('id-ID')}</span>
+                                            </h4>
+                                            <table className="w-full text-[11px] font-mono border border-slate-300 border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 text-left">
+                                                        <th className="p-1.5">Kode</th>
+                                                        <th className="p-1.5">Nama Peralatan Gudang</th>
+                                                        <th className="p-1.5">Kategori</th>
+                                                        <th className="p-1.5 text-center">Stok</th>
+                                                        <th className="p-1.5 text-right">Harga Satuan</th>
+                                                        <th className="p-1.5 text-right">Total Nilai Aset</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-200">
+                                                    {(warehouseSuppliesList || []).map((s, idx) => {
+                                                        const qty = Number(s.qty ?? s.stock_qty) || 0;
+                                                        const uPrice = getSupplyUnitPrice(s);
+                                                        return (
+                                                            <tr key={s.id || idx}>
+                                                                <td className="p-1.5 font-bold text-slate-900">{s.item_code}</td>
+                                                                <td className="p-1.5 font-sans font-semibold text-slate-900">{s.name}</td>
+                                                                <td className="p-1.5 font-sans text-slate-700">{s.category}</td>
+                                                                <td className="p-1.5 text-center font-bold">{qty} {s.unit || 'Pcs'}</td>
+                                                                <td className="p-1.5 text-right">Rp {Number(uPrice).toLocaleString('id-ID')}</td>
+                                                                <td className="p-1.5 text-right font-bold text-slate-900">
+                                                                    Rp {(qty * uPrice).toLocaleString('id-ID')}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

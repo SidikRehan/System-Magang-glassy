@@ -26,7 +26,9 @@ import {
     Truck,
     MapPin,
     Hash,
-    CheckCircle2
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 
 // Konfigurasi Keterangan & Identitas Berdasarkan Jenis Tabel / Sumber Gambar
@@ -159,6 +161,7 @@ export default function ImageLightboxModal({
     isOpen,
     onClose,
     url,
+    urls = [],
     title,
     type,
     subtitle,
@@ -173,9 +176,56 @@ export default function ImageLightboxModal({
     const [imageError, setImageError] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(0);
     const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
 
+    const normalizeSingleUrl = (u) => {
+        if (!u || typeof u !== 'string') return '';
+        const t = u.trim();
+        if (!t) return '';
+        if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('blob:') || t.startsWith('data:') || t.startsWith('/')) {
+            return t;
+        }
+        return `/storage/${t}`;
+    };
+
+    const resolvedUrlList = React.useMemo(() => {
+        if (Array.isArray(urls) && urls.length > 0) {
+            return urls.map(normalizeSingleUrl).filter(Boolean);
+        }
+        if (typeof url === 'string' && url.trim()) {
+            const raw = url.trim().replace(/^\/storage\//, '');
+            if (raw.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) {
+                        return parsed.map(normalizeSingleUrl).filter(Boolean);
+                    }
+                } catch {
+                    // fallback
+                }
+            }
+            const single = normalizeSingleUrl(url);
+            return single ? [single] : [];
+        }
+        return [];
+    }, [url, urls]);
+
+    const activeUrl = resolvedUrlList[activeIndex] || resolvedUrlList[0] || '';
+
     // Reset controls saat gambar baru dibuka
+    useEffect(() => {
+        if (isOpen) {
+            setActiveIndex(0);
+            setZoom(1);
+            setRotation(0);
+            setPosition({ x: 0, y: 0 });
+            setImageLoaded(false);
+            setImageError(false);
+        }
+    }, [isOpen, url, urls]);
+
+    // Reset zoom/load saat berpindah slide gambar
     useEffect(() => {
         if (isOpen) {
             setZoom(1);
@@ -184,15 +234,21 @@ export default function ImageLightboxModal({
             setImageLoaded(false);
             setImageError(false);
         }
-    }, [isOpen, url]);
+    }, [activeIndex]);
 
-    // Keyboard shortcuts (Escape, Zoom, Rotate, Reset)
+    // Keyboard shortcuts (Escape, Zoom, Rotate, Reset, ArrowLeft/Right)
     useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
                 onClose();
+            } else if (e.key === 'ArrowRight' && resolvedUrlList.length > 1) {
+                e.preventDefault();
+                setActiveIndex(prev => (prev + 1) % resolvedUrlList.length);
+            } else if (e.key === 'ArrowLeft' && resolvedUrlList.length > 1) {
+                e.preventDefault();
+                setActiveIndex(prev => (prev - 1 + resolvedUrlList.length) % resolvedUrlList.length);
             } else if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
                 setZoom(prev => Math.min(3.5, Math.round((prev + 0.25) * 100) / 100));
@@ -212,11 +268,11 @@ export default function ImageLightboxModal({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, resolvedUrlList.length]);
 
-    if (!isOpen || !url) return null;
+    if (!isOpen || !activeUrl) return null;
 
-    const resolvedType = resolveLightboxType(type, title, url);
+    const resolvedType = resolveLightboxType(type, title, activeUrl);
     const config = LIGHTBOX_TYPE_CONFIG[resolvedType] || LIGHTBOX_TYPE_CONFIG.order;
     const IconComponent = config.icon;
 
@@ -262,7 +318,7 @@ export default function ImageLightboxModal({
         setIsDragging(false);
     };
 
-    const fileName = url.split('/').pop() || 'gambar';
+    const fileName = activeUrl.split('/').pop() || 'gambar';
 
     return (
         <div 
@@ -284,6 +340,11 @@ export default function ImageLightboxModal({
                                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider font-mono border ${config.badgeColor}`}>
                                     {displayBadge}
                                 </span>
+                                {resolvedUrlList.length > 1 && (
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        Foto {activeIndex + 1} dari {resolvedUrlList.length}
+                                    </span>
+                                )}
                                 <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">•</span>
                                 <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
                                     {config.tableLabel}
@@ -302,7 +363,7 @@ export default function ImageLightboxModal({
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                         {/* Download button */}
                         <a
-                            href={url}
+                            href={activeUrl}
                             target="_blank"
                             rel="noreferrer"
                             download={fileName}
@@ -315,7 +376,7 @@ export default function ImageLightboxModal({
 
                         {/* Open Original in New Tab */}
                         <a
-                            href={url}
+                            href={activeUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="text-slate-600 hover:text-[#1b68b0] hover:bg-blue-50 border border-slate-200 rounded-xl p-2 transition cursor-pointer"
@@ -432,6 +493,44 @@ export default function ImageLightboxModal({
                     )}
 
                     {/* Image Element with Transform */}
+                    {resolvedUrlList.length > 1 && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => setActiveIndex(prev => (prev - 1 + resolvedUrlList.length) % resolvedUrlList.length)}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-2xl bg-white/90 hover:bg-white border border-slate-200 shadow-lg flex items-center justify-center text-slate-700 hover:text-[#1b68b0] transition cursor-pointer"
+                                title="Foto Sebelumnya (Panah Kiri)"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveIndex(prev => (prev + 1) % resolvedUrlList.length)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-2xl bg-white/90 hover:bg-white border border-slate-200 shadow-lg flex items-center justify-center text-slate-700 hover:text-[#1b68b0] transition cursor-pointer"
+                                title="Foto Berikutnya (Panah Kanan)"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-lg">
+                                {resolvedUrlList.map((thumbUrl, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setActiveIndex(idx)}
+                                        className={`w-10 h-10 rounded-xl overflow-hidden border-2 transition cursor-pointer ${
+                                            activeIndex === idx
+                                                ? 'border-[#1b68b0] ring-2 ring-[#1b68b0]/20 scale-105'
+                                                : 'border-slate-200 opacity-70 hover:opacity-100'
+                                        }`}
+                                        title={`Lihat Foto #${idx + 1}`}
+                                    >
+                                        <img src={thumbUrl} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+
                     {imageError ? (
                         <div className="p-8 text-center space-y-2 max-w-sm">
                             <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
@@ -442,7 +541,7 @@ export default function ImageLightboxModal({
                                 File gambar lampiran tidak ditemukan atau format file tidak didukung oleh browser.
                             </p>
                             <a
-                                href={url}
+                                href={activeUrl}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-block mt-2 text-xs font-bold text-[#1b68b0] hover:underline"
@@ -458,7 +557,7 @@ export default function ImageLightboxModal({
                             }}
                         >
                             <img
-                                src={url}
+                                src={activeUrl}
                                 alt={displaySubtitle}
                                 onLoad={() => setImageLoaded(true)}
                                 onError={() => setImageError(true)}

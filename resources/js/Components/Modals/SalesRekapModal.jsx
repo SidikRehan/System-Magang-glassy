@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, X } from 'lucide-react';
+import { BarChart3, X, Printer } from 'lucide-react';
 
 export default function SalesRekapModal({
     show,
@@ -198,13 +198,21 @@ export default function SalesRekapModal({
                     </div>
                 </div>
 
-                <div className="flex justify-end pt-2 border-t border-slate-200">
+                <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
                     <button
                         type="button"
                         onClick={onClose}
                         className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs cursor-pointer transition"
                     >
                         Tutup Rekap
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="bg-[#1b68b0] hover:bg-[#15528c] text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition shadow-xs"
+                    >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Cetak Rekap</span>
                     </button>
                 </div>
             </div>

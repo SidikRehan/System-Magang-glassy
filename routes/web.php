@@ -35,6 +35,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/batch-delivery', [SypOperationalController::class, 'assignBatchDelivery'])->name('orders.batch_delivery');
     Route::post('/deliveries/pickup-order', [SypOperationalController::class, 'storePickupDispatch'])->name('deliveries.pickup_order');
     Route::post('/deliveries/{tripCode}/gate-check', [SypOperationalController::class, 'gateCheckDelivery'])->name('deliveries.gate_check');
+    Route::post('/orders/{id}/gate-check', [SypOperationalController::class, 'gateCheckOrder'])->name('orders.gate_check');
 
     // Division Defect Complaint Operations
     Route::post('/orders/{id}/complaint', [ComplaintController::class, 'submitGlassComplaint'])->name('orders.complaint');
